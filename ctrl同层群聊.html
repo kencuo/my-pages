@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
   <head>
@@ -3606,6 +3605,7 @@
         retractingMessages: new Set(), // Track messages being retracted
         songNotes: new Map(), // Store song notes/descriptions
         isAiReplying: false, // Added flag to track AI reply status
+        isInitialized: false, // 添加初始化标志
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -4258,12 +4258,25 @@
       // 全量渲染消息气泡（仅在必要时使用）
       function renderAllMessages() {
         const chat = document.getElementById('chatMessages');
-        chat.innerHTML = '';
-        lastHistoryCount = 0;
-        state.messageHistory.forEach((msg, idx) => {
-          appendMessage(msg, idx);
-        });
-        lastHistoryCount = state.messageHistory.length;
+
+        // 检查是否已经有消息渲染过，如果有且数量匹配，则不重新渲染
+        const existingMessages = chat.children.length;
+        if (existingMessages === state.messageHistory.length && existingMessages > 0) {
+          console.log('消息已渲染，跳过重复渲染');
+          lastHistoryCount = state.messageHistory.length;
+          return;
+        }
+
+        // 只有在消息数量不匹配或者没有消息时才清空重新渲染
+        if (existingMessages !== state.messageHistory.length) {
+          chat.innerHTML = '';
+          lastHistoryCount = 0;
+          state.messageHistory.forEach((msg, idx) => {
+            appendMessage(msg, idx);
+          });
+          lastHistoryCount = state.messageHistory.length;
+          console.log('重新渲染了', state.messageHistory.length, '条消息');
+        }
       }
 
       // 优化的部分渲染：只渲染新消息
@@ -7151,6 +7164,47 @@
       let syncTimeout = null;
       let pendingSync = false;
 
+      // 本地存储键名
+      const LOCAL_STORAGE_KEY = 'chatMessageHistory';
+      const LOCAL_STORAGE_PERSON_KEY = 'chatPersonName';
+
+      // 保存消息历史到本地存储
+      function saveMessageHistoryToLocal() {
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.messageHistory));
+          // 同时保存当前聊天对象的名字
+          const nameSpan = document.getElementById('chatPersonName');
+          if (nameSpan && nameSpan.textContent) {
+            localStorage.setItem(LOCAL_STORAGE_PERSON_KEY, nameSpan.textContent);
+          }
+        } catch (error) {
+          console.warn('保存消息历史到本地存储失败:', error);
+        }
+      }
+
+      // 从本地存储加载消息历史
+      function loadMessageHistoryFromLocal() {
+        try {
+          const savedHistory = localStorage.getItem(LOCAL_STORAGE_KEY);
+          const savedPersonName = localStorage.getItem(LOCAL_STORAGE_PERSON_KEY);
+
+          if (savedHistory) {
+            state.messageHistory = JSON.parse(savedHistory);
+            console.log('从本地存储加载了', state.messageHistory.length, '条历史消息');
+          }
+
+          if (savedPersonName) {
+            const nameSpan = document.getElementById('chatPersonName');
+            if (nameSpan) nameSpan.textContent = savedPersonName;
+          }
+
+          return state.messageHistory.length > 0;
+        } catch (error) {
+          console.warn('从本地存储加载消息历史失败:', error);
+          return false;
+        }
+      }
+
       // SillyTavern API 交互
       async function syncToSillyTavern() {
         if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
@@ -7158,6 +7212,8 @@
           const log = serializeQunliaoLog(state.messageHistory); // 保留完整的消息历史，包括头像信息
           await setChatMessages([{ message_id: state.currentMsgId, message: log }], { refresh: 'none' });
         }
+        // 同时保存到本地存储作为备份
+        saveMessageHistoryToLocal();
       }
 
       // 🚀 优化：延迟批量同步，避免频繁调用
@@ -7181,24 +7237,75 @@
 
       // 初始化加载历史
       function loadHistoryFromSillyTavern() {
-        if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
-          state.currentMsgId = getCurrentMessageId();
-          const msg = getChatMessages(state.currentMsgId)[0];
-          if (msg && msg.message) {
-            // 新增：自动解析人名
-            const personName = parsePersonNameFromQunliao(msg.message);
-            const nameSpan = document.getElementById('chatPersonName');
-            if (nameSpan) nameSpan.textContent = personName ? personName : '';
-            state.messageHistory = parseQunliaoLog(msg.message);
-          } else {
-            state.messageHistory = [];
-            const nameSpan = document.getElementById('chatPersonName');
-            if (nameSpan) nameSpan.textContent = '';
+        // 如果已经初始化过，只进行增量更新
+        if (state.isInitialized) {
+          console.log('已初始化，进行增量更新检查');
+
+          // 检查是否有新消息需要同步
+          if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
+            try {
+              const currentMsgId = getCurrentMessageId();
+              const msg = getChatMessages(currentMsgId)[0];
+              if (msg && msg.message && msg.message.trim()) {
+                const newHistory = parseQunliaoLog(msg.message);
+
+                // 只有当消息数量发生变化时才更新
+                if (newHistory.length !== state.messageHistory.length) {
+                  console.log('检测到消息变化，更新历史');
+                  state.messageHistory = newHistory;
+                  renderAllMessages();
+                }
+              }
+            } catch (error) {
+              console.warn('增量更新失败:', error);
+            }
           }
-          // 初始化时需要全量渲染，之后使用部分渲染
-          renderAllMessages();
-          updateAiRequestButtonVisibility();
+          return;
         }
+
+        let historyLoaded = false;
+
+        // 首先尝试从SillyTavern加载
+        if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
+          try {
+            state.currentMsgId = getCurrentMessageId();
+            const msg = getChatMessages(state.currentMsgId)[0];
+            if (msg && msg.message && msg.message.trim()) {
+              // 新增：自动解析人名
+              const personName = parsePersonNameFromQunliao(msg.message);
+              const nameSpan = document.getElementById('chatPersonName');
+              if (nameSpan) nameSpan.textContent = personName ? personName : '';
+
+              // 解析消息历史
+              state.messageHistory = parseQunliaoLog(msg.message);
+              historyLoaded = true;
+              console.log('从SillyTavern加载了', state.messageHistory.length, '条历史消息');
+            }
+          } catch (error) {
+            console.warn('从SillyTavern加载历史失败:', error);
+          }
+        }
+
+        // 如果SillyTavern加载失败，尝试从本地存储加载
+        if (!historyLoaded) {
+          console.log('SillyTavern历史为空，尝试从本地存储加载...');
+          historyLoaded = loadMessageHistoryFromLocal();
+        }
+
+        // 如果都没有加载到历史，初始化为空
+        if (!historyLoaded) {
+          state.messageHistory = [];
+          const nameSpan = document.getElementById('chatPersonName');
+          if (nameSpan) nameSpan.textContent = '';
+          console.log('没有找到历史消息，初始化为空');
+        }
+
+        // 标记为已初始化
+        state.isInitialized = true;
+
+        // 初始化时需要全量渲染，之后使用部分渲染
+        renderAllMessages();
+        updateAiRequestButtonVisibility();
       }
 
       // 兼容 SillyTavern 渲染
@@ -8014,4 +8121,3 @@
     </script>
   </body>
 </html>
-
