@@ -148,7 +148,7 @@
       }
       .chat-messages {
         flex: 1;
-        background: url('https://files.catbox.moe/e1xk9k.jpeg') center/cover;
+        background: url('https://files.catbox.moe/g299b6.jpeg') center/cover;
         padding: 18px 10px 10px 10px;
         overflow-y: auto;
         display: flex;
@@ -208,53 +208,12 @@
         margin: 0 2px;
       }
       .bubble img.chat-img {
-        max-width: 200px;
-        max-height: 200px;
+        max-width: 120px;
+        max-height: 120px;
         border-radius: 12px;
         margin: 2px 0;
         display: block;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        cursor: pointer;
-        transition: transform 0.2s ease;
-      }
-
-      .bubble img.chat-img:hover {
-        transform: scale(1.02);
-      }
-
-      .image-container {
-        position: relative;
-        display: inline-block;
-        max-width: 200px;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      .vision-analysis-indicator {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        background: rgba(7, 193, 96, 0.9);
-        color: white;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-size: 10px;
-        font-weight: 500;
-        z-index: 10;
-        transition: opacity 0.3s ease;
-      }
-
-      .image-description {
-        background: rgba(0,0,0,0.7);
-        color: white;
-        padding: 8px 12px;
-        font-size: 12px;
-        line-height: 1.4;
-        border-radius: 6px;
-        margin-top: 6px;
-        display: none;
-        word-wrap: break-word;
-        max-width: 200px;
+        box-shadow: 0 1px 4px #e0c6f7;
       }
       .bubble .quote {
         display: block;
@@ -785,18 +744,12 @@
         margin: 0 2px;
       }
       .message-content img.chat-img {
-        max-width: 200px;
-        max-height: 200px;
+        max-width: 120px;
+        max-height: 120px;
         border-radius: 12px;
         margin: 2px 0;
         display: block;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        cursor: pointer;
-        transition: transform 0.2s ease;
-      }
-
-      .message-content img.chat-img:hover {
-        transform: scale(1.02);
+        box-shadow: 0 1px 4px #e0c6f7;
       }
 
       /* typing line style */
@@ -1161,7 +1114,7 @@
         width: 100%;
         height: 120px;
         background-color: #f5f5f5;
-        background-image: url('https://files.catbox.moe/e1xk9k.jpeg');
+        background-image: url('https://files.catbox.moe/g299b6.jpeg');
         background-size: cover;
         background-position: center;
       }
@@ -1263,7 +1216,7 @@
         position: relative;
         z-index: 1;
         text-align: center;
-        padding-top: 80px;
+        padding-top: 40px; /* 减少顶部padding */
         text-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
       }
       #voiceCallRequestAiBtn {
@@ -1301,6 +1254,7 @@
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         margin-bottom: 15px;
         object-fit: cover;
+        display: none; /* 隐藏顶部头像 */
       }
       .voice-call-name {
         font-size: 22px;
@@ -1328,25 +1282,77 @@
       }
 
       .incall-message {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+        max-width: 90%;
+      }
+
+      .incall-message-content {
         padding: 6px 12px;
         border-radius: 16px;
         font-size: 14px;
         line-height: 1.4;
-        max-width: 80%;
         word-wrap: break-word;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        flex: 1;
+      }
+
+      .incall-message-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: #ddd;
+        position: relative;
+      }
+
+      .incall-avatar-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        flex-shrink: 0;
+      }
+
+      .incall-avatar-name {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.8);
+        text-align: center;
+        max-width: 40px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
       }
 
       .incall-message.user {
-        background: #95ec69;
-        color: #000;
+        flex-direction: row-reverse;
         align-self: flex-end;
       }
 
+      .incall-message.user .incall-avatar-container {
+        align-items: flex-end;
+      }
+
+      .incall-message.user .incall-message-content {
+        background: #95ec69;
+        color: #000;
+      }
+
       .incall-message.char {
+        align-self: flex-start;
+      }
+
+      .incall-message.char .incall-avatar-container {
+        align-items: flex-start;
+      }
+
+      .incall-message.char .incall-message-content {
         background: #fff;
         color: #333;
-        align-self: flex-start;
       }
 
       .voice-call-footer {
@@ -1539,7 +1545,7 @@
         width: 100%;
         height: 120px;
         background-color: #f5f5f5;
-        background-image: url('https://files.catbox.moe/e1xk9k.jpeg');
+        background-image: url('https://files.catbox.moe/g299b6.jpeg');
         background-size: cover;
         background-position: center;
       }
@@ -3671,8 +3677,8 @@
             <label class="setting-label">破限模式</label>
             <div class="setting-preview">
               <div class="preview-info" style="flex: 1;">
-                <div class="preview-title">启用内置破限预设</div>
-                <div class="preview-desc">使用优化的破限预设，减少空回复和重复</div>
+                <div class="preview-title">完全绕过SillyTavern预设</div>
+                <div class="preview-desc">使用原生generateRaw函数，完全不受ST预设影响</div>
               </div>
               <div class="jailbreak-toggle-container">
                 <label class="jailbreak-switch">
@@ -3713,7 +3719,7 @@
       // NEW MESSAGE FORMATS:
       // User: [我方消息|消息内容|消息时间]
       // Char: [角色昵称|对方头像文件名|消息内容|消息时间]
-      // All content stored in <shouji>...</shouji> tag
+      // All content stored in <qunliao>...</qunliao> tag
 
       console.log(
         '%c作者 ctrl 不许偷盗喵喵喵喵',
@@ -3722,7 +3728,6 @@
 
       // Avatar and name constants are no longer primary, but can be used as fallbacks.
       const NAME_USER = '我';
-      const NAME_CHAR = '对方';
 
       // emoji 列表
       const EMOJIS = ['😊', '😂', '🥰', '😳', '😭', '😎', '😡', '👍', '🎉', '💖', '🥺', '🤔', '😏', '😱', '��', '🤗'];
@@ -3744,7 +3749,6 @@
         retractingMessages: new Set(), // Track messages being retracted
         songNotes: new Map(), // Store song notes/descriptions
         isAiReplying: false, // Added flag to track AI reply status
-        jailbreakEnabled: false, // 破限模式开关
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -3752,6 +3756,10 @@
         window.parent && window.parent.TavernHelper && typeof window.parent.TavernHelper.generate === 'function'
           ? window.parent.TavernHelper.generate
           : null;
+
+      // 获取原生generate函数，可以完全绕过预设
+      const generate = typeof window.parent?.generate === 'function' ? window.parent.generate : null;
+      const generateRaw = typeof window.parent?.generateRaw === 'function' ? window.parent.generateRaw : null;
 
       // 工具函数：sleep
       function sleep(ms) {
@@ -3814,10 +3822,6 @@
         if (voiceMatch) {
           return { type: 'voice', voiceText: voiceMatch[1], content };
         }
-        // Image - 检查是否是图片消息
-        if (content === '[图片]' || content.startsWith('[图片]') || content.includes('图片')) {
-          return { type: 'image', imageDescription: content, content };
-        }
         // Recall
         const recallMatch = content.match(/^撤回消息\|(.*)/);
         if (recallMatch) {
@@ -3830,21 +3834,23 @@
       const messageParsers = [
         // 🔄 新格式：转账消息
         {
-          regex: /^\[我方消息\|转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
-          handler: ([, amount, time]) => ({
+          regex: /^\[我方消息\|给(.+?)转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          handler: ([, target, amount, time]) => ({
             sender: 'user',
             type: 'transfer',
+            target,
             amount: parseFloat(amount),
             time,
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
-          handler: ([, charName, avatar, amount, time]) => ({
+          regex: /^\[(.+?)\|(.+?)\|给(.+?)转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, avatar, target, amount, time]) => ({
             sender: 'char',
             type: 'transfer',
             charName,
             avatar,
+            target,
             amount: parseFloat(amount),
             time,
           }),
@@ -4197,7 +4203,7 @@
           handler: ([, avatar, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
-            charName: '对方', // 旧格式使用默认角色名
+            charName: '',
             avatar,
             time,
           }),
@@ -4234,49 +4240,15 @@
         },
       ];
 
-      // 消息兼容性处理函数
-      function ensureMessageCompatibility(msg) {
-        if (!msg || typeof msg !== 'object') return msg;
-
-        // 确保基本属性存在
-        if (!msg.sender) msg.sender = 'char';
-        if (!msg.type) msg.type = 'text';
-        if (!msg.time) msg.time = '00:00';
-        if (!msg.content && msg.type === 'text') msg.content = '';
-
-        // 处理旧版本的消息格式兼容性
-        if (msg.type === 'img' && !msg.imgUrl && msg.content) {
-          // 尝试从content中提取图片URL
-          const imgMatch = msg.content.match(/https?:\/\/[^\s]+/);
-          if (imgMatch) {
-            msg.imgUrl = imgMatch[0];
-            msg.type = 'image';
-          }
-        }
-
-        // 确保语音消息有必要的属性
-        if (msg.type === 'voice' && !msg.voiceText) {
-          msg.voiceText = msg.content || '';
-        }
-
-        // 确保转账消息有金额
-        if (['transfer', 'receive', 'redpacket', 'claimed-redpacket'].includes(msg.type) && !msg.amount) {
-          const amountMatch = (msg.content || '').match(/(\d+(?:\.\d+)?)/);
-          msg.amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
-        }
-
-        return msg;
-      }
-
-      function parseShoujiLog(text) {
+      function parseQunliaoLog(text) {
         // 作者 ctrl 不许偷ado 喵喵喵喵
-        const match = text.match(/<shouji>([\s\S]*?)<\/shouji>/);
+        const match = text.match(/<qunliao>([\s\S]*?)<\/qunliao>/);
         if (!match) return [];
         const raw = match[1].trim();
         if (!raw) return [];
 
         const lines = raw.split(/\n+/).filter(Boolean);
-        const messages = lines
+        return lines
           .map(line => {
             for (const parser of messageParsers) {
               const match = line.match(parser.regex);
@@ -4284,55 +4256,33 @@
                 return parser.handler(match);
               }
             }
-            // 如果没有匹配的解析器，尝试作为普通文本消息处理
-            const fallbackMatch = line.match(/^\[(.+?)\|(.+?)\|(.+?)\|(\d{2}:\d{2})\]$/) ||
-                                 line.match(/^\[我方消息\|(.+?)\|(\d{2}:\d{2})\]$/);
-            if (fallbackMatch) {
-              if (fallbackMatch.length === 3) {
-                // 我方消息格式
-                return {
-                  sender: 'user',
-                  type: 'text',
-                  content: fallbackMatch[1],
-                  time: fallbackMatch[2]
-                };
-              } else if (fallbackMatch.length === 5) {
-                // 对方消息格式
-                return {
-                  sender: 'char',
-                  type: 'text',
-                  charName: fallbackMatch[1],
-                  avatar: fallbackMatch[2],
-                  content: fallbackMatch[3],
-                  time: fallbackMatch[4]
-                };
-              }
-            }
             return null; // No parser matched this line
           })
-          .filter(Boolean)
-          .map(ensureMessageCompatibility); // 应用兼容性处理
-
-        return messages;
+          .filter(Boolean);
       }
 
       // ==================== REFACTORED SERIALIZATION LOGIC ====================
 
-      function serializeShoujiLog(msgArr) {
-         // ▼▼▼ 新增代码：从页面获取当前聊天对象的名字 ▼▼▼
-        const charName = getCurrentCharName();
-        const titleLine = (charName && charName !== '对方') ? `【和${charName}的聊天】\n` : '';
-        // ▲▲▲ 新增代码结束 ▲▲▲
+      function serializeQunliaoLog(msgArr) {
+        let qunliaoTitle = '';
+        if (state && state.currentMsgId && typeof getChatMessages === 'function') {
+          const msg = getChatMessages(state.currentMsgId)[0];
+          if (msg && msg.message) {
+            const match = msg.message.match(/【和(.+?)的聊天】/);
+            if (match) qunliaoTitle = match[1];
+          }
+        }
+        const titleLine = qunliaoTitle ? `【和${qunliaoTitle}的聊天】\n` : '';
 
         const lines = msgArr.map(m => {
-          // 🔄 新格式：直接返回格式化字符串，不依赖content重构
-          const currentCharName = getCurrentCharName();
+          // 直接使用消息中的charName，不由群聊标题决定
+          const currentCharName = m.charName || '';
 
           // 转账消息
           if (m.type === 'transfer') {
             return m.sender === 'user'
-              ? `[我方消息|转账${m.amount}元|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|转账${m.amount}元|${m.time}]`;
+              ? `[我方消息|给${m.target || 'xxx'}转账${m.amount}元|${m.time}]`
+              : `[${currentCharName}|${m.avatar || ''}|给${m.target || 'xxx'}转账${m.amount}元|${m.time}]`;
           }
           // 收账消息
           else if (m.type === 'receive') {
@@ -4418,15 +4368,9 @@
               ? `[我方消息|变音特效|${m.voiceEffect}|${m.voiceEffectContent}|${m.time}]`
               : `[${currentCharName}|${m.avatar || ''}|变音特效|${m.voiceEffect}|${m.voiceEffectContent}|${m.time}]`;
           } else if (m.type === 'image') {
-            // 图片消息处理 - 区分真实图片和描述图片
-            let imageInfo = m.imageDescription || '图片';
-            if (m.imageData && m.fileName) {
-              imageInfo = `${m.imageDescription || '图片'}(${m.fileName})`;
-            }
-
             return m.sender === 'user'
-              ? `[我方消息|图片|${imageInfo}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|图片|${imageInfo}|${m.time}]`;
+              ? `[我方消息|图片|${m.imageDescription}|${m.time}]`
+              : `[${currentCharName}|${m.avatar || ''}|图片|${m.imageDescription}|${m.time}]`;
           }
 
           // 其他消息类型的通用逻辑
@@ -4450,8 +4394,7 @@
           }
         });
         
-        // ▼▼▼ 修改之处：在拼接时，把标题行加在最前面 ▼▼▼
-        return '<shouji>\n' + titleLine + lines.join('\n') + '\n</shouji>';
+        return '<qunliao>\n' + titleLine + lines.join('\n') + '\n</qunliao>';
       }
 
       // ==================== OPTIMIZED RENDERING LOGIC ====================
@@ -4464,26 +4407,10 @@
         const chat = document.getElementById('chatMessages');
         chat.innerHTML = '';
         lastHistoryCount = 0;
-
         state.messageHistory.forEach((msg, idx) => {
-          try {
-            appendMessage(msg, idx);
-          } catch (error) {
-            console.error(`❌ 渲染消息 ${idx} 失败:`, error, msg);
-            // 创建一个错误提示消息
-            const errorMsg = document.createElement('div');
-            errorMsg.className = 'message system-notification';
-            errorMsg.innerHTML = `
-              <div class="message-content" style="background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;">
-                消息渲染失败 (${idx}): ${error.message || '未知错误'}
-              </div>
-            `;
-            chat.appendChild(errorMsg);
-          }
+          appendMessage(msg, idx);
         });
-
         lastHistoryCount = state.messageHistory.length;
-        console.log(`✅ 渲染完成，共 ${state.messageHistory.length} 条消息`);
       }
 
       // 优化的部分渲染：只渲染新消息
@@ -4511,37 +4438,14 @@
       // Append a single message to the chat
       function appendMessage(msg, idx, isGenerated = false) {
         const chat = document.getElementById('chatMessages');
-
-        try {
-          // 确保消息数据完整性
-          const processedMsg = ensureMessageCompatibility(msg);
-          const message = createMessageElement(processedMsg, idx);
-
-          if (message) {
-            // 标记生成的消息用于优化渲染
-            if (isGenerated || idx >= lastHistoryCount) {
-              message.classList.add('generated');
-            }
-            chat.appendChild(message);
-            // Scroll to bottom only if the user is already near the bottom
-            if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
-              chat.scrollTop = chat.scrollHeight;
-            }
-          } else {
-            console.warn(`⚠️ 消息 ${idx} 创建失败，跳过渲染:`, msg);
+        const message = createMessageElement(msg, idx);
+        if (message) {
+          // 标记生成的消息用于优化渲染
+          if (isGenerated || idx >= lastHistoryCount) {
+            message.classList.add('generated');
           }
-        } catch (error) {
-          console.error(`❌ 添加消息 ${idx} 失败:`, error, msg);
-          // 创建一个简单的错误提示
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'message system-notification';
-          errorDiv.innerHTML = `
-            <div class="message-content" style="background: #fff3e0; color: #e65100; border: 1px solid #ffcc02; font-size: 12px;">
-              消息显示异常 (${idx})
-            </div>
-          `;
-          chat.appendChild(errorDiv);
-          // Scroll to bottom
+          chat.appendChild(message);
+          // Scroll to bottom only if the user is already near the bottom
           if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
             chat.scrollTop = chat.scrollHeight;
           }
@@ -4553,19 +4457,9 @@
         const chat = document.getElementById('chatMessages');
         const oldMessage = chat.querySelector(`[data-index="${idx}"]`);
         if (oldMessage) {
-          try {
-            const processedMsg = ensureMessageCompatibility(state.messageHistory[idx]);
-            const newMessage = createMessageElement(processedMsg, idx);
-            if (newMessage) {
-              oldMessage.replaceWith(newMessage);
-            } else {
-              console.warn(`⚠️ 更新消息 ${idx} 失败，保留原消息`);
-            }
-          } catch (error) {
-            console.error(`❌ 更新消息 ${idx} 失败:`, error);
-            // 保留原消息，但添加错误标记
-            oldMessage.style.opacity = '0.7';
-            oldMessage.title = '消息更新失败';
+          const newMessage = createMessageElement(state.messageHistory[idx], idx);
+          if (newMessage) {
+            oldMessage.replaceWith(newMessage);
           }
         }
       }
@@ -4616,93 +4510,24 @@
       function renderImageMessage(contentDiv, msg) {
         contentDiv.classList.add('image-message');
 
-        // 创建图片容器
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'image-container';
-        imageContainer.style.cssText = `
-          position: relative;
-          display: inline-block;
-          max-width: 200px;
-          border-radius: 8px;
-          overflow: hidden;
-        `;
-
-        // 创建图片元素
+        // Create image element
         const img = document.createElement('img');
         img.className = 'chat-img';
-        img.style.cssText = `
-          max-width: 100%;
-          max-height: 200px;
-          border-radius: 8px;
-          cursor: pointer;
-          display: block;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        `;
+        img.src = 'https://files.catbox.moe/wveq3r.jpeg';
+        img.style.cursor = 'pointer';
 
-        // 设置图片源
-        if (msg.imageData) {
-          // 如果有真实图片数据，显示真实图片
-          img.src = msg.imageData;
-          img.alt = msg.fileName || '图片';
-        } else {
-          // 如果只有描述，显示占位图片
-          img.src = 'https://files.catbox.moe/wveq3r.jpeg';
-          img.alt = msg.imageDescription || '图片';
-        }
-
-        // 创建描述区域
+        // Add description tooltip
         const description = document.createElement('div');
         description.className = 'image-description';
-        description.style.cssText = `
-          background: rgba(0,0,0,0.7);
-          color: white;
-          padding: 8px 12px;
-          font-size: 12px;
-          line-height: 1.4;
-          border-radius: 6px;
-          margin-top: 6px;
-          display: none;
-          word-wrap: break-word;
-        `;
-        description.textContent = msg.imageDescription || '图片';
+        description.textContent = msg.imageDescription;
+        description.style.display = 'none';
 
-        // 如果需要AI视觉分析，添加分析状态指示
-        if (msg.needsVisionAnalysis && msg.sender === 'user') {
-          const analysisIndicator = document.createElement('div');
-          analysisIndicator.className = 'vision-analysis-indicator';
-          analysisIndicator.style.cssText = `
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            background: rgba(7, 193, 96, 0.9);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 500;
-          `;
-          analysisIndicator.textContent = '🤖 AI识图中...';
-          imageContainer.appendChild(analysisIndicator);
-
-          // 自动触发AI视觉分析
-          setTimeout(() => {
-            requestVisionAnalysis(msg, analysisIndicator);
-          }, 1000);
-        }
-
-        // 点击图片显示/隐藏描述
+        // Add click handler to show/hide description
         img.onclick = () => {
           description.style.display = description.style.display === 'none' ? 'block' : 'none';
         };
 
-        // 图片加载错误处理
-        img.onerror = () => {
-          img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCA0MEgxMjBWODBIODBWNDBaIiBmaWxsPSIjREREIi8+CjxjaXJjbGUgY3g9IjkwIiBjeT0iNTUiIHI9IjUiIGZpbGw9IiNBQUEiLz4KPHBhdGggZD0iTTkwIDY1TDEwMCA3NUg4MEw5MCA2NVoiIGZpbGw9IiNBQUEiLz4KPHRleHQgeD0iMTAwIiB5PSIxMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTkiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiI+5Zu+54mH5Yqg6L295aSx6LSlPC90ZXh0Pgo8L3N2Zz4K';
-          img.alt = '图片加载失败';
-        };
-
-        imageContainer.appendChild(img);
-        contentDiv.appendChild(imageContainer);
+        contentDiv.appendChild(img);
         contentDiv.appendChild(description);
       }
 
@@ -4710,6 +4535,10 @@
         contentDiv.classList.add('wechat-transfer');
 
         // 💰 微信风格转账样式
+        let targetText = '';
+        if (msg.target) {
+          targetText = `<div class="transfer-target">转账给 <span style='color:#ff69b4;font-weight:bold;'>${msg.target}</span></div>`;
+        }
         contentDiv.innerHTML = `
           <div class="wechat-card">
             <div class="wechat-card-header">
@@ -4717,6 +4546,7 @@
               <div class="transfer-info">
                 <div class="transfer-title">转账</div>
                 <div class="transfer-amount">¥${msg.amount}</div>
+                ${targetText}
               </div>
             </div>
             ${msg.sender === 'char' && !msg.claimed ? '<div class="wechat-card-footer">点击查看详情</div>' : ''}
@@ -5209,7 +5039,7 @@
         return {
           avatarUrl: lastCharMsg ? 'https://files.catbox.moe/' + lastCharMsg.avatar : '',
           avatarId: lastCharMsg ? lastCharMsg.avatar : '',
-          name: NAME_CHAR, // Using the constant for now
+          name: lastCharMsg ? lastCharMsg.charName : '',
         };
       }
 
@@ -5523,7 +5353,7 @@
               text = '[图片]';
               break;
             case 'image':
-              text = extra.imageDescription || '[图片]';
+              text = '[图片]';
               break;
             case 'voice':
               text = `语音消息|${extra.voiceText}`;
@@ -5532,7 +5362,7 @@
               text = `[变音特效|${extra.voiceEffect}|${extra.voiceEffectContent}]`;
               break;
             case 'transfer':
-              text = `转账${extra.amount}元`;
+              text = `[${extra.target}|${extra.avatar}|给${extra.target === '我方' ? '我方' : extra.target}转账${extra.amount}元|${extra.time}]`;
               break;
             case 'receive':
               text = `收账${extra.amount}元`;
@@ -5604,85 +5434,6 @@
         deferredSync();
         if (state.inVoiceCall) {
           requestAiReply(); // 语音通话中自动触发AI回复
-        } else if (parsedMsg.type === 'image' && parsedMsg.needsVisionAnalysis) {
-          // 如果是需要AI识图的图片消息，延迟触发AI回复
-          setTimeout(() => {
-            requestAiReply();
-          }, 2000); // 给AI识图一些时间
-        }
-      }
-
-      // AI视觉分析功能
-      async function requestVisionAnalysis(imageMsg, indicator) {
-        if (!AI_GENERATE) {
-          if (indicator) {
-            indicator.textContent = '❌ AI不可用';
-            indicator.style.background = 'rgba(255, 0, 0, 0.8)';
-          }
-          return;
-        }
-
-        try {
-          // 构建视觉分析请求
-          const visionPrompt = `请分析这张图片，描述你看到的内容。图片描述：${imageMsg.imageDescription || '用户发送了一张图片'}`;
-
-          // 准备发送给AI的数据，包含图片
-          const requestData = {
-            user_input: visionPrompt,
-            should_stream: false,
-            image_data: imageMsg.imageData, // 发送base64图片数据
-            message_type: 'vision_analysis'
-          };
-
-          // 如果启用了破限模式，告诉SillyTavern不要使用它的预设
-          if (state.jailbreakEnabled) {
-            requestData.bypass_tavern_preset = true;
-            requestData.use_raw_prompt = true;
-            requestData.disable_system_prompt = true;
-          }
-
-          if (indicator) {
-            indicator.textContent = '🤖 分析中...';
-          }
-
-          // 调用AI进行视觉分析
-          const response = await AI_GENERATE(requestData);
-
-          if (indicator) {
-            indicator.textContent = '✅ 已识图';
-            indicator.style.background = 'rgba(76, 175, 80, 0.9)';
-
-            // 3秒后隐藏指示器
-            setTimeout(() => {
-              if (indicator.parentNode) {
-                indicator.style.opacity = '0';
-                setTimeout(() => {
-                  if (indicator.parentNode) {
-                    indicator.parentNode.removeChild(indicator);
-                  }
-                }, 300);
-              }
-            }, 3000);
-          }
-
-          // 如果AI返回了分析结果，自动生成AI回复
-          if (response && typeof response === 'string' && response.trim()) {
-            // 标记用户发送了新消息，允许AI回复
-            state.userHasSentNewMessage = true;
-            updateAiRequestButtonVisibility();
-
-            // 延迟一下再请求AI回复，让用户看到识图完成
-            setTimeout(() => {
-              requestAiReply();
-            }, 1500);
-          }
-
-        } catch (error) {
-          console.error('视觉分析失败:', error);
-          if (indicator) {
-            indicator.textContent = '❌ 识图失败';
-            indicator.style.background = 'rgba(255, 0, 0, 0.8)';
-          }
         }
       }
 
@@ -5791,7 +5542,7 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
       // 请求AI回复
       async function requestAiReply() {
         if (!AI_GENERATE) return;
-
+        
         // 防止重复调用AI回复
         if (state.isAiReplying) {
           return;
@@ -5815,38 +5566,14 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         // 统一上下文长度，保证稳定性
         const maxContext = 120; // 语音通话和普通聊天使用相同的上下文长度
         const recentMessages = state.messageHistory.slice(-maxContext);
-        let context = serializeShoujiLog(recentMessages);
+        let context = serializeQunliaoLog(recentMessages);
 
         // 根据破限开关决定是否添加破限预设
         if (state.jailbreakEnabled) {
           context = JAILBREAK_PROMPT + "\n\n" + context;
-          console.log('🔓 破限模式已启用，使用内置GeGe预设，绕过SillyTavern预设');
+          console.log('🔓 破限模式已启用，将使用原生generateRaw函数完全绕过SillyTavern预设');
         } else {
           console.log('🔒 破限模式未启用，使用SillyTavern预设');
-        }
-
-        // 检查最近的消息中是否有图片，如果有则包含图片数据
-        let requestData = {
-          user_input: context,
-          should_stream: true
-        };
-
-        // 如果启用了破限模式，告诉SillyTavern不要使用它的预设
-        if (state.jailbreakEnabled) {
-          requestData.bypass_tavern_preset = true;
-          requestData.use_raw_prompt = true;
-          requestData.disable_system_prompt = true;
-        }
-
-        // 查找最近的图片消息（最多查找最近10条消息）
-        const recentImageMsg = recentMessages.slice(-10).reverse().find(msg =>
-          msg.type === 'image' && msg.imageData && msg.sender === 'user'
-        );
-
-        if (recentImageMsg) {
-          requestData.image_data = recentImageMsg.imageData;
-          requestData.image_description = recentImageMsg.imageDescription;
-          requestData.has_vision_context = true;
         }
 
         try {
@@ -5856,10 +5583,36 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
             setTimeout(() => reject(new Error('AI回复超时')), timeoutMs)
           );
 
-          const stream = await Promise.race([
-            AI_GENERATE(requestData),
-            timeoutPromise
-          ]);
+          let stream;
+
+          // 如果启用了破限模式，使用原生generate函数完全绕过预设
+          if (state.jailbreakEnabled && generateRaw) {
+            console.log('🔓 使用原生generateRaw函数，完全绕过SillyTavern预设');
+            stream = await Promise.race([
+              generateRaw({
+                ordered_prompts: [
+                  { role: 'system', content: context },
+                  'world_info_before',
+                  'persona_description',
+                  'char_description',
+                  'char_personality',
+                  'scenario',
+                  'world_info_after',
+                  'dialogue_examples',
+                  'chat_history',
+                  'user_input'
+                ],
+                should_stream: true
+              }),
+              timeoutPromise
+            ]);
+          } else {
+            // 使用普通的AI_GENERATE函数
+            stream = await Promise.race([
+              AI_GENERATE({ user_input: context, should_stream: true }),
+              timeoutPromise
+            ]);
+          }
           
           // 检查stream是否有效
           if (!stream) {
@@ -5872,7 +5625,7 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
           const processBuffer = () => {
             let msgs = [];
             try {
-              msgs = parseShoujiLog(`<shouji>${buffer}</shouji>`);
+              msgs = parseQunliaoLog(`<qunliao>${buffer}</qunliao>`);
             } catch (_) {
               // 当前片段不完整，先忽略
             }
@@ -5900,12 +5653,12 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
                 if (!msg.callContext) {
                   msg.callContext = true;
                 }
-
+                
                 // 语音通话中限制消息类型：只允许文本和通话结束消息
                 if (msg.sender === 'char' && !['text', 'voicecall-end'].includes(msg.type || 'text')) {
                   continue; // 跳过这个消息
                 }
-
+                
                 // 确保AI不替用户说话：只处理AI自己的消息
                 if (msg.sender === 'user') {
                   continue; // 跳过用户消息，AI不应该生成用户消息
@@ -5962,11 +5715,33 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
             }
 
             try {
-              buffer = await AI_GENERATE({
-                user_input: retryContext,
-                should_stream: false,
-                temperature: Math.min(1.0, 0.7 + retryCount * 0.1) // 增加随机性
-              });
+              // 如果启用了破限模式，使用原生generateRaw函数
+              if (state.jailbreakEnabled && generateRaw) {
+                buffer = await generateRaw({
+                  ordered_prompts: [
+                    { role: 'system', content: retryContext },
+                    'world_info_before',
+                    'persona_description',
+                    'char_description',
+                    'char_personality',
+                    'scenario',
+                    'world_info_after',
+                    'dialogue_examples',
+                    'chat_history',
+                    'user_input'
+                  ],
+                  should_stream: false,
+                  temperature: Math.min(1.0, 0.7 + retryCount * 0.1)
+                });
+              } else {
+                const requestData = {
+                  user_input: retryContext,
+                  should_stream: false,
+                  temperature: Math.min(1.0, 0.7 + retryCount * 0.1)
+                };
+
+                buffer = await AI_GENERATE(requestData);
+              }
               processBuffer();
             } catch (error) {
               console.log(`❌ 重试 ${retryCount} 失败:`, error);
@@ -6148,227 +5923,15 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         }
       }
 
-      // 发送图片 - 支持上传和描述两种方式
+      // 发送图片
       function sendImage() {
-        // 创建图片发送模态框
-        showImageSendModal();
-      }
-
-      // 显示图片发送模态框
-      function showImageSendModal() {
-        let modal = document.getElementById('imageSendModal');
-        if (!modal) {
-          modal = document.createElement('div');
-          modal.id = 'imageSendModal';
-          modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          `;
-
-          modal.innerHTML = `
-            <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 400px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0; font-size: 18px; color: #333;">发送图片</h3>
-                <button id="closeImageModal" style="background: none; border: none; font-size: 24px; color: #666; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">×</button>
-              </div>
-
-              <div style="margin-bottom: 20px;">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                  <button id="uploadImageBtn" style="flex: 1; padding: 12px; border: 2px dashed #07c160; background: #f8f8f8; color: #07c160; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s;">
-                    📁 上传本地图片
-                  </button>
-                  <button id="describeImageBtn" style="flex: 1; padding: 12px; border: 2px solid #07c160; background: #07c160; color: white; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s;">
-                    ✏️ 描述图片
-                  </button>
-                </div>
-
-                <div id="imagePreviewArea" style="display: none; margin-bottom: 15px;">
-                  <img id="imagePreview" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
-                  <div style="margin-top: 8px; font-size: 12px; color: #666;" id="imageInfo"></div>
-                </div>
-
-                <textarea id="imageDescriptionInput" placeholder="请输入图片描述或备注（可选）" style="width: 100%; min-height: 60px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;"></textarea>
-              </div>
-
-              <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button id="cancelImageSend" style="padding: 8px 20px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 6px; cursor: pointer;">取消</button>
-                <button id="confirmImageSend" style="padding: 8px 20px; border: none; background: #07c160; color: white; border-radius: 6px; cursor: pointer;">发送</button>
-              </div>
-            </div>
-            <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
-          `;
-
-          document.body.appendChild(modal);
-
-          // 绑定事件
-          setupImageModalEvents(modal);
+        const description = prompt('请描述图片内容:');
+        if (description) {
+          // 构造新格式 [我方消息|图片|{{描述的内容}}|{{时间}}]
+          const time = getTimeStr();
+          // 直接插入到消息历史，type 用 image
+          sendMessage({ type: 'image', imageDescription: description, time });
         }
-
-        modal.style.display = 'flex';
-        // 重置状态
-        resetImageModal();
-      }
-
-      // 设置图片模态框事件
-      function setupImageModalEvents(modal) {
-        const closeBtn = modal.querySelector('#closeImageModal');
-        const cancelBtn = modal.querySelector('#cancelImageSend');
-        const confirmBtn = modal.querySelector('#confirmImageSend');
-        const uploadBtn = modal.querySelector('#uploadImageBtn');
-        const describeBtn = modal.querySelector('#describeImageBtn');
-        const fileInput = modal.querySelector('#imageFileInput');
-
-        // 关闭模态框
-        const closeModal = () => {
-          modal.style.display = 'none';
-          resetImageModal();
-        };
-
-        closeBtn.onclick = closeModal;
-        cancelBtn.onclick = closeModal;
-
-        // 点击遮罩关闭
-        modal.onclick = (e) => {
-          if (e.target === modal) closeModal();
-        };
-
-        // 上传图片
-        uploadBtn.onclick = () => {
-          fileInput.click();
-        };
-
-        // 描述图片模式
-        describeBtn.onclick = () => {
-          const previewArea = modal.querySelector('#imagePreviewArea');
-          const descInput = modal.querySelector('#imageDescriptionInput');
-          previewArea.style.display = 'none';
-          descInput.placeholder = '请描述图片内容';
-          descInput.focus();
-          // 清除已选择的文件
-          fileInput.value = '';
-          modal.dataset.mode = 'describe';
-        };
-
-        // 文件选择
-        fileInput.onchange = (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            handleImageFileSelect(file, modal);
-          }
-        };
-
-        // 确认发送
-        confirmBtn.onclick = () => {
-          handleImageSend(modal);
-        };
-      }
-
-      // 处理图片文件选择
-      function handleImageFileSelect(file, modal) {
-        // 检查文件类型
-        if (!file.type.startsWith('image/')) {
-          alert('请选择图片文件！');
-          return;
-        }
-
-        // 检查文件大小 (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          alert('图片文件不能超过5MB！');
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const previewArea = modal.querySelector('#imagePreviewArea');
-          const preview = modal.querySelector('#imagePreview');
-          const info = modal.querySelector('#imageInfo');
-          const descInput = modal.querySelector('#imageDescriptionInput');
-
-          preview.src = e.target.result;
-          info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-          previewArea.style.display = 'block';
-          descInput.placeholder = '请输入图片备注（可选）';
-
-          modal.dataset.mode = 'upload';
-          modal.dataset.imageData = e.target.result;
-          modal.dataset.fileName = file.name;
-        };
-
-        reader.readAsDataURL(file);
-      }
-
-      // 重置图片模态框
-      function resetImageModal() {
-        const modal = document.getElementById('imageSendModal');
-        if (!modal) return;
-
-        const previewArea = modal.querySelector('#imagePreviewArea');
-        const descInput = modal.querySelector('#imageDescriptionInput');
-        const fileInput = modal.querySelector('#imageFileInput');
-
-        previewArea.style.display = 'none';
-        descInput.value = '';
-        descInput.placeholder = '请输入图片描述或备注（可选）';
-        fileInput.value = '';
-        delete modal.dataset.mode;
-        delete modal.dataset.imageData;
-        delete modal.dataset.fileName;
-      }
-
-      // 处理图片发送
-      function handleImageSend(modal) {
-        const mode = modal.dataset.mode;
-        const description = modal.querySelector('#imageDescriptionInput').value.trim();
-
-        if (mode === 'upload') {
-          // 上传模式
-          const imageData = modal.dataset.imageData;
-          const fileName = modal.dataset.fileName;
-
-          if (!imageData) {
-            alert('请先选择图片！');
-            return;
-          }
-
-          sendMessage({
-            type: 'image',
-            imageData: imageData,
-            fileName: fileName,
-            imageDescription: description || '发送了一张图片',
-            time: getTimeStr(),
-            needsVisionAnalysis: true // 标记需要AI视觉分析
-          });
-
-        } else if (mode === 'describe') {
-          // 描述模式
-          if (!description) {
-            alert('请输入图片描述！');
-            return;
-          }
-
-          sendMessage({
-            type: 'image',
-            imageDescription: description,
-            time: getTimeStr(),
-            needsVisionAnalysis: false // 不需要AI分析，只是文字描述
-          });
-
-        } else {
-          alert('请选择发送方式！');
-          return;
-        }
-
-        // 关闭模态框
-        modal.style.display = 'none';
-        resetImageModal();
       }
 
       // 发送语音消息
@@ -6381,9 +5944,12 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
 
       // 发送转账
       function sendTransfer() {
+        const target = prompt('请输入转账对象 (输入"我方"表示转账给用户，输入其他名字表示转账给该角色):');
+        if (!target) return;
+        
         const amount = prompt('请输入转账金额:');
         if (amount && !isNaN(parseFloat(amount))) {
-          sendMessage({ type: 'transfer', amount: parseFloat(amount).toFixed(2) });
+          sendMessage({ type: 'transfer', amount: parseFloat(amount).toFixed(2), target: target });
         } else if (amount) {
           alert('请输入有效的数字金额！');
         }
@@ -7931,7 +7497,7 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
       async function syncToSillyTavern() {
         if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          const log = serializeShoujiLog(state.messageHistory); // 保留完整的消息历史，包括头像信息
+          const log = serializeQunliaoLog(state.messageHistory); // 保留完整的消息历史，包括头像信息
           await setChatMessages([{ message_id: state.currentMsgId, message: log }], { refresh: 'none' });
         }
       }
@@ -7962,27 +7528,10 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
           const msg = getChatMessages(state.currentMsgId)[0];
           if (msg && msg.message) {
             // 新增：自动解析人名
-            const personName = parsePersonNameFromShouji(msg.message);
+            const personName = parsePersonNameFromQunliao(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan) nameSpan.textContent = personName ? personName : '';
-
-            try {
-              state.messageHistory = parseShoujiLog(msg.message);
-              console.log(`✅ 成功加载 ${state.messageHistory.length} 条历史消息`);
-            } catch (error) {
-              console.error('❌ 解析历史消息失败:', error);
-              state.messageHistory = [];
-              // 尝试从原始消息中恢复基本文本内容
-              if (msg.message) {
-                const fallbackMsg = {
-                  sender: 'char',
-                  type: 'text',
-                  content: '历史消息解析失败，请重新开始对话',
-                  time: new Date().toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' })
-                };
-                state.messageHistory = [fallbackMsg];
-              }
-            }
+            state.messageHistory = parseQunliaoLog(msg.message);
           } else {
             state.messageHistory = [];
             const nameSpan = document.getElementById('chatPersonName');
@@ -8024,9 +7573,9 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
 
         // Setup UI
         callChatView.innerHTML = '';
-        avatarEl.src = charInfo.avatarUrl;
+        // avatarEl.src = charInfo.avatarUrl; // 隐藏头像，不需要设置
         bg.style.backgroundImage = `url('${charInfo.avatarUrl}')`;
-        nameEl.textContent = charInfo.name;
+        nameEl.textContent = '群聊语音通话'; // 群聊显示固定文本
         statusEl.textContent = '正在通话中...';
         overlay.style.display = 'flex';
 
@@ -8215,12 +7764,25 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
           line.className = 'transcript-line ' + (msg.sender === 'user' ? 'user' : 'char');
           const sender = document.createElement('span');
           sender.className = 'sender-label';
-          sender.textContent = msg.sender === 'user' ? '我方:' : '对方:';
+          // 显示具体的说话人名字，而不是"我方"和"对方"
+          if (msg.sender === 'user') {
+            sender.textContent = '我方:';
+          } else {
+            // 使用角色的具体名字，如果没有则显示"对方"
+            const charName = msg.charName || '对方';
+            sender.textContent = charName + ':';
+          }
 
           // Format content based on message type
           let content = msg.content;
           if (msg.type === 'voice') content = `🎤 ${msg.voiceText}`;
-          else if (msg.type === 'transfer') content = `💰 转账${msg.amount}元`;
+          else if (msg.type === 'transfer') {
+            if (msg.target) {
+              content = `💰 给${msg.target}转账${msg.amount}元`;
+            } else {
+              content = `💰 转账${msg.amount}元`;
+            }
+          }
           else if (msg.type === 'redpacket') content = `🧧 红包${msg.amount}元`;
 
           const textNode = document.createTextNode(' ' + content);
@@ -8252,11 +7814,53 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
 
         const messageEl = document.createElement('div');
         messageEl.className = `incall-message ${msg.sender === 'user' ? 'user' : 'char'}`;
+
+        // 创建头像容器
+        const avatarContainer = document.createElement('div');
+        avatarContainer.className = 'incall-avatar-container';
+
+        // 创建头像元素
+        const avatarEl = document.createElement('img');
+        avatarEl.className = 'incall-message-avatar';
+
+        // 创建人名标签
+        const nameEl = document.createElement('div');
+        nameEl.className = 'incall-avatar-name';
+
+        if (msg.sender === 'user') {
+          // 用户头像 - 可以设置默认头像或从配置获取
+          avatarEl.src = 'https://files.catbox.moe/g299b6.jpeg'; // 默认用户头像
+          nameEl.textContent = '我'; // 用户显示为"我"
+        } else {
+          // 角色头像 - 从消息或当前角色信息获取
+          const charInfo = getLastCharInfo();
+          avatarEl.src = msg.avatar ? 'https://files.catbox.moe/' + msg.avatar : charInfo.avatarUrl || 'https://files.catbox.moe/g299b6.jpeg';
+          nameEl.textContent = msg.charName || charInfo.name || '角色'; // 显示角色名称
+        }
+
+        // 将头像和名称添加到容器中
+        avatarContainer.appendChild(avatarEl);
+        avatarContainer.appendChild(nameEl);
+
+        // 创建消息内容元素
+        const contentEl = document.createElement('div');
+        contentEl.className = 'incall-message-content';
+
         let content = msg.content;
         if (msg.type === 'voice') content = '🎤 [语音消息]';
-        else if (msg.type === 'transfer') content = '💸 [转账]';
+        else if (msg.type === 'transfer') {
+          if (msg.target) {
+            content = `💸 [给${msg.target}转账${msg.amount}元]`;
+          } else {
+            content = '💸 [转账]';
+          }
+        }
         else if (msg.type === 'redpacket') content = '🧧 [红包]';
-        messageEl.textContent = content;
+        contentEl.textContent = content;
+
+        // 组装消息元素
+        messageEl.appendChild(avatarContainer);
+        messageEl.appendChild(contentEl);
 
         callChatView.appendChild(messageEl);
         callChatView.scrollTop = callChatView.scrollHeight;
@@ -8264,7 +7868,7 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         // console.log('Added message to call view:', msg.sender, content);
 
         // 确保消息可见
-        messageEl.style.display = 'block';
+        messageEl.style.display = 'flex';
         messageEl.style.opacity = '1';
       }
 
@@ -8398,19 +8002,17 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         };
       }
 
-      // 新增：解析【和xxx的聊天】格式，自动显示人名
-      function parsePersonNameFromShouji(text) {
+      // 新增：解析<qunliao>【和xxx的聊天】格式，自动显示人名
+      function parsePersonNameFromQunliao(text) {
         const match = text.match(/【和(.+?)的聊天】/);
         return match ? match[1] : '';
       }
 
-      // 获取当前角色名称
-      function getCurrentCharName() {
-        const nameSpan = document.getElementById('chatPersonName');
-        if (nameSpan && nameSpan.textContent.trim()) {
-          return nameSpan.textContent.trim();
-        }
-        return '对方'; // 默认回退值
+      // 获取群聊人名数组
+      function getQunliaoNamesFromText(text) {
+        const namesStr = parsePersonNameFromQunliao(text);
+        if (!namesStr) return [];
+        return namesStr.split(/,|，/).map(n => n.trim()).filter(Boolean);
       }
 
       // 创建表情包消息元素
@@ -8620,13 +8222,12 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         }
       });
 
-      // 设置功能相关代码
+      // ========== 头像和壁纸本地上传与持久化功能 ==========
       const settingsState = {
         userAvatar: null,
         wallpaper: null
       };
 
-      // 从localStorage加载设置
       function loadSettings() {
         const savedAvatar = localStorage.getItem('chatUserAvatar');
         const savedWallpaper = localStorage.getItem('chatWallpaper');
@@ -8637,7 +8238,6 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
           settingsState.userAvatar = savedAvatar;
           updateUserAvatars();
         }
-
         if (savedWallpaper) {
           settingsState.wallpaper = savedWallpaper;
           updateWallpaper();
@@ -8655,7 +8255,6 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         }
       }
 
-      // 保存设置到localStorage
       function saveSettings() {
         if (settingsState.userAvatar) {
           localStorage.setItem('chatUserAvatar', settingsState.userAvatar);
@@ -8665,7 +8264,6 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         }
       }
 
-      // 更新用户头像
       function updateUserAvatars() {
         const avatars = document.querySelectorAll('.user_avatar');
         avatars.forEach(avatar => {
@@ -8677,7 +8275,6 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
             avatar.style.backgroundImage = '';
           }
         });
-
         // 更新预览
         const preview = document.getElementById('avatarPreview');
         if (preview) {
@@ -8689,7 +8286,6 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         }
       }
 
-      // 更新壁纸
       function updateWallpaper() {
         const chatMessages = document.querySelector('.chat-messages');
         if (chatMessages) {
@@ -8698,29 +8294,25 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
             chatMessages.style.backgroundSize = 'cover';
             chatMessages.style.backgroundPosition = 'center';
           } else {
-            chatMessages.style.backgroundImage = "url('https://files.catbox.moe/e1xk9k.jpeg')";
+            chatMessages.style.backgroundImage = "url('https://files.catbox.moe/g299b6.jpeg')";
           }
         }
-
         // 更新预览
         const preview = document.getElementById('wallpaperPreview');
         if (preview) {
           if (settingsState.wallpaper) {
             preview.src = settingsState.wallpaper;
           } else {
-            preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
+            preview.src = 'https://files.catbox.moe/g299b6.jpeg';
           }
         }
       }
 
-      // 处理文件上传
       function handleFileUpload(file, type) {
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function(e) {
           const dataUrl = e.target.result;
-
           if (type === 'avatar') {
             settingsState.userAvatar = dataUrl;
             updateUserAvatars();
@@ -8728,13 +8320,11 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
             settingsState.wallpaper = dataUrl;
             updateWallpaper();
           }
-
           saveSettings();
         };
         reader.readAsDataURL(file);
       }
 
-      // 重置设置
       function resetSetting(type) {
         if (type === 'avatar') {
           settingsState.userAvatar = null;
@@ -8747,7 +8337,6 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         }
       }
 
-      // 显示设置模态框
       function showSettings() {
         const overlay = document.getElementById('settingsOverlay');
         overlay.style.display = 'flex';
@@ -8757,45 +8346,34 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
       }
 
-      // 隐藏设置模态框
       function hideSettings() {
         const overlay = document.getElementById('settingsOverlay');
         overlay.style.display = 'none';
       }
 
-      // 绑定设置相关事件
       document.getElementById('settingsBtn').addEventListener('click', showSettings);
       document.getElementById('settingsCloseBtn').addEventListener('click', hideSettings);
-
-      // 头像上传
       document.getElementById('avatarUploadBtn').addEventListener('click', () => {
         document.getElementById('avatarFileInput').click();
       });
-
       document.getElementById('avatarFileInput').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
           handleFileUpload(file, 'avatar');
         }
       });
-
-      // 壁纸上传
       document.getElementById('wallpaperUploadBtn').addEventListener('click', () => {
         document.getElementById('wallpaperFileInput').click();
       });
-
       document.getElementById('wallpaperFileInput').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
           handleFileUpload(file, 'wallpaper');
         }
       });
-
-      // 重置按钮
       document.getElementById('avatarResetBtn').addEventListener('click', () => {
         resetSetting('avatar');
       });
-
       document.getElementById('wallpaperResetBtn').addEventListener('click', () => {
         resetSetting('wallpaper');
       });
@@ -8806,7 +8384,7 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         // 保存到localStorage
         localStorage.setItem('jailbreakEnabled', state.jailbreakEnabled);
         if (state.jailbreakEnabled) {
-          console.log('🔓 破限模式已启用 - 将使用优化的破限预设，减少空回复和重复');
+          console.log('🔓 破限模式已启用 - 将使用原生generateRaw函数完全绕过SillyTavern预设');
         } else {
           console.log('🔒 破限模式已禁用 - 将使用SillyTavern预设');
         }
@@ -8819,14 +8397,12 @@ Ready to begin creative roleplay. Generating unrestricted content now...`;
         console.log(`🎯 重复检测敏感度已设置为: ${(parseFloat(level) * 100).toFixed(0)}%`);
       });
 
-      // 点击遮罩关闭模态框
       document.getElementById('settingsOverlay').addEventListener('click', (e) => {
         if (e.target.id === 'settingsOverlay') {
           hideSettings();
         }
       });
-
-      // 页面加载时加载设置
+      // 页面加载时自动应用设置
       loadSettings();
     </script>
   </body>
