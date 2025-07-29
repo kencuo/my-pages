@@ -4,70 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>聊天</title>
-    <script>
-      // 在页面重新加载前保存状态
-      window.addEventListener('beforeunload', function() {
-        if (typeof state !== 'undefined' && state.messageHistory) {
-          localStorage.setItem('chatState_backup', JSON.stringify({
-            messageHistory: state.messageHistory,
-            charName: typeof charName !== 'undefined' ? charName : '',
-            userName: typeof userName !== 'undefined' ? userName : '',
-            userAvatarPath: typeof userAvatarPath !== 'undefined' ? userAvatarPath : '',
-            charAvatarPath: typeof charAvatarPath !== 'undefined' ? charAvatarPath : '',
-            timestamp: Date.now()
-          }));
-        }
-      });
-
-      // 恢复状态的函数
-      function restoreStateIfNeeded() {
-        try {
-          const savedState = localStorage.getItem('chatState_backup');
-          if (savedState) {
-            const parsed = JSON.parse(savedState);
-            // 检查是否是最近保存的状态（5分钟内）
-            if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-              if (parsed.messageHistory && parsed.messageHistory.length > 0) {
-                // 恢复消息历史
-                if (typeof state !== 'undefined') {
-                  state.messageHistory = parsed.messageHistory;
-                  // 重新渲染消息
-                  setTimeout(() => {
-                    if (typeof renderAllMessages === 'function') {
-                      renderAllMessages();
-                    }
-                  }, 100);
-                }
-              }
-            } else {
-              // 清除过期的备份
-              localStorage.removeItem('chatState_backup');
-            }
-          }
-        } catch (e) {
-          console.warn('恢复状态失败:', e);
-          localStorage.removeItem('chatState_backup');
-        }
-      }
-
-      // 保存当前状态到localStorage
-      function saveCurrentState() {
-        try {
-          if (typeof state !== 'undefined' && state.messageHistory) {
-            localStorage.setItem('chatState_backup', JSON.stringify({
-              messageHistory: state.messageHistory,
-              charName: typeof charName !== 'undefined' ? charName : '',
-              userName: typeof userName !== 'undefined' ? userName : '',
-              userAvatarPath: typeof userAvatarPath !== 'undefined' ? userAvatarPath : '',
-              charAvatarPath: typeof charAvatarPath !== 'undefined' ? charAvatarPath : '',
-              timestamp: Date.now()
-            }));
-          }
-        } catch (e) {
-          console.warn('保存状态失败:', e);
-        }
-      }
-    </script>
     <style>
       body {
         background: #dbdbdb;
@@ -4456,8 +4392,6 @@
           appendMessage(msg, idx);
         });
         lastHistoryCount = state.messageHistory.length;
-        // 保存状态到localStorage
-        setTimeout(saveCurrentState, 200);
       }
 
       // 优化的部分渲染：只渲染新消息
@@ -4496,8 +4430,6 @@
           if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
             chat.scrollTop = chat.scrollHeight;
           }
-          // 保存状态到localStorage
-          setTimeout(saveCurrentState, 100);
         }
       }
 
@@ -4509,8 +4441,6 @@
           const newMessage = createMessageElement(state.messageHistory[idx], idx);
           if (newMessage) {
             oldMessage.replaceWith(newMessage);
-            // 保存状态到localStorage
-            setTimeout(saveCurrentState, 100);
           }
         }
       }
@@ -7849,9 +7779,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
           const log = serializeShoujiLog(state.messageHistory); // 保留完整的消息历史，包括头像信息
           await setChatMessages([{ message_id: state.currentMsgId, message: log }], { refresh: 'none' });
-
-          // 同步到SillyTavern后，也保存到本地状态
-          saveCurrentState();
         }
       }
 
@@ -7879,63 +7806,17 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
           state.currentMsgId = getCurrentMessageId();
           const msg = getChatMessages(state.currentMsgId)[0];
-
           if (msg && msg.message) {
             // 新增：自动解析人名
             const personName = parsePersonNameFromShouji(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan) nameSpan.textContent = personName ? personName : '';
-
-            // 解析SillyTavern中的消息历史
-            const sillyTavernHistory = parseShoujiLog(msg.message);
-
-            // 智能合并：如果当前有消息历史且比SillyTavern的更新，则保留当前的
-            const currentHistory = state.messageHistory || [];
-            const savedState = localStorage.getItem('chatState_backup');
-
-            if (savedState) {
-              try {
-                const parsed = JSON.parse(savedState);
-                // 如果本地保存的状态比较新（5分钟内），且消息数量更多，则优先使用本地状态
-                if (Date.now() - parsed.timestamp < 5 * 60 * 1000 &&
-                    parsed.messageHistory &&
-                    parsed.messageHistory.length >= sillyTavernHistory.length) {
-                  console.log('🔄 使用本地保存的状态，消息数量:', parsed.messageHistory.length);
-                  state.messageHistory = parsed.messageHistory;
-                } else {
-                  console.log('🔄 使用SillyTavern的状态，消息数量:', sillyTavernHistory.length);
-                  state.messageHistory = sillyTavernHistory;
-                }
-              } catch (e) {
-                console.warn('解析本地状态失败，使用SillyTavern状态');
-                state.messageHistory = sillyTavernHistory;
-              }
-            } else {
-              state.messageHistory = sillyTavernHistory;
-            }
+            state.messageHistory = parseShoujiLog(msg.message);
           } else {
-            // 如果SillyTavern没有消息，检查是否有本地备份
-            const savedState = localStorage.getItem('chatState_backup');
-            if (savedState) {
-              try {
-                const parsed = JSON.parse(savedState);
-                if (Date.now() - parsed.timestamp < 5 * 60 * 1000 && parsed.messageHistory) {
-                  console.log('🔄 SillyTavern无消息，使用本地备份');
-                  state.messageHistory = parsed.messageHistory;
-                } else {
-                  state.messageHistory = [];
-                }
-              } catch (e) {
-                state.messageHistory = [];
-              }
-            } else {
-              state.messageHistory = [];
-            }
-
+            state.messageHistory = [];
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan) nameSpan.textContent = '';
           }
-
           // 初始化时需要全量渲染，之后使用部分渲染
           renderAllMessages();
           updateAiRequestButtonVisibility();
@@ -7948,15 +7829,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           loadHistoryFromSillyTavern();
           // 初始化输入框高度
           updateInputHeight();
-          // 恢复之前的状态（如果有的话）
-          setTimeout(restoreStateIfNeeded, 200);
         });
       } else {
         loadHistoryFromSillyTavern();
         // 初始化输入框高度
         updateInputHeight();
-        // 恢复之前的状态（如果有的话）
-        setTimeout(restoreStateIfNeeded, 200);
       }
 
       // 开始语音通话
