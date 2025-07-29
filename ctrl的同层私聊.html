@@ -4,6 +4,70 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>聊天</title>
+    <script>
+      // 在页面重新加载前保存状态
+      window.addEventListener('beforeunload', function() {
+        if (typeof state !== 'undefined' && state.messageHistory) {
+          localStorage.setItem('chatState_backup', JSON.stringify({
+            messageHistory: state.messageHistory,
+            charName: typeof charName !== 'undefined' ? charName : '',
+            userName: typeof userName !== 'undefined' ? userName : '',
+            userAvatarPath: typeof userAvatarPath !== 'undefined' ? userAvatarPath : '',
+            charAvatarPath: typeof charAvatarPath !== 'undefined' ? charAvatarPath : '',
+            timestamp: Date.now()
+          }));
+        }
+      });
+
+      // 恢复状态的函数
+      function restoreStateIfNeeded() {
+        try {
+          const savedState = localStorage.getItem('chatState_backup');
+          if (savedState) {
+            const parsed = JSON.parse(savedState);
+            // 检查是否是最近保存的状态（5分钟内）
+            if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+              if (parsed.messageHistory && parsed.messageHistory.length > 0) {
+                // 恢复消息历史
+                if (typeof state !== 'undefined') {
+                  state.messageHistory = parsed.messageHistory;
+                  // 重新渲染消息
+                  setTimeout(() => {
+                    if (typeof renderAllMessages === 'function') {
+                      renderAllMessages();
+                    }
+                  }, 100);
+                }
+              }
+            } else {
+              // 清除过期的备份
+              localStorage.removeItem('chatState_backup');
+            }
+          }
+        } catch (e) {
+          console.warn('恢复状态失败:', e);
+          localStorage.removeItem('chatState_backup');
+        }
+      }
+
+      // 保存当前状态到localStorage
+      function saveCurrentState() {
+        try {
+          if (typeof state !== 'undefined' && state.messageHistory) {
+            localStorage.setItem('chatState_backup', JSON.stringify({
+              messageHistory: state.messageHistory,
+              charName: typeof charName !== 'undefined' ? charName : '',
+              userName: typeof userName !== 'undefined' ? userName : '',
+              userAvatarPath: typeof userAvatarPath !== 'undefined' ? userAvatarPath : '',
+              charAvatarPath: typeof charAvatarPath !== 'undefined' ? charAvatarPath : '',
+              timestamp: Date.now()
+            }));
+          }
+        } catch (e) {
+          console.warn('保存状态失败:', e);
+        }
+      }
+    </script>
     <style>
       body {
         background: #dbdbdb;
@@ -4392,6 +4456,8 @@
           appendMessage(msg, idx);
         });
         lastHistoryCount = state.messageHistory.length;
+        // 保存状态到localStorage
+        setTimeout(saveCurrentState, 200);
       }
 
       // 优化的部分渲染：只渲染新消息
@@ -4430,6 +4496,8 @@
           if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
             chat.scrollTop = chat.scrollHeight;
           }
+          // 保存状态到localStorage
+          setTimeout(saveCurrentState, 100);
         }
       }
 
@@ -4441,6 +4509,8 @@
           const newMessage = createMessageElement(state.messageHistory[idx], idx);
           if (newMessage) {
             oldMessage.replaceWith(newMessage);
+            // 保存状态到localStorage
+            setTimeout(saveCurrentState, 100);
           }
         }
       }
@@ -7829,11 +7899,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           loadHistoryFromSillyTavern();
           // 初始化输入框高度
           updateInputHeight();
+          // 恢复之前的状态（如果有的话）
+          setTimeout(restoreStateIfNeeded, 200);
         });
       } else {
         loadHistoryFromSillyTavern();
         // 初始化输入框高度
         updateInputHeight();
+        // 恢复之前的状态（如果有的话）
+        setTimeout(restoreStateIfNeeded, 200);
       }
 
       // 开始语音通话
