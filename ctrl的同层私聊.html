@@ -4289,22 +4289,36 @@
       function parseShoujiLog(text) {
         // 作者 ctrl 不许偷ado 喵喵喵喵
         const match = text.match(/<shouji>([\s\S]*?)<\/shouji>/);
-        if (!match) return [];
+        if (!match) {
+          console.log('No <shouji> tags found in message');
+          return [];
+        }
         const raw = match[1].trim();
-        if (!raw) return [];
+        if (!raw) {
+          console.log('Empty content inside <shouji> tags');
+          return [];
+        }
 
         const lines = raw.split(/\n+/).filter(Boolean);
-        return lines
-          .map(line => {
+        console.log('Parsing', lines.length, 'message lines');
+
+        const parsedMessages = lines
+          .map((line, index) => {
             for (const parser of messageParsers) {
               const match = line.match(parser.regex);
               if (match) {
-                return parser.handler(match);
+                const result = parser.handler(match);
+                console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount);
+                return result;
               }
             }
+            console.log(`Line ${index + 1} not matched:`, line);
             return null; // No parser matched this line
           })
           .filter(Boolean);
+
+        console.log('Successfully parsed', parsedMessages.length, 'messages');
+        return parsedMessages;
       }
 
       // ==================== REFACTORED SERIALIZATION LOGIC ====================
@@ -4453,12 +4467,30 @@
       // 全量渲染消息气泡（仅在必要时使用）
       function renderAllMessages() {
         const chat = document.getElementById('chatMessages');
+        if (!chat) {
+          console.error('Chat container not found!');
+          return;
+        }
+
+        console.log('Rendering all messages, count:', state.messageHistory.length);
         chat.innerHTML = '';
         lastHistoryCount = 0;
+
         state.messageHistory.forEach((msg, idx) => {
-          appendMessage(msg, idx);
+          try {
+            appendMessage(msg, idx);
+          } catch (error) {
+            console.error('Error rendering message at index', idx, ':', error, msg);
+          }
         });
+
         lastHistoryCount = state.messageHistory.length;
+
+        // 确保滚动到底部
+        setTimeout(() => {
+          chat.scrollTop = chat.scrollHeight;
+          console.log('Rendered messages in DOM:', chat.children.length);
+        }, 50);
       }
 
       // 优化的部分渲染：只渲染新消息
@@ -4470,6 +4502,12 @@
           appendMessage(state.messageHistory[i], i);
         }
         lastHistoryCount = state.messageHistory.length;
+
+        // 确保滚动到底部
+        const chat = document.getElementById('chatMessages');
+        setTimeout(() => {
+          chat.scrollTop = chat.scrollHeight;
+        }, 50);
       }
 
       // 清除生成的消息（保留历史消息）
@@ -4486,6 +4524,11 @@
       // Append a single message to the chat
       function appendMessage(msg, idx, isGenerated = false) {
         const chat = document.getElementById('chatMessages');
+        if (!chat) {
+          console.warn('Chat container not found');
+          return;
+        }
+
         const message = createMessageElement(msg, idx);
         if (message) {
           // 标记生成的消息用于优化渲染
@@ -4493,10 +4536,14 @@
             message.classList.add('generated');
           }
           chat.appendChild(message);
-          // Scroll to bottom only if the user is already near the bottom
-          if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
-            chat.scrollTop = chat.scrollHeight;
-          }
+
+          // 确保消息内容正确渲染
+          setTimeout(() => {
+            // Scroll to bottom only if the user is already near the bottom
+            if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
+              chat.scrollTop = chat.scrollHeight;
+            }
+          }, 10);
         }
       }
 
@@ -4515,15 +4562,25 @@
       // --- Message Content Renderers ---
 
       function renderTextMessage(contentDiv, msg) {
-        let content = msg.content;
-        EMOJIS.forEach(e => {
-          content = content.replaceAll(
-            e,
-            `<img class="emoji" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${e
-              .codePointAt(0)
-              .toString(16)}.svg" alt="${e}">`,
-          );
-        });
+        let content = msg.content || '';
+
+        // 确保内容不为空
+        if (!content) {
+          content = '(空消息)';
+        }
+
+        // 处理表情符号
+        if (typeof EMOJIS !== 'undefined' && Array.isArray(EMOJIS)) {
+          EMOJIS.forEach(e => {
+            content = content.replaceAll(
+              e,
+              `<img class="emoji" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${e
+                .codePointAt(0)
+                .toString(16)}.svg" alt="${e}">`,
+            );
+          });
+        }
+
         const textSpan = document.createElement('span');
         textSpan.innerHTML = content;
         contentDiv.appendChild(textSpan);
@@ -5076,7 +5133,18 @@
 
         // Call the appropriate renderer based on message type
         const renderer = messageRenderers[msg.type] || messageRenderers.text;
-        renderer(contentDiv, msg, idx);
+        if (!renderer) {
+          console.error('No renderer found for message type:', msg.type, msg);
+          return null;
+        }
+
+        try {
+          renderer(contentDiv, msg, idx);
+        } catch (error) {
+          console.error('Error rendering message:', error, msg);
+          // Fallback to text renderer
+          messageRenderers.text(contentDiv, msg, idx);
+        }
 
         // For cancelled call, we want the user bubble style
         if (msg.type === 'call-cancelled') {
@@ -7892,14 +7960,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan) nameSpan.textContent = personName ? personName : '';
             state.messageHistory = parseShoujiLog(msg.message);
+
+            // 调试信息
+            console.log('Loaded message history:', state.messageHistory.length, 'messages');
           } else {
             state.messageHistory = [];
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan) nameSpan.textContent = '';
+            console.log('No message history found');
           }
-          // 初始化时需要全量渲染，之后使用部分渲染
-          renderAllMessages();
-          updateAiRequestButtonVisibility();
+
+          // 强制重置渲染状态
+          lastHistoryCount = 0;
+
+          // 延迟渲染确保DOM已准备好
+          setTimeout(() => {
+            renderAllMessages();
+            updateAiRequestButtonVisibility();
+            console.log('Messages rendered, total in DOM:', document.querySelectorAll('#chatMessages .message').length);
+          }, 100);
         }
       }
 
@@ -8023,6 +8102,28 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         document.addEventListener('DOMContentLoaded', initApp);
       } else {
         initApp();
+      }
+
+      // 额外的安全措施：页面完全加载后再次检查消息渲染
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const chat = document.getElementById('chatMessages');
+          if (chat && state.messageHistory.length > 0 && chat.children.length === 0) {
+            console.log('Messages not rendered, forcing re-render...');
+            renderAllMessages();
+          }
+        }, 500);
+      });
+
+      // 定期检查消息渲染状态（开发调试用）
+      if (typeof window !== 'undefined') {
+        setInterval(() => {
+          const chat = document.getElementById('chatMessages');
+          if (chat && state.messageHistory.length > 0 && chat.children.length === 0) {
+            console.warn('Detected missing messages, attempting re-render...');
+            renderAllMessages();
+          }
+        }, 5000); // 每5秒检查一次
       }
 
       // 开始语音通话
