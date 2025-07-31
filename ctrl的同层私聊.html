@@ -7958,15 +7958,27 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             // 新增：自动解析人名
             const personName = parsePersonNameFromShouji(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
-            if (nameSpan) nameSpan.textContent = personName ? personName : '';
+            if (nameSpan) {
+              if (personName) {
+                nameSpan.textContent = personName;
+                console.log('Set person name to:', personName);
+              } else {
+                // 如果没有解析到人名，保持当前显示的名字（如果有的话）
+                console.log('No person name found, keeping current name:', nameSpan.textContent);
+              }
+            }
+
             state.messageHistory = parseShoujiLog(msg.message);
 
             // 调试信息
             console.log('Loaded message history:', state.messageHistory.length, 'messages');
+            console.log('Current displayed name:', nameSpan ? nameSpan.textContent : 'none');
           } else {
             state.messageHistory = [];
             const nameSpan = document.getElementById('chatPersonName');
-            if (nameSpan) nameSpan.textContent = '';
+            if (nameSpan && !nameSpan.textContent.trim()) {
+              nameSpan.textContent = ''; // 只在没有名字时清空
+            }
             console.log('No message history found');
           }
 
@@ -8124,6 +8136,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             renderAllMessages();
           }
         }, 5000); // 每5秒检查一次
+
+        // 暴露全局函数供用户使用
+        window.setCharName = setCharacterName;
+        window.getCurrentCharName = getCurrentCharName;
+        window.forceRerender = renderAllMessages;
+
+        console.log('Debug functions available:');
+        console.log('- setCharName("角色名") - 手动设置角色名');
+        console.log('- getCurrentCharName() - 获取当前角色名');
+        console.log('- forceRerender() - 强制重新渲染消息');
       }
 
       // 开始语音通话
@@ -8519,17 +8541,69 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 新增：解析【和xxx的聊天】格式，自动显示人名
       function parsePersonNameFromShouji(text) {
-        const match = text.match(/【和(.+?)的聊天】/);
-        return match ? match[1] : '';
+        // 匹配【和xxx的聊天】格式
+        const titleMatch = text.match(/【和(.+?)的聊天】/);
+        if (titleMatch) {
+          console.log('Found chat title with name:', titleMatch[1]);
+          return titleMatch[1];
+        }
+
+        // 如果没有标题，尝试从消息中推断角色名
+        const shoujiMatch = text.match(/<shouji>([\s\S]*?)<\/shouji>/);
+        if (shoujiMatch) {
+          const content = shoujiMatch[1];
+          // 查找第一个角色消息中的角色名
+          const charMsgMatch = content.match(/\[(.+?)\|(.+?)\|.*?\|(\d{2}:\d{2})\]/);
+          if (charMsgMatch && charMsgMatch[1] !== '我方消息' && charMsgMatch[1] !== '对方消息') {
+            console.log('Inferred name from first char message:', charMsgMatch[1]);
+            return charMsgMatch[1];
+          }
+        }
+
+        console.log('No name found in shouji log');
+        return '';
       }
 
       // 获取当前角色名称
       function getCurrentCharName() {
+        // 首先检查页面上显示的人名
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && nameSpan.textContent.trim()) {
           return nameSpan.textContent.trim();
         }
+
+        // 尝试从最近的角色消息中获取角色名
+        const lastCharMsg = [...state.messageHistory].reverse().find(m => m.sender === 'char' && m.charName);
+        if (lastCharMsg && lastCharMsg.charName && lastCharMsg.charName !== '对方') {
+          return lastCharMsg.charName;
+        }
+
+        // 尝试从设置中获取角色名
+        const nameInput = document.getElementById('charNameInput');
+        if (nameInput && nameInput.value.trim()) {
+          return nameInput.value.trim();
+        }
+
         return '对方'; // 默认回退值
+      }
+
+      // 手动设置角色名称
+      function setCharacterName(name) {
+        const nameSpan = document.getElementById('chatPersonName');
+        if (nameSpan && name && name.trim()) {
+          nameSpan.textContent = name.trim();
+          console.log('Manually set character name to:', name.trim());
+
+          // 同步到消息历史中
+          state.messageHistory.forEach(msg => {
+            if (msg.sender === 'char' && (!msg.charName || msg.charName === '对方')) {
+              msg.charName = name.trim();
+            }
+          });
+
+          // 重新渲染消息以更新显示
+          renderAllMessages();
+        }
       }
 
       // 创建表情包消息元素
@@ -8872,23 +8946,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 获取当前角色名称
-      function getCurrentCharName() {
-        // 从最后一条角色消息中获取角色名，或者从输入框获取
-        const nameInput = document.getElementById('charNameInput');
-        if (nameInput && nameInput.value.trim()) {
-          return nameInput.value.trim();
-        }
 
-        // 如果输入框为空，尝试从最近的消息中推断
-        const messages = document.querySelectorAll('.message.received');
-        if (messages.length > 0) {
-          // 这里可以根据实际情况来推断角色名
-          return 'Character'; // 默认角色名
-        }
-
-        return 'Character';
-      }
 
       // 处理文件上传
       function handleFileUpload(file, type) {
