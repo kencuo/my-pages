@@ -3752,27 +3752,6 @@
               </div>
             </div>
           </div>
-
-          <!-- 消息管理设置 -->
-          <div class="setting-section">
-            <label class="setting-label">消息管理</label>
-            <div class="setting-preview">
-              <div class="preview-info">
-                <div class="preview-title">自动同步消息</div>
-                <div class="preview-desc">自动检测SillyTavern中的消息变化并实时更新</div>
-              </div>
-              <div class="jailbreak-toggle-container">
-                <label class="jailbreak-toggle">
-                  <input type="checkbox" id="autoSyncToggle" checked>
-                  <span class="jailbreak-slider"></span>
-                </label>
-              </div>
-            </div>
-            <div class="setting-buttons">
-              <button class="upload-btn" id="reloadMessagesBtn">重新加载消息</button>
-              <button class="reset-btn" id="clearCacheBtn">清除缓存</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -4282,7 +4261,7 @@
             const catboxMatch = content.match(/([a-zA-Z0-9]+\.(jpeg|jpg|png|gif|webp))$/i);
             let stickerData = null;
             let displayContent = content;
-
+            
             if (catboxMatch) {
               // 提取文件名并构造完整链接
               const fileName = catboxMatch[1];
@@ -4293,7 +4272,7 @@
                 displayContent = '表情包';
               }
             }
-
+            
             return {
               sender: 'char',
               type: 'sticker',
@@ -4303,65 +4282,6 @@
               stickerData: stickerData,
               time,
             };
-          },
-        },
-        // 兼容性解析器 - 处理各种可能的旧格式
-        {
-          regex: /^(.+?):\s*(.+)$/,
-          handler: ([, sender, content]) => {
-            const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
-
-            if (sender.includes('我') || sender.includes('用户') || sender.includes('User') || sender === '{{user}}') {
-              return {
-                sender: 'user',
-                type: 'text',
-                content: content.trim(),
-                time: currentTime
-              };
-            } else {
-              return {
-                sender: 'char',
-                type: 'text',
-                charName: sender.trim(),
-                avatar: '',
-                content: content.trim(),
-                time: currentTime
-              };
-            }
-          },
-        },
-        // 最后的兜底解析器 - 处理任何包含方括号的格式
-        {
-          regex: /^\[([^\]]+)\](.*)$/,
-          handler: ([, header, content]) => {
-            const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
-            const parts = header.split('|');
-
-            if (parts.length >= 2) {
-              const sender = parts[0];
-              const actualContent = content.trim() || parts[parts.length - 1];
-
-              if (sender.includes('我') || sender.includes('用户') || sender.includes('User')) {
-                return {
-                  sender: 'user',
-                  type: 'text',
-                  content: actualContent,
-                  time: currentTime
-                };
-              } else {
-                return {
-                  sender: 'char',
-                  type: 'text',
-                  charName: sender.trim(),
-                  avatar: parts[1] || '',
-                  content: actualContent,
-                  time: currentTime
-                };
-              }
-            }
-
-            // 如果解析失败，返回null
-            return null;
           },
         },
       ];
@@ -4375,47 +4295,13 @@
 
         const lines = raw.split(/\n+/).filter(Boolean);
         return lines
-          .map((line, index) => {
-            // 跳过标题行（通常是第一行，包含角色名等信息）
-            if (index === 0 && (line.includes('角色:') || line.includes('用户:') || line.includes('对话开始'))) {
-              return null;
-            }
-
+          .map(line => {
             for (const parser of messageParsers) {
               const match = line.match(parser.regex);
               if (match) {
                 return parser.handler(match);
               }
             }
-
-            // 如果没有匹配到任何解析器，尝试作为简单文本消息处理
-            console.warn('未能解析的消息行:', line);
-
-            // 尝试简单的文本消息格式兼容
-            const simpleTextMatch = line.match(/^\[(.+?)\|(.+?)\]$/) || line.match(/^(.+?):(.+)$/);
-            if (simpleTextMatch) {
-              const [, sender, content] = simpleTextMatch;
-              const currentTime = new Date().toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
-
-              if (sender.includes('我') || sender.includes('用户') || sender.includes('User')) {
-                return {
-                  sender: 'user',
-                  type: 'text',
-                  content: content.trim(),
-                  time: currentTime
-                };
-              } else {
-                return {
-                  sender: 'char',
-                  type: 'text',
-                  charName: sender.trim(),
-                  avatar: '',
-                  content: content.trim(),
-                  time: currentTime
-                };
-              }
-            }
-
             return null; // No parser matched this line
           })
           .filter(Boolean);
@@ -4569,78 +4455,10 @@
         const chat = document.getElementById('chatMessages');
         chat.innerHTML = '';
         lastHistoryCount = 0;
-
-        // 如果没有消息历史，显示提示
-        if (state.messageHistory.length === 0) {
-          const emptyDiv = document.createElement('div');
-          emptyDiv.style.cssText = 'text-align: center; color: #999; padding: 20px; font-size: 14px;';
-          emptyDiv.innerHTML = '暂无消息记录<br><small>如果之前有消息但现在看不到，请尝试刷新页面</small>';
-          chat.appendChild(emptyDiv);
-          return;
-        }
-
         state.messageHistory.forEach((msg, idx) => {
           appendMessage(msg, idx);
         });
         lastHistoryCount = state.messageHistory.length;
-      }
-
-      // 强制重新解析和渲染所有消息
-      function forceReloadMessages() {
-        console.log('强制重新加载消息...');
-
-        // 重置监听器状态
-        lastMessageContent = '';
-        lastMessageId = null;
-
-        // 显示加载提示
-        const chat = document.getElementById('chatMessages');
-        const loadingDiv = document.createElement('div');
-        loadingDiv.style.cssText = 'text-align: center; color: #666; padding: 20px; font-size: 14px;';
-        loadingDiv.innerHTML = '🔄 正在重新加载消息...';
-        chat.innerHTML = '';
-        chat.appendChild(loadingDiv);
-
-        // 延迟执行以显示加载动画
-        setTimeout(() => {
-          try {
-            loadHistoryFromSillyTavern();
-
-            // 更新监听器状态
-            if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
-              lastMessageId = getCurrentMessageId();
-              const msg = getChatMessages(lastMessageId)[0];
-              if (msg) {
-                lastMessageContent = msg.message;
-              }
-            }
-
-            // 如果仍然没有消息，显示更详细的提示
-            if (state.messageHistory.length === 0) {
-              const errorDiv = document.createElement('div');
-              errorDiv.style.cssText = 'text-align: center; color: #e74c3c; padding: 20px; font-size: 14px; line-height: 1.5;';
-              errorDiv.innerHTML = `
-                ⚠️ 无法加载消息记录<br>
-                <small style="color: #666;">
-                  可能的原因：<br>
-                  • 消息格式不兼容<br>
-                  • SillyTavern API 未正确连接<br>
-                  • 消息数据为空<br><br>
-                  请检查控制台日志获取更多信息
-                </small>
-              `;
-              chat.innerHTML = '';
-              chat.appendChild(errorDiv);
-            }
-          } catch (error) {
-            console.error('重新加载消息时出错:', error);
-            const errorDiv = document.createElement('div');
-            errorDiv.style.cssText = 'text-align: center; color: #e74c3c; padding: 20px; font-size: 14px;';
-            errorDiv.innerHTML = `❌ 加载失败: ${error.message}`;
-            chat.innerHTML = '';
-            chat.appendChild(errorDiv);
-          }
-        }, 100);
       }
 
       // 优化的部分渲染：只渲染新消息
@@ -8073,17 +7891,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const personName = parsePersonNameFromShouji(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan) nameSpan.textContent = personName ? personName : '';
-
-            // 解析消息历史
-            const originalHistory = state.messageHistory.length;
             state.messageHistory = parseShoujiLog(msg.message);
-
-            // 调试信息：显示解析结果
-            console.log(`消息解析完成: 原有${originalHistory}条，现有${state.messageHistory.length}条消息`);
-            if (state.messageHistory.length === 0 && msg.message.includes('<shouji>')) {
-              console.warn('警告：检测到shouji标签但未解析出任何消息，可能存在格式兼容性问题');
-              console.log('原始消息内容:', msg.message);
-            }
           } else {
             state.messageHistory = [];
             const nameSpan = document.getElementById('chatPersonName');
@@ -8095,53 +7903,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 消息变化监听器
-      let messageCheckInterval = null;
-      let lastMessageContent = '';
-      let lastMessageId = null;
-
-      function startMessageMonitoring() {
-        // 清除现有的监听器
-        if (messageCheckInterval) {
-          clearInterval(messageCheckInterval);
-        }
-
-        // 每500ms检查一次消息变化
-        messageCheckInterval = setInterval(() => {
-          if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
-            try {
-              const currentMsgId = getCurrentMessageId();
-              const msg = getChatMessages(currentMsgId)[0];
-
-              // 检查消息ID或内容是否发生变化
-              if (msg && (currentMsgId !== lastMessageId || msg.message !== lastMessageContent)) {
-                console.log('检测到消息变化，重新加载...');
-                lastMessageId = currentMsgId;
-                lastMessageContent = msg.message;
-
-                // 重新解析和渲染消息
-                loadHistoryFromSillyTavern();
-              }
-            } catch (error) {
-              console.warn('消息监听出错:', error);
-            }
-          }
-        }, 500);
-
-        console.log('消息变化监听器已启动');
-      }
-
-      function stopMessageMonitoring() {
-        if (messageCheckInterval) {
-          clearInterval(messageCheckInterval);
-          messageCheckInterval = null;
-          console.log('消息变化监听器已停止');
-        }
-      }
-
       // 初始化应用
       async function initApp() {
         try {
+
+
           // 检查SillyTavern API
           checkSillyTavernAPI();
 
@@ -8152,12 +7918,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           // 加载历史记录
           loadHistoryFromSillyTavern();
 
-          // 根据用户设置决定是否启动消息变化监听
-          const autoSyncEnabled = localStorage.getItem('autoSyncEnabled') !== 'false'; // 默认启用
-          if (autoSyncEnabled) {
-            startMessageMonitoring();
-          }
-
           // 初始化输入框高度
           updateInputHeight();
 
@@ -8166,33 +7926,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           // 绑定所有事件监听器
           bindEventListeners();
-
-          // 添加全局键盘快捷键
-          document.addEventListener('keydown', (e) => {
-            // Ctrl+R 或 Cmd+R 重新加载消息（阻止默认的页面刷新）
-            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-              e.preventDefault();
-              console.log('快捷键触发：重新加载消息');
-              forceReloadMessages();
-            }
-            // F5 也可以重新加载消息
-            if (e.key === 'F5') {
-              e.preventDefault();
-              console.log('F5触发：重新加载消息');
-              forceReloadMessages();
-            }
-          });
-
-          // 页面失去焦点时停止监听，获得焦点时重新开始（优化性能）
-          document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-              stopMessageMonitoring();
-            } else {
-              startMessageMonitoring();
-              // 页面重新获得焦点时立即检查一次
-              setTimeout(loadHistoryFromSillyTavern, 100);
-            }
-          });
 
         } catch (error) {
           // 显示错误提示
@@ -9112,9 +8845,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         updateCharAvatarPreview();
         // 更新破限开关显示状态
         document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
-        // 更新自动同步开关显示状态
-        const autoSyncEnabled = localStorage.getItem('autoSyncEnabled') !== 'false';
-        document.getElementById('autoSyncToggle').checked = autoSyncEnabled;
       }
 
       // 隐藏设置模态框
@@ -9186,48 +8916,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         state.jailbreakEnabled = e.target.checked;
         // 保存到localStorage
         localStorage.setItem('jailbreakEnabled', state.jailbreakEnabled);
-      });
 
-      // 重新加载消息按钮
-      document.getElementById('reloadMessagesBtn').addEventListener('click', () => {
-        console.log('用户点击重新加载消息');
-        forceReloadMessages();
-        // 显示提示
-        const btn = document.getElementById('reloadMessagesBtn');
-        const originalText = btn.textContent;
-        btn.textContent = '重新加载中...';
-        btn.disabled = true;
-
-        setTimeout(() => {
-          btn.textContent = '加载完成';
-          setTimeout(() => {
-            btn.textContent = originalText;
-            btn.disabled = false;
-          }, 1000);
-        }, 500);
-      });
-
-      // 清除缓存按钮
-      document.getElementById('clearCacheBtn').addEventListener('click', () => {
-        if (confirm('确定要清除所有缓存数据吗？这将重置所有设置。')) {
-          localStorage.clear();
-          sessionStorage.clear();
-          location.reload();
-        }
-      });
-
-      // 自动同步开关
-      document.getElementById('autoSyncToggle').addEventListener('change', (e) => {
-        const isEnabled = e.target.checked;
-        localStorage.setItem('autoSyncEnabled', isEnabled);
-
-        if (isEnabled) {
-          console.log('启用自动消息同步');
-          startMessageMonitoring();
-        } else {
-          console.log('禁用自动消息同步');
-          stopMessageMonitoring();
-        }
       });
 
       // 点击遮罩关闭模态框
