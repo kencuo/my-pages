@@ -583,6 +583,35 @@
         transform: translateX(26px);
       }
 
+      /* 角色头像设置样式 */
+      .char-avatar-section {
+        margin-bottom: 25px;
+      }
+
+      .char-avatar-preview {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: #ddd;
+        border: 2px solid #e0e0e0;
+      }
+
+      .char-name-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+
+      .char-name-input:focus {
+        outline: none;
+        border-color: #07c160;
+      }
+
       /* ========== WeChat style message layout override ========== */
       .message {
         display: flex;
@@ -2781,20 +2810,61 @@
         cursor: pointer;
       }
       .image-description {
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 8px 12px;
+        font-size: 12px;
+        line-height: 1.4;
+        border-radius: 6px;
+        margin-top: 6px;
+        display: none;
+        word-wrap: break-word;
+        max-width: 200px;
         position: absolute;
         top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        max-width: 80%;
-        text-align: center;
-        z-index: 100;
-        word-break: break-word;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        opacity: 0;
+        transition: all 0.4s ease;
+        z-index: 20;
+        transform-origin: center top;
+      }
+
+      .image-description.show {
+        display: block;
+        opacity: 1;
+        animation: expandFromCenter 0.4s ease-out forwards;
+      }
+
+      .image-description.hide {
+        animation: collapseToCenter 0.3s ease-in forwards;
+      }
+
+      @keyframes expandFromCenter {
+        0% {
+          transform: translateY(-50%) scaleY(0);
+          opacity: 0;
+          height: 0;
+        }
+        100% {
+          transform: translateY(-50%) scaleY(1);
+          opacity: 1;
+          height: auto;
+        }
+      }
+
+      @keyframes collapseToCenter {
+        0% {
+          transform: translateY(-50%) scaleY(1);
+          opacity: 1;
+          height: auto;
+        }
+        100% {
+          transform: translateY(-50%) scaleY(0);
+          opacity: 0;
+          height: 0;
+        }
       }
       .image-message {
         position: relative;
@@ -3672,6 +3742,24 @@
             <input type="file" class="file-input" id="wallpaperFileInput" accept="image/*">
           </div>
 
+          <!-- 角色头像设置 -->
+          <div class="setting-section char-avatar-section">
+            <label class="setting-label">角色头像</label>
+            <input type="text" class="char-name-input" id="charNameInput" placeholder="输入角色名称">
+            <div class="setting-preview">
+              <img class="char-avatar-preview" id="charAvatarPreview" src="https://files.catbox.moe/e1xk9k.jpeg" alt="角色头像预览">
+              <div class="preview-info">
+                <div class="preview-title">自定义角色头像</div>
+                <div class="preview-desc">为当前角色设置专属头像</div>
+              </div>
+            </div>
+            <div class="setting-buttons">
+              <button class="upload-btn" id="charAvatarUploadBtn">上传头像</button>
+              <button class="reset-btn" id="charAvatarResetBtn">重置</button>
+            </div>
+            <input type="file" class="file-input" id="charAvatarFileInput" accept="image/*">
+          </div>
+
           <!-- 破限设置 -->
           <div class="setting-section">
             <label class="setting-label">破限模式</label>
@@ -4288,22 +4376,36 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function parseQunliaoLog(text) {
         // 作者 ctrl 不许偷ado 喵喵喵喵
         const match = text.match(/<qunliao>([\s\S]*?)<\/qunliao>/);
-        if (!match) return [];
+        if (!match) {
+          console.log('No <qunliao> tags found in message');
+          return [];
+        }
         const raw = match[1].trim();
-        if (!raw) return [];
+        if (!raw) {
+          console.log('Empty content inside <qunliao> tags');
+          return [];
+        }
 
         const lines = raw.split(/\n+/).filter(Boolean);
-        return lines
-          .map(line => {
+        console.log('Parsing', lines.length, 'message lines');
+
+        const parsedMessages = lines
+          .map((line, index) => {
             for (const parser of messageParsers) {
               const match = line.match(parser.regex);
               if (match) {
-                return parser.handler(match);
+                const result = parser.handler(match);
+                console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount);
+                return result;
               }
             }
+            console.log(`Line ${index + 1} not matched:`, line);
             return null; // No parser matched this line
           })
           .filter(Boolean);
+
+        console.log('Successfully parsed', parsedMessages.length, 'messages');
+        return parsedMessages;
       }
 
       // ==================== REFACTORED SERIALIZATION LOGIC ====================
@@ -4450,12 +4552,30 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 全量渲染消息气泡（仅在必要时使用）
       function renderAllMessages() {
         const chat = document.getElementById('chatMessages');
+        if (!chat) {
+          console.error('Chat container not found!');
+          return;
+        }
+
+        console.log('Rendering all messages, count:', state.messageHistory.length);
         chat.innerHTML = '';
         lastHistoryCount = 0;
+
         state.messageHistory.forEach((msg, idx) => {
-          appendMessage(msg, idx);
+          try {
+            appendMessage(msg, idx);
+          } catch (error) {
+            console.error('Error rendering message at index', idx, ':', error, msg);
+          }
         });
+
         lastHistoryCount = state.messageHistory.length;
+
+        // 确保滚动到底部
+        setTimeout(() => {
+          chat.scrollTop = chat.scrollHeight;
+          console.log('Rendered messages in DOM:', chat.children.length);
+        }, 50);
       }
 
       // 优化的部分渲染：只渲染新消息
@@ -4467,6 +4587,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           appendMessage(state.messageHistory[i], i);
         }
         lastHistoryCount = state.messageHistory.length;
+
+        // 确保滚动到底部
+        const chat = document.getElementById('chatMessages');
+        setTimeout(() => {
+          chat.scrollTop = chat.scrollHeight;
+        }, 50);
       }
 
       // 清除生成的消息（保留历史消息）
@@ -4483,6 +4609,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // Append a single message to the chat
       function appendMessage(msg, idx, isGenerated = false) {
         const chat = document.getElementById('chatMessages');
+        if (!chat) {
+          console.warn('Chat container not found');
+          return;
+        }
+
         const message = createMessageElement(msg, idx);
         if (message) {
           // 标记生成的消息用于优化渲染
@@ -4490,10 +4621,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             message.classList.add('generated');
           }
           chat.appendChild(message);
-          // Scroll to bottom only if the user is already near the bottom
-          if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
-            chat.scrollTop = chat.scrollHeight;
-          }
+
+          // 确保消息内容正确渲染
+          setTimeout(() => {
+            // Scroll to bottom only if the user is already near the bottom
+            if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
+              chat.scrollTop = chat.scrollHeight;
+            }
+          }, 10);
         }
       }
 
@@ -4512,15 +4647,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // --- Message Content Renderers ---
 
       function renderTextMessage(contentDiv, msg) {
-        let content = msg.content;
-        EMOJIS.forEach(e => {
-          content = content.replaceAll(
-            e,
-            `<img class="emoji" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${e
-              .codePointAt(0)
-              .toString(16)}.svg" alt="${e}">`,
-          );
-        });
+        let content = msg.content || '';
+
+        // 确保内容不为空
+        if (!content) {
+          content = '(空消息)';
+        }
+
+        // 处理表情符号
+        if (typeof EMOJIS !== 'undefined' && Array.isArray(EMOJIS)) {
+          EMOJIS.forEach(e => {
+            content = content.replaceAll(
+              e,
+              `<img class="emoji" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${e
+                .codePointAt(0)
+                .toString(16)}.svg" alt="${e}">`,
+            );
+          });
+        }
+
         const textSpan = document.createElement('span');
         textSpan.innerHTML = content;
         contentDiv.appendChild(textSpan);
@@ -4567,9 +4712,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         description.textContent = msg.imageDescription;
         description.style.display = 'none';
 
-        // Add click handler to show/hide description
+        // 点击图片显示/隐藏描述（从中间向下延伸动画）
         img.onclick = () => {
-          description.style.display = description.style.display === 'none' ? 'block' : 'none';
+          if (description.classList.contains('show')) {
+            // 隐藏描述 - 添加收回动画
+            description.classList.remove('show');
+            description.classList.add('hide');
+            setTimeout(() => {
+              description.style.display = 'none';
+              description.classList.remove('hide');
+            }, 300);
+          } else {
+            // 显示描述 - 从中间向下延伸
+            description.style.display = 'block';
+            setTimeout(() => {
+              description.classList.add('show');
+            }, 10);
+          }
         };
 
         contentDiv.appendChild(img);
@@ -4950,7 +5109,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           } else if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
-            avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+
+            // 检查是否有自定义角色头像
+            const charName = msg.name || getCurrentCharName();
+            if (charName && settingsState.charAvatars[charName]) {
+              avatar.src = settingsState.charAvatars[charName];
+            } else {
+              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+            }
+
             message.appendChild(avatar);
           }
           message.appendChild(wrapper);
@@ -4997,7 +5164,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         // Call the appropriate renderer based on message type
         const renderer = messageRenderers[msg.type] || messageRenderers.text;
-        renderer(contentDiv, msg, idx);
+        if (!renderer) {
+          console.error('No renderer found for message type:', msg.type, msg);
+          return null;
+        }
+
+        try {
+          renderer(contentDiv, msg, idx);
+        } catch (error) {
+          console.error('Error rendering message:', error, msg);
+          // Fallback to text renderer
+          messageRenderers.text(contentDiv, msg, idx);
+        }
 
         // For cancelled call, we want the user bubble style
         if (msg.type === 'call-cancelled') {
@@ -5069,7 +5247,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
-            avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+
+            // 检查是否有自定义角色头像
+            const charName = msg.name || getCurrentCharName();
+            if (charName && settingsState.charAvatars[charName]) {
+              avatar.src = settingsState.charAvatars[charName];
+            } else {
+              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+            }
+
             message.appendChild(avatar);
           }
           message.appendChild(wrapper);
@@ -7415,16 +7601,39 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             // 新增：自动解析人名
             const personName = parsePersonNameFromQunliao(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
-            if (nameSpan) nameSpan.textContent = personName ? personName : '';
+            if (nameSpan) {
+              if (personName) {
+                nameSpan.textContent = personName;
+                console.log('Set group name to:', personName);
+              } else {
+                // 如果没有解析到群名，保持当前显示的名字（如果有的话）
+                console.log('No group name found, keeping current name:', nameSpan.textContent);
+              }
+            }
+
             state.messageHistory = parseQunliaoLog(msg.message);
+
+            // 调试信息
+            console.log('Loaded message history:', state.messageHistory.length, 'messages');
+            console.log('Current displayed name:', nameSpan ? nameSpan.textContent : 'none');
           } else {
             state.messageHistory = [];
             const nameSpan = document.getElementById('chatPersonName');
-            if (nameSpan) nameSpan.textContent = '';
+            if (nameSpan && !nameSpan.textContent.trim()) {
+              nameSpan.textContent = ''; // 只在没有名字时清空
+            }
+            console.log('No message history found');
           }
-          // 初始化时需要全量渲染，之后使用部分渲染
-          renderAllMessages();
-          updateAiRequestButtonVisibility();
+
+          // 强制重置渲染状态
+          lastHistoryCount = 0;
+
+          // 延迟渲染确保DOM已准备好
+          setTimeout(() => {
+            renderAllMessages();
+            updateAiRequestButtonVisibility();
+            console.log('Messages rendered, total in DOM:', document.querySelectorAll('#chatMessages .message').length);
+          }, 100);
         }
       }
 
@@ -7439,6 +7648,34 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         loadHistoryFromSillyTavern();
         // 初始化输入框高度
         updateInputHeight();
+      }
+
+      // 额外的安全措施：页面完全加载后再次检查消息渲染
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const chat = document.getElementById('chatMessages');
+          if (chat && state.messageHistory.length > 0 && chat.children.length === 0) {
+            console.log('Messages not rendered, forcing re-render...');
+            renderAllMessages();
+          }
+        }, 500);
+      });
+
+      // 定期检查消息渲染状态（开发调试用）
+      if (typeof window !== 'undefined') {
+        setInterval(() => {
+          const chat = document.getElementById('chatMessages');
+          if (chat && state.messageHistory.length > 0 && chat.children.length === 0) {
+            console.warn('Detected missing messages, attempting re-render...');
+            renderAllMessages();
+          }
+        }, 5000); // 每5秒检查一次
+
+        // 暴露全局函数供用户使用
+        window.forceRerender = renderAllMessages;
+
+        console.log('Debug functions available:');
+        console.log('- forceRerender() - 强制重新渲染消息');
       }
 
       // 开始语音通话
@@ -7719,8 +7956,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         } else {
           // 角色头像 - 从消息或当前角色信息获取
           const charInfo = getLastCharInfo();
-          avatarEl.src = msg.avatar ? 'https://files.catbox.moe/' + msg.avatar : charInfo.avatarUrl || 'https://files.catbox.moe/g299b6.jpeg';
-          nameEl.textContent = msg.charName || charInfo.name || '角色'; // 显示角色名称
+          const charName = msg.charName || charInfo.name || getCurrentCharName();
+
+          // 检查是否有自定义角色头像
+          if (charName && settingsState.charAvatars[charName]) {
+            avatarEl.src = settingsState.charAvatars[charName];
+          } else {
+            avatarEl.src = msg.avatar ? 'https://files.catbox.moe/' + msg.avatar : charInfo.avatarUrl || 'https://files.catbox.moe/g299b6.jpeg';
+          }
+
+          nameEl.textContent = charName || '角色'; // 显示角色名称
         }
 
         // 将头像和名称添加到容器中
@@ -7953,7 +8198,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
-            avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+
+            // 检查是否有自定义角色头像
+            const charName = msg.name || getCurrentCharName();
+            if (charName && settingsState.charAvatars[charName]) {
+              avatar.src = settingsState.charAvatars[charName];
+            } else {
+              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+            }
+
             message.appendChild(avatar);
           }
           message.appendChild(wrapper);
@@ -8110,12 +8363,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // ========== 头像和壁纸本地上传与持久化功能 ==========
       const settingsState = {
         userAvatar: null,
-        wallpaper: null
+        wallpaper: null,
+        charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
 
       function loadSettings() {
         const savedAvatar = localStorage.getItem('chatUserAvatar');
         const savedWallpaper = localStorage.getItem('chatWallpaper');
+        const savedCharAvatars = localStorage.getItem('chatCharAvatars');
         const savedJailbreak = localStorage.getItem('jailbreakEnabled');
 
         if (savedAvatar) {
@@ -8125,6 +8380,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (savedWallpaper) {
           settingsState.wallpaper = savedWallpaper;
           updateWallpaper();
+        }
+
+        if (savedCharAvatars) {
+          try {
+            settingsState.charAvatars = JSON.parse(savedCharAvatars);
+            updateCharAvatars();
+          } catch (e) {
+            console.error('Failed to parse char avatars:', e);
+            settingsState.charAvatars = {};
+          }
         }
 
         // 加载破限开关状态
@@ -8140,6 +8405,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
         if (settingsState.wallpaper) {
           localStorage.setItem('chatWallpaper', settingsState.wallpaper);
+        }
+        if (settingsState.charAvatars && Object.keys(settingsState.charAvatars).length > 0) {
+          localStorage.setItem('chatCharAvatars', JSON.stringify(settingsState.charAvatars));
         }
       }
 
@@ -8187,6 +8455,59 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
+      // 更新角色头像
+      function updateCharAvatars() {
+        // 更新所有角色头像
+        const charAvatars = document.querySelectorAll('.avatar:not(.user_avatar)');
+        charAvatars.forEach(avatar => {
+          const messageElement = avatar.closest('.message');
+          if (messageElement && messageElement.classList.contains('received')) {
+            // 这是角色的头像，尝试从消息中获取角色名
+            const charName = getCurrentCharName();
+            if (charName && settingsState.charAvatars[charName]) {
+              avatar.src = settingsState.charAvatars[charName];
+            }
+          }
+        });
+
+        // 更新预览
+        updateCharAvatarPreview();
+      }
+
+      // 更新角色头像预览
+      function updateCharAvatarPreview() {
+        const preview = document.getElementById('charAvatarPreview');
+        const nameInput = document.getElementById('charNameInput');
+        if (preview && nameInput) {
+          const charName = nameInput.value.trim();
+          if (charName && settingsState.charAvatars[charName]) {
+            preview.src = settingsState.charAvatars[charName];
+          } else {
+            preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
+          }
+        }
+      }
+
+      // 获取当前角色名称
+      function getCurrentCharName() {
+        // 从最后一条角色消息中获取角色名，或者从输入框获取
+        const nameInput = document.getElementById('charNameInput');
+        if (nameInput && nameInput.value.trim()) {
+          return nameInput.value.trim();
+        }
+
+        // 如果输入框为空，尝试从消息历史中获取角色名
+        if (state.messageHistory && state.messageHistory.length > 0) {
+          // 从最后一条角色消息中获取角色名
+          const lastCharMsg = [...state.messageHistory].reverse().find(m => m.sender === 'char' && m.name);
+          if (lastCharMsg && lastCharMsg.name) {
+            return lastCharMsg.name;
+          }
+        }
+
+        return 'Character'; // 默认角色名
+      }
+
       function handleFileUpload(file, type) {
         if (!file) return;
         const reader = new FileReader();
@@ -8198,6 +8519,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           } else if (type === 'wallpaper') {
             settingsState.wallpaper = dataUrl;
             updateWallpaper();
+          } else if (type === 'charAvatar') {
+            const charName = getCurrentCharName();
+            if (charName) {
+              settingsState.charAvatars[charName] = dataUrl;
+              updateCharAvatars();
+            }
           }
           saveSettings();
         };
@@ -8213,6 +8540,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           settingsState.wallpaper = null;
           localStorage.removeItem('chatWallpaper');
           updateWallpaper();
+        } else if (type === 'charAvatar') {
+          const charName = getCurrentCharName();
+          if (charName && settingsState.charAvatars[charName]) {
+            delete settingsState.charAvatars[charName];
+            updateCharAvatars();
+            saveSettings();
+          }
         }
       }
 
@@ -8221,6 +8555,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         overlay.style.display = 'flex';
         updateUserAvatars();
         updateWallpaper();
+        updateCharAvatarPreview();
         // 更新破限开关显示状态
         document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
       }
@@ -8255,6 +8590,27 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       });
       document.getElementById('wallpaperResetBtn').addEventListener('click', () => {
         resetSetting('wallpaper');
+      });
+
+      // 角色头像上传
+      document.getElementById('charAvatarUploadBtn').addEventListener('click', () => {
+        document.getElementById('charAvatarFileInput').click();
+      });
+
+      document.getElementById('charAvatarFileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleFileUpload(file, 'charAvatar');
+        }
+      });
+
+      document.getElementById('charAvatarResetBtn').addEventListener('click', () => {
+        resetSetting('charAvatar');
+      });
+
+      // 角色名称输入框变化时更新预览
+      document.getElementById('charNameInput').addEventListener('input', () => {
+        updateCharAvatarPreview();
       });
 
       // 破限开关
