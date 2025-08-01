@@ -5844,27 +5844,6 @@
         }
       }
 
-      // 清理图片缓存（避免localStorage过满）
-      function cleanImageCache() {
-        const keys = Object.keys(localStorage);
-        const imageCacheKeys = keys.filter(key => key.startsWith('image_cache_'));
-
-        // 如果缓存超过50个，删除最旧的
-        if (imageCacheKeys.length > 50) {
-          const sortedKeys = imageCacheKeys.sort();
-          const keysToDelete = sortedKeys.slice(0, imageCacheKeys.length - 50);
-          keysToDelete.forEach(key => {
-            localStorage.removeItem(key);
-          });
-          console.log(`🧹 清理了 ${keysToDelete.length} 个旧的图片缓存`);
-        }
-      }
-
-      // 页面加载时清理缓存
-      document.addEventListener('DOMContentLoaded', () => {
-        cleanImageCache();
-      });
-
       // 更新Kimi模型选择框
       function updateKimiModelSelect() {
         const select = document.getElementById('kimiModel');
@@ -7138,195 +7117,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      // 生成字符串哈希值（模仿插件的getStringHash）
-      function getStringHash(str) {
-        let hash = 0;
-        if (str.length === 0) return hash.toString();
-        for (let i = 0; i < str.length; i++) {
-          const char = str.charCodeAt(i);
-          hash = ((hash << 5) - hash) + char;
-          hash = hash & hash; // 转换为32位整数
-        }
-        return Math.abs(hash).toString(36);
-      }
-
-      // 高质量图片处理（尽可能模仿插件效果）
-      function optimizeImageForAI(file, quality = 0.92) {
-        return new Promise((resolve, reject) => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
-
-          img.onload = function() {
-            // 使用更保守的尺寸策略（插件可能不压缩尺寸）
-            let { width, height } = img;
-
-            // 只有在图片非常大时才压缩
-            const maxSize = 2048; // 提高最大尺寸
-            if (width > maxSize || height > maxSize) {
-              if (width > height) {
-                height = (height * maxSize) / width;
-                width = maxSize;
-              } else {
-                width = (width * maxSize) / height;
-                height = maxSize;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            // 使用更好的渲染设置
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-
-            // 如果原图有透明度，保持透明度而不是填充白色
-            if (file.type === 'image/png') {
-              // PNG保持原始格式和透明度
-              ctx.drawImage(img, 0, 0, width, height);
-              const optimizedBase64 = canvas.toDataURL('image/png', 1.0);
-              resolve(optimizedBase64);
-            } else {
-              // 其他格式转为高质量JPEG
-              ctx.fillStyle = '#FFFFFF';
-              ctx.fillRect(0, 0, width, height);
-              ctx.drawImage(img, 0, 0, width, height);
-              const optimizedBase64 = canvas.toDataURL('image/jpeg', quality);
-              resolve(optimizedBase64);
-            }
-          };
-
-          img.onerror = function() {
-            reject(new Error('图片加载失败'));
-          };
-
-          // 加载原始图片
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            img.src = e.target.result;
-          };
-          reader.onerror = function() {
-            reject(new Error('文件读取失败'));
-          };
-          reader.readAsDataURL(file);
-        });
-      }
-
-      // 使用茶馆正式2.0的图片处理逻辑
-      async function simulatePluginProcessing(file) {
-        try {
-          console.log('🔄 启动茶馆式图片处理');
-
-          // 1. 生成文件标识（按照插件逻辑）
-          const extension = file.type.split("/")[1] || "png";
-          const fileNamePrefix = `${Date.now()}_${getStringHash(file.name)}`;
-          const characterName = "用户";
-
-          // 2. 先转base64用于回退
-          const fileBase64 = await convertFileToBase64(file);
-          const base64Data = fileBase64.split(",")[1];
-
-          // 3. 使用茶馆正式2.0的处理方法（传递原始文件）
-          const imageUrl = await simulateSaveBase64AsFile(
-            base64Data,
-            characterName,
-            fileNamePrefix,
-            extension,
-            file  // 传递原始文件以使用茶馆的压缩方法
-          );
-
-          return { url: imageUrl };
-
-        } catch (error) {
-          console.error('茶馆式处理失败:', error);
-          // 失败时回退到原始base64
-          const fallbackBase64 = await convertFileToBase64(file);
-          return { url: fallbackBase64 };
-        }
-      }
-
-      // 使用茶馆正式2.0的图片处理方法
-      async function simulateSaveBase64AsFile(base64Data, characterName, fileName, extension, originalFile) {
-        try {
-          console.log(`🔄 使用茶馆式处理: ${fileName}.${extension}`);
-
-          let optimizedBase64;
-
-          if (originalFile) {
-            // 如果有原始文件，使用茶馆正式2.0的压缩方法
-            optimizedBase64 = await compressImageForVision(originalFile, 800, 600, 0.8);
-          } else {
-            // 如果只有base64数据，回退到基础处理
-            const fullBase64 = `data:image/${extension};base64,${base64Data}`;
-            optimizedBase64 = fullBase64;
-          }
-
-          // 模拟本地存储
-          const localKey = `st_image_${characterName}_${fileName}`;
-          try {
-            localStorage.setItem(localKey, optimizedBase64);
-            console.log(`💾 已保存到本地缓存: ${localKey}`);
-          } catch (e) {
-            console.warn('本地存储失败，直接返回优化结果');
-          }
-
-          return optimizedBase64;
-
-        } catch (error) {
-          console.error('茶馆式处理失败:', error);
-          // 回退到原始数据
-          return `data:image/${extension};base64,${base64Data}`;
-        }
-      }
-
-      // 使用茶馆正式2.0的优秀图片压缩算法
-      function compressImageForVision(file, maxWidth = 800, maxHeight = 600, quality = 0.8) {
-        return new Promise((resolve) => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
-
-          img.onload = function() {
-            // 计算新的尺寸（茶馆正式2.0的逻辑）
-            let { width, height } = img;
-            if (width > height) {
-              if (width > maxWidth) {
-                height = height * (maxWidth / width);
-                width = maxWidth;
-              }
-            } else {
-              if (height > maxHeight) {
-                width = width * (maxHeight / height);
-                height = maxHeight;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            // 绘制图片
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // 转换为base64 - 使用茶馆正式2.0的参数
-            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-            console.log(`✨ 茶馆式压缩完成: ${width}x${height}, 质量${quality}`);
-            resolve(compressedBase64);
-          };
-
-          img.onerror = function() {
-            console.error('图片加载失败');
-            // 失败时使用原始文件转base64
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(file);
-          };
-
-          // 使用茶馆正式2.0的方法：URL.createObjectURL
-          img.src = URL.createObjectURL(file);
-        });
-      }
-
       // 处理图片文件选择
       async function handleImageFileSelect(file, modal) {
         // 检查文件类型
@@ -7352,48 +7142,24 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         try {
           let imageUrl;
-          let processingInfo = '';
 
-          // 优先使用插件式的图片优化处理
+          // 首先尝试使用插件上传功能
           if (typeof top.window.__uploadImageByPlugin === 'function') {
             try {
               const result = await top.window.__uploadImageByPlugin(file);
               imageUrl = result.url;
-
-              // 调试信息：分析插件返回的数据
-              console.log('=== 插件处理调试信息 ===');
-              console.log('插件返回结果:', result);
-              console.log('URL类型:', typeof result.url);
-              console.log('URL长度:', result.url.length);
-              console.log('是否为base64:', result.url.startsWith('data:'));
-              console.log('是否为网络URL:', result.url.startsWith('http'));
-              console.log('是否为本地文件:', result.url.startsWith('file:'));
-              console.log('URL前100字符:', result.url.substring(0, 100));
-
-              processingInfo = '已通过插件处理';
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到服务器`;
             } catch (uploadError) {
-              console.warn('插件处理失败，使用内置优化方案:', uploadError);
-              // 插件失败时，使用我们的内置优化处理
-              const result = await processImageLikePlugin(file);
-              imageUrl = result.url;
-              const compressionRatio = ((1 - result.optimizedSize / result.originalSize) * 100).toFixed(1);
-              processingInfo = result.processed ?
-                `已优化处理 (压缩${compressionRatio}%)` :
-                '已转换为识图格式';
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
+              console.warn('服务器上传失败，使用本地base64方案:', uploadError);
+              // 如果服务器上传失败，使用本地base64方案
+              imageUrl = await convertFileToBase64(file);
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
             }
           } else {
-            // 没有插件时，精确模拟插件的完整处理流程
-            console.log('🔄 启动精确模拟');
-
-            const result = await simulatePluginProcessing(file);
-            imageUrl = result.url;
-
-            processingInfo = '已通过模拟处理';
-            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
-
-            console.log('✅处理完成');
+            // 如果没有上传插件，直接使用本地base64方案
+            console.log('未检测到上传插件，使用本地base64方案');
+            imageUrl = await convertFileToBase64(file);
+            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
           }
 
           preview.src = imageUrl;
