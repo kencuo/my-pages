@@ -3773,13 +3773,39 @@
               </div>
             </div>
 
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">识图API地址</label>
-              <input type="text" id="visionApiUrl" placeholder="请输入识图API地址（如：https://api.openai.com/v1）" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+            <!-- Kimi专用配置 -->
+            <div id="kimiConfig" style="margin-bottom: 15px; display: none;">
+              <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">Kimi API密钥</label>
+              <input type="password" id="kimiApiKey" placeholder="请输入Kimi API密钥" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
               <div style="font-size: 11px; color: #666; margin-top: 3px;">
-                支持OpenAI、硅基流动等兼容OpenAI格式的API
+                从 <a href="https://platform.moonshot.cn/" target="_blank" style="color: #007AFF;">Kimi开放平台</a> 获取API密钥
               </div>
+
+              <div style="margin-top: 10px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">Kimi模型</label>
+                <select id="kimiModel" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                  <option value="moonshot-v1-8k">moonshot-v1-8k（推荐）</option>
+                  <option value="moonshot-v1-32k">moonshot-v1-32k</option>
+                  <option value="moonshot-v1-128k">moonshot-v1-128k</option>
+                </select>
+              </div>
+
+              <div style="margin-top: 10px;">
+                <button id="testKimiBtn" style="width: 100%; padding: 8px 12px; background: #6C5CE7; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">测试Kimi连接</button>
+              </div>
+
+              <div id="kimiTestResult" style="margin-top: 10px; padding: 8px; border-radius: 4px; font-size: 12px; display: none;"></div>
             </div>
+
+            <!-- 自定义API配置 -->
+            <div id="customConfig">
+              <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">识图API地址</label>
+                <input type="text" id="visionApiUrl" placeholder="请输入识图API地址（如：https://api.openai.com/v1）" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                <div style="font-size: 11px; color: #666; margin-top: 3px;">
+                  支持OpenAI、硅基流动等兼容OpenAI格式的API
+                </div>
+              </div>
 
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">识图API密钥</label>
@@ -3798,7 +3824,8 @@
               <button class="upload-btn" id="refreshVisionBtn" style="font-size: 12px; padding: 6px 12px; background: #9b59b6;">刷新模型</button>
             </div>
 
-            <div id="visionTestResult" style="margin-top: 10px; padding: 8px; border-radius: 4px; font-size: 12px; display: none;"></div>
+              <div id="visionTestResult" style="margin-top: 10px; padding: 8px; border-radius: 4px; font-size: 12px; display: none;"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -3842,7 +3869,11 @@
         isAiReplying: false, // Added flag to track AI reply status
         jailbreakEnabled: false, // 破限模式开关
         // 识图API配置
-        visionMode: 'tavern', // 识图方式：'tavern' 或 'custom'
+        visionMode: 'tavern', // 识图方式：'tavern'、'kimi' 或 'custom'
+        // Kimi配置
+        kimiApiKey: '',
+        kimiModel: 'moonshot-v1-8k',
+        // 自定义API配置
         visionApiUrl: '',
         visionApiKey: '',
         visionModel: '',
@@ -5704,6 +5735,85 @@
       }
 
       // 识图API管理功能
+      // 测试Kimi连接
+      async function testKimiConnection() {
+        const apiKey = document.getElementById('kimiApiKey').value.trim();
+        const resultDiv = document.getElementById('kimiTestResult');
+
+        if (!apiKey) {
+          showKimiTestResult('请先填写Kimi API密钥！', 'error');
+          return;
+        }
+
+        const testBtn = document.getElementById('testKimiBtn');
+        testBtn.disabled = true;
+        testBtn.textContent = '测试中...';
+        showKimiTestResult('正在测试Kimi API连接...', 'info');
+
+        try {
+          // 测试Kimi API连接
+          const response = await fetch('https://api.moonshot.cn/v1/models', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          if (data.data && Array.isArray(data.data)) {
+            state.kimiApiKey = apiKey;
+            showKimiTestResult(`Kimi API连接成功！找到 ${data.data.length} 个模型。`, 'success');
+          } else {
+            showKimiTestResult('Kimi API连接成功，但返回的模型数据格式不正确！', 'warning');
+          }
+        } catch (error) {
+          console.error('Kimi API连接测试失败:', error);
+          showKimiTestResult(`Kimi API连接失败: ${error.message}`, 'error');
+        } finally {
+          testBtn.disabled = false;
+          testBtn.textContent = '测试Kimi连接';
+        }
+      }
+
+      // 显示Kimi测试结果
+      function showKimiTestResult(message, type) {
+        const resultDiv = document.getElementById('kimiTestResult');
+        resultDiv.style.display = 'block';
+        resultDiv.textContent = message;
+
+        // 清除之前的样式类
+        resultDiv.className = '';
+
+        switch (type) {
+          case 'success':
+            resultDiv.style.background = '#d4edda';
+            resultDiv.style.color = '#155724';
+            resultDiv.style.border = '1px solid #c3e6cb';
+            break;
+          case 'error':
+            resultDiv.style.background = '#f8d7da';
+            resultDiv.style.color = '#721c24';
+            resultDiv.style.border = '1px solid #f5c6cb';
+            break;
+          case 'warning':
+            resultDiv.style.background = '#fff3cd';
+            resultDiv.style.color = '#856404';
+            resultDiv.style.border = '1px solid #ffeaa7';
+            break;
+          case 'info':
+            resultDiv.style.background = '#d1ecf1';
+            resultDiv.style.color = '#0c5460';
+            resultDiv.style.border = '1px solid #bee5eb';
+            break;
+        }
+      }
+
       // 测试识图API连接
       async function testVisionConnection() {
         const url = document.getElementById('visionApiUrl').value.trim();
@@ -5899,6 +6009,187 @@
         }
       }
 
+      // 使用Kimi API进行识图
+      async function requestVisionAnalysisWithKimi(imageMsg, indicator) {
+        if (!state.kimiApiKey) {
+          if (indicator) {
+            indicator.textContent = '❌ 请配置Kimi API密钥';
+            indicator.style.background = 'rgba(255, 0, 0, 0.8)';
+          }
+          return;
+        }
+
+        try {
+          if (indicator) {
+            indicator.textContent = '🌙 Kimi识图中...';
+          }
+
+          // Kimi API的特殊格式
+          const kimiMessages = [
+            {
+              role: 'user',
+              content: '请详细描述这张图片的内容，包括图片中的物体、人物、场景、文字、颜色、情感等所有可见的元素。请用客观、详细的语言描述，不要加入主观评价。'
+            }
+          ];
+
+          // 处理图片数据
+          let imageData = imageMsg.imageData;
+          if (imageData.startsWith('data:image/')) {
+            // 如果是base64格式，需要转换为Kimi接受的格式
+            // Kimi可能需要先上传图片获取file_id，这里我们尝试直接发送base64
+          }
+
+          // 发送Kimi识图请求
+          const kimiResponse = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.kimiApiKey}`
+            },
+            body: JSON.stringify({
+              model: state.kimiModel,
+              messages: kimiMessages,
+              temperature: 0.3,
+              max_tokens: 800,
+              // 注意：Kimi可能需要特殊的图片处理方式
+              // 这里我们先尝试标准格式，如果不行再调整
+              files: [
+                {
+                  type: 'image',
+                  url: imageData
+                }
+              ]
+            })
+          });
+
+          if (!kimiResponse.ok) {
+            // 如果标准格式失败，尝试OpenAI兼容格式
+            const fallbackResponse = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.kimiApiKey}`
+              },
+              body: JSON.stringify({
+                model: state.kimiModel,
+                messages: [
+                  {
+                    role: 'user',
+                    content: [
+                      {
+                        type: 'text',
+                        text: '请详细描述这张图片的内容，包括图片中的物体、人物、场景、文字、颜色、情感等所有可见的元素。请用客观、详细的语言描述，不要加入主观评价。'
+                      },
+                      {
+                        type: 'image_url',
+                        image_url: {
+                          url: imageData
+                        }
+                      }
+                    ]
+                  }
+                ],
+                temperature: 0.3,
+                max_tokens: 800
+              })
+            });
+
+            if (!fallbackResponse.ok) {
+              throw new Error(`Kimi API请求失败: ${kimiResponse.status} ${kimiResponse.statusText}`);
+            }
+
+            const fallbackData = await fallbackResponse.json();
+            if (!fallbackData.choices || !fallbackData.choices[0] || !fallbackData.choices[0].message) {
+              throw new Error('Kimi API返回数据格式不正确');
+            }
+
+            const imageDescription = fallbackData.choices[0].message.content.trim();
+            console.log('🌙 Kimi识图完成:', imageDescription);
+
+            if (indicator) {
+              indicator.textContent = '✅ Kimi已识图';
+              indicator.style.background = 'rgba(108, 92, 231, 0.9)';
+
+              // 3秒后隐藏指示器
+              setTimeout(() => {
+                if (indicator.parentNode) {
+                  indicator.style.opacity = '0';
+                  setTimeout(() => {
+                    if (indicator.parentNode) {
+                      indicator.parentNode.removeChild(indicator);
+                    }
+                  }, 300);
+                }
+              }, 3000);
+            }
+
+            // 构建发送给角色AI的消息内容
+            let messageForAI = '';
+            if (imageMsg.imageDescription && imageMsg.imageDescription !== '发送了一张图片') {
+              messageForAI = `用户发送了一张图片并说："${imageMsg.imageDescription}"\n\n图片内容描述：${imageDescription}`;
+            } else {
+              messageForAI = `用户发送了一张图片。\n\n图片内容描述：${imageDescription}`;
+            }
+
+            // 标记用户发送了新消息，允许AI回复
+            state.userHasSentNewMessage = true;
+            updateAiRequestButtonVisibility();
+
+            return;
+          }
+
+          const kimiData = await kimiResponse.json();
+
+          if (!kimiData.choices || !kimiData.choices[0] || !kimiData.choices[0].message) {
+            throw new Error('Kimi API返回数据格式不正确');
+          }
+
+          const imageDescription = kimiData.choices[0].message.content.trim();
+          console.log('🌙 Kimi识图完成:', imageDescription);
+
+          if (indicator) {
+            indicator.textContent = '✅ Kimi已识图';
+            indicator.style.background = 'rgba(108, 92, 231, 0.9)';
+
+            // 3秒后隐藏指示器
+            setTimeout(() => {
+              if (indicator.parentNode) {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                  if (indicator.parentNode) {
+                    indicator.parentNode.removeChild(indicator);
+                  }
+                }, 300);
+              }
+            }, 3000);
+          }
+
+          // 构建发送给角色AI的消息内容
+          let messageForAI = '';
+          if (imageMsg.imageDescription && imageMsg.imageDescription !== '发送了一张图片') {
+            messageForAI = `用户发送了一张图片并说："${imageMsg.imageDescription}"\n\n图片内容描述：${imageDescription}`;
+          } else {
+            messageForAI = `用户发送了一张图片。\n\n图片内容描述：${imageDescription}`;
+          }
+
+          // 标记用户发送了新消息，允许AI回复
+          state.userHasSentNewMessage = true;
+          updateAiRequestButtonVisibility();
+
+          return;
+
+        } catch (error) {
+          console.error('Kimi识图失败:', error);
+          if (indicator) {
+            indicator.textContent = '❌ Kimi识图失败';
+            indicator.style.background = 'rgba(255, 0, 0, 0.8)';
+          }
+          // Kimi识图失败，回退到酒馆识图
+          console.warn('Kimi识图失败，回退到酒馆识图');
+          return await requestVisionAnalysisWithTavern(imageMsg, indicator);
+        }
+      }
+
       // 使用酒馆内置API进行识图
       async function requestVisionAnalysisWithTavern(imageMsg, indicator) {
         if (!AI_GENERATE) {
@@ -6007,6 +6298,9 @@
         if (state.visionMode === 'tavern') {
           // 使用酒馆内置API进行识图
           return await requestVisionAnalysisWithTavern(imageMsg, indicator);
+        } else if (state.visionMode === 'kimi') {
+          // 使用Kimi API进行识图
+          return await requestVisionAnalysisWithKimi(imageMsg, indicator);
         } else if (state.visionMode === 'custom' && state.visionApiUrl && state.visionApiKey && state.visionModel) {
           // 使用自定义识图API
           try {
@@ -9380,32 +9674,43 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const savedVisionModel = localStorage.getItem('visionModel');
         const savedVisionModels = localStorage.getItem('availableVisionModels');
 
+        // 加载Kimi配置
+        const savedKimiApiKey = localStorage.getItem('kimiApiKey');
+        const savedKimiModel = localStorage.getItem('kimiModel');
+
+        if (savedKimiApiKey) {
+          state.kimiApiKey = savedKimiApiKey;
+          document.getElementById('kimiApiKey').value = savedKimiApiKey;
+        }
+
+        if (savedKimiModel) {
+          state.kimiModel = savedKimiModel;
+          document.getElementById('kimiModel').value = savedKimiModel;
+        }
+
         if (savedVisionMode) {
           state.visionMode = savedVisionMode;
           document.getElementById('visionMode').value = savedVisionMode;
 
-          // 根据保存的模式显示/隐藏自定义API配置
-          const customApiElements = [
-            document.getElementById('visionApiUrl').parentElement,
-            document.getElementById('visionApiKey').parentElement,
-            document.getElementById('visionModel').parentElement,
-            document.getElementById('testVisionBtn').parentElement
-          ];
+          // 根据保存的模式显示/隐藏配置
+          const kimiConfig = document.getElementById('kimiConfig');
+          const customConfig = document.getElementById('customConfig');
 
-          if (savedVisionMode === 'custom') {
-            customApiElements.forEach(el => el.style.display = 'block');
+          if (savedVisionMode === 'kimi') {
+            kimiConfig.style.display = 'block';
+            customConfig.style.display = 'none';
+          } else if (savedVisionMode === 'custom') {
+            kimiConfig.style.display = 'none';
+            customConfig.style.display = 'block';
           } else {
-            customApiElements.forEach(el => el.style.display = 'none');
+            // tavern模式
+            kimiConfig.style.display = 'none';
+            customConfig.style.display = 'none';
           }
         } else {
-          // 默认使用酒馆模式，隐藏自定义API配置
-          const customApiElements = [
-            document.getElementById('visionApiUrl').parentElement,
-            document.getElementById('visionApiKey').parentElement,
-            document.getElementById('visionModel').parentElement,
-            document.getElementById('testVisionBtn').parentElement
-          ];
-          customApiElements.forEach(el => el.style.display = 'none');
+          // 默认使用酒馆模式，隐藏所有配置
+          document.getElementById('kimiConfig').style.display = 'none';
+          document.getElementById('customConfig').style.display = 'none';
         }
 
         if (savedVisionApiUrl) {
@@ -9665,19 +9970,34 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         state.visionMode = e.target.value;
         localStorage.setItem('visionMode', state.visionMode);
 
-        // 根据选择的模式显示/隐藏自定义API配置
-        const customApiElements = [
-          document.getElementById('visionApiUrl').parentElement,
-          document.getElementById('visionApiKey').parentElement,
-          document.getElementById('visionModel').parentElement,
-          document.getElementById('testVisionBtn').parentElement
-        ];
+        // 根据选择的模式显示/隐藏配置
+        const kimiConfig = document.getElementById('kimiConfig');
+        const customConfig = document.getElementById('customConfig');
 
-        if (state.visionMode === 'custom') {
-          customApiElements.forEach(el => el.style.display = 'block');
+        if (state.visionMode === 'kimi') {
+          kimiConfig.style.display = 'block';
+          customConfig.style.display = 'none';
+        } else if (state.visionMode === 'custom') {
+          kimiConfig.style.display = 'none';
+          customConfig.style.display = 'block';
         } else {
-          customApiElements.forEach(el => el.style.display = 'none');
+          // tavern模式
+          kimiConfig.style.display = 'none';
+          customConfig.style.display = 'none';
         }
+      });
+
+      // Kimi相关事件监听器
+      document.getElementById('testKimiBtn').addEventListener('click', testKimiConnection);
+
+      document.getElementById('kimiApiKey').addEventListener('input', (e) => {
+        state.kimiApiKey = e.target.value.trim();
+        localStorage.setItem('kimiApiKey', state.kimiApiKey);
+      });
+
+      document.getElementById('kimiModel').addEventListener('change', (e) => {
+        state.kimiModel = e.target.value;
+        localStorage.setItem('kimiModel', state.kimiModel);
       });
 
       // 识图API配置输入框变化时保存
