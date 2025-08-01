@@ -3760,6 +3760,19 @@
               配置识图API后，AI可以识别用户发送的图片内容
             </div>
 
+            <!-- 识图方式选择 -->
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">识图方式</label>
+              <select id="visionMode" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                <option value="tavern">使用酒馆内置API（推荐）</option>
+                <option value="kimi">使用Kimi API（月之暗面）</option>
+                <option value="custom">使用自定义API</option>
+              </select>
+              <div style="font-size: 11px; color: #666; margin-top: 3px;">
+                酒馆内置：使用SillyTavern配置的API；Kimi：专门适配月之暗面；自定义：使用下方配置的API
+              </div>
+            </div>
+
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">识图API地址</label>
               <input type="text" id="visionApiUrl" placeholder="请输入识图API地址（如：https://api.openai.com/v1）" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
@@ -3829,6 +3842,7 @@
         isAiReplying: false, // Added flag to track AI reply status
         jailbreakEnabled: false, // 破限模式开关
         // 识图API配置
+        visionMode: 'tavern', // 识图方式：'tavern' 或 'custom'
         visionApiUrl: '',
         visionApiKey: '',
         visionModel: '',
@@ -4721,10 +4735,12 @@
           analysisIndicator.textContent = '🤖 AI识图中...';
           imageContainer.appendChild(analysisIndicator);
 
-          // 自动触发AI视觉分析
-          setTimeout(() => {
-            requestVisionAnalysis(msg, analysisIndicator);
-          }, 1000);
+          // 标记图片需要识图分析，但不自动触发
+          msg.needsVisionAnalysis = true;
+          msg.visionIndicator = analysisIndicator;
+
+          // 更新AI请求按钮的可见性
+          updateAiRequestButtonVisibility();
         }
 
         // 点击图片显示/隐藏描述（从中间向下延伸动画）
@@ -5883,14 +5899,119 @@
         }
       }
 
+      // 使用酒馆内置API进行识图
+      async function requestVisionAnalysisWithTavern(imageMsg, indicator) {
+        if (!AI_GENERATE) {
+          if (indicator) {
+            indicator.textContent = '❌ 酒馆AI不可用';
+            indicator.style.background = 'rgba(255, 0, 0, 0.8)';
+          }
+          return;
+        }
+
+        try {
+          if (indicator) {
+            indicator.textContent = '🤖 酒馆识图中...';
+          }
+
+          // 构建识图请求
+          const visionPrompt = `请详细描述这张图片的内容，包括图片中的物体、人物、场景、文字、颜色、情感等所有可见的元素。请用客观、详细的语言描述，不要加入主观评价。`;
+
+          let response;
+
+          if (state.jailbreakEnabled && AI_GENERATE_RAW) {
+            // 破限模式：使用generateRaw
+            const rawRequestData = {
+              ordered_prompts: [
+                { role: 'system', content: JAILBREAK_PROMPT },
+                'world_info_before',
+                'persona_description',
+                'char_description',
+                'char_personality',
+                'scenario',
+                'world_info_after',
+                'dialogue_examples',
+                'chat_history',
+                'user_input'
+              ],
+              injects: [
+                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: false,
+              image: imageMsg.imageData
+            };
+
+            response = await AI_GENERATE_RAW(rawRequestData);
+          } else {
+            // 普通模式：使用标准generate函数
+            const requestData = {
+              injects: [
+                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: false,
+              image: imageMsg.imageData
+            };
+
+            response = await AI_GENERATE(requestData);
+          }
+
+          if (response && typeof response === 'string' && response.trim()) {
+            console.log('🖼️ 酒馆识图完成:', response.trim());
+
+            if (indicator) {
+              indicator.textContent = '✅ 酒馆已识图';
+              indicator.style.background = 'rgba(76, 175, 80, 0.9)';
+
+              // 3秒后隐藏指示器
+              setTimeout(() => {
+                if (indicator.parentNode) {
+                  indicator.style.opacity = '0';
+                  setTimeout(() => {
+                    if (indicator.parentNode) {
+                      indicator.parentNode.removeChild(indicator);
+                    }
+                  }, 300);
+                }
+              }, 3000);
+            }
+
+            // 构建发送给角色AI的消息内容
+            let messageForAI = '';
+            if (imageMsg.imageDescription && imageMsg.imageDescription !== '发送了一张图片') {
+              messageForAI = `用户发送了一张图片并说："${imageMsg.imageDescription}"\n\n图片内容描述：${response.trim()}`;
+            } else {
+              messageForAI = `用户发送了一张图片。\n\n图片内容描述：${response.trim()}`;
+            }
+
+            // 标记用户发送了新消息，允许AI回复
+            state.userHasSentNewMessage = true;
+            updateAiRequestButtonVisibility();
+
+            return;
+          } else {
+            throw new Error('酒馆AI返回空结果');
+          }
+
+        } catch (error) {
+          console.error('酒馆识图失败:', error);
+          if (indicator) {
+            indicator.textContent = '❌ 酒馆识图失败';
+            indicator.style.background = 'rgba(255, 0, 0, 0.8)';
+          }
+        }
+      }
+
       // AI视觉分析功能
       async function requestVisionAnalysis(imageMsg, indicator) {
-        // 检查是否配置了识图API
-        if (state.visionApiUrl && state.visionApiKey && state.visionModel) {
-          // 使用配置的识图API
+        // 根据选择的识图方式进行处理
+        if (state.visionMode === 'tavern') {
+          // 使用酒馆内置API进行识图
+          return await requestVisionAnalysisWithTavern(imageMsg, indicator);
+        } else if (state.visionMode === 'custom' && state.visionApiUrl && state.visionApiKey && state.visionModel) {
+          // 使用自定义识图API
           try {
             if (indicator) {
-              indicator.textContent = '🤖 识图中...';
+              indicator.textContent = '🤖 自定义识图中...';
             }
 
             // 构建识图请求
@@ -5941,7 +6062,7 @@
             console.log('🖼️ 图片识别完成:', imageDescription);
 
             if (indicator) {
-              indicator.textContent = '✅ 已识图';
+              indicator.textContent = '✅ 自定义已识图';
               indicator.style.background = 'rgba(76, 175, 80, 0.9)';
 
               // 3秒后隐藏指示器
@@ -5969,11 +6090,7 @@
             state.userHasSentNewMessage = true;
             updateAiRequestButtonVisibility();
 
-            // 延迟一下再请求AI回复，让用户看到识图完成
-            setTimeout(() => {
-              requestAiReply();
-            }, 1500);
-
+            // 识图完成，不自动触发AI回复，等待用户手动点击
             return;
 
           } catch (error) {
@@ -5982,11 +6099,16 @@
               indicator.textContent = '❌ 识图失败';
               indicator.style.background = 'rgba(255, 0, 0, 0.8)';
             }
-            // 识图失败，继续使用原有的AI分析方式
+            // 自定义识图失败，回退到酒馆识图
+            console.warn('自定义识图失败，回退到酒馆识图');
+            return await requestVisionAnalysisWithTavern(imageMsg, indicator);
           }
+        } else {
+          // 如果没有配置自定义API或选择了酒馆模式，使用酒馆识图
+          return await requestVisionAnalysisWithTavern(imageMsg, indicator);
         }
 
-        // 原有的AI分析方式（作为备用）
+        // 原有的AI分析方式（作为最后备用）
         if (!AI_GENERATE) {
           if (indicator) {
             indicator.textContent = '❌ AI不可用';
@@ -6058,16 +6180,13 @@
             }, 3000);
           }
 
-          // 如果AI返回了分析结果，自动生成AI回复
+          // 如果AI返回了分析结果，标记用户发送了新消息
           if (response && typeof response === 'string' && response.trim()) {
             // 标记用户发送了新消息，允许AI回复
             state.userHasSentNewMessage = true;
             updateAiRequestButtonVisibility();
 
-            // 延迟一下再请求AI回复，让用户看到识图完成
-            setTimeout(() => {
-              requestAiReply();
-            }, 1500);
+            // 识图完成，不自动触发AI回复，等待用户手动点击
           }
 
         } catch (error) {
@@ -6150,6 +6269,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 防止重复调用AI回复
         if (state.isAiReplying) {
           return;
+        }
+
+        // 首先检查是否有需要识图的图片
+        const pendingVisionMessages = state.messageHistory.filter(msg =>
+          msg.type === 'image' && msg.needsVisionAnalysis && msg.visionIndicator
+        );
+
+        if (pendingVisionMessages.length > 0) {
+          // 先处理所有需要识图的图片
+          for (const imageMsg of pendingVisionMessages) {
+            if (imageMsg.visionIndicator) {
+              await requestVisionAnalysis(imageMsg, imageMsg.visionIndicator);
+              // 标记该图片已处理
+              imageMsg.needsVisionAnalysis = false;
+            }
+          }
+
+          // 识图完成后，等待一下再继续AI回复
+          await sleep(1500);
         }
 
         // 语音通话中允许AI主动回复，普通聊天中防止AI连续回复
@@ -9236,10 +9374,39 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
 
         // 加载识图API配置
+        const savedVisionMode = localStorage.getItem('visionMode');
         const savedVisionApiUrl = localStorage.getItem('visionApiUrl');
         const savedVisionApiKey = localStorage.getItem('visionApiKey');
         const savedVisionModel = localStorage.getItem('visionModel');
         const savedVisionModels = localStorage.getItem('availableVisionModels');
+
+        if (savedVisionMode) {
+          state.visionMode = savedVisionMode;
+          document.getElementById('visionMode').value = savedVisionMode;
+
+          // 根据保存的模式显示/隐藏自定义API配置
+          const customApiElements = [
+            document.getElementById('visionApiUrl').parentElement,
+            document.getElementById('visionApiKey').parentElement,
+            document.getElementById('visionModel').parentElement,
+            document.getElementById('testVisionBtn').parentElement
+          ];
+
+          if (savedVisionMode === 'custom') {
+            customApiElements.forEach(el => el.style.display = 'block');
+          } else {
+            customApiElements.forEach(el => el.style.display = 'none');
+          }
+        } else {
+          // 默认使用酒馆模式，隐藏自定义API配置
+          const customApiElements = [
+            document.getElementById('visionApiUrl').parentElement,
+            document.getElementById('visionApiKey').parentElement,
+            document.getElementById('visionModel').parentElement,
+            document.getElementById('testVisionBtn').parentElement
+          ];
+          customApiElements.forEach(el => el.style.display = 'none');
+        }
 
         if (savedVisionApiUrl) {
           state.visionApiUrl = savedVisionApiUrl;
@@ -9492,6 +9659,26 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 识图API相关事件监听器
       document.getElementById('testVisionBtn').addEventListener('click', testVisionConnection);
       document.getElementById('refreshVisionBtn').addEventListener('click', refreshVisionModels);
+
+      // 识图方式选择
+      document.getElementById('visionMode').addEventListener('change', (e) => {
+        state.visionMode = e.target.value;
+        localStorage.setItem('visionMode', state.visionMode);
+
+        // 根据选择的模式显示/隐藏自定义API配置
+        const customApiElements = [
+          document.getElementById('visionApiUrl').parentElement,
+          document.getElementById('visionApiKey').parentElement,
+          document.getElementById('visionModel').parentElement,
+          document.getElementById('testVisionBtn').parentElement
+        ];
+
+        if (state.visionMode === 'custom') {
+          customApiElements.forEach(el => el.style.display = 'block');
+        } else {
+          customApiElements.forEach(el => el.style.display = 'none');
+        }
+      });
 
       // 识图API配置输入框变化时保存
       document.getElementById('visionApiUrl').addEventListener('input', (e) => {
