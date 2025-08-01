@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>聊天</title>
     <style>
+      /* 脉动动画 */
+      @keyframes pulse {
+        0% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.05); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+
       body {
         background: #dbdbdb;
         min-height: 100vh;
@@ -3783,11 +3790,10 @@
 
               <div style="margin-top: 10px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">Kimi模型</label>
-                <select id="kimiModel" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
-                  <option value="moonshot-v1-8k">moonshot-v1-8k（推荐）</option>
-                  <option value="moonshot-v1-32k">moonshot-v1-32k</option>
-                  <option value="moonshot-v1-128k">moonshot-v1-128k</option>
-                </select>
+                <input type="text" id="kimiModel" placeholder="输入模型名称，如：moonshot-v1-8k" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;" value="moonshot-v1-8k">
+                <div style="font-size: 11px; color: #666; margin-top: 3px;">
+                  常用模型：moonshot-v1-8k, moonshot-v1-32k, moonshot-v1-128k
+                </div>
               </div>
 
               <div style="margin-top: 10px;">
@@ -4763,7 +4769,9 @@
             font-size: 10px;
             font-weight: 500;
           `;
-          analysisIndicator.textContent = '🤖 AI识图中...';
+          analysisIndicator.textContent = '👆 点击AI回复开始识图';
+          analysisIndicator.style.background = 'rgba(255, 165, 0, 0.9)';
+          analysisIndicator.style.animation = 'pulse 2s infinite';
           imageContainer.appendChild(analysisIndicator);
 
           // 标记图片需要识图分析，但不自动触发
@@ -5722,12 +5730,8 @@
         deferredSync();
         if (state.inVoiceCall) {
           requestAiReply(); // 语音通话中自动触发AI回复
-        } else if (parsedMsg.type === 'image' && parsedMsg.needsVisionAnalysis) {
-          // 如果是需要AI识图的图片消息，延迟触发AI回复
-          setTimeout(() => {
-            requestAiReply();
-          }, 2000); // 给AI识图一些时间
         }
+        // 图片消息不再自动触发AI回复，等待用户手动点击
 
         } catch (error) {
           showErrorMessage('发送消息失败: ' + error.message);
@@ -9995,8 +9999,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         localStorage.setItem('kimiApiKey', state.kimiApiKey);
       });
 
-      document.getElementById('kimiModel').addEventListener('change', (e) => {
-        state.kimiModel = e.target.value;
+      document.getElementById('kimiModel').addEventListener('input', (e) => {
+        state.kimiModel = e.target.value.trim();
         localStorage.setItem('kimiModel', state.kimiModel);
       });
 
