@@ -5844,6 +5844,27 @@
         }
       }
 
+      // 清理图片缓存（避免localStorage过满）
+      function cleanImageCache() {
+        const keys = Object.keys(localStorage);
+        const imageCacheKeys = keys.filter(key => key.startsWith('image_cache_'));
+
+        // 如果缓存超过50个，删除最旧的
+        if (imageCacheKeys.length > 50) {
+          const sortedKeys = imageCacheKeys.sort();
+          const keysToDelete = sortedKeys.slice(0, imageCacheKeys.length - 50);
+          keysToDelete.forEach(key => {
+            localStorage.removeItem(key);
+          });
+          console.log(`🧹 清理了 ${keysToDelete.length} 个旧的图片缓存`);
+        }
+      }
+
+      // 页面加载时清理缓存
+      document.addEventListener('DOMContentLoaded', () => {
+        cleanImageCache();
+      });
+
       // 更新Kimi模型选择框
       function updateKimiModelSelect() {
         const select = document.getElementById('kimiModel');
@@ -7117,6 +7138,113 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
+      // 生成字符串哈希值（模仿插件的getStringHash）
+      function getStringHash(str) {
+        let hash = 0;
+        if (str.length === 0) return hash.toString();
+        for (let i = 0; i < str.length; i++) {
+          const char = str.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash; // 转换为32位整数
+        }
+        return Math.abs(hash).toString(36);
+      }
+
+      // 优化图片质量和格式（模仿插件的图片处理）
+      function optimizeImageForAI(file, quality = 0.85) {
+        return new Promise((resolve, reject) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+
+          img.onload = function() {
+            // 计算优化后的尺寸（最大1920px，保持比例）
+            const maxSize = 1920;
+            let { width, height } = img;
+
+            if (width > maxSize || height > maxSize) {
+              if (width > height) {
+                height = (height * maxSize) / width;
+                width = maxSize;
+              } else {
+                width = (width * maxSize) / height;
+                height = maxSize;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // 绘制并优化图片
+            ctx.fillStyle = '#FFFFFF'; // 白色背景，避免透明度问题
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // 转换为优化后的base64
+            const optimizedBase64 = canvas.toDataURL('image/jpeg', quality);
+            resolve(optimizedBase64);
+          };
+
+          img.onerror = function() {
+            reject(new Error('图片加载失败'));
+          };
+
+          // 加载原始图片
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            img.src = e.target.result;
+          };
+          reader.onerror = function() {
+            reject(new Error('文件读取失败'));
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // 模拟插件的saveBase64AsFile功能（本地存储优化）
+      async function processImageLikePlugin(file) {
+        try {
+          // 1. 生成唯一文件标识（模仿插件逻辑）
+          const timestamp = Date.now();
+          const fileHash = getStringHash(file.name);
+          const extension = file.type.split('/')[1] || 'jpg';
+          const uniqueId = `${timestamp}_${fileHash}`;
+
+          // 2. 优化图片（模仿插件的图片处理）
+          const optimizedBase64 = await optimizeImageForAI(file, 0.85);
+
+          // 3. 存储到localStorage作为缓存（模拟本地存储）
+          const cacheKey = `image_cache_${uniqueId}`;
+          try {
+            localStorage.setItem(cacheKey, optimizedBase64);
+            console.log(`✅ 图片已优化并缓存: ${uniqueId}`);
+          } catch (e) {
+            console.warn('localStorage空间不足，跳过缓存');
+          }
+
+          // 4. 返回优化后的图片数据
+          return {
+            url: optimizedBase64,
+            id: uniqueId,
+            originalSize: file.size,
+            optimizedSize: Math.round(optimizedBase64.length * 0.75), // base64大小估算
+            processed: true
+          };
+
+        } catch (error) {
+          console.error('图片处理失败:', error);
+          // 失败时回退到原始base64
+          const fallbackBase64 = await convertFileToBase64(file);
+          return {
+            url: fallbackBase64,
+            id: `fallback_${Date.now()}`,
+            originalSize: file.size,
+            optimizedSize: file.size,
+            processed: false
+          };
+        }
+      }
+
       // 处理图片文件选择
       async function handleImageFileSelect(file, modal) {
         // 检查文件类型
@@ -7142,24 +7270,36 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         try {
           let imageUrl;
+          let processingInfo = '';
 
-          // 首先尝试使用插件上传功能
+          // 优先使用插件式的图片优化处理
           if (typeof top.window.__uploadImageByPlugin === 'function') {
             try {
               const result = await top.window.__uploadImageByPlugin(file);
               imageUrl = result.url;
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到服务器`;
+              processingInfo = '已通过插件处理';
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
             } catch (uploadError) {
-              console.warn('服务器上传失败，使用本地base64方案:', uploadError);
-              // 如果服务器上传失败，使用本地base64方案
-              imageUrl = await convertFileToBase64(file);
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+              console.warn('插件处理失败，使用内置优化方案:', uploadError);
+              // 插件失败时，使用我们的内置优化处理
+              const result = await processImageLikePlugin(file);
+              imageUrl = result.url;
+              const compressionRatio = ((1 - result.optimizedSize / result.originalSize) * 100).toFixed(1);
+              processingInfo = result.processed ?
+                `已优化处理 (压缩${compressionRatio}%)` :
+                '已转换为识图格式';
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
             }
           } else {
-            // 如果没有上传插件，直接使用本地base64方案
-            console.log('未检测到上传插件，使用本地base64方案');
-            imageUrl = await convertFileToBase64(file);
-            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+            // 没有插件时，使用我们的内置优化处理
+            console.log('未检测到插件，使用内置图片优化处理');
+            const result = await processImageLikePlugin(file);
+            imageUrl = result.url;
+            const compressionRatio = ((1 - result.optimizedSize / result.originalSize) * 100).toFixed(1);
+            processingInfo = result.processed ?
+              `已优化处理 (压缩${compressionRatio}%)` :
+              '已转换为识图格式';
+            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
           }
 
           preview.src = imageUrl;
