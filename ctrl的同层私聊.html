@@ -3797,9 +3797,7 @@
 
       // 获取 SillyTavern 生成函数（如果可用）
       const AI_GENERATE =
-        window.parent && window.parent.TavernHelper && typeof window.parent.TavernHelper.generate === 'function'
-          ? window.parent.TavernHelper.generate
-          : null;
+        typeof generate === 'function' ? generate : null;
 
       // 获取 SillyTavern 原始生成函数（用于破限模式）
       const AI_GENERATE_RAW =
@@ -5699,10 +5697,11 @@
 
 
             const requestData = {
-              user_input: visionPrompt,
+              injects: [
+                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
+              ],
               should_stream: false,
-              image_data: imageMsg.imageData,
-              message_type: 'vision_analysis'
+              image: imageMsg.imageData
             };
 
             response = await AI_GENERATE(requestData);
@@ -5889,14 +5888,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
 
             const requestData = {
-              user_input: context,
+              injects: [
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+              ],
               should_stream: true
             };
 
             if (recentImageMsg) {
-              requestData.image_data = recentImageMsg.imageData;
-              requestData.image_description = recentImageMsg.imageDescription;
-              requestData.has_vision_context = true;
+              requestData.image = recentImageMsg.imageData;
             }
 
             stream = await Promise.race([
@@ -5974,13 +5973,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           // 若仍未得到任何消息，再尝试一次性模式
           if (handled === 0) {
-            buffer = await AI_GENERATE({ user_input: context, should_stream: false });
+            buffer = await AI_GENERATE({
+              injects: [
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: false
+            });
             processBuffer();
           }
 
           // 如果没有处理任何消息，尝试一次性模式重试一次
           if (handled === 0) {
-            buffer = await AI_GENERATE({ user_input: context, should_stream: false });
+            buffer = await AI_GENERATE({
+              injects: [
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: false
+            });
             processBuffer();
           }
           
@@ -6280,7 +6289,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       // 处理图片文件选择
-      function handleImageFileSelect(file, modal) {
+      async function handleImageFileSelect(file, modal) {
         // 检查文件类型
         if (!file.type.startsWith('image/')) {
           alert('请选择图片文件！');
@@ -6293,24 +6302,33 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const previewArea = modal.querySelector('#imagePreviewArea');
-          const preview = modal.querySelector('#imagePreview');
-          const info = modal.querySelector('#imageInfo');
-          const descInput = modal.querySelector('#imageDescriptionInput');
+        const previewArea = modal.querySelector('#imagePreviewArea');
+        const preview = modal.querySelector('#imagePreview');
+        const info = modal.querySelector('#imageInfo');
+        const descInput = modal.querySelector('#imageDescriptionInput');
 
-          preview.src = e.target.result;
-          info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-          previewArea.style.display = 'block';
+        // 显示上传中状态
+        info.textContent = '正在上传图片...';
+        previewArea.style.display = 'block';
+
+        try {
+          // 上传图片到服务器
+          const result = await top.window.__uploadImageByPlugin(file);
+          const imageUrl = result.url;
+
+          preview.src = imageUrl;
+          info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传`;
           descInput.placeholder = '请输入图片备注（可选）';
 
           modal.dataset.mode = 'upload';
-          modal.dataset.imageData = e.target.result;
+          modal.dataset.imageData = imageUrl;
           modal.dataset.fileName = file.name;
-        };
-
-        reader.readAsDataURL(file);
+        } catch (error) {
+          console.error('图片上传失败:', error);
+          info.textContent = '图片上传失败，请重试';
+          previewArea.style.display = 'none';
+          alert('图片上传失败，请重试！');
+        }
       }
 
       // 重置图片模态框
