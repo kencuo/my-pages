@@ -3752,6 +3752,41 @@
               </div>
             </div>
           </div>
+
+          <!-- 识图API配置 -->
+          <div class="setting-section">
+            <label class="setting-label">🖼️ 识图API配置</label>
+            <div class="setting-description" style="margin-bottom: 15px; font-size: 12px; color: #666;">
+              配置识图API后，AI可以识别用户发送的图片内容
+            </div>
+
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">识图API地址</label>
+              <input type="text" id="visionApiUrl" placeholder="请输入识图API地址（如：https://api.openai.com/v1）" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+              <div style="font-size: 11px; color: #666; margin-top: 3px;">
+                支持OpenAI、硅基流动等兼容OpenAI格式的API
+              </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">识图API密钥</label>
+              <input type="password" id="visionApiKey" placeholder="请输入识图API密钥" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #333;">识图模型</label>
+              <select id="visionModel" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                <option value="">请先测试连接以获取可用模型</option>
+              </select>
+            </div>
+
+            <div class="setting-buttons" style="gap: 8px;">
+              <button class="upload-btn" id="testVisionBtn" style="font-size: 12px; padding: 6px 12px;">测试连接</button>
+              <button class="upload-btn" id="refreshVisionBtn" style="font-size: 12px; padding: 6px 12px; background: #9b59b6;">刷新模型</button>
+            </div>
+
+            <div id="visionTestResult" style="margin-top: 10px; padding: 8px; border-radius: 4px; font-size: 12px; display: none;"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -3793,6 +3828,11 @@
         songNotes: new Map(), // Store song notes/descriptions
         isAiReplying: false, // Added flag to track AI reply status
         jailbreakEnabled: false, // 破限模式开关
+        // 识图API配置
+        visionApiUrl: '',
+        visionApiKey: '',
+        visionModel: '',
+        availableVisionModels: [],
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -5647,8 +5687,306 @@
         }
       }
 
+      // 识图API管理功能
+      // 测试识图API连接
+      async function testVisionConnection() {
+        const url = document.getElementById('visionApiUrl').value.trim();
+        const key = document.getElementById('visionApiKey').value.trim();
+        const resultDiv = document.getElementById('visionTestResult');
+
+        if (!url || !key) {
+          showVisionTestResult('请先填写识图API地址和密钥！', 'error');
+          return;
+        }
+
+        const testBtn = document.getElementById('testVisionBtn');
+        testBtn.disabled = true;
+        testBtn.textContent = '测试中...';
+        showVisionTestResult('正在测试识图API连接...', 'info');
+
+        try {
+          const response = await fetch(`${url}/models`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${key}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          if (data.data && Array.isArray(data.data)) {
+            // 过滤出支持视觉的模型
+            const visionModels = data.data.filter(model => {
+              const modelId = model.id.toLowerCase();
+              return modelId.includes('vision') ||
+                     modelId.includes('gpt-4') ||
+                     modelId.includes('claude') ||
+                     modelId.includes('gemini') ||
+                     modelId.includes('qwen-vl') ||
+                     modelId.includes('qwen2-vl') ||
+                     modelId.includes('internvl') ||
+                     modelId.includes('llava') ||
+                     modelId.includes('minicpm') ||
+                     modelId.includes('yi-vision') ||
+                     modelId.includes('cogvlm') ||
+                     modelId.includes('-v') ||
+                     modelId.includes('visual') ||
+                     modelId.includes('multimodal');
+            });
+
+            if (visionModels.length === 0) {
+              state.availableVisionModels = data.data.map(model => model.id);
+              updateVisionModelSelect();
+              state.visionApiUrl = url;
+              state.visionApiKey = key;
+              showVisionTestResult(`识图API连接成功！找到 ${data.data.length} 个模型。请手动选择支持视觉识别的模型。`, 'warning');
+            } else {
+              state.availableVisionModels = visionModels.map(model => model.id);
+              updateVisionModelSelect();
+              state.visionApiUrl = url;
+              state.visionApiKey = key;
+              showVisionTestResult(`识图API连接成功！找到 ${visionModels.length} 个支持视觉的模型。`, 'success');
+            }
+          } else {
+            showVisionTestResult('识图API连接成功，但返回的模型数据格式不正确！', 'warning');
+          }
+        } catch (error) {
+          console.error('识图API连接测试失败:', error);
+          showVisionTestResult(`识图API连接失败: ${error.message}`, 'error');
+        } finally {
+          testBtn.disabled = false;
+          testBtn.textContent = '测试连接';
+        }
+      }
+
+      // 刷新识图模型列表
+      async function refreshVisionModels() {
+        if (!state.visionApiUrl || !state.visionApiKey) {
+          showVisionTestResult('请先测试识图API连接！', 'error');
+          return;
+        }
+
+        const refreshBtn = document.getElementById('refreshVisionBtn');
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = '刷新中...';
+        showVisionTestResult('正在刷新识图模型列表...', 'info');
+
+        try {
+          const response = await fetch(`${state.visionApiUrl}/models`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${state.visionApiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          if (data.data && Array.isArray(data.data)) {
+            const visionModels = data.data.filter(model => {
+              const modelId = model.id.toLowerCase();
+              return modelId.includes('vision') ||
+                     modelId.includes('gpt-4') ||
+                     modelId.includes('claude') ||
+                     modelId.includes('gemini') ||
+                     modelId.includes('qwen-vl') ||
+                     modelId.includes('qwen2-vl') ||
+                     modelId.includes('internvl') ||
+                     modelId.includes('llava') ||
+                     modelId.includes('minicpm') ||
+                     modelId.includes('yi-vision') ||
+                     modelId.includes('cogvlm') ||
+                     modelId.includes('-v') ||
+                     modelId.includes('visual') ||
+                     modelId.includes('multimodal');
+            });
+
+            if (visionModels.length === 0) {
+              state.availableVisionModels = data.data.map(model => model.id);
+              updateVisionModelSelect();
+              showVisionTestResult(`识图模型列表刷新成功！找到 ${data.data.length} 个模型。请手动选择支持视觉识别的模型。`, 'warning');
+            } else {
+              state.availableVisionModels = visionModels.map(model => model.id);
+              updateVisionModelSelect();
+              showVisionTestResult(`识图模型列表刷新成功！找到 ${visionModels.length} 个支持视觉的模型。`, 'success');
+            }
+          } else {
+            showVisionTestResult('识图模型列表刷新失败：返回数据格式不正确！', 'error');
+          }
+        } catch (error) {
+          console.error('刷新识图模型失败:', error);
+          showVisionTestResult(`刷新识图模型失败: ${error.message}`, 'error');
+        } finally {
+          refreshBtn.disabled = false;
+          refreshBtn.textContent = '刷新模型';
+        }
+      }
+
+      // 更新识图模型选择框
+      function updateVisionModelSelect() {
+        const select = document.getElementById('visionModel');
+        select.innerHTML = '<option value="">请选择识图模型</option>';
+
+        state.availableVisionModels.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model;
+          option.textContent = model;
+          if (model === state.visionModel) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+
+        // 保存模型列表到localStorage
+        localStorage.setItem('availableVisionModels', JSON.stringify(state.availableVisionModels));
+      }
+
+      // 显示识图测试结果
+      function showVisionTestResult(message, type) {
+        const resultDiv = document.getElementById('visionTestResult');
+        resultDiv.style.display = 'block';
+        resultDiv.textContent = message;
+
+        // 清除之前的样式类
+        resultDiv.className = '';
+
+        switch (type) {
+          case 'success':
+            resultDiv.style.background = '#d4edda';
+            resultDiv.style.color = '#155724';
+            resultDiv.style.border = '1px solid #c3e6cb';
+            break;
+          case 'error':
+            resultDiv.style.background = '#f8d7da';
+            resultDiv.style.color = '#721c24';
+            resultDiv.style.border = '1px solid #f5c6cb';
+            break;
+          case 'warning':
+            resultDiv.style.background = '#fff3cd';
+            resultDiv.style.color = '#856404';
+            resultDiv.style.border = '1px solid #ffeaa7';
+            break;
+          case 'info':
+            resultDiv.style.background = '#d1ecf1';
+            resultDiv.style.color = '#0c5460';
+            resultDiv.style.border = '1px solid #bee5eb';
+            break;
+        }
+      }
+
       // AI视觉分析功能
       async function requestVisionAnalysis(imageMsg, indicator) {
+        // 检查是否配置了识图API
+        if (state.visionApiUrl && state.visionApiKey && state.visionModel) {
+          // 使用配置的识图API
+          try {
+            if (indicator) {
+              indicator.textContent = '🤖 识图中...';
+            }
+
+            // 构建识图请求
+            const visionMessages = [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: '请详细描述这张图片的内容，包括图片中的物体、人物、场景、文字、颜色、情感等所有可见的元素。请用客观、详细的语言描述，不要加入主观评价。'
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: imageMsg.imageData
+                    }
+                  }
+                ]
+              }
+            ];
+
+            // 发送识图请求
+            const visionResponse = await fetch(`${state.visionApiUrl}/chat/completions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.visionApiKey}`
+              },
+              body: JSON.stringify({
+                model: state.visionModel,
+                messages: visionMessages,
+                max_tokens: 800,
+                temperature: 0.3
+              })
+            });
+
+            if (!visionResponse.ok) {
+              throw new Error(`识图API请求失败: ${visionResponse.status} ${visionResponse.statusText}`);
+            }
+
+            const visionData = await visionResponse.json();
+
+            if (!visionData.choices || !visionData.choices[0] || !visionData.choices[0].message) {
+              throw new Error('识图API返回数据格式不正确');
+            }
+
+            const imageDescription = visionData.choices[0].message.content.trim();
+            console.log('🖼️ 图片识别完成:', imageDescription);
+
+            if (indicator) {
+              indicator.textContent = '✅ 已识图';
+              indicator.style.background = 'rgba(76, 175, 80, 0.9)';
+
+              // 3秒后隐藏指示器
+              setTimeout(() => {
+                if (indicator.parentNode) {
+                  indicator.style.opacity = '0';
+                  setTimeout(() => {
+                    if (indicator.parentNode) {
+                      indicator.parentNode.removeChild(indicator);
+                    }
+                  }, 300);
+                }
+              }, 3000);
+            }
+
+            // 构建发送给角色AI的消息内容
+            let messageForAI = '';
+            if (imageMsg.imageDescription && imageMsg.imageDescription !== '发送了一张图片') {
+              messageForAI = `用户发送了一张图片并说："${imageMsg.imageDescription}"\n\n图片内容描述：${imageDescription}`;
+            } else {
+              messageForAI = `用户发送了一张图片。\n\n图片内容描述：${imageDescription}`;
+            }
+
+            // 标记用户发送了新消息，允许AI回复
+            state.userHasSentNewMessage = true;
+            updateAiRequestButtonVisibility();
+
+            // 延迟一下再请求AI回复，让用户看到识图完成
+            setTimeout(() => {
+              requestAiReply();
+            }, 1500);
+
+            return;
+
+          } catch (error) {
+            console.error('识图API分析失败:', error);
+            if (indicator) {
+              indicator.textContent = '❌ 识图失败';
+              indicator.style.background = 'rgba(255, 0, 0, 0.8)';
+            }
+            // 识图失败，继续使用原有的AI分析方式
+          }
+        }
+
+        // 原有的AI分析方式（作为备用）
         if (!AI_GENERATE) {
           if (indicator) {
             indicator.textContent = '❌ AI不可用';
@@ -5669,8 +6007,6 @@
 
           if (state.jailbreakEnabled && AI_GENERATE_RAW) {
             // 破限模式：使用generateRaw
-
-
             const rawRequestData = {
               ordered_prompts: [
                 { role: 'system', content: JAILBREAK_PROMPT },
@@ -5694,8 +6030,6 @@
             response = await AI_GENERATE_RAW(rawRequestData);
           } else {
             // 普通模式：使用标准generate函数
-
-
             const requestData = {
               injects: [
                 { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
@@ -8870,6 +9204,36 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           state.jailbreakEnabled = savedJailbreak === 'true';
           document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
         }
+
+        // 加载识图API配置
+        const savedVisionApiUrl = localStorage.getItem('visionApiUrl');
+        const savedVisionApiKey = localStorage.getItem('visionApiKey');
+        const savedVisionModel = localStorage.getItem('visionModel');
+        const savedVisionModels = localStorage.getItem('availableVisionModels');
+
+        if (savedVisionApiUrl) {
+          state.visionApiUrl = savedVisionApiUrl;
+          document.getElementById('visionApiUrl').value = savedVisionApiUrl;
+        }
+
+        if (savedVisionApiKey) {
+          state.visionApiKey = savedVisionApiKey;
+          document.getElementById('visionApiKey').value = savedVisionApiKey;
+        }
+
+        if (savedVisionModel) {
+          state.visionModel = savedVisionModel;
+        }
+
+        if (savedVisionModels) {
+          try {
+            state.availableVisionModels = JSON.parse(savedVisionModels);
+            updateVisionModelSelect();
+          } catch (e) {
+            console.error('Failed to parse vision models:', e);
+            state.availableVisionModels = [];
+          }
+        }
       }
 
       // 保存设置到localStorage
@@ -9093,7 +9457,26 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         state.jailbreakEnabled = e.target.checked;
         // 保存到localStorage
         localStorage.setItem('jailbreakEnabled', state.jailbreakEnabled);
+      });
 
+      // 识图API相关事件监听器
+      document.getElementById('testVisionBtn').addEventListener('click', testVisionConnection);
+      document.getElementById('refreshVisionBtn').addEventListener('click', refreshVisionModels);
+
+      // 识图API配置输入框变化时保存
+      document.getElementById('visionApiUrl').addEventListener('input', (e) => {
+        state.visionApiUrl = e.target.value.trim();
+        localStorage.setItem('visionApiUrl', state.visionApiUrl);
+      });
+
+      document.getElementById('visionApiKey').addEventListener('input', (e) => {
+        state.visionApiKey = e.target.value.trim();
+        localStorage.setItem('visionApiKey', state.visionApiKey);
+      });
+
+      document.getElementById('visionModel').addEventListener('change', (e) => {
+        state.visionModel = e.target.value;
+        localStorage.setItem('visionModel', state.visionModel);
       });
 
       // 点击遮罩关闭模态框
