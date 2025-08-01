@@ -6081,15 +6081,12 @@
             }
           ];
 
-          // 处理图片数据 - 优先使用识图专用的base64数据
-          let imageData = imageMsg.visionData || imageMsg.imageData;
-
-          if (!imageData) {
-            console.warn('Kimi识图：没有可用的图片数据');
-            return;
+          // 处理图片数据
+          let imageData = imageMsg.imageData;
+          if (imageData.startsWith('data:image/')) {
+            // 如果是base64格式，需要转换为Kimi接受的格式
+            // Kimi可能需要先上传图片获取file_id，这里我们尝试直接发送base64
           }
-
-          console.log('🌙 Kimi识图使用的数据格式:', imageData.substring(0, 50) + '...');
 
           // 发送Kimi识图请求
           const kimiResponse = await fetch('https://api.moonshot.cn/v1/chat/completions', {
@@ -6281,7 +6278,7 @@
                 { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false,
-              image: imageMsg.visionData || imageMsg.imageData
+              image: imageMsg.imageData
             };
 
             response = await AI_GENERATE_RAW(rawRequestData);
@@ -6292,7 +6289,7 @@
                 { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false,
-              image: imageMsg.visionData || imageMsg.imageData
+              image: imageMsg.imageData
             };
 
             response = await AI_GENERATE(requestData);
@@ -6372,7 +6369,7 @@
                   {
                     type: 'image_url',
                     image_url: {
-                      url: imageMsg.visionData || imageMsg.imageData
+                      url: imageMsg.imageData
                     }
                   }
                 ]
@@ -7120,30 +7117,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      // 专门为识图优化的图片处理
-      async function processImageForVision(file) {
-        // 对于识图，直接使用base64更可靠
-        // 参考流式同层插件，但保持简单易用
-        console.log('🖼️ 为识图处理图片，使用base64格式确保最佳兼容性');
-        return await convertFileToBase64(file);
-      }
-
-      // 对于显示的图片处理（保持现有逻辑）
-      async function processImageForDisplay(file) {
-        // 先尝试插件上传，失败则使用base64
-        if (typeof top.window.__uploadImageByPlugin === 'function') {
-          try {
-            const result = await top.window.__uploadImageByPlugin(file);
-            console.log('✅ 使用插件上传成功，图片已保存到本地');
-            return result.url;
-          } catch (error) {
-            console.warn('插件上传失败，使用base64方案:', error);
-          }
-        }
-        console.log('📄 使用base64格式处理图片');
-        return await convertFileToBase64(file);
-      }
-
       // 处理图片文件选择
       async function handleImageFileSelect(file, modal) {
         // 检查文件类型
@@ -7168,14 +7141,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         previewArea.style.display = 'block';
 
         try {
-          // 使用优化的图片处理函数
-          const imageUrl = await processImageForDisplay(file);
+          let imageUrl;
 
-          // 根据处理结果更新显示信息
-          if (imageUrl.startsWith('data:')) {
-            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+          // 首先尝试使用插件上传功能
+          if (typeof top.window.__uploadImageByPlugin === 'function') {
+            try {
+              const result = await top.window.__uploadImageByPlugin(file);
+              imageUrl = result.url;
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到服务器`;
+            } catch (uploadError) {
+              console.warn('服务器上传失败，使用本地base64方案:', uploadError);
+              // 如果服务器上传失败，使用本地base64方案
+              imageUrl = await convertFileToBase64(file);
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+            }
           } else {
-            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到服务器`;
+            // 如果没有上传插件，直接使用本地base64方案
+            console.log('未检测到上传插件，使用本地base64方案');
+            imageUrl = await convertFileToBase64(file);
+            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
           }
 
           preview.src = imageUrl;
@@ -7184,10 +7168,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           modal.dataset.mode = 'upload';
           modal.dataset.imageData = imageUrl;
           modal.dataset.fileName = file.name;
-
-          // 同时准备识图专用的base64数据
-          const visionData = await processImageForVision(file);
-          modal.dataset.visionData = visionData;
         } catch (error) {
           console.error('图片处理失败:', error);
           info.textContent = '图片处理失败，请重试';
@@ -7221,8 +7201,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         if (mode === 'upload') {
           // 上传模式
-          const imageData = modal.dataset.imageData; // 用于显示的图片数据
-          const visionData = modal.dataset.visionData; // 用于识图的base64数据
+          const imageData = modal.dataset.imageData;
           const fileName = modal.dataset.fileName;
 
           if (!imageData) {
@@ -7232,8 +7211,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           sendMessage({
             type: 'image',
-            imageData: imageData, // 显示用的图片URL或base64
-            visionData: visionData, // 识图专用的base64数据
+            imageData: imageData,
             fileName: fileName,
             imageDescription: description || '发送了一张图片',
             time: getTimeStr(),
@@ -10115,6 +10093,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           hideSettings()
         }
       });
+
+
+
       // 页面加载时加载设置
       // loadSettings(); // 这个现在在initApp中调用
     </script>
