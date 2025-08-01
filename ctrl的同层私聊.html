@@ -4774,7 +4774,11 @@
           'text/markdown': '📝',
           'text/csv': '📊',
           'application/vnd.ms-excel': '📊',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊'
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
+          'text/html': '🌐',
+          'text/xml': '📋',
+          'application/xml': '📋',
+          'application/rtf': '📄'
         };
 
         return iconMap[fileType] || '📄';
@@ -6902,6 +6906,28 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
+        // 检查是否有待处理的文档
+        let documentAnalysisPrompt = '';
+        if (window.lastUploadedDocument) {
+          const doc = window.lastUploadedDocument;
+          const timeSinceUpload = Date.now() - doc.timestamp;
+
+          // 如果文档是在最近5分钟内上传的，自动包含文档分析
+          if (timeSinceUpload < 5 * 60 * 1000) {
+            console.log('🤖 检测到待处理文档，将包含在AI回复中');
+
+            // 构建文档分析提示（将在后面注入到AI请求中）
+            documentAnalysisPrompt = `用户刚刚上传了一个文档"${doc.fileName}"`;
+            if (doc.description) {
+              documentAnalysisPrompt += `，用户说明：${doc.description}`;
+            }
+            documentAnalysisPrompt += `\n\n文档内容：\n${doc.content}\n\n请分析这个文档的内容，包括：\n1. 文档主题和类型\n2. 关键信息摘要\n3. 重要观点或结论\n4. 如果有需要讨论的地方，请提出问题\n\n请用简洁明了的方式回复。`;
+
+            // 清除待处理文档
+            delete window.lastUploadedDocument;
+          }
+        }
+
         // 首先检查是否有需要识图的图片
         const pendingVisionMessages = state.messageHistory.filter(msg =>
           msg.type === 'image' && msg.needsVisionAnalysis && msg.visionIndicator
@@ -6959,9 +6985,21 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             // 破限模式：使用generateRaw完全绕过SillyTavern预设
 
 
+            // 构建系统提示，包含文档分析（如果有）
+            let systemContent = JAILBREAK_PROMPT;
+            if (documentAnalysisPrompt) {
+              systemContent += `\n\n[文档分析任务]\n${documentAnalysisPrompt}`;
+            }
+
+            // 构建上下文，包含文档分析（如果有）
+            let contextWithDocument = context;
+            if (documentAnalysisPrompt) {
+              contextWithDocument += `\n\n[文档分析]\n${documentAnalysisPrompt}`;
+            }
+
             const rawRequestData = {
               ordered_prompts: [
-                { role: 'system', content: JAILBREAK_PROMPT },
+                { role: 'system', content: systemContent },
                 'world_info_before',
                 'persona_description',
                 'char_description',
@@ -6973,7 +7011,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 'user_input'
               ],
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: contextWithDocument, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: true
             };
@@ -6989,10 +7027,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           } else {
             // 普通模式：使用标准generate函数
 
+            // 构建上下文，包含文档分析（如果有）
+            let contextWithDocument = context;
+            if (documentAnalysisPrompt) {
+              contextWithDocument += `\n\n[文档分析任务]\n${documentAnalysisPrompt}`;
+            }
 
             const requestData = {
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: contextWithDocument, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: true
             };
@@ -7076,9 +7119,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           // 若仍未得到任何消息，再尝试一次性模式
           if (handled === 0) {
+            // 构建上下文，包含文档分析（如果有）
+            let contextWithDocument = context;
+            if (documentAnalysisPrompt) {
+              contextWithDocument += `\n\n[文档分析任务]\n${documentAnalysisPrompt}`;
+            }
+
             buffer = await AI_GENERATE({
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: contextWithDocument, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false
             });
@@ -7087,9 +7136,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           // 如果没有处理任何消息，尝试一次性模式重试一次
           if (handled === 0) {
+            // 构建上下文，包含文档分析（如果有）
+            let contextWithDocument = context;
+            if (documentAnalysisPrompt) {
+              contextWithDocument += `\n\n[文档分析任务]\n${documentAnalysisPrompt}`;
+            }
+
             buffer = await AI_GENERATE({
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: contextWithDocument, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false
             });
@@ -7615,7 +7670,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 <button id="confirmFileSend" style="padding: 8px 20px; border: none; background: #07c160; color: white; border-radius: 6px; cursor: pointer;">发送</button>
               </div>
             </div>
-            <input type="file" id="fileFileInput" accept=".txt,.pdf,.doc,.docx,.json,.md" style="display: none;">
+            <input type="file" id="fileFileInput" accept=".txt,.pdf,.doc,.docx,.json,.md,.csv,.html,.xml,.rtf" style="display: none;">
           `;
 
           document.body.appendChild(modal);
@@ -7832,11 +7887,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           sendMessage(messageData);
 
-          // 如果启用AI阅读，自动发送AI分析请求
+          // 不再自动发送AI分析请求，等待用户点击绿色按钮
+          // 将文档信息存储到全局变量，供AI回复时使用
           if (enableAI) {
-            setTimeout(() => {
-              requestAIAnalysis(messageData.content, fileName, description);
-            }, 1000);
+            window.lastUploadedDocument = {
+              content: messageData.content,
+              fileName: fileName,
+              description: description,
+              timestamp: Date.now()
+            };
+            console.log('📄 文档已上传，等待AI分析。点击左上角绿色按钮开始对话。');
           }
 
         } else if (mode === 'describe') {
@@ -7861,31 +7921,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         resetFileModal();
       }
 
-      // 请求AI分析文档
+      // 请求AI分析文档（现在通过全局文档变量处理）
       function requestAIAnalysis(content, fileName, userDescription) {
         try {
-          let analysisPrompt = `我刚刚上传了一个文档"${fileName}"`;
+          console.log('🤖 准备AI分析文档:', fileName);
 
-          if (userDescription) {
-            analysisPrompt += `，用户说明：${userDescription}`;
-          }
+          // 设置待处理文档
+          window.lastUploadedDocument = {
+            content: content,
+            fileName: fileName,
+            description: userDescription,
+            timestamp: Date.now()
+          };
 
-          analysisPrompt += `\n\n文档内容如下：\n${content}\n\n请帮我分析这个文档：
-1. 文档的主要内容和类型
-2. 关键信息摘要
-3. 重要观点或结论
-4. 如果有需要讨论或澄清的地方
-
-请用简洁明了的方式回复。`;
-
-          // 发送分析请求
-          sendMessage({
-            type: 'text',
-            message: analysisPrompt,
-            isAIRequest: true
-          });
-
-          // 触发AI回复
+          // 触发AI回复，AI会自动检测并处理文档
           setTimeout(() => {
             requestAiReply();
           }, 500);
