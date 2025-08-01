@@ -6622,6 +6622,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         };
       }
 
+      // 将文件转换为base64格式
+      function convertFileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            resolve(e.target.result);
+          };
+          reader.onerror = function(error) {
+            reject(error);
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
       // 处理图片文件选择
       async function handleImageFileSelect(file, modal) {
         // 检查文件类型
@@ -6646,22 +6660,38 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         previewArea.style.display = 'block';
 
         try {
-          // 上传图片到服务器
-          const result = await top.window.__uploadImageByPlugin(file);
-          const imageUrl = result.url;
+          let imageUrl;
+
+          // 首先尝试使用插件上传功能
+          if (typeof top.window.__uploadImageByPlugin === 'function') {
+            try {
+              const result = await top.window.__uploadImageByPlugin(file);
+              imageUrl = result.url;
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到服务器`;
+            } catch (uploadError) {
+              console.warn('服务器上传失败，使用本地base64方案:', uploadError);
+              // 如果服务器上传失败，使用本地base64方案
+              imageUrl = await convertFileToBase64(file);
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+            }
+          } else {
+            // 如果没有上传插件，直接使用本地base64方案
+            console.log('未检测到上传插件，使用本地base64方案');
+            imageUrl = await convertFileToBase64(file);
+            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+          }
 
           preview.src = imageUrl;
-          info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传`;
           descInput.placeholder = '请输入图片备注（可选）';
 
           modal.dataset.mode = 'upload';
           modal.dataset.imageData = imageUrl;
           modal.dataset.fileName = file.name;
         } catch (error) {
-          console.error('图片上传失败:', error);
-          info.textContent = '图片上传失败，请重试';
+          console.error('图片处理失败:', error);
+          info.textContent = '图片处理失败，请重试';
           previewArea.style.display = 'none';
-          alert('图片上传失败，请重试！');
+          alert('图片处理失败，请重试！');
         }
       }
 
@@ -9482,7 +9512,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 点击遮罩关闭模态框
       document.getElementById('settingsOverlay').addEventListener('click', (e) => {
         if (e.target.id === 'settingsOverlay') {
-          hideSettings();
+          hideSettings()
         }
       });
 
