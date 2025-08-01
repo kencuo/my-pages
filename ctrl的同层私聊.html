@@ -1708,6 +1708,68 @@
         border-bottom: none;
       }
 
+      /* Document message styling */
+      .message-content.document-message {
+        background: #f8f9fa !important;
+        border-left: 4px solid #007bff !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+      }
+
+      .document-container {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        border-left: 4px solid #007bff;
+        margin: 5px 0;
+      }
+
+      .document-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+
+      .document-description {
+        background: white;
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .document-content {
+        background: white;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 10px;
+      }
+
+      .document-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .document-actions button {
+        background: white;
+        border: 1px solid #007bff;
+        color: #007bff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s ease;
+      }
+
+      .document-actions button:hover {
+        background: #007bff;
+        color: white;
+      }
+
       /* Voice call message styling */
       .message.call-context {
         /* 移除动画，保持静态 */
@@ -5130,6 +5192,145 @@
         contentDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:20px;">📄</span><div><div style="font-weight:600;">${msg.fileFormat ? msg.fileFormat.toUpperCase() : 'FILE'}</div><div style="font-size:13px;white-space:pre-wrap;color:#333;">${msg.fileContent}</div></div></div>`;
       }
 
+      // 渲染文档消息（真实文件）
+      function renderDocumentMessage(contentDiv, msg) {
+        contentDiv.classList.add('document-message');
+
+        const fileIcon = getFileIcon(msg.fileType);
+        const fileName = msg.fileName || '未知文件';
+        const fileType = msg.fileType || 'unknown';
+        const description = msg.description || '';
+        const content = msg.content || '';
+        const isRealFile = msg.isRealFile || false;
+
+        // 内容预览（限制长度）
+        const maxPreviewLength = 200;
+        const contentPreview = content.length > maxPreviewLength
+          ? content.substring(0, maxPreviewLength) + '...'
+          : content;
+
+        // 生成唯一ID用于展开/收起功能
+        const messageId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        let html = `
+          <div class="document-container" style="
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 5px 0;
+          ">
+            <div class="document-header" style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              margin-bottom: 10px;
+              font-weight: bold;
+            ">
+              <span style="font-size: 24px;">${fileIcon}</span>
+              <div style="flex: 1;">
+                <div style="color: #333; font-size: 14px;">${fileName}</div>
+                <div style="color: #666; font-size: 12px;">
+                  ${fileType} ${isRealFile ? '• 真实文件 ✅' : '• 文字描述 📝'}
+                </div>
+              </div>
+            </div>
+        `;
+
+        // 如果有用户描述，显示描述
+        if (description) {
+          html += `
+            <div class="document-description" style="
+              background: white;
+              padding: 10px;
+              border-radius: 6px;
+              margin-bottom: 10px;
+              border: 1px solid #e0e0e0;
+            ">
+              <div style="font-size: 12px; color: #666; margin-bottom: 5px;">📝 用户说明：</div>
+              <div style="font-size: 13px; color: #333;">${description}</div>
+            </div>
+          `;
+        }
+
+        // 如果是真实文件且有内容，显示内容预览
+        if (isRealFile && content) {
+          html += `
+            <div class="document-content" style="
+              background: white;
+              padding: 10px;
+              border-radius: 6px;
+              border: 1px solid #e0e0e0;
+              margin-bottom: 10px;
+            ">
+              <div style="font-size: 12px; color: #666; margin-bottom: 5px;">📄 文档内容：</div>
+              <div id="${messageId}_preview" style="
+                font-family: monospace;
+                font-size: 12px;
+                line-height: 1.4;
+                color: #333;
+                white-space: pre-wrap;
+                max-height: 150px;
+                overflow-y: auto;
+              ">${contentPreview}</div>
+              ${content.length > maxPreviewLength ? `
+                <div style="margin-top: 8px;">
+                  <button onclick="toggleDocumentContent('${messageId}')" style="
+                    background: none;
+                    border: 1px solid #007bff;
+                    color: #007bff;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                  ">查看完整内容</button>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+
+        // 操作按钮
+        if (isRealFile && content) {
+          html += `
+            <div class="document-actions" style="
+              display: flex;
+              gap: 8px;
+              flex-wrap: wrap;
+            ">
+              <button onclick="copyDocumentContent('${messageId}')" style="
+                background: white;
+                border: 1px solid #28a745;
+                color: #28a745;
+                padding: 6px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+              ">📋 复制内容</button>
+              <button onclick="requestDocumentAnalysis('${messageId}')" style="
+                background: white;
+                border: 1px solid #ffc107;
+                color: #ffc107;
+                padding: 6px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+              ">🤖 AI分析</button>
+            </div>
+          `;
+        }
+
+        html += `</div>`;
+
+        contentDiv.innerHTML = html;
+
+        // 存储完整内容到DOM元素，供后续操作使用
+        if (content) {
+          contentDiv.dataset.fullContent = content;
+          contentDiv.dataset.fileName = fileName;
+        }
+      }
+
       function renderLocationMessage(contentDiv, msg) {
         contentDiv.classList.add('location-message');
         const loc = msg.locationText || msg.content;
@@ -5170,6 +5371,7 @@
         'call-cancelled': renderCallCancelledMessage,
         'voice-effect': renderVoiceEffectMessage,
         file: renderFileMessage,
+        document: renderDocumentMessage, // 新增文档类型渲染器
         location: renderLocationMessage,
       };
 
@@ -7296,13 +7498,514 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 发送文件
+      // 发送文件 - 支持真实文件上传和文本描述两种方式
       function sendFile() {
-        const format = prompt('请选择文件格式 (word/pdf/txt/其它):');
-        if (!format) return;
-        const content = prompt('请输入文件内容:');
-        if (content === null) return;
-        sendMessage({ type: 'file', fileFormat: format, fileContent: content });
+        showFileSendModal();
+      }
+
+      // 显示文件发送模态框
+      function showFileSendModal() {
+        let modal = document.getElementById('fileSendModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'fileSendModal';
+          modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          `;
+
+          modal.innerHTML = `
+            <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 450px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #333;">📄 发送文件</h3>
+                <button id="closeFileModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="uploadFileBtn" style="flex: 1; padding: 12px; border: 2px solid #07c160; background: #07c160; color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">📁 上传真实文件</button>
+                <button id="describeFileBtn" style="flex: 1; padding: 12px; border: 2px solid #07c160; background: white; color: #07c160; border-radius: 8px; cursor: pointer; font-size: 14px;">✏️ 文字描述</button>
+              </div>
+
+              <div id="filePreviewArea" style="display: none; margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 8px; border: 1px solid #ddd;">
+                <div id="filePreview" style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                  <div id="fileIcon" style="font-size: 24px;">📄</div>
+                  <div>
+                    <div id="fileName" style="font-weight: bold; color: #333;"></div>
+                    <div id="fileInfo" style="font-size: 12px; color: #666;"></div>
+                  </div>
+                </div>
+                <div id="fileContentPreview" style="max-height: 150px; overflow-y: auto; background: white; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; white-space: pre-wrap;"></div>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">备注说明：</label>
+                <textarea id="fileDescriptionInput" placeholder="请输入文件说明或让AI如何处理这个文件（可选）" style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;"></textarea>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="enableAIReading" checked style="cursor: pointer;">
+                  <span style="font-size: 14px; color: #333;">🤖 启用AI阅读分析</span>
+                </label>
+                <div style="font-size: 12px; color: #666; margin-top: 5px; margin-left: 24px;">
+                  勾选后，AI将自动阅读文档内容并进行分析
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="cancelFileSend" style="padding: 8px 20px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 6px; cursor: pointer;">取消</button>
+                <button id="confirmFileSend" style="padding: 8px 20px; border: none; background: #07c160; color: white; border-radius: 6px; cursor: pointer;">发送</button>
+              </div>
+            </div>
+            <input type="file" id="fileFileInput" accept=".txt,.pdf,.doc,.docx,.json,.md" style="display: none;">
+          `;
+
+          document.body.appendChild(modal);
+          setupFileModalEvents(modal);
+        }
+
+        modal.style.display = 'flex';
+        resetFileModal();
+      }
+
+      // 设置文件模态框事件
+      function setupFileModalEvents(modal) {
+        const closeBtn = modal.querySelector('#closeFileModal');
+        const cancelBtn = modal.querySelector('#cancelFileSend');
+        const confirmBtn = modal.querySelector('#confirmFileSend');
+        const uploadBtn = modal.querySelector('#uploadFileBtn');
+        const describeBtn = modal.querySelector('#describeFileBtn');
+        const fileInput = modal.querySelector('#fileFileInput');
+
+        // 关闭模态框
+        const closeModal = () => {
+          modal.style.display = 'none';
+          resetFileModal();
+        };
+
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+
+        // 点击遮罩关闭
+        modal.onclick = (e) => {
+          if (e.target === modal) {
+            closeModal();
+          }
+        };
+
+        // 上传文件模式
+        uploadBtn.onclick = () => {
+          modal.dataset.mode = 'upload';
+          uploadBtn.style.background = '#07c160';
+          uploadBtn.style.color = 'white';
+          describeBtn.style.background = 'white';
+          describeBtn.style.color = '#07c160';
+
+          // 触发文件选择
+          fileInput.click();
+        };
+
+        // 文字描述模式
+        describeBtn.onclick = () => {
+          modal.dataset.mode = 'describe';
+          describeBtn.style.background = '#07c160';
+          describeBtn.style.color = 'white';
+          uploadBtn.style.background = 'white';
+          uploadBtn.style.color = '#07c160';
+
+          // 隐藏预览区域
+          const previewArea = modal.querySelector('#filePreviewArea');
+          previewArea.style.display = 'none';
+
+          // 更新输入框提示
+          const descInput = modal.querySelector('#fileDescriptionInput');
+          descInput.placeholder = '请描述文件内容，例如：这是一个关于项目计划的Word文档，包含了时间安排和任务分配...';
+        };
+
+        // 文件选择处理
+        fileInput.onchange = async (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            await handleFileSelect(file, modal);
+          }
+        };
+
+        // 确认发送
+        confirmBtn.onclick = () => {
+          handleFileSend(modal);
+        };
+      }
+
+      // 处理文件选择
+      async function handleFileSelect(file, modal) {
+        const previewArea = modal.querySelector('#filePreviewArea');
+        const fileIcon = modal.querySelector('#fileIcon');
+        const fileName = modal.querySelector('#fileName');
+        const fileInfo = modal.querySelector('#fileInfo');
+        const contentPreview = modal.querySelector('#fileContentPreview');
+        const descInput = modal.querySelector('#fileDescriptionInput');
+
+        // 显示文件信息
+        fileName.textContent = file.name;
+        fileInfo.textContent = `${file.type} • ${formatFileSize(file.size)}`;
+
+        // 设置文件图标
+        fileIcon.textContent = getFileIcon(file.type);
+
+        // 显示预览区域
+        previewArea.style.display = 'block';
+
+        // 显示处理状态
+        contentPreview.textContent = '正在处理文件...';
+
+        try {
+          // 检查插件是否可用
+          if (typeof top.window.__processFileByPlugin === 'function') {
+            // 使用插件处理文件
+            const result = await top.window.__processFileByPlugin(file, {
+              enableAIReading: false // 这里先不启用AI，只获取内容
+            });
+
+            if (result.success) {
+              // 存储处理结果
+              modal.dataset.fileData = JSON.stringify(result);
+              modal.dataset.fileName = file.name;
+              modal.dataset.fileType = file.type;
+
+              // 显示内容预览
+              const content = result.content || '文件处理完成';
+              const preview = content.length > 500 ? content.substring(0, 500) + '...' : content;
+              contentPreview.textContent = preview;
+
+              // 更新描述输入框提示
+              descInput.placeholder = `文件已上传：${file.name}。请输入处理说明或让AI如何分析这个文件（可选）`;
+
+              fileInfo.textContent = `${file.type} • ${formatFileSize(file.size)} • 处理成功 ✅`;
+            } else {
+              throw new Error('文件处理失败');
+            }
+          } else {
+            // 插件不可用，使用基础文件读取
+            console.warn('文档处理插件未加载，使用基础文件读取');
+            const content = await readFileAsText(file);
+
+            modal.dataset.fileContent = content;
+            modal.dataset.fileName = file.name;
+            modal.dataset.fileType = file.type;
+
+            const preview = content.length > 500 ? content.substring(0, 500) + '...' : content;
+            contentPreview.textContent = preview;
+
+            descInput.placeholder = `文件已读取：${file.name}。请输入处理说明（可选）`;
+            fileInfo.textContent = `${file.type} • ${formatFileSize(file.size)} • 基础读取 ⚠️`;
+          }
+        } catch (error) {
+          console.error('文件处理失败:', error);
+          contentPreview.textContent = `文件处理失败: ${error.message}`;
+          fileInfo.textContent = `${file.type} • ${formatFileSize(file.size)} • 处理失败 ❌`;
+        }
+      }
+
+      // 基础文件读取（备用方案）
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsText(file, 'UTF-8');
+        });
+      }
+
+      // 获取文件图标
+      function getFileIcon(fileType) {
+        const iconMap = {
+          'text/plain': '📄',
+          'application/pdf': '📕',
+          'application/msword': '📘',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📘',
+          'application/json': '📋',
+          'text/markdown': '📝',
+          'text/csv': '📊',
+          'application/vnd.ms-excel': '📊',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊'
+        };
+
+        return iconMap[fileType] || '📄';
+      }
+
+      // 格式化文件大小
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      // 处理文件发送
+      function handleFileSend(modal) {
+        const mode = modal.dataset.mode;
+        const description = modal.querySelector('#fileDescriptionInput').value.trim();
+        const enableAI = modal.querySelector('#enableAIReading').checked;
+
+        if (mode === 'upload') {
+          // 上传模式
+          const fileData = modal.dataset.fileData;
+          const fileName = modal.dataset.fileName;
+          const fileType = modal.dataset.fileType;
+
+          if (!fileData && !modal.dataset.fileContent) {
+            alert('请先选择文件！');
+            return;
+          }
+
+          let messageData;
+
+          if (fileData) {
+            // 使用插件处理的结果
+            const result = JSON.parse(fileData);
+            messageData = {
+              type: 'document',
+              fileName: fileName,
+              fileType: fileType,
+              content: result.content,
+              description: description,
+              enableAI: enableAI,
+              metadata: result.metadata,
+              isRealFile: true
+            };
+          } else {
+            // 使用基础读取的结果
+            messageData = {
+              type: 'document',
+              fileName: fileName,
+              fileType: fileType,
+              content: modal.dataset.fileContent,
+              description: description,
+              enableAI: enableAI,
+              isRealFile: true
+            };
+          }
+
+          sendMessage(messageData);
+
+          // 如果启用AI阅读，自动发送AI分析请求
+          if (enableAI) {
+            setTimeout(() => {
+              requestAIAnalysis(messageData.content, fileName, description);
+            }, 1000);
+          }
+
+        } else if (mode === 'describe') {
+          // 描述模式
+          if (!description) {
+            alert('请输入文件描述！');
+            return;
+          }
+
+          sendMessage({
+            type: 'file',
+            fileDescription: description,
+            isRealFile: false
+          });
+        } else {
+          alert('请选择发送模式！');
+          return;
+        }
+
+        // 关闭模态框
+        modal.style.display = 'none';
+        resetFileModal();
+      }
+
+      // 请求AI分析文档
+      function requestAIAnalysis(content, fileName, userDescription) {
+        try {
+          let analysisPrompt = `我刚刚上传了一个文档"${fileName}"`;
+
+          if (userDescription) {
+            analysisPrompt += `，用户说明：${userDescription}`;
+          }
+
+          analysisPrompt += `\n\n文档内容如下：\n${content}\n\n请帮我分析这个文档：
+1. 文档的主要内容和类型
+2. 关键信息摘要
+3. 重要观点或结论
+4. 如果有需要讨论或澄清的地方
+
+请用简洁明了的方式回复。`;
+
+          // 发送分析请求
+          sendMessage({
+            type: 'text',
+            message: analysisPrompt,
+            isAIRequest: true
+          });
+
+          // 触发AI回复
+          setTimeout(() => {
+            requestAiReply();
+          }, 500);
+
+        } catch (error) {
+          console.error('AI分析请求失败:', error);
+        }
+      }
+
+      // 重置文件模态框
+      function resetFileModal() {
+        const modal = document.getElementById('fileSendModal');
+        if (!modal) return;
+
+        const previewArea = modal.querySelector('#filePreviewArea');
+        const descInput = modal.querySelector('#fileDescriptionInput');
+        const fileInput = modal.querySelector('#fileFileInput');
+        const uploadBtn = modal.querySelector('#uploadFileBtn');
+        const describeBtn = modal.querySelector('#describeFileBtn');
+        const enableAI = modal.querySelector('#enableAIReading');
+
+        // 重置显示状态
+        previewArea.style.display = 'none';
+        descInput.value = '';
+        descInput.placeholder = '请输入文件说明或让AI如何处理这个文件（可选）';
+        fileInput.value = '';
+        enableAI.checked = true;
+
+        // 重置按钮状态
+        uploadBtn.style.background = '#07c160';
+        uploadBtn.style.color = 'white';
+        describeBtn.style.background = 'white';
+        describeBtn.style.color = '#07c160';
+
+        // 清除数据
+        delete modal.dataset.mode;
+        delete modal.dataset.fileData;
+        delete modal.dataset.fileName;
+        delete modal.dataset.fileType;
+        delete modal.dataset.fileContent;
+      }
+
+      // 全局函数：切换文档内容显示
+      window.toggleDocumentContent = function(messageId) {
+        const previewDiv = document.getElementById(`${messageId}_preview`);
+        const button = previewDiv.nextElementSibling.querySelector('button');
+        const contentDiv = previewDiv.closest('.message').querySelector('.document-message');
+        const fullContent = contentDiv.dataset.fullContent;
+
+        if (button.textContent === '查看完整内容') {
+          previewDiv.textContent = fullContent;
+          previewDiv.style.maxHeight = '400px';
+          button.textContent = '收起内容';
+        } else {
+          const maxPreviewLength = 200;
+          const contentPreview = fullContent.length > maxPreviewLength
+            ? fullContent.substring(0, maxPreviewLength) + '...'
+            : fullContent;
+          previewDiv.textContent = contentPreview;
+          previewDiv.style.maxHeight = '150px';
+          button.textContent = '查看完整内容';
+        }
+      };
+
+      // 全局函数：复制文档内容
+      window.copyDocumentContent = function(messageId) {
+        const contentDiv = document.getElementById(`${messageId}_preview`).closest('.message').querySelector('.document-message');
+        const fullContent = contentDiv.dataset.fullContent;
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(fullContent).then(() => {
+            // 显示复制成功提示
+            showToast('内容已复制到剪贴板', 'success');
+          }).catch(err => {
+            console.error('复制失败:', err);
+            showToast('复制失败', 'error');
+          });
+        } else {
+          // 备用方案
+          const textArea = document.createElement('textarea');
+          textArea.value = fullContent;
+          document.body.appendChild(textArea);
+          textArea.select();
+          try {
+            document.execCommand('copy');
+            showToast('内容已复制到剪贴板', 'success');
+          } catch (err) {
+            console.error('复制失败:', err);
+            showToast('复制失败', 'error');
+          }
+          document.body.removeChild(textArea);
+        }
+      };
+
+      // 全局函数：请求文档分析
+      window.requestDocumentAnalysis = function(messageId) {
+        const contentDiv = document.getElementById(`${messageId}_preview`).closest('.message').querySelector('.document-message');
+        const fullContent = contentDiv.dataset.fullContent;
+        const fileName = contentDiv.dataset.fileName;
+
+        if (fullContent && fileName) {
+          requestAIAnalysis(fullContent, fileName, '用户请求重新分析此文档');
+        }
+      };
+
+      // 显示提示消息
+      function showToast(message, type = 'info') {
+        // 创建提示元素
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 12px 20px;
+          border-radius: 6px;
+          color: white;
+          font-size: 14px;
+          z-index: 10000;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        `;
+
+        // 根据类型设置颜色
+        switch (type) {
+          case 'success':
+            toast.style.background = '#28a745';
+            break;
+          case 'error':
+            toast.style.background = '#dc3545';
+            break;
+          case 'warning':
+            toast.style.background = '#ffc107';
+            toast.style.color = '#000';
+            break;
+          default:
+            toast.style.background = '#007bff';
+        }
+
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        // 显示动画
+        setTimeout(() => {
+          toast.style.opacity = '1';
+        }, 100);
+
+        // 自动隐藏
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => {
+            if (toast.parentNode) {
+              document.body.removeChild(toast);
+            }
+          }, 300);
+        }, 3000);
       }
 
       // 发送位置
