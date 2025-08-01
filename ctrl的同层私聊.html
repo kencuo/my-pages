@@ -6081,18 +6081,11 @@
             }
           ];
 
-          // 处理图片数据 - 参考流式同层插件的处理方式
-          let visionData = imageMsg.visionData || imageMsg.imageData;
-          let imageData;
+          // 处理图片数据 - 优先使用识图专用的base64数据
+          let imageData = imageMsg.visionData || imageMsg.imageData;
 
-          // 如果visionData是我们的特殊对象，优先尝试纯base64
-          if (visionData && typeof visionData === 'object' && visionData.pure) {
-            console.log('🌙 Kimi识图：尝试使用纯base64格式（参考插件方式）');
-            imageData = `data:image/jpeg;base64,${visionData.pure}`;
-          } else if (typeof visionData === 'string') {
-            imageData = visionData;
-          } else {
-            console.warn('Kimi识图：图片数据格式异常');
+          if (!imageData) {
+            console.warn('Kimi识图：没有可用的图片数据');
             return;
           }
 
@@ -7129,21 +7122,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 专门为识图优化的图片处理
       async function processImageForVision(file) {
-        // 对于识图，参考流式同层插件的处理方式
-        // 某些API可能更喜欢纯base64数据（无前缀）
-        console.log('🖼️ 为识图处理图片，参考插件方式确保最佳兼容性');
-        const fullBase64 = await convertFileToBase64(file);
-
-        // 提供两种格式供不同API选择
-        const pureBase64 = fullBase64.split(",")[1]; // 纯base64（无前缀）
-        const withPrefix = fullBase64; // 带前缀的完整格式
-
-        return {
-          pure: pureBase64,
-          full: withPrefix,
-          // 默认返回带前缀的，但识图函数可以选择使用pure
-          toString: () => withPrefix
-        };
+        // 对于识图，直接使用base64更可靠
+        // 参考流式同层插件，但保持简单易用
+        console.log('🖼️ 为识图处理图片，使用base64格式确保最佳兼容性');
+        return await convertFileToBase64(file);
       }
 
       // 对于显示的图片处理（保持现有逻辑）
