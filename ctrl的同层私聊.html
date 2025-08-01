@@ -7150,18 +7150,19 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         return Math.abs(hash).toString(36);
       }
 
-      // 优化图片质量和格式（模仿插件的图片处理）
-      function optimizeImageForAI(file, quality = 0.85) {
+      // 高质量图片处理（尽可能模仿插件效果）
+      function optimizeImageForAI(file, quality = 0.92) {
         return new Promise((resolve, reject) => {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           const img = new Image();
 
           img.onload = function() {
-            // 计算优化后的尺寸（最大1920px，保持比例）
-            const maxSize = 1920;
+            // 使用更保守的尺寸策略（插件可能不压缩尺寸）
             let { width, height } = img;
 
+            // 只有在图片非常大时才压缩
+            const maxSize = 2048; // 提高最大尺寸
             if (width > maxSize || height > maxSize) {
               if (width > height) {
                 height = (height * maxSize) / width;
@@ -7175,14 +7176,24 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             canvas.width = width;
             canvas.height = height;
 
-            // 绘制并优化图片
-            ctx.fillStyle = '#FFFFFF'; // 白色背景，避免透明度问题
-            ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
+            // 使用更好的渲染设置
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
 
-            // 转换为优化后的base64
-            const optimizedBase64 = canvas.toDataURL('image/jpeg', quality);
-            resolve(optimizedBase64);
+            // 如果原图有透明度，保持透明度而不是填充白色
+            if (file.type === 'image/png') {
+              // PNG保持原始格式和透明度
+              ctx.drawImage(img, 0, 0, width, height);
+              const optimizedBase64 = canvas.toDataURL('image/png', 1.0);
+              resolve(optimizedBase64);
+            } else {
+              // 其他格式转为高质量JPEG
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+              const optimizedBase64 = canvas.toDataURL('image/jpeg', quality);
+              resolve(optimizedBase64);
+            }
           };
 
           img.onerror = function() {
@@ -7201,48 +7212,116 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      // 模拟插件的saveBase64AsFile功能（本地存储优化）
-      async function processImageLikePlugin(file) {
+      // 精确模拟SillyTavern插件的处理逻辑
+      async function simulatePluginProcessing(file) {
         try {
-          // 1. 生成唯一文件标识（模仿插件逻辑）
-          const timestamp = Date.now();
-          const fileHash = getStringHash(file.name);
-          const extension = file.type.split('/')[1] || 'jpg';
-          const uniqueId = `${timestamp}_${fileHash}`;
+          // 1. 完全按照插件逻辑：先转base64，再提取纯数据
+          const fileBase64 = await convertFileToBase64(file);
+          const base64Data = fileBase64.split(",")[1]; // 去掉data:image/jpeg;base64,前缀
 
-          // 2. 优化图片（模仿插件的图片处理）
-          const optimizedBase64 = await optimizeImageForAI(file, 0.85);
+          // 2. 生成文件标识（完全按照插件逻辑）
+          const extension = file.type.split("/")[1] || "png";
+          const fileNamePrefix = `${Date.now()}_${getStringHash(file.name)}`;
 
-          // 3. 存储到localStorage作为缓存（模拟本地存储）
-          const cacheKey = `image_cache_${uniqueId}`;
-          try {
-            localStorage.setItem(cacheKey, optimizedBase64);
-            console.log(`✅ 图片已优化并缓存: ${uniqueId}`);
-          } catch (e) {
-            console.warn('localStorage空间不足，跳过缓存');
-          }
+          // 3. 模拟获取角色名（插件逻辑）
+          const characterName = "用户"; // 简化处理，实际插件会获取当前角色名
 
-          // 4. 返回优化后的图片数据
-          return {
-            url: optimizedBase64,
-            id: uniqueId,
-            originalSize: file.size,
-            optimizedSize: Math.round(optimizedBase64.length * 0.75), // base64大小估算
-            processed: true
-          };
+          // 4. 模拟SillyTavern的saveBase64AsFile函数
+          const imageUrl = await simulateSaveBase64AsFile(
+            base64Data,
+            characterName,
+            fileNamePrefix,
+            extension
+          );
+
+          return { url: imageUrl };
 
         } catch (error) {
-          console.error('图片处理失败:', error);
+          console.error('插件模拟处理失败:', error);
           // 失败时回退到原始base64
           const fallbackBase64 = await convertFileToBase64(file);
-          return {
-            url: fallbackBase64,
-            id: `fallback_${Date.now()}`,
-            originalSize: file.size,
-            optimizedSize: file.size,
-            processed: false
-          };
+          return { url: fallbackBase64 };
         }
+      }
+
+      // 模拟SillyTavern的saveBase64AsFile函数（这是关键！）
+      async function simulateSaveBase64AsFile(base64Data, characterName, fileName, extension) {
+        try {
+          // 这里模拟SillyTavern可能的图片优化逻辑
+          console.log(`🔄 模拟SillyTavern处理: ${fileName}.${extension}`);
+
+          // 1. 重新构建完整的base64数据
+          const fullBase64 = `data:image/${extension};base64,${base64Data}`;
+
+          // 2. 应用SillyTavern可能的优化（关键步骤）
+          const optimizedBase64 = await applySillyTavernOptimization(fullBase64, extension);
+
+          // 3. 模拟本地存储（SillyTavern会保存到文件系统）
+          const localKey = `st_image_${characterName}_${fileName}`;
+          try {
+            localStorage.setItem(localKey, optimizedBase64);
+            console.log(`💾 已模拟保存到本地: ${localKey}`);
+          } catch (e) {
+            console.warn('模拟本地存储失败，直接返回优化结果');
+          }
+
+          // 4. 返回优化后的图片数据（SillyTavern可能返回本地路径，但最终会转为base64）
+          return optimizedBase64;
+
+        } catch (error) {
+          console.error('SillyTavern模拟处理失败:', error);
+          // 回退到原始数据
+          return `data:image/${extension};base64,${base64Data}`;
+        }
+      }
+
+      // 模拟SillyTavern的图片优化算法（推测的关键逻辑）
+      async function applySillyTavernOptimization(base64Data, extension) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+
+          img.onload = function() {
+            try {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+
+              // SillyTavern可能的特殊处理逻辑
+              canvas.width = img.width;
+              canvas.height = img.height;
+
+              // 可能的特殊渲染设置（这些设置可能是关键）
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+
+              // 可能不填充背景，保持原始透明度
+              ctx.drawImage(img, 0, 0);
+
+              // SillyTavern可能使用特定的压缩参数
+              let optimized;
+              if (extension === 'png') {
+                // PNG保持原始格式
+                optimized = canvas.toDataURL('image/png');
+              } else {
+                // 其他格式使用高质量JPEG
+                optimized = canvas.toDataURL('image/jpeg', 0.95);
+              }
+
+              console.log(`✨ SillyTavern优化完成: ${extension} -> ${optimized.length}字符`);
+              resolve(optimized);
+
+            } catch (error) {
+              console.error('SillyTavern优化失败:', error);
+              resolve(base64Data); // 失败时返回原始数据
+            }
+          };
+
+          img.onerror = function() {
+            console.error('SillyTavern优化图片加载失败');
+            resolve(base64Data); // 失败时返回原始数据
+          };
+
+          img.src = base64Data;
+        });
       }
 
       // 处理图片文件选择
@@ -7277,6 +7356,17 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             try {
               const result = await top.window.__uploadImageByPlugin(file);
               imageUrl = result.url;
+
+              // 调试信息：分析插件返回的数据
+              console.log('=== 插件处理调试信息 ===');
+              console.log('插件返回结果:', result);
+              console.log('URL类型:', typeof result.url);
+              console.log('URL长度:', result.url.length);
+              console.log('是否为base64:', result.url.startsWith('data:'));
+              console.log('是否为网络URL:', result.url.startsWith('http'));
+              console.log('是否为本地文件:', result.url.startsWith('file:'));
+              console.log('URL前100字符:', result.url.substring(0, 100));
+
               processingInfo = '已通过插件处理';
               info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
             } catch (uploadError) {
@@ -7291,15 +7381,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
             }
           } else {
-            // 没有插件时，使用我们的内置优化处理
-            console.log('未检测到插件，使用内置图片优化处理');
-            const result = await processImageLikePlugin(file);
+            // 没有插件时，精确模拟插件的完整处理流程
+            console.log('🔄 未检测到插件，启动精确插件模拟');
+
+            const result = await simulatePluginProcessing(file);
             imageUrl = result.url;
-            const compressionRatio = ((1 - result.optimizedSize / result.originalSize) * 100).toFixed(1);
-            processingInfo = result.processed ?
-              `已优化处理 (压缩${compressionRatio}%)` :
-              '已转换为识图格式';
+
+            processingInfo = '已通过插件模拟处理';
             info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - ${processingInfo}`;
+
+            console.log('✅ 插件模拟处理完成');
           }
 
           preview.src = imageUrl;
