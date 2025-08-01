@@ -4057,6 +4057,21 @@
         if (content === '[图片]' || content.startsWith('[图片]') || content.includes('图片')) {
           return { type: 'image', imageDescription: content, content };
         }
+        // Document - 检查是否是文档消息
+        const documentMatch = content.match(/^\[文档\]\s*(.+?)(?:\s*-\s*(.+))?$/);
+        if (documentMatch) {
+          return {
+            type: 'document',
+            fileName: documentMatch[1],
+            description: documentMatch[2] || '',
+            content
+          };
+        }
+        // File - 检查是否是文件描述消息
+        const fileMatch = content.match(/^(.+?)\|(.+)$/);
+        if (fileMatch && !content.includes('语音消息') && !content.includes('转账') && !content.includes('红包')) {
+          return { type: 'file', fileFormat: fileMatch[1], fileContent: fileMatch[2], content };
+        }
         // Recall
         const recallMatch = content.match(/^撤回消息\|(.*)/);
         if (recallMatch) {
@@ -4747,6 +4762,23 @@
       }
 
       // --- Message Content Renderers ---
+
+      // 获取文件图标（全局函数）
+      function getFileIcon(fileType) {
+        const iconMap = {
+          'text/plain': '📄',
+          'application/pdf': '📕',
+          'application/msword': '📘',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📘',
+          'application/json': '📋',
+          'text/markdown': '📝',
+          'text/csv': '📊',
+          'application/vnd.ms-excel': '📊',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊'
+        };
+
+        return iconMap[fileType] || '📄';
+      }
 
       function renderTextMessage(contentDiv, msg) {
         let content = msg.content || '';
@@ -5937,6 +5969,17 @@
             case 'file':
               text = `${extra.fileFormat}|${extra.fileContent}`;
               break;
+            case 'document':
+              // 文档类型消息
+              if (extra.isRealFile) {
+                text = `[文档] ${extra.fileName}`;
+                if (extra.description) {
+                  text += ` - ${extra.description}`;
+                }
+              } else {
+                text = extra.fileDescription || '[文档描述]';
+              }
+              break;
             case 'location':
               text = `${extra.locationText}`;
               break;
@@ -5965,8 +6008,15 @@
         }
 
         const newIndex = state.messageHistory.length;
-        // The parser will add the correct `type` property
-        const parsedMsg = { ...parseInlineContentType(msg.content), ...msg };
+        // The parser will add the correct `type` property, but preserve existing type if already set
+        let parsedMsg;
+        if (msg.type && msg.type !== 'text') {
+          // 如果已经有明确的类型（如document），保持不变
+          parsedMsg = msg;
+        } else {
+          // 否则使用解析器识别类型
+          parsedMsg = { ...parseInlineContentType(msg.content), ...msg };
+        }
 
 
 
@@ -7724,22 +7774,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      // 获取文件图标
-      function getFileIcon(fileType) {
-        const iconMap = {
-          'text/plain': '📄',
-          'application/pdf': '📕',
-          'application/msword': '📘',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📘',
-          'application/json': '📋',
-          'text/markdown': '📝',
-          'text/csv': '📊',
-          'application/vnd.ms-excel': '📊',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊'
-        };
 
-        return iconMap[fileType] || '📄';
-      }
 
       // 格式化文件大小
       function formatFileSize(bytes) {
@@ -11241,6 +11276,28 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 页面加载时加载设置
       // loadSettings(); // 这个现在在initApp中调用
+
+      // 文档处理功能调试信息
+      console.log('📄 Document processing functions loaded:');
+      console.log('- toggleDocumentContent(messageId): 切换文档内容显示');
+      console.log('- copyDocumentContent(messageId): 复制文档内容');
+      console.log('- requestDocumentAnalysis(messageId): 请求AI分析文档');
+
+      // 检查插件状态
+      setTimeout(() => {
+        if (typeof top.window.__processFileByPlugin === 'function') {
+          console.log('✅ 文档处理插件已加载');
+        } else {
+          console.warn('⚠️ 文档处理插件未加载');
+        }
+
+        // 检查消息渲染器
+        if (typeof messageRenderers !== 'undefined' && messageRenderers.document) {
+          console.log('✅ 文档消息渲染器已注册');
+        } else {
+          console.warn('⚠️ 文档消息渲染器未注册');
+        }
+      }, 1000);
     </script>
   </body>
 </html>
