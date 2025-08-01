@@ -7183,16 +7183,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             try {
               const result = await top.window.__uploadImageByPlugin(file);
               imageUrl = result.url;
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到服务器`;
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 好了，来玩吧孩子`;
             } catch (uploadError) {
-              console.warn('服务器上传失败，使用本地base64方案:', uploadError);
+              console.warn('使用本地base64方案:', uploadError);
               // 如果服务器上传失败，使用本地base64方案
               imageUrl = await convertFileToBase64(file);
               info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
             }
           } else {
             // 如果没有上传插件，直接使用本地base64方案
-            console.log('未检测到上传插件，使用本地base64方案');
+            console.log('未检测到插件，使用本地base64方案');
             imageUrl = await convertFileToBase64(file);
             info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
           }
