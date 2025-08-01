@@ -4747,6 +4747,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // Helper to apply user avatar from parent frame
       function applyUserAvatar(avatarElement) {
+        // 优先使用用户设置的头像，没有则使用默认头像
         const userAvatarUrl = settingsState.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg';
         if (avatarElement) {
           avatarElement.style.backgroundImage = `url('${userAvatarUrl}')`;
@@ -9448,23 +9449,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       function updateUserAvatars() {
         const avatars = document.querySelectorAll('.user_avatar');
+        // 优先使用用户设置的头像，没有则使用默认头像
+        const userAvatarUrl = settingsState.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg';
+
         avatars.forEach(avatar => {
-          if (settingsState.userAvatar) {
-            avatar.style.backgroundImage = `url(${settingsState.userAvatar})`;
-            avatar.style.backgroundSize = 'cover';
-            avatar.style.backgroundPosition = 'center';
-          } else {
-            avatar.style.backgroundImage = '';
-          }
+          avatar.style.backgroundImage = `url(${userAvatarUrl})`;
+          avatar.style.backgroundSize = 'cover';
+          avatar.style.backgroundPosition = 'center';
+          avatar.style.backgroundColor = '#fff'; // 添加后备背景色
         });
+
         // 更新预览
         const preview = document.getElementById('avatarPreview');
         if (preview) {
-          if (settingsState.userAvatar) {
-            preview.src = settingsState.userAvatar;
-          } else {
-            preview.src = '';
-          }
+          preview.src = userAvatarUrl;
         }
       }
 
@@ -9704,8 +9702,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             }
           });
 
-          // 创建下载链接
-          const link = document.createElement('a');
+          // 创建下载链接 - 兼容手机浏览器
           const timestamp = new Date().toLocaleString('zh-CN', {
             year: 'numeric',
             month: '2-digit',
@@ -9715,13 +9712,24 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             second: '2-digit'
           }).replace(/[\/\s:]/g, '-');
           const groupName = document.getElementById('chatPersonName').textContent || '群聊记录';
-          link.download = `${groupName}-${timestamp}.png`;
-          link.href = canvas.toDataURL('image/png', 0.9);
+          const fileName = `${groupName}-${timestamp}.png`;
+          const dataUrl = canvas.toDataURL('image/png', 0.9);
 
-          // 触发下载
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          // 检测是否为移动设备
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+          if (isMobile) {
+            // 手机端：显示图片预览和保存指导
+            showMobileImagePreview(dataUrl, fileName);
+          } else {
+            // 桌面端：直接下载
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
 
           // 移除加载提示
           const loadingElement = document.getElementById('screenshot-loading');
@@ -9753,6 +9761,158 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           // 提供备用方案
           showFallbackScreenshotOptions();
         }
+      }
+
+      // 手机端图片预览和保存指导
+      function showMobileImagePreview(dataUrl, fileName) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 20px;
+          box-sizing: border-box;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+          background: white;
+          border-radius: 12px;
+          max-width: 90%;
+          max-height: 90%;
+          overflow: auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        `;
+
+        // 创建图片预览
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.style.cssText = `
+          max-width: 100%;
+          max-height: 60vh;
+          object-fit: contain;
+          border-radius: 8px 8px 0 0;
+        `;
+
+        // 创建操作区域
+        const actionArea = document.createElement('div');
+        actionArea.style.cssText = `
+          padding: 20px;
+          text-align: center;
+          width: 100%;
+          box-sizing: border-box;
+        `;
+
+        actionArea.innerHTML = `
+          <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">截图完成</h3>
+          <p style="margin: 0 0 20px 0; color: #666; line-height: 1.5; font-size: 14px;">
+            长按下方图片，选择"保存图片"或"下载图片"
+          </p>
+          <div style="margin: 15px 0;">
+            <button id="mobile-download-btn" style="
+              background: #07c160;
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 16px;
+              margin: 0 10px;
+            ">尝试下载</button>
+            <button id="mobile-close-btn" style="
+              background: #f0f0f0;
+              color: #333;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 16px;
+              margin: 0 10px;
+            ">关闭</button>
+          </div>
+          <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">
+            文件名: ${fileName}
+          </p>
+        `;
+
+        content.appendChild(img);
+        content.appendChild(actionArea);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // 绑定事件
+        document.getElementById('mobile-download-btn').onclick = () => {
+          // 尝试触发下载
+          try {
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = dataUrl;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // 显示成功提示
+            showSuccessMessage('已尝试下载，请检查下载文件夹');
+          } catch (error) {
+            // 如果下载失败，提供其他方案
+            alert('自动下载失败，请长按图片手动保存');
+          }
+        };
+
+        document.getElementById('mobile-close-btn').onclick = () => {
+          document.body.removeChild(modal);
+        };
+
+        // 点击背景关闭
+        modal.onclick = (e) => {
+          if (e.target === modal) {
+            document.body.removeChild(modal);
+          }
+        };
+
+        // 长按图片提示
+        img.addEventListener('touchstart', (e) => {
+          const touchTimer = setTimeout(() => {
+            // 显示保存提示
+            const tip = document.createElement('div');
+            tip.style.cssText = `
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background: rgba(0, 0, 0, 0.8);
+              color: white;
+              padding: 10px 15px;
+              border-radius: 6px;
+              font-size: 14px;
+              z-index: 10000;
+              pointer-events: none;
+            `;
+            tip.textContent = '继续长按选择"保存图片"';
+            modal.appendChild(tip);
+
+            setTimeout(() => {
+              if (modal.contains(tip)) {
+                modal.removeChild(tip);
+              }
+            }, 2000);
+          }, 500);
+
+          img.addEventListener('touchend', () => {
+            clearTimeout(touchTimer);
+          }, { once: true });
+        });
       }
 
       // 备用截屏方案
