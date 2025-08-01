@@ -4055,30 +4055,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      // 专门为识图优化的图片处理
-      async function processImageForVision(file) {
-        // 对于识图，直接使用base64更可靠
-        // 参考流式同层插件，但保持简单易用
-        console.log('🖼️ 为识图处理图片，使用base64格式确保最佳兼容性');
-        return await convertFileToBase64(file);
-      }
-
-      // 对于显示的图片处理（保持现有逻辑）
-      async function processImageForDisplay(file) {
-        // 先尝试插件上传，失败则使用base64
-        if (window.parent && window.parent.uploadImageByPlugin) {
-          try {
-            const result = await window.parent.uploadImageByPlugin(file);
-            console.log('✅ 使用SillyTavern上传成功，图片已保存');
-            return result;
-          } catch (error) {
-            console.warn('SillyTavern上传失败，使用base64方案:', error);
-          }
-        }
-        console.log('📄 使用base64格式处理图片');
-        return await convertFileToBase64(file);
-      }
-
       // 识图API管理功能
       // 测试Kimi连接
       async function testKimiConnection() {
@@ -4390,15 +4366,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             }
           ];
 
-          // 处理图片数据 - 优先使用识图专用的base64数据
-          let imageData = imageMsg.visionData || imageMsg.imageData;
-
-          if (!imageData) {
-            console.warn('Kimi识图：没有可用的图片数据');
-            return;
-          }
-
-          console.log('🌙 Kimi识图使用的数据格式:', imageData.substring(0, 50) + '...');
+          // 处理图片数据
+          let imageData = imageMsg.imageData;
 
           // 发送Kimi识图请求
           const kimiResponse = await fetch('https://api.moonshot.cn/v1/chat/completions', {
@@ -4578,7 +4547,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false,
-              image: imageMsg.visionData || imageMsg.imageData
+              image: imageMsg.imageData
             };
 
             response = await AI_GENERATE_RAW(rawRequestData);
@@ -4589,7 +4558,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false,
-              image: imageMsg.visionData || imageMsg.imageData
+              image: imageMsg.imageData
             };
 
             response = await AI_GENERATE(requestData);
@@ -4664,7 +4633,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                   {
                     type: 'image_url',
                     image_url: {
-                      url: imageMsg.visionData || imageMsg.imageData
+                      url: imageMsg.imageData
                     }
                   }
                 ]
@@ -6944,16 +6913,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 }
               }
 
-              // 同时准备识图专用的base64数据
-              const visionData = await processImageForVision(file);
-
               // 构造图片消息
               const time = getTimeStr();
               sendMessage({
                 type: 'image',
                 imageDescription: description,
-                imageData: imageData,      // 显示用数据
-                visionData: visionData,    // 识图专用base64数据
+                imageData: imageData,
                 time
               });
 
