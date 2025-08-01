@@ -3806,10 +3806,9 @@
                 <input type="password" id="kimiApiKey" placeholder="Kimi API密钥" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
               </div>
               <div style="margin-bottom: 10px;">
-                <input type="text" id="kimiModel" placeholder="输入模型名称，如：moonshot-v1-8k" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;" value="moonshot-v1-8k">
-                <div style="font-size: 11px; color: #666; margin-top: 3px;">
-                  常用模型：moonshot-v1-8k, moonshot-v1-32k, moonshot-v1-128k
-                </div>
+                <select id="kimiModel" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                  <option value="">请先测试Kimi连接以获取模型</option>
+                </select>
               </div>
               <button id="testKimiBtn" style="width: 100%; padding: 8px; background: #6C5CE7; color: white; border: none; border-radius: 6px; font-size: 12px;">测试Kimi连接</button>
               <div id="kimiTestResult" style="margin-top: 8px; padding: 6px; border-radius: 4px; font-size: 11px; display: none;"></div>
@@ -3957,7 +3956,8 @@
         visionMode: 'tavern', // 识图方式：'tavern'、'kimi' 或 'custom'
         // Kimi配置
         kimiApiKey: '',
-        kimiModel: 'moonshot-v1-8k',
+        kimiModel: '',
+        availableKimiModels: [],
         // 自定义API配置
         visionApiUrl: '',
         visionApiKey: '',
@@ -4088,6 +4088,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           if (data.data && Array.isArray(data.data)) {
             state.kimiApiKey = apiKey;
+            state.availableKimiModels = data.data.map(model => model.id);
+            updateKimiModelSelect();
             showKimiTestResult(`Kimi API连接成功！找到 ${data.data.length} 个模型。`, 'success');
           } else {
             showKimiTestResult('Kimi API连接成功，但返回的模型数据格式不正确！', 'warning');
@@ -4129,6 +4131,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             resultDiv.style.border = '1px solid #bee5eb';
             break;
         }
+      }
+
+      // 更新Kimi模型选择框
+      function updateKimiModelSelect() {
+        const select = document.getElementById('kimiModel');
+        select.innerHTML = '<option value="">请选择Kimi模型</option>';
+
+        state.availableKimiModels.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model;
+          option.textContent = model;
+          if (model === state.kimiModel) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+
+        // 保存模型列表到localStorage
+        localStorage.setItem('availableKimiModels', JSON.stringify(state.availableKimiModels));
       }
 
       // 测试自定义识图API连接
@@ -9362,6 +9383,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
         }
 
+        // 加载Kimi可用模型列表
+        const savedKimiModels = localStorage.getItem('availableKimiModels');
+        if (savedKimiModels) {
+          try {
+            state.availableKimiModels = JSON.parse(savedKimiModels);
+            updateKimiModelSelect();
+          } catch (e) {
+            console.error('Failed to parse available Kimi models:', e);
+            state.availableKimiModels = [];
+          }
+        }
+
         // 根据识图模式显示/隐藏配置
         updateVisionConfigDisplay();
       }
@@ -9604,8 +9637,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         localStorage.setItem('kimiApiKey', state.kimiApiKey);
       });
 
-      document.getElementById('kimiModel').addEventListener('input', (e) => {
-        state.kimiModel = e.target.value.trim();
+      document.getElementById('kimiModel').addEventListener('change', (e) => {
+        state.kimiModel = e.target.value;
         localStorage.setItem('kimiModel', state.kimiModel);
       });
 
