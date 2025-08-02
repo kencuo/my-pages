@@ -2333,6 +2333,19 @@
         word-wrap: break-word;
       }
 
+      .sticker-ai-note {
+        font-size: 10px;
+        color: #1976d2;
+        text-align: center;
+        margin-top: 3px;
+        padding: 2px 6px;
+        background: rgba(25, 118, 210, 0.1);
+        border-radius: 6px;
+        border: 1px solid rgba(25, 118, 210, 0.2);
+        max-width: 120px;
+        word-wrap: break-word;
+      }
+
       .sticker-placeholder {
         width: 120px;
         height: 120px;
@@ -3342,6 +3355,467 @@
         display: inline-block;
         min-width: 40px;
       }
+
+      /* 文件发送模态框样式 */
+      .file-send-options {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .file-option {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #fafafa;
+      }
+
+      .file-option:hover {
+        border-color: #07c160;
+        background: #f0f9f0;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(7, 193, 96, 0.15);
+      }
+
+      .file-option.selected {
+        border-color: #07c160;
+        background: #e8f5e8;
+      }
+
+      .option-icon {
+        font-size: 24px;
+        margin-right: 15px;
+        width: 40px;
+        text-align: center;
+      }
+
+      .option-content {
+        flex: 1;
+      }
+
+      .option-title {
+        font-weight: 600;
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 4px;
+      }
+
+      .option-desc {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.4;
+      }
+
+      .file-input-section {
+        margin-top: 20px;
+      }
+
+      .file-upload-area {
+        margin-bottom: 20px;
+      }
+
+      .upload-zone {
+        border: 2px dashed #ddd;
+        border-radius: 8px;
+        padding: 30px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 15px;
+      }
+
+      .upload-zone:hover,
+      .upload-zone.dragover {
+        border-color: #07c160;
+        background: #f8f8f8;
+      }
+
+      .upload-icon {
+        font-size: 36px;
+        margin-bottom: 10px;
+      }
+
+      .upload-text {
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+
+      .upload-hint {
+        font-size: 12px;
+        color: #666;
+      }
+
+      .file-preview {
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+      }
+
+      .file-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .file-icon {
+        font-size: 24px;
+        width: 40px;
+        text-align: center;
+      }
+
+      .file-details {
+        flex: 1;
+      }
+
+      .file-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+      }
+
+      .file-size {
+        font-size: 12px;
+        color: #666;
+      }
+
+      .remove-file-btn {
+        background: #ff4757;
+        color: white;
+        border: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.3s ease;
+      }
+
+      .remove-file-btn:hover {
+        background: #ff3742;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+      }
+
+      .cancel-btn {
+        background: #f0f0f0;
+        color: #666;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .cancel-btn:hover {
+        background: #e0e0e0;
+        color: #333;
+      }
+
+      .send-btn {
+        background: #07c160;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .send-btn:hover:not(:disabled) {
+        background: #06ad56;
+      }
+
+      .send-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      /* 文档消息样式 */
+      .document-message {
+        max-width: 100%;
+      }
+
+      .document-container {
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 4px 0;
+      }
+
+      .document-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .document-icon {
+        font-size: 24px;
+        width: 32px;
+        text-align: center;
+      }
+
+      .document-info {
+        flex: 1;
+      }
+
+      .document-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+
+      .document-meta {
+        font-size: 11px;
+        color: #666;
+      }
+
+      .ai-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 500;
+      }
+
+      .document-description {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 8px;
+        margin: 8px 0;
+        font-size: 12px;
+        color: #856404;
+      }
+
+      .document-content {
+        margin: 8px 0;
+      }
+
+      .content-label {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+
+      .content-preview {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 8px;
+        font-size: 12px;
+        color: #333;
+        line-height: 1.4;
+        max-height: 100px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .ai-analysis {
+        background: #e8f5e8;
+        border: 1px solid #c8e6c9;
+        border-radius: 4px;
+        padding: 8px;
+        margin: 8px 0;
+      }
+
+      .ai-label {
+        font-size: 11px;
+        color: #2e7d32;
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+
+      .ai-content {
+        font-size: 12px;
+        color: #1b5e20;
+        line-height: 1.4;
+        white-space: pre-wrap;
+      }
+
+      .document-footer {
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .process-time {
+        font-size: 10px;
+        color: #999;
+      }
+
+      /* 移动端文件发送模态框优化 */
+      @media (max-width: 768px) {
+        .file-send-modal {
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          top: auto !important;
+          transform: none !important;
+          max-width: 100% !important;
+          width: 100% !important;
+          border-radius: 20px 20px 0 0 !important;
+          animation: slideUpFromBottom 0.3s ease-out;
+        }
+
+        .file-send-modal .modal-header {
+          text-align: center;
+          position: relative;
+          padding: 20px 20px 10px 20px;
+        }
+
+        .file-send-modal .modal-header::before {
+          content: '';
+          position: absolute;
+          top: 8px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 40px;
+          height: 4px;
+          background: #ccc;
+          border-radius: 2px;
+        }
+
+        .file-send-modal .modal-close {
+          position: absolute;
+          right: 15px;
+          top: 15px;
+        }
+
+        .file-option {
+          padding: 20px 15px !important;
+          margin-bottom: 8px;
+        }
+
+        .option-icon {
+          font-size: 28px !important;
+          margin-right: 15px;
+        }
+
+        .option-title {
+          font-size: 18px !important;
+        }
+
+        .upload-zone {
+          padding: 40px 20px !important;
+        }
+
+        .upload-icon {
+          font-size: 48px !important;
+        }
+
+        .upload-text {
+          font-size: 18px !important;
+        }
+      }
+
+      @keyframes slideUpFromBottom {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+
+      /* 表情包设置样式 */
+      .settings-section {
+        padding: 20px;
+      }
+
+      .setting-item {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+      }
+
+      .setting-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        margin-bottom: 8px;
+      }
+
+      .setting-label input[type="checkbox"] {
+        margin-right: 10px;
+        transform: scale(1.2);
+      }
+
+      .setting-title {
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .setting-desc {
+        font-size: 12px;
+        color: #666;
+        line-height: 1.4;
+        margin-top: 5px;
+      }
+
+      .setting-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 10px 0;
+        padding: 8px 12px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+      }
+
+      .status-indicator {
+        font-size: 16px;
+      }
+
+      .test-btn {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background-color 0.3s ease;
+      }
+
+      .test-btn:hover {
+        background: #0056b3;
+      }
+
+      .test-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
@@ -3598,6 +4072,7 @@
           <div class="sticker-tab active" data-tab="my-stickers">我的表情包</div>
           <div class="sticker-tab" data-tab="add-sticker">添加表情包</div>
           <div class="sticker-tab" data-tab="manage-tags">管理标签</div>
+          <div class="sticker-tab" data-tab="sticker-settings">设置</div>
         </div>
 
         <!-- 我的表情包标签页 -->
@@ -3649,6 +4124,42 @@
               <button type="button" id="addTagBtn" class="add-tag-btn">添加标签</button>
             </div>
             <div class="tag-list" id="tagList"></div>
+          </div>
+        </div>
+
+        <!-- 表情包设置标签页 -->
+        <div class="sticker-tab-content" id="sticker-settings">
+          <div class="settings-section">
+            <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">🤖 AI识图功能</h3>
+
+            <div class="setting-item">
+              <label class="setting-label">
+                <input type="checkbox" id="stickerAIVisionToggle" checked>
+                <span class="setting-title">启用表情包AI识图</span>
+              </label>
+              <div class="setting-desc">
+                发送表情包时自动调用AI识别图片内容，为没有备注的表情包生成描述
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-title">AI识图状态</div>
+              <div class="setting-status" id="aiVisionStatus">
+                <span class="status-indicator" id="statusIndicator">🔄</span>
+                <span id="statusText">检测中...</span>
+              </div>
+              <button class="test-btn" id="testAIVisionBtn">测试AI识图</button>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-title">使用说明</div>
+              <div class="setting-desc">
+                • 启用后，发送表情包时会自动调用AI识别图片内容<br>
+                • 如果表情包已有备注，AI描述会作为补充信息保存<br>
+                • 如果表情包没有备注，AI描述会作为表情包内容显示<br>
+                • 需要确保ctrl的插件（bug大杂烩）正常工作
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -3871,6 +4382,100 @@
       </div>
     </div>
     </div></div>
+
+    <!-- 文件发送模态框 -->
+    <div class="modal-overlay" id="fileSendModal" style="display: none;">
+      <div class="modal-content file-send-modal" style="max-width: 500px; width: 90%;">
+        <div class="modal-header">
+          <h3>📄 发送文件</h3>
+          <button class="modal-close" id="fileSendCloseBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="file-send-options">
+            <div class="file-option" id="textDescriptionOption">
+              <div class="option-icon">✏️</div>
+              <div class="option-content">
+                <div class="option-title">文字描述</div>
+                <div class="option-desc">输入文档的描述内容</div>
+              </div>
+            </div>
+            <div class="file-option" id="realFileOption">
+              <div class="option-icon">📁</div>
+              <div class="option-content">
+                <div class="option-title">上传真实文件</div>
+                <div class="option-desc">选择并上传真实的文档文件</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 文字描述界面 -->
+          <div class="file-input-section" id="textDescriptionSection" style="display: none;">
+            <div class="form-group">
+              <label>文件格式</label>
+              <select id="fileFormatSelect">
+                <option value="txt">文本文件 (.txt)</option>
+                <option value="word">Word文档 (.doc/.docx)</option>
+                <option value="pdf">PDF文档 (.pdf)</option>
+                <option value="json">JSON文件 (.json)</option>
+                <option value="csv">CSV文件 (.csv)</option>
+                <option value="html">HTML文件 (.html)</option>
+                <option value="xml">XML文件 (.xml)</option>
+                <option value="其它">其它格式</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>文件内容</label>
+              <textarea id="fileContentInput" placeholder="请输入文件内容..." rows="6"></textarea>
+            </div>
+            <div class="form-actions">
+              <button class="cancel-btn" id="textDescriptionCancelBtn">取消</button>
+              <button class="send-btn" id="textDescriptionSendBtn">发送</button>
+            </div>
+          </div>
+
+          <!-- 真实文件上传界面 -->
+          <div class="file-input-section" id="realFileSection" style="display: none;">
+            <div class="file-upload-area">
+              <div class="upload-zone" id="fileUploadZone">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">点击选择文件或拖拽到此处</div>
+                <div class="upload-hint">支持 .txt, .md, .json, .csv, .html, .xml, .rtf, .pdf, .doc, .docx</div>
+                <input type="file" id="realFileInput" accept=".txt,.md,.json,.csv,.html,.xml,.rtf,.pdf,.doc,.docx" style="display: none;">
+              </div>
+
+              <div class="file-preview" id="filePreview" style="display: none;">
+                <div class="file-info">
+                  <div class="file-icon">📄</div>
+                  <div class="file-details">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="file-size" id="fileSize"></div>
+                  </div>
+                  <button class="remove-file-btn" id="removeFileBtn">&times;</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="enableAIReading" checked>
+                  🤖 启用AI阅读分析
+                </label>
+                <div class="option-desc">让AI自动分析文档内容并提供摘要</div>
+              </div>
+
+              <div class="form-group">
+                <label>文件说明 (可选)</label>
+                <input type="text" id="fileDescription" placeholder="为这个文件添加说明...">
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="cancel-btn" id="realFileCancelBtn">取消</button>
+              <button class="send-btn" id="realFileSendBtn" disabled>发送</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 作者 ctrl 不许偷盗喵喵喵喵 -->
     <script>
@@ -4500,6 +5105,16 @@
               ? `[我方消息|${m.fileFormat}|${m.fileContent}|${m.time}]`
               : `[${currentCharName}|${m.avatar || ''}|${m.fileFormat}|${m.fileContent}|${m.time}]`;
           }
+          // 文档消息
+          else if (m.type === 'document') {
+            const docInfo = `${m.fileName} (${formatFileSize(m.fileSize)})`;
+            const aiInfo = m.aiAnalysis && m.enabledAI ? `\nAI分析: ${m.aiAnalysis}` : '';
+            const content = m.description ? `${m.description}${aiInfo}` : `文档内容预览: ${m.content ? m.content.substring(0, 100) + '...' : '无内容'}${aiInfo}`;
+
+            return m.sender === 'user'
+              ? `[我方消息|文档|${docInfo}|${content}|${m.time}]`
+              : `[${currentCharName}|${m.avatar || ''}|文档|${docInfo}|${content}|${m.time}]`;
+          }
           // 位置消息
           else if (m.type === 'location') {
             return m.sender === 'user'
@@ -5127,7 +5742,84 @@
 
       function renderFileMessage(contentDiv, msg) {
         contentDiv.classList.add('file-message');
+
+        // 检查是否是新的文档消息类型
+        if (msg.type === 'document') {
+          renderDocumentMessage(contentDiv, msg);
+          return;
+        }
+
+        // 原有的文件消息渲染
         contentDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:20px;">📄</span><div><div style="font-weight:600;">${msg.fileFormat ? msg.fileFormat.toUpperCase() : 'FILE'}</div><div style="font-size:13px;white-space:pre-wrap;color:#333;">${msg.fileContent}</div></div></div>`;
+      }
+
+      function renderDocumentMessage(contentDiv, msg) {
+        contentDiv.classList.add('document-message');
+
+        const fileIcon = getFileIcon(msg.fileName);
+        const fileSize = formatFileSize(msg.fileSize);
+        const hasAI = msg.aiAnalysis && msg.enabledAI;
+
+        let documentHtml = `
+          <div class="document-container">
+            <div class="document-header">
+              <div class="document-icon">${fileIcon}</div>
+              <div class="document-info">
+                <div class="document-name">${msg.fileName}</div>
+                <div class="document-meta">${fileSize} • ${msg.fileType || '未知格式'}</div>
+              </div>
+              ${hasAI ? '<div class="ai-badge">🤖 AI已分析</div>' : ''}
+            </div>
+        `;
+
+        if (msg.description) {
+          documentHtml += `<div class="document-description">${msg.description}</div>`;
+        }
+
+        if (msg.content && msg.content.length > 0) {
+          const preview = msg.content.length > 200 ? msg.content.substring(0, 200) + '...' : msg.content;
+          documentHtml += `
+            <div class="document-content">
+              <div class="content-label">📄 文档内容预览</div>
+              <div class="content-preview">${preview}</div>
+            </div>
+          `;
+        }
+
+        if (hasAI) {
+          documentHtml += `
+            <div class="ai-analysis">
+              <div class="ai-label">🤖 AI分析结果</div>
+              <div class="ai-content">${msg.aiAnalysis}</div>
+            </div>
+          `;
+        }
+
+        documentHtml += `
+            <div class="document-footer">
+              <span class="process-time">处理时间: ${new Date(msg.processedAt).toLocaleString()}</span>
+            </div>
+          </div>
+        `;
+
+        contentDiv.innerHTML = documentHtml;
+      }
+
+      function getFileIcon(fileName) {
+        const ext = fileName.split('.').pop().toLowerCase();
+        const iconMap = {
+          'txt': '📄',
+          'md': '📝',
+          'json': '📋',
+          'csv': '📊',
+          'html': '🌐',
+          'xml': '📰',
+          'pdf': '📕',
+          'doc': '📘',
+          'docx': '📘',
+          'rtf': '📄'
+        };
+        return iconMap[ext] || '📄';
       }
 
       function renderLocationMessage(contentDiv, msg) {
@@ -5170,6 +5862,7 @@
         'call-cancelled': renderCallCancelledMessage,
         'voice-effect': renderVoiceEffectMessage,
         file: renderFileMessage,
+        document: renderFileMessage, // 文档消息也使用 renderFileMessage，内部会自动判断类型
         location: renderLocationMessage,
       };
 
@@ -5734,6 +6427,9 @@
               break;
             case 'file':
               text = `${extra.fileFormat}|${extra.fileContent}`;
+              break;
+            case 'document':
+              text = `文档|${extra.fileName}|${extra.description || ''}`;
               break;
             case 'location':
               text = `${extra.locationText}`;
@@ -7298,27 +7994,235 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 发送文件
       function sendFile() {
-        const format = prompt('请选择文件格式 (word/pdf/txt/其它):');
-        if (!format) return;
-        const content = prompt('请输入文件内容:');
-        if (content === null) return;
-        sendMessage({ type: 'file', fileFormat: format, fileContent: content });
+        showFileSendModal();
       }
 
       // 发送位置
       function sendLocation() {
         const locationName = prompt('请输入位置名称:');
         if (!locationName) return;
-        
+
         const locationAddress = prompt('请输入地址 (可选):');
         let locationText = locationName;
-        
+
         // 如果有地址，则用|分隔名称和地址
         if (locationAddress) {
           locationText = `${locationName}|${locationAddress}`;
         }
-        
+
         sendMessage({ type: 'location', locationText: locationText });
+      }
+
+      // ==================== 文件发送功能 ====================
+
+      let selectedFile = null;
+
+      // 显示文件发送模态框
+      function showFileSendModal() {
+        const modal = document.getElementById('fileSendModal');
+        modal.style.display = 'flex';
+        resetFileSendModal();
+      }
+
+      // 隐藏文件发送模态框
+      function hideFileSendModal() {
+        const modal = document.getElementById('fileSendModal');
+        modal.style.display = 'none';
+        resetFileSendModal();
+      }
+
+      // 重置文件发送模态框状态
+      function resetFileSendModal() {
+        document.querySelectorAll('.file-option').forEach(option => {
+          option.classList.remove('selected');
+        });
+
+        document.getElementById('textDescriptionSection').style.display = 'none';
+        document.getElementById('realFileSection').style.display = 'none';
+
+        document.getElementById('fileFormatSelect').value = 'txt';
+        document.getElementById('fileContentInput').value = '';
+        document.getElementById('fileDescription').value = '';
+        document.getElementById('enableAIReading').checked = true;
+
+        selectedFile = null;
+        document.getElementById('realFileInput').value = '';
+        document.getElementById('filePreview').style.display = 'none';
+        document.getElementById('realFileSendBtn').disabled = true;
+      }
+
+      // 发送文字描述文件
+      function sendTextDescriptionFile() {
+        const format = document.getElementById('fileFormatSelect').value;
+        const content = document.getElementById('fileContentInput').value.trim();
+
+        if (!content) {
+          alert('请输入文件内容！');
+          return;
+        }
+
+        sendMessage({
+          type: 'file',
+          fileFormat: format,
+          fileContent: content
+        });
+
+        hideFileSendModal();
+      }
+
+      // 发送真实文件
+      async function sendRealFile() {
+        if (!selectedFile) {
+          alert('请选择文件！');
+          return;
+        }
+
+        const enableAI = document.getElementById('enableAIReading').checked;
+        const description = document.getElementById('fileDescription').value.trim();
+
+        try {
+          // 显示处理状态
+          document.getElementById('realFileSendBtn').textContent = '处理中...';
+          document.getElementById('realFileSendBtn').disabled = true;
+
+          // 检查插件是否可用
+          if (typeof top.window.__processDocumentByPlugin !== 'function') {
+            throw new Error('文档处理插件未加载，请检查插件是否正确安装');
+          }
+
+          // 处理文档
+          const result = await top.window.__processDocumentByPlugin(selectedFile, {
+            enableAIReading: enableAI,
+            aiPrompt: description ? `请分析这个文档：${description}` : '请分析这个文档的主要内容'
+          });
+
+          if (result.success) {
+            // 发送文档消息
+            const documentMessage = {
+              type: 'document',
+              fileName: selectedFile.name,
+              fileSize: selectedFile.size,
+              fileType: result.type || selectedFile.type,
+              content: result.content,
+              description: description,
+              aiAnalysis: result.aiAnalysis,
+              enabledAI: enableAI,
+              processedAt: new Date().toISOString()
+            };
+
+            sendMessage(documentMessage);
+
+            // 如果启用了AI分析且有结果，可以自动触发AI回复
+            if (enableAI && result.aiAnalysis) {
+              setTimeout(() => {
+                // 可以在这里添加自动AI回复逻辑
+                console.log('文档已处理，AI分析结果：', result.aiAnalysis);
+              }, 1000);
+            }
+
+            hideFileSendModal();
+          } else {
+            throw new Error(result.error || '文档处理失败');
+          }
+
+        } catch (error) {
+          console.error('文件处理失败:', error);
+          alert(`文件处理失败: ${error.message}`);
+
+          // 恢复按钮状态
+          document.getElementById('realFileSendBtn').textContent = '发送';
+          document.getElementById('realFileSendBtn').disabled = false;
+        }
+      }
+
+      // 处理文件选择
+      function handleFileSelect(file) {
+        if (!file) return;
+
+        selectedFile = file;
+
+        // 显示文件预览
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        document.getElementById('filePreview').style.display = 'block';
+
+        // 启用发送按钮
+        document.getElementById('realFileSendBtn').disabled = false;
+      }
+
+      // 格式化文件大小
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      // 移除选中的文件
+      function removeSelectedFile() {
+        selectedFile = null;
+        document.getElementById('realFileInput').value = '';
+        document.getElementById('filePreview').style.display = 'none';
+        document.getElementById('realFileSendBtn').disabled = true;
+      }
+
+      // 选择文字描述选项
+      function selectTextDescriptionOption() {
+        // 更新选项状态
+        document.querySelectorAll('.file-option').forEach(option => {
+          option.classList.remove('selected');
+        });
+        document.getElementById('textDescriptionOption').classList.add('selected');
+
+        // 显示对应的输入区域
+        document.getElementById('textDescriptionSection').style.display = 'block';
+        document.getElementById('realFileSection').style.display = 'none';
+      }
+
+      // 选择真实文件选项
+      function selectRealFileOption() {
+        // 更新选项状态
+        document.querySelectorAll('.file-option').forEach(option => {
+          option.classList.remove('selected');
+        });
+        document.getElementById('realFileOption').classList.add('selected');
+
+        // 显示对应的输入区域
+        document.getElementById('textDescriptionSection').style.display = 'none';
+        document.getElementById('realFileSection').style.display = 'block';
+      }
+
+      // 处理文件选择
+      function handleFileSelect(file) {
+        if (!file) return;
+
+        selectedFile = file;
+
+        // 显示文件预览
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        document.getElementById('filePreview').style.display = 'block';
+
+        // 启用发送按钮
+        document.getElementById('realFileSendBtn').disabled = false;
+      }
+
+      // 格式化文件大小
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      // 移除选中的文件
+      function removeSelectedFile() {
+        selectedFile = null;
+        document.getElementById('realFileInput').value = '';
+        document.getElementById('filePreview').style.display = 'none';
+        document.getElementById('realFileSendBtn').disabled = true;
       }
 
       // 事件绑定
@@ -7334,6 +8238,56 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       document.getElementById('voiceCallBtn').onclick = startVoiceCall;
       document.getElementById('fileBtn').onclick = sendFile;
       document.getElementById('locationBtn').onclick = sendLocation;
+
+      // 文件发送模态框事件绑定
+      document.getElementById('fileSendCloseBtn').onclick = hideFileSendModal;
+      document.getElementById('textDescriptionOption').onclick = selectTextDescriptionOption;
+      document.getElementById('realFileOption').onclick = selectRealFileOption;
+      document.getElementById('textDescriptionCancelBtn').onclick = hideFileSendModal;
+      document.getElementById('textDescriptionSendBtn').onclick = sendTextDescriptionFile;
+      document.getElementById('realFileCancelBtn').onclick = hideFileSendModal;
+      document.getElementById('realFileSendBtn').onclick = sendRealFile;
+      document.getElementById('removeFileBtn').onclick = removeSelectedFile;
+
+      // 文件上传区域事件
+      document.getElementById('fileUploadZone').onclick = () => {
+        document.getElementById('realFileInput').click();
+      };
+
+      document.getElementById('realFileInput').onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleFileSelect(file);
+        }
+      };
+
+      // 拖拽上传功能
+      const fileUploadZone = document.getElementById('fileUploadZone');
+      fileUploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileUploadZone.classList.add('dragover');
+      });
+
+      fileUploadZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        fileUploadZone.classList.remove('dragover');
+      });
+
+      fileUploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileUploadZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          handleFileSelect(files[0]);
+        }
+      });
+
+      // 点击模态框背景关闭
+      document.getElementById('fileSendModal').addEventListener('click', (e) => {
+        if (e.target.id === 'fileSendModal') {
+          hideFileSendModal();
+        }
+      });
 
       // ==================== 音乐播放器功能 ====================
 
@@ -8444,15 +9398,45 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       // 发送表情包
-      function sendSticker(sticker) {
+      async function sendSticker(sticker) {
         // 简化：只发送备注，不发送完整的图片数据
-        const content = sticker.note || '表情包';
+        let content = sticker.note || '表情包';
+        let aiDescription = null;
+
+        // 检查是否启用AI识图功能
+        const enableAIVision = localStorage.getItem('sticker-ai-vision-enabled') !== 'false'; // 默认启用
+
+        if (enableAIVision && typeof top.window.__uploadImageByPlugin === 'function') {
+          try {
+            // 将DataURL转换为File对象
+            const response = await fetch(sticker.dataURL);
+            const blob = await response.blob();
+            const file = new File([blob], 'sticker.png', { type: 'image/png' });
+
+            // 调用插件进行图像识别
+            const result = await top.window.__uploadImageByPlugin(file, {
+              enableAIVision: true,
+              aiPrompt: '请简单描述这个表情包的内容，用一句话概括即可'
+            });
+
+            if (result.success && result.aiDescription) {
+              aiDescription = result.aiDescription;
+              // 如果没有用户备注，使用AI描述作为内容
+              if (!sticker.note || sticker.note.trim() === '') {
+                content = `AI识图: ${aiDescription}`;
+              }
+            }
+          } catch (error) {
+            console.log('[表情包识图] AI识图失败，使用原始备注:', error.message);
+          }
+        }
 
         const newMessage = {
           sender: 'user',
           type: 'sticker',
           content: content,
           stickerData: sticker.dataURL, // 图片数据单独存储，不放在消息内容中
+          aiDescription: aiDescription, // 保存AI描述
           time: getTimeStr(),
         };
 
@@ -8685,7 +9669,89 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       async function initStickerApp() {
         try {
           await initStickerDB();
+          initStickerSettings();
         } catch (error) {
+        }
+      }
+
+      // 初始化表情包设置
+      function initStickerSettings() {
+        // 加载AI识图设置
+        const aiVisionEnabled = localStorage.getItem('sticker-ai-vision-enabled') !== 'false';
+        document.getElementById('stickerAIVisionToggle').checked = aiVisionEnabled;
+
+        // 检测AI识图状态
+        checkAIVisionStatus();
+
+        // 绑定设置事件
+        document.getElementById('stickerAIVisionToggle').onchange = (e) => {
+          localStorage.setItem('sticker-ai-vision-enabled', e.target.checked);
+          checkAIVisionStatus();
+        };
+
+        document.getElementById('testAIVisionBtn').onclick = testAIVision;
+      }
+
+      // 检测AI识图状态
+      function checkAIVisionStatus() {
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const testBtn = document.getElementById('testAIVisionBtn');
+
+        if (typeof top.window.__uploadImageByPlugin === 'function') {
+          statusIndicator.textContent = '✅';
+          statusText.textContent = 'AI识图插件可用';
+          testBtn.disabled = false;
+        } else {
+          statusIndicator.textContent = '❌';
+          statusText.textContent = 'AI识图插件未加载';
+          testBtn.disabled = true;
+        }
+      }
+
+      // 测试AI识图功能
+      async function testAIVision() {
+        const testBtn = document.getElementById('testAIVisionBtn');
+        const statusText = document.getElementById('statusText');
+
+        testBtn.disabled = true;
+        testBtn.textContent = '测试中...';
+        statusText.textContent = '正在测试AI识图功能...';
+
+        try {
+          // 创建一个测试图片（简单的canvas）
+          const canvas = document.createElement('canvas');
+          canvas.width = 100;
+          canvas.height = 100;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ff6b6b';
+          ctx.fillRect(0, 0, 100, 100);
+          ctx.fillStyle = 'white';
+          ctx.font = '20px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('😊', 50, 60);
+
+          // 转换为blob
+          const blob = await new Promise(resolve => canvas.toBlob(resolve));
+          const file = new File([blob], 'test.png', { type: 'image/png' });
+
+          // 调用插件测试
+          const result = await top.window.__uploadImageByPlugin(file, {
+            enableAIVision: true,
+            aiPrompt: '请描述这个测试图片'
+          });
+
+          if (result.success) {
+            statusText.textContent = `测试成功！AI识图结果: ${result.aiDescription || '无描述'}`;
+          } else {
+            statusText.textContent = `测试失败: ${result.error || '未知错误'}`;
+          }
+
+        } catch (error) {
+          statusText.textContent = `测试失败: ${error.message}`;
+        } finally {
+          testBtn.disabled = false;
+          testBtn.textContent = '测试AI识图';
         }
       }
 
@@ -9539,6 +10605,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           note.className = 'sticker-note-text';
           note.textContent = msg.content;
           contentDiv.appendChild(note);
+        }
+
+        // AI识图结果（如果有且与备注不同）
+        if (msg.aiDescription && msg.aiDescription !== msg.content && !msg.content.includes(msg.aiDescription)) {
+          const aiNote = document.createElement('div');
+          aiNote.className = 'sticker-ai-note';
+          aiNote.innerHTML = `🤖 ${msg.aiDescription}`;
+          contentDiv.appendChild(aiNote);
         }
 
         wrapper.appendChild(contentDiv);
