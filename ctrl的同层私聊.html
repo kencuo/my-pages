@@ -11207,19 +11207,51 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             });
           }
 
-          // 生成截图
-          const canvas = await html2canvas(chatContainer, {
+          // 检查内容高度，如果太高则提示用户选择范围
+          const contentHeight = chatContainer.scrollHeight;
+          const maxHeight = 15000; // 最大高度限制，超过此高度将提示选择范围
+
+          let screenshotOptions = {
             backgroundColor: '#ffffff',
-            scale: 1.5, // 提高清晰度
+            scale: 1.2, // 降低scale以减少内存占用
             useCORS: true,
             allowTaint: true,
             scrollX: 0,
             scrollY: 0,
             width: chatContainer.scrollWidth,
-            height: chatContainer.scrollHeight,
+            height: Math.min(contentHeight, maxHeight),
             logging: false,
-            removeContainer: false
-          });
+            removeContainer: false,
+            maxWidth: 4096, // 限制最大宽度
+            maxHeight: 15000 // 限制最大高度
+          };
+
+          // 如果内容太长，提示用户选择截图范围
+          if (contentHeight > maxHeight) {
+            const userChoice = await showScreenshotRangeDialog(contentHeight, maxHeight);
+            if (userChoice.cancelled) {
+              throw new Error('用户取消截图');
+            }
+
+            if (userChoice.forceAll) {
+              // 强制截图全部内容，降低质量
+              screenshotOptions.scale = 0.8;
+              screenshotOptions.height = contentHeight;
+              console.warn('强制截图全部内容，可能会很慢或失败');
+            } else if (userChoice.useRange) {
+              // 用户选择了特定范围，临时隐藏其他消息
+              await hideMessagesOutsideRange(userChoice.startIndex, userChoice.endIndex);
+              screenshotOptions.height = userChoice.height;
+            }
+          }
+
+          // 生成截图
+          const canvas = await html2canvas(chatContainer, screenshotOptions);
+
+          // 如果使用了范围截图，恢复隐藏的消息
+          if (contentHeight > maxHeight) {
+            await restoreHiddenMessages();
+          }
 
           // 恢复原始样式
           Object.keys(originalStyles).forEach(key => {
@@ -11661,6 +11693,196 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       });
 
 
+
+      // 隐藏指定范围外的消息
+      let hiddenMessages = [];
+
+      async function hideMessagesOutsideRange(startIndex, endIndex) {
+        const messages = Array.from(document.querySelectorAll('#chatMessages .message'));
+        hiddenMessages = [];
+
+        messages.forEach((message, index) => {
+          if (index < startIndex || index > endIndex) {
+            hiddenMessages.push({
+              element: message,
+              originalDisplay: message.style.display
+            });
+            message.style.display = 'none';
+          }
+        });
+
+        // 等待DOM更新
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // 恢复隐藏的消息
+      async function restoreHiddenMessages() {
+        hiddenMessages.forEach(item => {
+          item.element.style.display = item.originalDisplay || '';
+        });
+        hiddenMessages = [];
+
+        // 等待DOM更新
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // 截图范围选择对话框
+      async function showScreenshotRangeDialog(contentHeight, maxHeight) {
+        return new Promise((resolve) => {
+          // 创建模态框
+          const modal = document.createElement('div');
+          modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+          `;
+
+          const dialog = document.createElement('div');
+          dialog.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+          `;
+
+          // 获取消息列表用于范围选择
+          const messages = Array.from(document.querySelectorAll('#chatMessages .message'));
+          const totalMessages = messages.length;
+
+          dialog.innerHTML = `
+            <h3 style="margin: 0 0 16px 0; color: #333; font-size: 18px;">📸 选择截图范围</h3>
+            <p style="margin: 0 0 20px 0; color: #666; line-height: 1.5; font-size: 14px;">
+              聊天记录太长（${Math.round(contentHeight/1000)}k像素），超过了最大限制（${Math.round(maxHeight/1000)}k像素）。<br>
+              请选择要截图的范围：
+            </p>
+
+            <div style="margin-bottom: 20px;">
+              <label style="display: block; margin-bottom: 12px;">
+                <input type="radio" name="screenshotType" value="recent" checked style="margin-right: 8px;">
+                <strong>最近消息</strong> - 截图最后 ${Math.min(50, totalMessages)} 条消息
+              </label>
+
+              <label style="display: block; margin-bottom: 12px;">
+                <input type="radio" name="screenshotType" value="all" style="margin-right: 8px;">
+                <strong>全部消息</strong> - 强制截图全部内容（可能失败）
+              </label>
+
+              <label style="display: block; margin-bottom: 12px;">
+                <input type="radio" name="screenshotType" value="custom" style="margin-right: 8px;">
+                <strong>自定义范围</strong> - 手动选择消息范围
+              </label>
+            </div>
+
+            <div id="customRangeOptions" style="display: none; margin-bottom: 20px; padding: 12px; background: #f5f5f5; border-radius: 6px;">
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">起始消息（从第几条开始）:</label>
+                <input type="number" id="startMessage" min="1" max="${totalMessages}" value="1" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+              <div>
+                <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">结束消息（到第几条结束）:</label>
+                <input type="number" id="endMessage" min="1" max="${totalMessages}" value="${Math.min(50, totalMessages)}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+              <div style="margin-top: 8px; font-size: 12px; color: #888;">
+                总共 ${totalMessages} 条消息
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+              <button id="cancelScreenshot" style="
+                padding: 8px 16px;
+                border: 1px solid #ddd;
+                background: white;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+              ">取消</button>
+              <button id="confirmScreenshot" style="
+                padding: 8px 16px;
+                border: none;
+                background: #07c160;
+                color: white;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+              ">开始截图</button>
+            </div>
+          `;
+
+          modal.appendChild(dialog);
+          document.body.appendChild(modal);
+
+          // 处理自定义范围选项显示
+          const radioButtons = dialog.querySelectorAll('input[name="screenshotType"]');
+          const customOptions = dialog.getElementById('customRangeOptions');
+
+          radioButtons.forEach(radio => {
+            radio.addEventListener('change', () => {
+              customOptions.style.display = radio.value === 'custom' ? 'block' : 'none';
+            });
+          });
+
+          // 处理按钮点击
+          dialog.getElementById('cancelScreenshot').addEventListener('click', () => {
+            document.body.removeChild(modal);
+            resolve({ cancelled: true });
+          });
+
+          dialog.getElementById('confirmScreenshot').addEventListener('click', () => {
+            const selectedType = dialog.querySelector('input[name="screenshotType"]:checked').value;
+            let result = { cancelled: false, useRange: false };
+
+            if (selectedType === 'recent') {
+              // 最近消息
+              const recentCount = Math.min(50, totalMessages);
+              const startIndex = Math.max(0, totalMessages - recentCount);
+              result = {
+                cancelled: false,
+                useRange: true,
+                startIndex: startIndex,
+                endIndex: totalMessages - 1,
+                height: Math.min(maxHeight, contentHeight * 0.6) // 估算高度
+              };
+            } else if (selectedType === 'all') {
+              // 全部消息 - 不使用范围限制，但降低scale
+              result = {
+                cancelled: false,
+                useRange: false,
+                forceAll: true
+              };
+            } else if (selectedType === 'custom') {
+              // 自定义范围
+              const startMsg = parseInt(dialog.getElementById('startMessage').value) - 1;
+              const endMsg = parseInt(dialog.getElementById('endMessage').value) - 1;
+
+              if (startMsg >= 0 && endMsg >= startMsg && endMsg < totalMessages) {
+                const rangeHeight = Math.min(maxHeight, (endMsg - startMsg + 1) * 100); // 估算每条消息100px
+                result = {
+                  cancelled: false,
+                  useRange: true,
+                  startIndex: startMsg,
+                  endIndex: endMsg,
+                  height: rangeHeight
+                };
+              } else {
+                alert('请输入有效的消息范围');
+                return;
+              }
+            }
+
+            document.body.removeChild(modal);
+            resolve(result);
+          });
+        });
+      }
 
       // 页面加载时加载设置
       // loadSettings(); // 这个现在在initApp中调用
