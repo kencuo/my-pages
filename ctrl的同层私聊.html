@@ -3356,12 +3356,226 @@
         min-width: 40px;
       }
 
-      /* 文件发送模态框样式 */
-      .file-send-options {
+      /* 简洁文件发送弹窗样式 */
+      .simple-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
         display: flex;
-        flex-direction: column;
-        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .simple-modal {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        width: 90%;
+        max-width: 400px;
+        max-height: 80vh;
+        overflow: hidden;
+        animation: modalSlideIn 0.3s ease;
+      }
+
+      @keyframes modalSlideIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9) translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      .simple-modal-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #eee;
+        font-weight: 600;
+        font-size: 16px;
+        color: #333;
+        text-align: center;
+        background: #f8f9fa;
+      }
+
+      .simple-modal-body {
+        padding: 20px;
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+
+      .file-type-selector {
+        display: flex;
+        gap: 20px;
         margin-bottom: 20px;
+        justify-content: center;
+      }
+
+      .file-type-selector label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 8px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        background: #fafafa;
+      }
+
+      .file-type-selector label:hover {
+        border-color: #07c160;
+        background: #f0f9f0;
+      }
+
+      .file-type-selector input[type="radio"] {
+        margin-right: 8px;
+      }
+
+      .file-type-selector input[type="radio"]:checked + span {
+        color: #07c160;
+        font-weight: 600;
+      }
+
+      .file-type-selector label:has(input:checked) {
+        border-color: #07c160;
+        background: #e8f5e8;
+      }
+
+      .file-mode {
+        margin-top: 15px;
+      }
+
+      .input-group {
+        margin-bottom: 15px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .input-group select,
+      .input-group textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      .input-group select:focus,
+      .input-group textarea:focus {
+        outline: none;
+        border-color: #07c160;
+        box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.1);
+      }
+
+      .quick-upload-zone {
+        border: 2px dashed #ddd;
+        border-radius: 6px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 10px;
+      }
+
+      .quick-upload-zone:hover {
+        border-color: #07c160;
+        background: #f8f8f8;
+      }
+
+      .upload-text {
+        color: #666;
+        font-size: 14px;
+      }
+
+      .selected-file {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: #f0f9f0;
+        border: 1px solid #c8e6c9;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+
+      .selected-file button {
+        background: #ff4757;
+        color: white;
+        border: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .quick-options {
+        margin-top: 10px;
+      }
+
+      .quick-options label {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: #666;
+      }
+
+      .quick-options input[type="checkbox"] {
+        margin-right: 6px;
+      }
+
+      .simple-modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        background: #f8f9fa;
+      }
+
+      .modal-btn {
+        padding: 8px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        min-width: 60px;
+      }
+
+      .cancel-btn {
+        background: #f0f0f0;
+        color: #666;
+      }
+
+      .cancel-btn:hover {
+        background: #e0e0e0;
+        color: #333;
+      }
+
+      .confirm-btn {
+        background: #07c160;
+        color: white;
+      }
+
+      .confirm-btn:hover {
+        background: #06ad56;
+      }
+
+      .confirm-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
       }
 
       .file-option {
@@ -3669,80 +3883,7 @@
         color: #999;
       }
 
-      /* 移动端文件发送模态框优化 */
-      @media (max-width: 768px) {
-        .file-send-modal {
-          position: fixed !important;
-          bottom: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          top: auto !important;
-          transform: none !important;
-          max-width: 100% !important;
-          width: 100% !important;
-          border-radius: 20px 20px 0 0 !important;
-          animation: slideUpFromBottom 0.3s ease-out;
-        }
 
-        .file-send-modal .modal-header {
-          text-align: center;
-          position: relative;
-          padding: 20px 20px 10px 20px;
-        }
-
-        .file-send-modal .modal-header::before {
-          content: '';
-          position: absolute;
-          top: 8px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 40px;
-          height: 4px;
-          background: #ccc;
-          border-radius: 2px;
-        }
-
-        .file-send-modal .modal-close {
-          position: absolute;
-          right: 15px;
-          top: 15px;
-        }
-
-        .file-option {
-          padding: 20px 15px !important;
-          margin-bottom: 8px;
-        }
-
-        .option-icon {
-          font-size: 28px !important;
-          margin-right: 15px;
-        }
-
-        .option-title {
-          font-size: 18px !important;
-        }
-
-        .upload-zone {
-          padding: 40px 20px !important;
-        }
-
-        .upload-icon {
-          font-size: 48px !important;
-        }
-
-        .upload-text {
-          font-size: 18px !important;
-        }
-      }
-
-      @keyframes slideUpFromBottom {
-        from {
-          transform: translateY(100%);
-        }
-        to {
-          transform: translateY(0);
-        }
-      }
 
       /* 表情包设置样式 */
       .settings-section {
@@ -4383,96 +4524,62 @@
     </div>
     </div></div>
 
-    <!-- 文件发送模态框 -->
-    <div class="modal-overlay" id="fileSendModal" style="display: none;">
-      <div class="modal-content file-send-modal" style="max-width: 500px; width: 90%;">
-        <div class="modal-header">
-          <h3>📄 发送文件</h3>
-          <button class="modal-close" id="fileSendCloseBtn">&times;</button>
+    <!-- 文件发送弹窗 -->
+    <div class="simple-modal-overlay" id="fileModalOverlay" style="display: none;">
+      <div class="simple-modal" id="fileModal">
+        <div class="simple-modal-header">
+          <span>📄 发送文件</span>
         </div>
-        <div class="modal-body">
-          <div class="file-send-options">
-            <div class="file-option" id="textDescriptionOption">
-              <div class="option-icon">✏️</div>
-              <div class="option-content">
-                <div class="option-title">文字描述</div>
-                <div class="option-desc">输入文档的描述内容</div>
-              </div>
-            </div>
-            <div class="file-option" id="realFileOption">
-              <div class="option-icon">📁</div>
-              <div class="option-content">
-                <div class="option-title">上传真实文件</div>
-                <div class="option-desc">选择并上传真实的文档文件</div>
-              </div>
-            </div>
+        <div class="simple-modal-body">
+          <div class="file-type-selector">
+            <label>
+              <input type="radio" name="fileType" value="text" checked>
+              <span>✏️ 文字描述</span>
+            </label>
+            <label>
+              <input type="radio" name="fileType" value="upload">
+              <span>📁 上传文件</span>
+            </label>
           </div>
 
-          <!-- 文字描述界面 -->
-          <div class="file-input-section" id="textDescriptionSection" style="display: none;">
-            <div class="form-group">
-              <label>文件格式</label>
-              <select id="fileFormatSelect">
-                <option value="txt">文本文件 (.txt)</option>
-                <option value="word">Word文档 (.doc/.docx)</option>
-                <option value="pdf">PDF文档 (.pdf)</option>
-                <option value="json">JSON文件 (.json)</option>
-                <option value="csv">CSV文件 (.csv)</option>
-                <option value="html">HTML文件 (.html)</option>
-                <option value="xml">XML文件 (.xml)</option>
-                <option value="其它">其它格式</option>
+          <!-- 文字描述模式 -->
+          <div class="file-mode" id="textMode">
+            <div class="input-group">
+              <label>文件格式:</label>
+              <select id="quickFileFormat">
+                <option value="txt">文本文件</option>
+                <option value="word">Word文档</option>
+                <option value="pdf">PDF文档</option>
+                <option value="其它">其它</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>文件内容</label>
-              <textarea id="fileContentInput" placeholder="请输入文件内容..." rows="6"></textarea>
-            </div>
-            <div class="form-actions">
-              <button class="cancel-btn" id="textDescriptionCancelBtn">取消</button>
-              <button class="send-btn" id="textDescriptionSendBtn">发送</button>
+            <div class="input-group">
+              <label>文件内容:</label>
+              <textarea id="quickFileContent" placeholder="请输入文件内容..." rows="4"></textarea>
             </div>
           </div>
 
-          <!-- 真实文件上传界面 -->
-          <div class="file-input-section" id="realFileSection" style="display: none;">
-            <div class="file-upload-area">
-              <div class="upload-zone" id="fileUploadZone">
-                <div class="upload-icon">📄</div>
-                <div class="upload-text">点击选择文件或拖拽到此处</div>
-                <div class="upload-hint">支持 .txt, .md, .json, .csv, .html, .xml, .rtf, .pdf, .doc, .docx</div>
-                <input type="file" id="realFileInput" accept=".txt,.md,.json,.csv,.html,.xml,.rtf,.pdf,.doc,.docx" style="display: none;">
-              </div>
-
-              <div class="file-preview" id="filePreview" style="display: none;">
-                <div class="file-info">
-                  <div class="file-icon">📄</div>
-                  <div class="file-details">
-                    <div class="file-name" id="fileName"></div>
-                    <div class="file-size" id="fileSize"></div>
-                  </div>
-                  <button class="remove-file-btn" id="removeFileBtn">&times;</button>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>
-                  <input type="checkbox" id="enableAIReading" checked>
-                  🤖 启用AI阅读分析
-                </label>
-                <div class="option-desc">让AI自动分析文档内容并提供摘要</div>
-              </div>
-
-              <div class="form-group">
-                <label>文件说明 (可选)</label>
-                <input type="text" id="fileDescription" placeholder="为这个文件添加说明...">
-              </div>
+          <!-- 文件上传模式 -->
+          <div class="file-mode" id="uploadMode" style="display: none;">
+            <div class="quick-upload-zone" id="quickUploadZone">
+              <div class="upload-text">📁 点击选择文件</div>
+              <input type="file" id="quickFileInput" accept=".txt,.md,.json,.csv,.html,.xml,.rtf,.pdf,.doc,.docx" style="display: none;">
             </div>
-
-            <div class="form-actions">
-              <button class="cancel-btn" id="realFileCancelBtn">取消</button>
-              <button class="send-btn" id="realFileSendBtn" disabled>发送</button>
+            <div class="selected-file" id="selectedFileInfo" style="display: none;">
+              <span id="selectedFileName"></span>
+              <button type="button" id="removeQuickFile">×</button>
+            </div>
+            <div class="quick-options">
+              <label>
+                <input type="checkbox" id="quickAIReading" checked>
+                🤖 AI分析
+              </label>
             </div>
           </div>
+        </div>
+        <div class="simple-modal-footer">
+          <button class="modal-btn cancel-btn" id="fileModalCancel">取消</button>
+          <button class="modal-btn confirm-btn" id="fileModalConfirm">确定</button>
         </div>
       </div>
     </div>
@@ -8017,180 +8124,137 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       let selectedFile = null;
 
-      // 显示文件发送模态框
+      // 显示文件发送弹窗
       function showFileSendModal() {
-        const modal = document.getElementById('fileSendModal');
-        modal.style.display = 'flex';
-        resetFileSendModal();
+        const overlay = document.getElementById('fileModalOverlay');
+        overlay.style.display = 'flex';
+        resetFileModal();
       }
 
-      // 隐藏文件发送模态框
+      // 隐藏文件发送弹窗
       function hideFileSendModal() {
-        const modal = document.getElementById('fileSendModal');
-        modal.style.display = 'none';
-        resetFileSendModal();
+        const overlay = document.getElementById('fileModalOverlay');
+        overlay.style.display = 'none';
+        resetFileModal();
       }
 
-      // 重置文件发送模态框状态
-      function resetFileSendModal() {
-        document.querySelectorAll('.file-option').forEach(option => {
-          option.classList.remove('selected');
-        });
+      // 重置文件弹窗状态
+      function resetFileModal() {
+        // 重置为文字描述模式
+        document.querySelector('input[name="fileType"][value="text"]').checked = true;
+        switchFileMode('text');
 
-        document.getElementById('textDescriptionSection').style.display = 'none';
-        document.getElementById('realFileSection').style.display = 'none';
-
-        document.getElementById('fileFormatSelect').value = 'txt';
-        document.getElementById('fileContentInput').value = '';
-        document.getElementById('fileDescription').value = '';
-        document.getElementById('enableAIReading').checked = true;
+        // 清空表单
+        document.getElementById('quickFileFormat').value = 'txt';
+        document.getElementById('quickFileContent').value = '';
+        document.getElementById('quickFileInput').value = '';
+        document.getElementById('selectedFileInfo').style.display = 'none';
+        document.getElementById('quickAIReading').checked = true;
 
         selectedFile = null;
-        document.getElementById('realFileInput').value = '';
-        document.getElementById('filePreview').style.display = 'none';
-        document.getElementById('realFileSendBtn').disabled = true;
       }
 
-      // 发送文字描述文件
-      function sendTextDescriptionFile() {
-        const format = document.getElementById('fileFormatSelect').value;
-        const content = document.getElementById('fileContentInput').value.trim();
+      // 切换文件模式
+      function switchFileMode(mode) {
+        const textMode = document.getElementById('textMode');
+        const uploadMode = document.getElementById('uploadMode');
 
-        if (!content) {
-          alert('请输入文件内容！');
-          return;
+        if (mode === 'text') {
+          textMode.style.display = 'block';
+          uploadMode.style.display = 'none';
+        } else {
+          textMode.style.display = 'none';
+          uploadMode.style.display = 'block';
         }
-
-        sendMessage({
-          type: 'file',
-          fileFormat: format,
-          fileContent: content
-        });
-
-        hideFileSendModal();
       }
 
-      // 发送真实文件
-      async function sendRealFile() {
-        if (!selectedFile) {
-          alert('请选择文件！');
-          return;
-        }
+      // 处理文件弹窗确定按钮
+      async function handleFileModalConfirm() {
+        const fileType = document.querySelector('input[name="fileType"]:checked').value;
 
-        const enableAI = document.getElementById('enableAIReading').checked;
-        const description = document.getElementById('fileDescription').value.trim();
+        if (fileType === 'text') {
+          // 文字描述模式
+          const format = document.getElementById('quickFileFormat').value;
+          const content = document.getElementById('quickFileContent').value.trim();
 
-        try {
-          // 显示处理状态
-          document.getElementById('realFileSendBtn').textContent = '处理中...';
-          document.getElementById('realFileSendBtn').disabled = true;
-
-          // 检查插件是否可用
-          if (typeof top.window.__processDocumentByPlugin !== 'function') {
-            throw new Error('文档处理插件未加载，请检查插件是否正确安装');
+          if (!content) {
+            alert('请输入文件内容！');
+            return;
           }
 
-          // 处理文档
-          const result = await top.window.__processDocumentByPlugin(selectedFile, {
-            enableAIReading: enableAI,
-            aiPrompt: description ? `请分析这个文档：${description}` : '请分析这个文档的主要内容'
+          sendMessage({
+            type: 'file',
+            fileFormat: format,
+            fileContent: content
           });
 
-          if (result.success) {
-            // 发送文档消息
-            const documentMessage = {
-              type: 'document',
-              fileName: selectedFile.name,
-              fileSize: selectedFile.size,
-              fileType: result.type || selectedFile.type,
-              content: result.content,
-              description: description,
-              aiAnalysis: result.aiAnalysis,
-              enabledAI: enableAI,
-              processedAt: new Date().toISOString()
-            };
-
-            sendMessage(documentMessage);
-
-            // 如果启用了AI分析且有结果，可以自动触发AI回复
-            if (enableAI && result.aiAnalysis) {
-              setTimeout(() => {
-                // 可以在这里添加自动AI回复逻辑
-                console.log('文档已处理，AI分析结果：', result.aiAnalysis);
-              }, 1000);
-            }
-
-            hideFileSendModal();
-          } else {
-            throw new Error(result.error || '文档处理失败');
+          hideFileSendModal();
+        } else {
+          // 文件上传模式
+          if (!selectedFile) {
+            alert('请选择文件！');
+            return;
           }
 
-        } catch (error) {
-          console.error('文件处理失败:', error);
-          alert(`文件处理失败: ${error.message}`);
+          const enableAI = document.getElementById('quickAIReading').checked;
 
-          // 恢复按钮状态
-          document.getElementById('realFileSendBtn').textContent = '发送';
-          document.getElementById('realFileSendBtn').disabled = false;
+          try {
+            // 显示处理状态
+            const confirmBtn = document.getElementById('fileModalConfirm');
+            confirmBtn.textContent = '处理中...';
+            confirmBtn.disabled = true;
+
+            // 检查插件是否可用
+            if (typeof top.window.__processDocumentByPlugin !== 'function') {
+              throw new Error('文档处理插件未加载，请检查插件是否正确安装');
+            }
+
+            // 处理文档
+            const result = await top.window.__processDocumentByPlugin(selectedFile, {
+              enableAIReading: enableAI,
+              aiPrompt: '请分析这个文档的主要内容'
+            });
+
+            if (result.success) {
+              // 发送文档消息
+              const documentMessage = {
+                type: 'document',
+                fileName: selectedFile.name,
+                fileSize: selectedFile.size,
+                fileType: result.type || selectedFile.type,
+                content: result.content,
+                aiAnalysis: result.aiAnalysis,
+                enabledAI: enableAI,
+                processedAt: new Date().toISOString()
+              };
+
+              sendMessage(documentMessage);
+              hideFileSendModal();
+            } else {
+              throw new Error(result.error || '文档处理失败');
+            }
+
+          } catch (error) {
+            console.error('文件处理失败:', error);
+            alert(`文件处理失败: ${error.message}`);
+
+            // 恢复按钮状态
+            const confirmBtn = document.getElementById('fileModalConfirm');
+            confirmBtn.textContent = '确定';
+            confirmBtn.disabled = false;
+          }
         }
       }
 
-      // 处理文件选择
-      function handleFileSelect(file) {
-        if (!file) return;
 
-        selectedFile = file;
 
-        // 显示文件预览
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileSize').textContent = formatFileSize(file.size);
-        document.getElementById('filePreview').style.display = 'block';
-
-        // 启用发送按钮
-        document.getElementById('realFileSendBtn').disabled = false;
-      }
-
-      // 格式化文件大小
+      // 格式化文件大小（保留这个函数，其他地方可能用到）
       function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-      }
-
-      // 移除选中的文件
-      function removeSelectedFile() {
-        selectedFile = null;
-        document.getElementById('realFileInput').value = '';
-        document.getElementById('filePreview').style.display = 'none';
-        document.getElementById('realFileSendBtn').disabled = true;
-      }
-
-      // 选择文字描述选项
-      function selectTextDescriptionOption() {
-        // 更新选项状态
-        document.querySelectorAll('.file-option').forEach(option => {
-          option.classList.remove('selected');
-        });
-        document.getElementById('textDescriptionOption').classList.add('selected');
-
-        // 显示对应的输入区域
-        document.getElementById('textDescriptionSection').style.display = 'block';
-        document.getElementById('realFileSection').style.display = 'none';
-      }
-
-      // 选择真实文件选项
-      function selectRealFileOption() {
-        // 更新选项状态
-        document.querySelectorAll('.file-option').forEach(option => {
-          option.classList.remove('selected');
-        });
-        document.getElementById('realFileOption').classList.add('selected');
-
-        // 显示对应的输入区域
-        document.getElementById('textDescriptionSection').style.display = 'none';
-        document.getElementById('realFileSection').style.display = 'block';
       }
 
       // 处理文件选择
@@ -8239,52 +8303,40 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       document.getElementById('fileBtn').onclick = sendFile;
       document.getElementById('locationBtn').onclick = sendLocation;
 
-      // 文件发送模态框事件绑定
-      document.getElementById('fileSendCloseBtn').onclick = hideFileSendModal;
-      document.getElementById('textDescriptionOption').onclick = selectTextDescriptionOption;
-      document.getElementById('realFileOption').onclick = selectRealFileOption;
-      document.getElementById('textDescriptionCancelBtn').onclick = hideFileSendModal;
-      document.getElementById('textDescriptionSendBtn').onclick = sendTextDescriptionFile;
-      document.getElementById('realFileCancelBtn').onclick = hideFileSendModal;
-      document.getElementById('realFileSendBtn').onclick = sendRealFile;
-      document.getElementById('removeFileBtn').onclick = removeSelectedFile;
+      // 文件发送弹窗事件绑定
+      document.getElementById('fileModalCancel').onclick = hideFileSendModal;
+      document.getElementById('fileModalConfirm').onclick = handleFileModalConfirm;
 
-      // 文件上传区域事件
-      document.getElementById('fileUploadZone').onclick = () => {
-        document.getElementById('realFileInput').click();
+      // 文件类型切换
+      document.querySelectorAll('input[name="fileType"]').forEach(radio => {
+        radio.onchange = (e) => {
+          switchFileMode(e.target.value);
+        };
+      });
+
+      // 快速文件上传
+      document.getElementById('quickUploadZone').onclick = () => {
+        document.getElementById('quickFileInput').click();
       };
 
-      document.getElementById('realFileInput').onchange = (e) => {
+      document.getElementById('quickFileInput').onchange = (e) => {
         const file = e.target.files[0];
         if (file) {
-          handleFileSelect(file);
+          selectedFile = file;
+          document.getElementById('selectedFileName').textContent = file.name;
+          document.getElementById('selectedFileInfo').style.display = 'flex';
         }
       };
 
-      // 拖拽上传功能
-      const fileUploadZone = document.getElementById('fileUploadZone');
-      fileUploadZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        fileUploadZone.classList.add('dragover');
-      });
+      document.getElementById('removeQuickFile').onclick = () => {
+        selectedFile = null;
+        document.getElementById('quickFileInput').value = '';
+        document.getElementById('selectedFileInfo').style.display = 'none';
+      };
 
-      fileUploadZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        fileUploadZone.classList.remove('dragover');
-      });
-
-      fileUploadZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        fileUploadZone.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-          handleFileSelect(files[0]);
-        }
-      });
-
-      // 点击模态框背景关闭
-      document.getElementById('fileSendModal').addEventListener('click', (e) => {
-        if (e.target.id === 'fileSendModal') {
+      // 点击遮罩层关闭弹窗
+      document.getElementById('fileModalOverlay').addEventListener('click', (e) => {
+        if (e.target.id === 'fileModalOverlay') {
           hideFileSendModal();
         }
       });
