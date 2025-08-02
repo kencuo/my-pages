@@ -666,6 +666,35 @@
         background: #ddd;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
+
+      /* 角色昵称显示 */
+      .avatar-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .char-nickname {
+        font-size: 10px;
+        color: #666;
+        text-align: center;
+        max-width: 50px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+        font-weight: 500;
+      }
+
+      .message.sent .avatar-container {
+        align-items: flex-end;
+      }
+
+      .message.received .avatar-container {
+        align-items: flex-start;
+      }
       .message-wrapper {
         position: relative;
         display: flex;
@@ -5977,23 +6006,40 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           timeSpan.textContent = msg.time;
           wrapper.appendChild(timeSpan);
           if (msg.sender === 'user') {
+            const avatarContainer = document.createElement('div');
+            avatarContainer.className = 'avatar-container';
+
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'avatar user_avatar';
             applyUserAvatar(avatarDiv);
-            message.appendChild(avatarDiv);
+
+            avatarContainer.appendChild(avatarDiv);
+            message.appendChild(avatarContainer);
           } else if (msg.avatar) {
+            const avatarContainer = document.createElement('div');
+            avatarContainer.className = 'avatar-container';
+
+            // 创建角色昵称标签
+            const charName = msg.charName || msg.name || getCurrentCharName();
+            if (charName && charName !== 'Character') {
+              const nicknameEl = document.createElement('div');
+              nicknameEl.className = 'char-nickname';
+              nicknameEl.textContent = charName;
+              avatarContainer.appendChild(nicknameEl);
+            }
+
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
 
             // 检查是否有自定义角色头像
-            const charName = msg.name || getCurrentCharName();
             if (charName && settingsState.charAvatars[charName]) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
 
-            message.appendChild(avatar);
+            avatarContainer.appendChild(avatar);
+            message.appendChild(avatarContainer);
           }
           message.appendChild(wrapper);
           return message;
@@ -6113,25 +6159,42 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         wrapper.appendChild(timeSpan);
 
         if (msg.sender === 'user') {
+          const avatarContainer = document.createElement('div');
+          avatarContainer.className = 'avatar-container';
+
           const avatarDiv = document.createElement('div');
           avatarDiv.className = 'avatar user_avatar';
           applyUserAvatar(avatarDiv);
-          message.appendChild(avatarDiv);
+
+          avatarContainer.appendChild(avatarDiv);
+          message.appendChild(avatarContainer);
           message.appendChild(wrapper);
         } else {
           if (msg.avatar) {
+            const avatarContainer = document.createElement('div');
+            avatarContainer.className = 'avatar-container';
+
+            // 创建角色昵称标签
+            const charName = msg.charName || msg.name || getCurrentCharName();
+            if (charName && charName !== 'Character') {
+              const nicknameEl = document.createElement('div');
+              nicknameEl.className = 'char-nickname';
+              nicknameEl.textContent = charName;
+              avatarContainer.appendChild(nicknameEl);
+            }
+
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
 
             // 检查是否有自定义角色头像
-            const charName = msg.name || getCurrentCharName();
             if (charName && settingsState.charAvatars[charName]) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
 
-            message.appendChild(avatar);
+            avatarContainer.appendChild(avatar);
+            message.appendChild(avatarContainer);
           }
           message.appendChild(wrapper);
         }
@@ -9165,25 +9228,42 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         wrapper.appendChild(timeSpan);
 
         if (msg.sender === 'user') {
+          const avatarContainer = document.createElement('div');
+          avatarContainer.className = 'avatar-container';
+
           const avatarDiv = document.createElement('div');
           avatarDiv.className = 'avatar user_avatar';
           applyUserAvatar(avatarDiv);
-          message.appendChild(avatarDiv);
+
+          avatarContainer.appendChild(avatarDiv);
+          message.appendChild(avatarContainer);
           message.appendChild(wrapper);
         } else {
           if (msg.avatar) {
+            const avatarContainer = document.createElement('div');
+            avatarContainer.className = 'avatar-container';
+
+            // 创建角色昵称标签
+            const charName = msg.charName || msg.name || getCurrentCharName();
+            if (charName && charName !== 'Character') {
+              const nicknameEl = document.createElement('div');
+              nicknameEl.className = 'char-nickname';
+              nicknameEl.textContent = charName;
+              avatarContainer.appendChild(nicknameEl);
+            }
+
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
 
             // 检查是否有自定义角色头像
-            const charName = msg.name || getCurrentCharName();
             if (charName && settingsState.charAvatars[charName]) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
 
-            message.appendChild(avatar);
+            avatarContainer.appendChild(avatar);
+            message.appendChild(avatarContainer);
           }
           message.appendChild(wrapper);
         }
