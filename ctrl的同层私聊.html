@@ -10055,7 +10055,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         try {
           // 确保所有按钮都有事件监听器
           const buttons = [
-            { id: 'screenshotBtn', handler: takeScreenshot },
+            { id: 'screenshotBtn', handler: (event) => takeScreenshot(event) },
             { id: 'settingsBtn', handler: showSettings },
             { id: 'requestAiBtn', handler: requestAiReply },
             { id: 'voiceCallRequestAiBtn', handler: requestAiReply },
@@ -11127,7 +11127,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       // 截屏功能
-      async function takeScreenshot() {
+      async function takeScreenshot(event) {
         try {
           // 显示加载提示
           const loadingMsg = document.createElement('div');
@@ -11226,22 +11226,32 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             maxHeight: 15000 // 限制最大高度
           };
 
-          // 如果内容太长，提示用户选择截图范围
-          if (contentHeight > maxHeight) {
+          // 总是提示用户选择截图范围（除非按住Shift键直接截图）
+          const isDirectScreenshot = event && event.shiftKey; // 按住Shift键直接截图
+
+          if (!isDirectScreenshot) {
             const userChoice = await showScreenshotRangeDialog(contentHeight, maxHeight);
             if (userChoice.cancelled) {
               throw new Error('用户取消截图');
             }
 
-            if (userChoice.forceAll) {
-              // 强制截图全部内容，降低质量
-              screenshotOptions.scale = 0.8;
+            if (userChoice.directAll) {
+              // 直接截图全部内容
+              if (contentHeight > maxHeight) {
+                screenshotOptions.scale = 0.8; // 内容过长时降低质量
+                console.warn('内容较长，已降低截图质量以避免失败');
+              }
               screenshotOptions.height = contentHeight;
-              console.warn('强制截图全部内容，可能会很慢或失败');
             } else if (userChoice.useRange) {
               // 用户选择了特定范围，临时隐藏其他消息
               await hideMessagesOutsideRange(userChoice.startIndex, userChoice.endIndex);
               screenshotOptions.height = userChoice.height;
+            }
+          } else {
+            // 按住Shift键时直接截图，但如果内容过长仍需降低质量
+            if (contentHeight > maxHeight) {
+              screenshotOptions.scale = 0.8;
+              console.warn('Shift+点击直接截图，内容较长已降低质量');
             }
           }
 
@@ -11565,7 +11575,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       // 绑定设置相关事件
-      document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
+      document.getElementById('screenshotBtn').addEventListener('click', (event) => takeScreenshot(event));
       document.getElementById('settingsBtn').addEventListener('click', showSettings);
       document.getElementById('settingsCloseBtn').addEventListener('click', hideSettings);
 
@@ -11758,22 +11768,26 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const messages = Array.from(document.querySelectorAll('#chatMessages .message'));
           const totalMessages = messages.length;
 
+          const isContentLong = contentHeight > maxHeight;
+
           dialog.innerHTML = `
             <h3 style="margin: 0 0 16px 0; color: #333; font-size: 18px;">📸 选择截图范围</h3>
             <p style="margin: 0 0 20px 0; color: #666; line-height: 1.5; font-size: 14px;">
-              聊天记录太长（${Math.round(contentHeight/1000)}k像素），超过了最大限制（${Math.round(maxHeight/1000)}k像素）。<br>
-              请选择要截图的范围：
+              ${isContentLong ?
+                `聊天记录较长（${Math.round(contentHeight/1000)}k像素），建议选择范围以获得更好的截图效果：` :
+                `当前有 ${totalMessages} 条消息，请选择要截图的范围：`
+              }
             </p>
 
             <div style="margin-bottom: 20px;">
               <label style="display: block; margin-bottom: 12px;">
-                <input type="radio" name="screenshotType" value="recent" checked style="margin-right: 8px;">
-                <strong>最近消息</strong> - 截图最后 ${Math.min(50, totalMessages)} 条消息
+                <input type="radio" name="screenshotType" value="all" ${!isContentLong ? 'checked' : ''} style="margin-right: 8px;">
+                <strong>全部消息</strong> - 截图所有聊天内容${isContentLong ? '（可能较慢）' : ''}
               </label>
 
               <label style="display: block; margin-bottom: 12px;">
-                <input type="radio" name="screenshotType" value="all" style="margin-right: 8px;">
-                <strong>全部消息</strong> - 强制截图全部内容（可能失败）
+                <input type="radio" name="screenshotType" value="recent" ${isContentLong ? 'checked' : ''} style="margin-right: 8px;">
+                <strong>最近消息</strong> - 截图最后 ${Math.min(50, totalMessages)} 条消息
               </label>
 
               <label style="display: block; margin-bottom: 12px;">
@@ -11820,9 +11834,29 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           modal.appendChild(dialog);
           document.body.appendChild(modal);
 
+          // 调试：检查按钮是否正确创建
+          setTimeout(() => {
+            const testCancel = dialog.querySelector('#cancelScreenshot');
+            const testConfirm = dialog.querySelector('#confirmScreenshot');
+            console.log('🔍 按钮检查 - 取消按钮:', testCancel ? '✅存在' : '❌缺失');
+            console.log('🔍 按钮检查 - 确认按钮:', testConfirm ? '✅存在' : '❌缺失');
+
+            if (testConfirm) {
+              console.log('🔍 确认按钮样式:', window.getComputedStyle(testConfirm).display);
+              console.log('🔍 确认按钮可点击:', !testConfirm.disabled);
+
+              // 提供手动测试函数
+              window.testScreenshotButton = () => {
+                console.log('🧪 手动测试按钮点击');
+                testConfirm.click();
+              };
+              console.log('💡 可以在控制台运行 testScreenshotButton() 来手动测试按钮');
+            }
+          }, 100);
+
           // 处理自定义范围选项显示
           const radioButtons = dialog.querySelectorAll('input[name="screenshotType"]');
-          const customOptions = dialog.getElementById('customRangeOptions');
+          const customOptions = dialog.querySelector('#customRangeOptions');
 
           radioButtons.forEach(radio => {
             radio.addEventListener('change', () => {
@@ -11830,17 +11864,46 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             });
           });
 
-          // 处理按钮点击
-          dialog.getElementById('cancelScreenshot').addEventListener('click', () => {
+          // 处理按钮点击 - 使用更可靠的事件绑定
+          const cancelBtn = dialog.querySelector('#cancelScreenshot');
+          const confirmBtn = dialog.querySelector('#confirmScreenshot');
+
+          if (!cancelBtn || !confirmBtn) {
+            console.error('❌ 找不到按钮元素');
             document.body.removeChild(modal);
             resolve({ cancelled: true });
-          });
+            return;
+          }
 
-          dialog.getElementById('confirmScreenshot').addEventListener('click', () => {
-            const selectedType = dialog.querySelector('input[name="screenshotType"]:checked').value;
+          cancelBtn.onclick = () => {
+            console.log('🚫 取消截图');
+            document.body.removeChild(modal);
+            resolve({ cancelled: true });
+          };
+
+          confirmBtn.onclick = () => {
+            console.log('🔄 开始截图按钮被点击');
+
+            const selectedRadio = dialog.querySelector('input[name="screenshotType"]:checked');
+            if (!selectedRadio) {
+              console.error('❌ 没有选中任何截图类型');
+              alert('请选择一个截图类型');
+              return;
+            }
+
+            const selectedType = selectedRadio.value;
+            console.log('📸 选择的截图类型:', selectedType);
+
             let result = { cancelled: false, useRange: false };
 
-            if (selectedType === 'recent') {
+            if (selectedType === 'all') {
+              // 全部消息 - 直接截图所有内容
+              result = {
+                cancelled: false,
+                useRange: false,
+                directAll: true
+              };
+            } else if (selectedType === 'recent') {
               // 最近消息
               const recentCount = Math.min(50, totalMessages);
               const startIndex = Math.max(0, totalMessages - recentCount);
@@ -11851,17 +11914,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 endIndex: totalMessages - 1,
                 height: Math.min(maxHeight, contentHeight * 0.6) // 估算高度
               };
-            } else if (selectedType === 'all') {
-              // 全部消息 - 不使用范围限制，但降低scale
-              result = {
-                cancelled: false,
-                useRange: false,
-                forceAll: true
-              };
             } else if (selectedType === 'custom') {
               // 自定义范围
-              const startMsg = parseInt(dialog.getElementById('startMessage').value) - 1;
-              const endMsg = parseInt(dialog.getElementById('endMessage').value) - 1;
+              const startMsg = parseInt(dialog.querySelector('#startMessage').value) - 1;
+              const endMsg = parseInt(dialog.querySelector('#endMessage').value) - 1;
 
               if (startMsg >= 0 && endMsg >= startMsg && endMsg < totalMessages) {
                 const rangeHeight = Math.min(maxHeight, (endMsg - startMsg + 1) * 100); // 估算每条消息100px
@@ -11878,9 +11934,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               }
             }
 
+            console.log('✅ 截图配置完成:', result);
             document.body.removeChild(modal);
             resolve(result);
-          });
+          };
         });
       }
 
