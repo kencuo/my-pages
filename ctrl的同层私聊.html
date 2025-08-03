@@ -1982,6 +1982,98 @@
         border: 1px solid var(--border-primary);
       }
 
+      /* 手机宽度调节器样式 */
+      .phone-width-selector {
+        margin-top: 20px;
+        padding: 15px;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border-primary);
+      }
+
+      .width-slider-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px;
+      }
+
+      .width-slider {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--bg-primary);
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .width-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s ease;
+      }
+
+      .width-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.1);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .width-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s ease;
+      }
+
+      .width-value {
+        min-width: 60px;
+        text-align: center;
+        font-weight: 600;
+        color: var(--accent-primary);
+        font-size: 14px;
+      }
+
+      .width-presets {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+
+      .width-preset-btn {
+        padding: 6px 12px;
+        border: 1px solid var(--border-primary);
+        border-radius: 20px;
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .width-preset-btn:hover {
+        background: var(--accent-primary);
+        color: white;
+        transform: translateY(-1px);
+      }
+
+      .width-preset-btn.active {
+        background: var(--accent-primary);
+        color: white;
+        border-color: var(--accent-primary);
+      }
+
       .bubble-style-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -6534,6 +6626,25 @@
                     </div>
                   </div>
                 </label>
+              </div>
+            </div>
+
+            <!-- 手机宽度调节器 -->
+            <div class="phone-width-selector">
+              <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 14px;">📱 手机宽度调节</h4>
+              <div class="width-slider-container">
+                <span style="font-size: 12px; color: var(--text-secondary);">窄</span>
+                <input type="range" class="width-slider" id="phoneWidthSlider"
+                       min="250" max="450" value="300" step="10">
+                <span style="font-size: 12px; color: var(--text-secondary);">宽</span>
+                <div class="width-value" id="widthValue">300px</div>
+              </div>
+              <div class="width-presets">
+                <button class="width-preset-btn" data-width="250">超窄</button>
+                <button class="width-preset-btn active" data-width="300">默认</button>
+                <button class="width-preset-btn" data-width="350">适中</button>
+                <button class="width-preset-btn" data-width="400">宽屏</button>
+                <button class="width-preset-btn" data-width="450">超宽</button>
               </div>
             </div>
           </div>
@@ -12955,7 +13066,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       const settingsState = {
         userAvatar: null,
         wallpaper: null,
-        charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
+        charAvatars: {}, // 存储角色头像，格式：{角色名: 头像URL}
+        phoneWidth: 300 // 手机宽度，默认300px
       };
 
       // 从localStorage加载设置
@@ -12966,6 +13078,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const savedJailbreak = localStorage.getItem('jailbreakEnabled');
         const savedTheme = localStorage.getItem('chatTheme');
         const savedBubbleStyle = localStorage.getItem('chatBubbleStyle');
+        const savedPhoneWidth = localStorage.getItem('chatPhoneWidth');
 
         if (savedAvatar) {
           settingsState.userAvatar = savedAvatar;
@@ -13092,6 +13205,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             bubbleRadio.checked = true;
           }
         }
+
+        // 加载手机宽度设置
+        if (savedPhoneWidth) {
+          const width = parseInt(savedPhoneWidth);
+          settingsState.phoneWidth = width;
+          updatePhoneWidth(width);
+          updatePhoneWidthUI(width);
+        }
       }
 
       // 保存设置到localStorage
@@ -13115,6 +13236,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           localStorage.setItem('chatCharAvatars', JSON.stringify(settingsState.charAvatars));
         } else {
           localStorage.removeItem('chatCharAvatars');
+        }
+
+        // 保存手机宽度
+        if (settingsState.phoneWidth) {
+          localStorage.setItem('chatPhoneWidth', settingsState.phoneWidth.toString());
         }
       }
 
@@ -14770,11 +14896,64 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
+      // 手机宽度调节功能
+      function updatePhoneWidth(width) {
+        const phone = document.querySelector('.cute-phone');
+        if (phone) {
+          phone.style.width = width + 'px';
+          settingsState.phoneWidth = width;
+          saveSettings();
+          console.log('📱 手机宽度已调整为:', width + 'px');
+        }
+      }
+
+      function updatePhoneWidthUI(width) {
+        const slider = document.getElementById('phoneWidthSlider');
+        const valueDisplay = document.getElementById('widthValue');
+        const presetButtons = document.querySelectorAll('.width-preset-btn');
+
+        if (slider) slider.value = width;
+        if (valueDisplay) valueDisplay.textContent = width + 'px';
+
+        // 更新预设按钮状态
+        presetButtons.forEach(btn => {
+          btn.classList.remove('active');
+          if (parseInt(btn.dataset.width) === width) {
+            btn.classList.add('active');
+          }
+        });
+      }
+
+      function initPhoneWidthControls() {
+        const slider = document.getElementById('phoneWidthSlider');
+        const valueDisplay = document.getElementById('widthValue');
+        const presetButtons = document.querySelectorAll('.width-preset-btn');
+
+        // 滑块事件
+        if (slider) {
+          slider.addEventListener('input', (e) => {
+            const width = parseInt(e.target.value);
+            updatePhoneWidth(width);
+            updatePhoneWidthUI(width);
+          });
+        }
+
+        // 预设按钮事件
+        presetButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const width = parseInt(btn.dataset.width);
+            updatePhoneWidth(width);
+            updatePhoneWidthUI(width);
+          });
+        });
+      }
+
       // 页面加载时应用主题和气泡样式
       document.addEventListener('DOMContentLoaded', () => {
         loadTheme();
         loadBubbleStyle();
         initMessageEffects();
+        initPhoneWidthControls();
       });
     </script>
 
