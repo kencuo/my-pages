@@ -6802,6 +6802,28 @@
 
     <!-- 作者 ctrl 不许偷盗喵喵喵喵 -->
     <script>
+      // 🚨 立即执行的调试信息
+      console.log('🎯 JavaScript 开始执行!');
+      console.log('📍 当前时间:', new Date().toLocaleTimeString());
+      console.log('📍 页面URL:', window.location.href);
+
+      // 立即添加全局测试函数
+      window.emergencyPhoneWidthTest = function(width = 350) {
+        console.log('🚨 紧急测试: 尝试设置手机宽度为', width + 'px');
+        const phone = document.getElementById('phone');
+        if (phone) {
+          phone.style.width = width + 'px';
+          phone.style.setProperty('width', width + 'px', 'important');
+          console.log('✅ 紧急测试: 手机元素找到并设置宽度');
+          console.log('📱 当前宽度:', window.getComputedStyle(phone).width);
+        } else {
+          console.log('❌ 紧急测试: 未找到手机元素');
+          console.log('📱 页面中所有带ID的元素:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
+        }
+      };
+
+      console.log('🧪 紧急测试函数已添加: emergencyPhoneWidthTest()');
+
       // ========== 可爱同层手机核心逻辑 ==========
       // 作者 ctrl 不许偷盗喵喵喵喵
       // NEW MESSAGE FORMATS:
@@ -14976,11 +14998,17 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       function initPhoneWidthControls() {
+        console.log('🔧 initPhoneWidthControls 函数开始执行');
+
         const slider = document.getElementById('phoneWidthSlider');
         const valueDisplay = document.getElementById('widthValue');
         const presetButtons = document.querySelectorAll('.width-preset-btn');
 
         console.log('🔧 初始化手机宽度控件...');
+        console.log('📱 找到的元素:');
+        console.log('  - 滑块:', slider);
+        console.log('  - 值显示:', valueDisplay);
+        console.log('  - 预设按钮数量:', presetButtons.length);
         console.log('📱 滑块元素:', slider);
         console.log('📱 预设按钮数量:', presetButtons.length);
 
@@ -15012,12 +15040,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 页面加载时应用主题和气泡样式
       document.addEventListener('DOMContentLoaded', () => {
+        console.log('🚀 DOMContentLoaded 事件触发');
+        console.log('📍 当前页面:', window.location.href);
+        console.log('📍 文档状态:', document.readyState);
+
         loadTheme();
         loadBubbleStyle();
         initMessageEffects();
 
         // 延迟初始化手机宽度控件，确保在SillyTavern环境中正常工作
         setTimeout(() => {
+          console.log('⏰ 开始延迟初始化手机宽度控件...');
+          console.log('📱 查找手机元素:', document.getElementById('phone'));
+          console.log('📱 查找宽度控件:', document.getElementById('phoneWidthSlider'));
+
           initPhoneWidthControls();
 
           // 应用保存的宽度设置到UI
