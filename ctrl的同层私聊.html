@@ -14900,10 +14900,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function updatePhoneWidth(width) {
         const phone = document.querySelector('.cute-phone');
         if (phone) {
-          phone.style.width = width + 'px';
+          phone.style.setProperty('width', width + 'px', 'important');
           settingsState.phoneWidth = width;
           saveSettings();
           console.log('📱 手机宽度已调整为:', width + 'px');
+
+          // 调试信息
+          console.log('📱 找到手机元素:', phone);
+          console.log('📱 当前宽度样式:', phone.style.width);
+        } else {
+          console.error('❌ 未找到 .cute-phone 元素');
         }
       }
 
@@ -14929,19 +14935,27 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const valueDisplay = document.getElementById('widthValue');
         const presetButtons = document.querySelectorAll('.width-preset-btn');
 
+        console.log('🔧 初始化手机宽度控件...');
+        console.log('📱 滑块元素:', slider);
+        console.log('📱 预设按钮数量:', presetButtons.length);
+
         // 滑块事件
         if (slider) {
           slider.addEventListener('input', (e) => {
             const width = parseInt(e.target.value);
+            console.log('📱 滑块调节到:', width + 'px');
             updatePhoneWidth(width);
             updatePhoneWidthUI(width);
           });
+        } else {
+          console.error('❌ 未找到手机宽度滑块');
         }
 
         // 预设按钮事件
         presetButtons.forEach(btn => {
           btn.addEventListener('click', () => {
             const width = parseInt(btn.dataset.width);
+            console.log('📱 预设按钮点击:', width + 'px');
             updatePhoneWidth(width);
             updatePhoneWidthUI(width);
           });
@@ -14953,7 +14967,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         loadTheme();
         loadBubbleStyle();
         initMessageEffects();
-        initPhoneWidthControls();
+
+        // 延迟初始化手机宽度控件，确保在SillyTavern环境中正常工作
+        setTimeout(() => {
+          initPhoneWidthControls();
+
+          // 如果有保存的宽度设置，立即应用
+          const savedWidth = localStorage.getItem('chatPhoneWidth');
+          if (savedWidth) {
+            const width = parseInt(savedWidth);
+            console.log('📱 应用保存的宽度:', width + 'px');
+            updatePhoneWidth(width);
+            updatePhoneWidthUI(width);
+          }
+        }, 500);
       });
     </script>
 
