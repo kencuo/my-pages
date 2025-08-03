@@ -14901,7 +14901,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 手机宽度调节功能 
+      // 手机宽度调节功能 - 兼容Cloudflare等CDN环境
       function updatePhoneWidth(width) {
         const phone = document.getElementById("phone");
         if (!phone) {
@@ -14909,17 +14909,53 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
-        // 直接设置宽度
-        phone.style.width = `${width}px`;
+        try {
+          // 方法1: 直接设置样式
+          phone.style.width = `${width}px`;
+          phone.style.setProperty('width', `${width}px`, 'important');
 
-        // 更新状态并保存
-        settingsState.phoneWidth = width;
-        saveSettings();
+          // 方法2: 通过CSS类切换（兼容CSP限制）
+          phone.setAttribute('data-width', width);
 
-        console.log('📱 手机宽度已调整为:', width + 'px');
-        console.log('📱 手机元素:', phone);
-        console.log('📱 当前计算样式宽度:', window.getComputedStyle(phone).width);
-        console.log('📱 当前内联样式宽度:', phone.style.width);
+          // 方法3: 动态CSS规则（最强兼容性）
+          updatePhoneWidthCSS(width);
+
+          // 更新状态并保存
+          settingsState.phoneWidth = width;
+          saveSettings();
+
+          console.log('📱 手机宽度已调整为:', width + 'px');
+          console.log('📱 手机元素:', phone);
+          console.log('📱 当前计算样式宽度:', window.getComputedStyle(phone).width);
+          console.log('📱 当前内联样式宽度:', phone.style.width);
+
+        } catch (error) {
+          console.error('❌ 设置宽度时出错:', error);
+          // 降级方案：使用CSS变量
+          document.documentElement.style.setProperty('--phone-width', width + 'px');
+        }
+      }
+
+      // 动态CSS规则方法 - 最强兼容性
+      function updatePhoneWidthCSS(width) {
+        // 移除旧的动态样式
+        const oldStyle = document.getElementById('dynamic-phone-width');
+        if (oldStyle) {
+          oldStyle.remove();
+        }
+
+        // 创建新的样式规则
+        const style = document.createElement('style');
+        style.id = 'dynamic-phone-width';
+        style.textContent = `
+          #phone[data-width="${width}"] {
+            width: ${width}px !important;
+          }
+          #phone {
+            width: ${width}px !important;
+          }
+        `;
+        document.head.appendChild(style);
       }
 
       function updatePhoneWidthUI(width) {
