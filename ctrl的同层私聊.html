@@ -1226,7 +1226,7 @@
         transition: all 0.3s ease;
       }
       .cute-phone {
-        width: 300px; /* 更纤细 */
+        width: var(--phone-width, 300px); /* 使用CSS变量，默认300px */
         height: 650px; /* 增加高度以显示挂断键 */
         background: var(--bg-secondary); /* 机身本体纯白，壁纸由内部 chat-messages 控制 */
         border-radius: 38px;
@@ -14898,19 +14898,47 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 手机宽度调节功能
       function updatePhoneWidth(width) {
-        const phone = document.querySelector('.cute-phone');
-        if (phone) {
-          phone.style.setProperty('width', width + 'px', 'important');
-          settingsState.phoneWidth = width;
-          saveSettings();
-          console.log('📱 手机宽度已调整为:', width + 'px');
+        // 尝试多种方式找到手机元素
+        let phone = document.querySelector('.cute-phone');
 
-          // 调试信息
-          console.log('📱 找到手机元素:', phone);
-          console.log('📱 当前宽度样式:', phone.style.width);
+        // 如果没找到，尝试等待一下再找
+        if (!phone) {
+          setTimeout(() => {
+            phone = document.querySelector('.cute-phone');
+            if (phone) {
+              applyPhoneWidth(phone, width);
+            } else {
+              console.error('❌ 延迟后仍未找到 .cute-phone 元素');
+              // 尝试查找所有可能的容器
+              const allDivs = document.querySelectorAll('div');
+              console.log('📱 页面中所有div元素数量:', allDivs.length);
+              allDivs.forEach((div, index) => {
+                if (div.className && div.className.includes('phone')) {
+                  console.log(`📱 找到可能的手机元素 ${index}:`, div.className);
+                }
+              });
+            }
+          }, 100);
         } else {
-          console.error('❌ 未找到 .cute-phone 元素');
+          applyPhoneWidth(phone, width);
         }
+      }
+
+      function applyPhoneWidth(phone, width) {
+        // 使用多种方式设置宽度
+        phone.style.setProperty('width', width + 'px', 'important');
+        phone.style.width = width + 'px';
+
+        // 也尝试设置CSS变量
+        document.documentElement.style.setProperty('--phone-width', width + 'px');
+
+        settingsState.phoneWidth = width;
+        saveSettings();
+
+        console.log('📱 手机宽度已调整为:', width + 'px');
+        console.log('📱 手机元素:', phone);
+        console.log('📱 当前计算样式宽度:', window.getComputedStyle(phone).width);
+        console.log('📱 当前内联样式宽度:', phone.style.width);
       }
 
       function updatePhoneWidthUI(width) {
