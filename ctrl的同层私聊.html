@@ -5731,7 +5731,7 @@
     </style>
   </head>
   <body>
-    <div class="phone-shell"><div class="cute-phone" data-author="ctrl">
+    <div class="phone-shell"><div class="cute-phone" id="phone" data-author="ctrl">
       <!-- 聊天界面 -->
       <div class="chat-header">
         <button id="requestAiBtn">
@@ -13211,9 +13211,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const width = parseInt(savedPhoneWidth);
           console.log('📱 loadSettings中加载保存的宽度:', width + 'px');
           settingsState.phoneWidth = width;
-          // 只设置CSS变量和UI，不调用updatePhoneWidth避免重复保存
-          document.documentElement.style.setProperty('--phone-width', width + 'px');
-          // updatePhoneWidthUI会在后面的延迟初始化中调用
+          // 直接应用宽度，不保存（避免重复保存）
+          const phone = document.getElementById("phone");
+          if (phone) {
+            phone.style.width = `${width}px`;
+            console.log('📱 loadSettings中已应用宽度');
+          }
         }
       }
 
@@ -14898,42 +14901,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 手机宽度调节功能
+      // 手机宽度调节功能 
       function updatePhoneWidth(width) {
-        // 尝试多种方式找到手机元素
-        let phone = document.querySelector('.cute-phone');
-
-        // 如果没找到，尝试等待一下再找
+        const phone = document.getElementById("phone");
         if (!phone) {
-          setTimeout(() => {
-            phone = document.querySelector('.cute-phone');
-            if (phone) {
-              applyPhoneWidth(phone, width);
-            } else {
-              console.error('❌ 延迟后仍未找到 .cute-phone 元素');
-              // 尝试查找所有可能的容器
-              const allDivs = document.querySelectorAll('div');
-              console.log('📱 页面中所有div元素数量:', allDivs.length);
-              allDivs.forEach((div, index) => {
-                if (div.className && div.className.includes('phone')) {
-                  console.log(`📱 找到可能的手机元素 ${index}:`, div.className);
-                }
-              });
-            }
-          }, 100);
-        } else {
-          applyPhoneWidth(phone, width);
+          console.error('❌ 未找到手机元素 #phone');
+          return;
         }
-      }
 
-      function applyPhoneWidth(phone, width) {
-        // 使用多种方式设置宽度
-        phone.style.setProperty('width', width + 'px', 'important');
-        phone.style.width = width + 'px';
+        // 直接设置宽度
+        phone.style.width = `${width}px`;
 
-        // 也尝试设置CSS变量
-        document.documentElement.style.setProperty('--phone-width', width + 'px');
-
+        // 更新状态并保存
         settingsState.phoneWidth = width;
         saveSettings();
 
@@ -15001,25 +14980,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         loadBubbleStyle();
         initMessageEffects();
 
-        // 立即应用保存的宽度设置（通过CSS变量）
-        const savedWidth = localStorage.getItem('chatPhoneWidth');
-        if (savedWidth) {
-          const width = parseInt(savedWidth);
-          console.log('📱 立即应用保存的宽度:', width + 'px');
-          document.documentElement.style.setProperty('--phone-width', width + 'px');
-          settingsState.phoneWidth = width;
-        }
-
         // 延迟初始化手机宽度控件，确保在SillyTavern环境中正常工作
         setTimeout(() => {
           initPhoneWidthControls();
 
-          // 再次应用宽度设置，确保UI同步
+          // 应用保存的宽度设置到UI
+          const savedWidth = localStorage.getItem('chatPhoneWidth');
           if (savedWidth) {
             const width = parseInt(savedWidth);
+            console.log('📱 初始化时应用保存的宽度到UI:', width + 'px');
             updatePhoneWidthUI(width);
-            // 强制更新一次
-            updatePhoneWidth(width);
           }
 
           // 添加全局测试函数
