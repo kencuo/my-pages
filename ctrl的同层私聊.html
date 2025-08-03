@@ -1019,6 +1019,121 @@
         50% { transform: translateY(-5px); }
       }
 
+      /* 🎉 关键词特效样式 */
+      .message-effects-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+        overflow: hidden;
+      }
+
+      /* 烟花特效 */
+      .firework {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        animation: firework 2s ease-out forwards;
+      }
+      @keyframes firework {
+        0% {
+          transform: scale(0);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(3);
+          opacity: 0;
+        }
+      }
+
+      /* 爱心雨特效 */
+      .heart-rain {
+        position: absolute;
+        font-size: 20px;
+        color: #ff69b4;
+        animation: heartFall 3s linear forwards;
+        pointer-events: none;
+      }
+      @keyframes heartFall {
+        0% {
+          transform: translateY(-100px) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(100vh) rotate(360deg);
+          opacity: 0;
+        }
+      }
+
+      /* 雪花特效 */
+      .snowflake {
+        position: absolute;
+        color: #87CEEB;
+        font-size: 16px;
+        animation: snowFall 4s linear forwards;
+        pointer-events: none;
+      }
+      @keyframes snowFall {
+        0% {
+          transform: translateY(-100px) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(100vh) rotate(720deg);
+          opacity: 0;
+        }
+      }
+
+      /* 彩虹特效 */
+      .rainbow-particle {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: rainbowFloat 3s ease-out forwards;
+      }
+      @keyframes rainbowFloat {
+        0% {
+          transform: translateY(0) scale(0);
+          opacity: 1;
+        }
+        50% {
+          transform: translateY(-200px) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-400px) scale(0);
+          opacity: 0;
+        }
+      }
+
+      /* 星星特效 */
+      .star-particle {
+        position: absolute;
+        color: #FFD700;
+        font-size: 18px;
+        animation: starTwinkle 2s ease-out forwards;
+        pointer-events: none;
+      }
+      @keyframes starTwinkle {
+        0%, 100% {
+          transform: scale(0) rotate(0deg);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1.5) rotate(180deg);
+          opacity: 1;
+        }
+      }
+
       /* 脉动动画 */
       @keyframes pulse {
         0% { opacity: 1; transform: scale(1); }
@@ -7209,6 +7324,13 @@
             message.classList.add('generated');
           }
           chat.appendChild(message);
+
+          // 🎉 检测关键词特效（只对用户发送的消息触发）
+          if (msg.sender === 'user' && msg.content && typeof msg.content === 'string') {
+            setTimeout(() => {
+              checkAndTriggerEffects(msg.content);
+            }, 300); // 延迟一点让消息先显示
+          }
 
           // 确保消息内容正确渲染
           setTimeout(() => {
@@ -14253,12 +14375,202 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 页面加载时加载设置
       // loadSettings(); // 这个现在在initApp中调用
 
+      // 🎉 关键词特效系统
+      const MESSAGE_EFFECTS = {
+        '生日快乐': 'fireworks',
+        '新年快乐': 'fireworks',
+        '春节快乐': 'fireworks',
+        '恭喜发财': 'fireworks',
+        '我爱你': 'hearts',
+        '爱你': 'hearts',
+        '❤️': 'hearts',
+        '💕': 'hearts',
+        '💖': 'hearts',
+        '圣诞快乐': 'snow',
+        '下雪': 'snow',
+        '❄️': 'snow',
+        '🎄': 'snow',
+        '彩虹': 'rainbow',
+        '🌈': 'rainbow',
+        '星星': 'stars',
+        '✨': 'stars',
+        '⭐': 'stars'
+      };
+
+      // 初始化特效系统
+      function initMessageEffects() {
+        // 确保特效容器存在
+        if (!document.getElementById('messageEffectsContainer')) {
+          const container = document.createElement('div');
+          container.id = 'messageEffectsContainer';
+          container.className = 'message-effects-container';
+          document.body.appendChild(container);
+        }
+      }
+
+      // 检测消息中的关键词并触发特效
+      function checkAndTriggerEffects(messageText) {
+        if (!messageText) return;
+
+        const text = messageText.toLowerCase();
+        for (const [keyword, effect] of Object.entries(MESSAGE_EFFECTS)) {
+          if (text.includes(keyword.toLowerCase())) {
+            triggerMessageEffect(effect);
+            break; // 只触发第一个匹配的特效
+          }
+        }
+      }
+
+      // 触发特效
+      function triggerMessageEffect(effectType) {
+        const container = document.getElementById('messageEffectsContainer');
+        if (!container) return;
+
+        switch (effectType) {
+          case 'fireworks':
+            createFireworksEffect(container);
+            break;
+          case 'hearts':
+            createHeartsEffect(container);
+            break;
+          case 'snow':
+            createSnowEffect(container);
+            break;
+          case 'rainbow':
+            createRainbowEffect(container);
+            break;
+          case 'stars':
+            createStarsEffect(container);
+            break;
+        }
+      }
+
+      // 烟花特效
+      function createFireworksEffect(container) {
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd', '#98d8c8'];
+
+        for (let i = 0; i < 15; i++) {
+          setTimeout(() => {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            firework.style.left = Math.random() * 100 + '%';
+            firework.style.top = Math.random() * 100 + '%';
+            firework.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+            container.appendChild(firework);
+
+            setTimeout(() => {
+              if (firework.parentNode) {
+                firework.parentNode.removeChild(firework);
+              }
+            }, 2000);
+          }, i * 100);
+        }
+      }
+
+      // 爱心雨特效
+      function createHeartsEffect(container) {
+        const hearts = ['💖', '💕', '💗', '💓', '💝', '❤️', '🧡', '💛', '💚', '💙', '💜'];
+
+        for (let i = 0; i < 20; i++) {
+          setTimeout(() => {
+            const heart = document.createElement('div');
+            heart.className = 'heart-rain';
+            heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+            heart.style.left = Math.random() * 100 + '%';
+            heart.style.animationDelay = Math.random() * 2 + 's';
+
+            container.appendChild(heart);
+
+            setTimeout(() => {
+              if (heart.parentNode) {
+                heart.parentNode.removeChild(heart);
+              }
+            }, 3000);
+          }, i * 150);
+        }
+      }
+
+      // 雪花特效
+      function createSnowEffect(container) {
+        const snowflakes = ['❄️', '❅', '❆', '🌨️'];
+
+        for (let i = 0; i < 25; i++) {
+          setTimeout(() => {
+            const snow = document.createElement('div');
+            snow.className = 'snowflake';
+            snow.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
+            snow.style.left = Math.random() * 100 + '%';
+            snow.style.animationDelay = Math.random() * 3 + 's';
+            snow.style.animationDuration = (Math.random() * 2 + 3) + 's';
+
+            container.appendChild(snow);
+
+            setTimeout(() => {
+              if (snow.parentNode) {
+                snow.parentNode.removeChild(snow);
+              }
+            }, 4000);
+          }, i * 100);
+        }
+      }
+
+      // 彩虹特效
+      function createRainbowEffect(container) {
+        const colors = ['#ff0000', '#ff8000', '#ffff00', '#80ff00', '#00ff00', '#00ff80', '#00ffff', '#0080ff', '#0000ff', '#8000ff', '#ff00ff', '#ff0080'];
+
+        for (let i = 0; i < 30; i++) {
+          setTimeout(() => {
+            const particle = document.createElement('div');
+            particle.className = 'rainbow-particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = '100%';
+            particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+            container.appendChild(particle);
+
+            setTimeout(() => {
+              if (particle.parentNode) {
+                particle.parentNode.removeChild(particle);
+              }
+            }, 3000);
+          }, i * 50);
+        }
+      }
+
+      // 星星特效
+      function createStarsEffect(container) {
+        const stars = ['⭐', '✨', '🌟', '💫', '⚡'];
+
+        for (let i = 0; i < 12; i++) {
+          setTimeout(() => {
+            const star = document.createElement('div');
+            star.className = 'star-particle';
+            star.textContent = stars[Math.floor(Math.random() * stars.length)];
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+
+            container.appendChild(star);
+
+            setTimeout(() => {
+              if (star.parentNode) {
+                star.parentNode.removeChild(star);
+              }
+            }, 2000);
+          }, i * 200);
+        }
+      }
+
       // 页面加载时应用主题和气泡样式
       document.addEventListener('DOMContentLoaded', () => {
         loadTheme();
         loadBubbleStyle();
+        initMessageEffects();
       });
     </script>
+
+    <!-- 🎉 消息特效容器 -->
+    <div id="messageEffectsContainer" class="message-effects-container"></div>
   </body>
 </html>
 
