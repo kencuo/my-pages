@@ -1226,7 +1226,7 @@
         transition: all 0.3s ease;
       }
       .cute-phone {
-        width: var(--phone-width, 300px); /* 使用CSS变量，默认300px */
+        width: 255px; /* 更纤细 */
         height: 650px; /* 增加高度以显示挂断键 */
         background: var(--bg-secondary); /* 机身本体纯白，壁纸由内部 chat-messages 控制 */
         border-radius: 38px;
@@ -1980,98 +1980,6 @@
         background: var(--bg-secondary);
         border-radius: 12px;
         border: 1px solid var(--border-primary);
-      }
-
-      /* 手机宽度调节器样式 */
-      .phone-width-selector {
-        margin-top: 20px;
-        padding: 15px;
-        background: var(--bg-secondary);
-        border-radius: 12px;
-        border: 1px solid var(--border-primary);
-      }
-
-      .width-slider-container {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-top: 10px;
-      }
-
-      .width-slider {
-        flex: 1;
-        height: 6px;
-        border-radius: 3px;
-        background: var(--bg-primary);
-        outline: none;
-        -webkit-appearance: none;
-        appearance: none;
-      }
-
-      .width-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--accent-primary);
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-        transition: all 0.2s ease;
-      }
-
-      .width-slider::-webkit-slider-thumb:hover {
-        transform: scale(1.1);
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
-      }
-
-      .width-slider::-moz-range-thumb {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--accent-primary);
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-        transition: all 0.2s ease;
-      }
-
-      .width-value {
-        min-width: 60px;
-        text-align: center;
-        font-weight: 600;
-        color: var(--accent-primary);
-        font-size: 14px;
-      }
-
-      .width-presets {
-        display: flex;
-        gap: 8px;
-        margin-top: 12px;
-        flex-wrap: wrap;
-      }
-
-      .width-preset-btn {
-        padding: 6px 12px;
-        border: 1px solid var(--border-primary);
-        border-radius: 20px;
-        background: var(--bg-primary);
-        color: var(--text-secondary);
-        font-size: 12px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .width-preset-btn:hover {
-        background: var(--accent-primary);
-        color: white;
-        transform: translateY(-1px);
-      }
-
-      .width-preset-btn.active {
-        background: var(--accent-primary);
-        color: white;
-        border-color: var(--accent-primary);
       }
 
       .bubble-style-grid {
@@ -5731,7 +5639,7 @@
     </style>
   </head>
   <body>
-    <div class="phone-shell"><div class="cute-phone" id="phone" data-author="ctrl">
+    <div class="phone-shell"><div class="cute-phone" data-author="ctrl">
       <!-- 聊天界面 -->
       <div class="chat-header">
         <button id="requestAiBtn">
@@ -6628,25 +6536,6 @@
                 </label>
               </div>
             </div>
-
-            <!-- 手机宽度调节器 -->
-            <div class="phone-width-selector">
-              <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 14px;">📱 手机宽度调节</h4>
-              <div class="width-slider-container">
-                <span style="font-size: 12px; color: var(--text-secondary);">窄</span>
-                <input type="range" class="width-slider" id="phoneWidthSlider"
-                       min="250" max="450" value="300" step="10">
-                <span style="font-size: 12px; color: var(--text-secondary);">宽</span>
-                <div class="width-value" id="widthValue">300px</div>
-              </div>
-              <div class="width-presets">
-                <button class="width-preset-btn" data-width="250">超窄</button>
-                <button class="width-preset-btn active" data-width="300">默认</button>
-                <button class="width-preset-btn" data-width="350">适中</button>
-                <button class="width-preset-btn" data-width="400">宽屏</button>
-                <button class="width-preset-btn" data-width="450">超宽</button>
-              </div>
-            </div>
           </div>
 
           <!-- 导出功能 -->
@@ -6802,28 +6691,6 @@
 
     <!-- 作者 ctrl 不许偷盗喵喵喵喵 -->
     <script>
-      // 🚨 立即执行的调试信息
-      console.log('🎯 JavaScript 开始执行!');
-      console.log('📍 当前时间:', new Date().toLocaleTimeString());
-      console.log('📍 页面URL:', window.location.href);
-
-      // 立即添加全局测试函数
-      window.emergencyPhoneWidthTest = function(width = 350) {
-        console.log('🚨 紧急测试: 尝试设置手机宽度为', width + 'px');
-        const phone = document.getElementById('phone');
-        if (phone) {
-          phone.style.width = width + 'px';
-          phone.style.setProperty('width', width + 'px', 'important');
-          console.log('✅ 紧急测试: 手机元素找到并设置宽度');
-          console.log('📱 当前宽度:', window.getComputedStyle(phone).width);
-        } else {
-          console.log('❌ 紧急测试: 未找到手机元素');
-          console.log('📱 页面中所有带ID的元素:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
-        }
-      };
-
-      console.log('🧪 紧急测试函数已添加: emergencyPhoneWidthTest()');
-
       // ========== 可爱同层手机核心逻辑 ==========
       // 作者 ctrl 不许偷盗喵喵喵喵
       // NEW MESSAGE FORMATS:
@@ -13088,8 +12955,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       const settingsState = {
         userAvatar: null,
         wallpaper: null,
-        charAvatars: {}, // 存储角色头像，格式：{角色名: 头像URL}
-        phoneWidth: 300 // 手机宽度，默认300px
+        charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
 
       // 从localStorage加载设置
@@ -13100,7 +12966,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const savedJailbreak = localStorage.getItem('jailbreakEnabled');
         const savedTheme = localStorage.getItem('chatTheme');
         const savedBubbleStyle = localStorage.getItem('chatBubbleStyle');
-        const savedPhoneWidth = localStorage.getItem('chatPhoneWidth');
 
         if (savedAvatar) {
           settingsState.userAvatar = savedAvatar;
@@ -13227,19 +13092,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             bubbleRadio.checked = true;
           }
         }
-
-        // 加载手机宽度设置
-        if (savedPhoneWidth) {
-          const width = parseInt(savedPhoneWidth);
-          console.log('📱 loadSettings中加载保存的宽度:', width + 'px');
-          settingsState.phoneWidth = width;
-          // 直接应用宽度，不保存（避免重复保存）
-          const phone = document.getElementById("phone");
-          if (phone) {
-            phone.style.width = `${width}px`;
-            console.log('📱 loadSettings中已应用宽度');
-          }
-        }
       }
 
       // 保存设置到localStorage
@@ -13263,11 +13115,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           localStorage.setItem('chatCharAvatars', JSON.stringify(settingsState.charAvatars));
         } else {
           localStorage.removeItem('chatCharAvatars');
-        }
-
-        // 保存手机宽度
-        if (settingsState.phoneWidth) {
-          localStorage.setItem('chatPhoneWidth', settingsState.phoneWidth.toString());
         }
       }
 
@@ -14923,194 +14770,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 手机宽度调节功能 - 兼容Cloudflare等CDN环境
-      function updatePhoneWidth(width) {
-        const phone = document.getElementById("phone");
-        if (!phone) {
-          console.error('❌ 未找到手机元素 #phone');
-          return;
-        }
-
-        try {
-          // 方法1: 直接设置样式
-          phone.style.width = `${width}px`;
-          phone.style.setProperty('width', `${width}px`, 'important');
-
-          // 方法2: 通过CSS类切换（兼容CSP限制）
-          phone.setAttribute('data-width', width);
-
-          // 方法3: 动态CSS规则（最强兼容性）
-          updatePhoneWidthCSS(width);
-
-          // 更新状态并保存
-          settingsState.phoneWidth = width;
-          saveSettings();
-
-          console.log('📱 手机宽度已调整为:', width + 'px');
-          console.log('📱 手机元素:', phone);
-          console.log('📱 当前计算样式宽度:', window.getComputedStyle(phone).width);
-          console.log('📱 当前内联样式宽度:', phone.style.width);
-
-        } catch (error) {
-          console.error('❌ 设置宽度时出错:', error);
-          // 降级方案：使用CSS变量
-          document.documentElement.style.setProperty('--phone-width', width + 'px');
-        }
-      }
-
-      // 动态CSS规则方法 - 最强兼容性
-      function updatePhoneWidthCSS(width) {
-        // 移除旧的动态样式
-        const oldStyle = document.getElementById('dynamic-phone-width');
-        if (oldStyle) {
-          oldStyle.remove();
-        }
-
-        // 创建新的样式规则
-        const style = document.createElement('style');
-        style.id = 'dynamic-phone-width';
-        style.textContent = `
-          #phone[data-width="${width}"] {
-            width: ${width}px !important;
-          }
-          #phone {
-            width: ${width}px !important;
-          }
-        `;
-        document.head.appendChild(style);
-      }
-
-      function updatePhoneWidthUI(width) {
-        const slider = document.getElementById('phoneWidthSlider');
-        const valueDisplay = document.getElementById('widthValue');
-        const presetButtons = document.querySelectorAll('.width-preset-btn');
-
-        if (slider) slider.value = width;
-        if (valueDisplay) valueDisplay.textContent = width + 'px';
-
-        // 更新预设按钮状态
-        presetButtons.forEach(btn => {
-          btn.classList.remove('active');
-          if (parseInt(btn.dataset.width) === width) {
-            btn.classList.add('active');
-          }
-        });
-      }
-
-      function initPhoneWidthControls() {
-        console.log('🔧 initPhoneWidthControls 函数开始执行');
-
-        const slider = document.getElementById('phoneWidthSlider');
-        const valueDisplay = document.getElementById('widthValue');
-        const presetButtons = document.querySelectorAll('.width-preset-btn');
-
-        console.log('🔧 初始化手机宽度控件...');
-        console.log('📱 找到的元素:');
-        console.log('  - 滑块:', slider);
-        console.log('  - 值显示:', valueDisplay);
-        console.log('  - 预设按钮数量:', presetButtons.length);
-        console.log('📱 滑块元素:', slider);
-        console.log('📱 预设按钮数量:', presetButtons.length);
-
-        // 滑块事件
-        if (slider) {
-          slider.addEventListener('input', (e) => {
-            const width = parseInt(e.target.value);
-            console.log('📱 滑块调节到:', width + 'px');
-            updatePhoneWidth(width);
-            updatePhoneWidthUI(width);
-          });
-        } else {
-          console.error('❌ 未找到手机宽度滑块');
-        }
-
-        // 预设按钮事件
-        presetButtons.forEach((btn, index) => {
-          console.log(`📱 绑定预设按钮 ${index}:`, btn.dataset.width + 'px');
-          btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const width = parseInt(btn.dataset.width);
-            console.log('📱 预设按钮点击:', btn.textContent, '宽度:', width + 'px');
-            console.log('📱 按钮data-width属性:', btn.dataset.width);
-            updatePhoneWidth(width);
-            updatePhoneWidthUI(width);
-          });
-        });
-      }
-
       // 页面加载时应用主题和气泡样式
       document.addEventListener('DOMContentLoaded', () => {
-        console.log('🚀 DOMContentLoaded 事件触发');
-        console.log('📍 当前页面:', window.location.href);
-        console.log('📍 文档状态:', document.readyState);
-
         loadTheme();
         loadBubbleStyle();
         initMessageEffects();
-
-        // 延迟初始化手机宽度控件，确保在SillyTavern环境中正常工作
-        setTimeout(() => {
-          console.log('⏰ 开始延迟初始化手机宽度控件...');
-          console.log('📱 查找手机元素:', document.getElementById('phone'));
-          console.log('📱 查找宽度控件:', document.getElementById('phoneWidthSlider'));
-
-          initPhoneWidthControls();
-
-          // 应用保存的宽度设置到UI
-          const savedWidth = localStorage.getItem('chatPhoneWidth');
-          if (savedWidth) {
-            const width = parseInt(savedWidth);
-            console.log('📱 初始化时应用保存的宽度到UI:', width + 'px');
-            updatePhoneWidthUI(width);
-          }
-
-          // 添加全局测试函数
-          window.testPhoneWidth = function(width) {
-            console.log('🧪 测试设置宽度:', width + 'px');
-            updatePhoneWidth(width);
-            updatePhoneWidthUI(width);
-          };
-
-          // Cloudflare环境检测
-          window.checkCloudflareCompatibility = function() {
-            console.log('🔍 Cloudflare兼容性检测:');
-            console.log('📍 当前域名:', window.location.hostname);
-            console.log('📍 User Agent:', navigator.userAgent);
-
-            // 检测CSP
-            try {
-              const testDiv = document.createElement('div');
-              testDiv.style.width = '100px';
-              console.log('✅ 内联样式设置: 正常');
-            } catch (e) {
-              console.log('❌ 内联样式设置: 被CSP阻止', e);
-            }
-
-            // 检测动态样式创建
-            try {
-              const testStyle = document.createElement('style');
-              testStyle.textContent = '.test { width: 100px; }';
-              document.head.appendChild(testStyle);
-              document.head.removeChild(testStyle);
-              console.log('✅ 动态样式创建: 正常');
-            } catch (e) {
-              console.log('❌ 动态样式创建: 被阻止', e);
-            }
-
-            // 检测手机元素
-            const phone = document.getElementById('phone');
-            if (phone) {
-              console.log('✅ 手机元素: 找到', phone);
-              console.log('📱 当前宽度:', window.getComputedStyle(phone).width);
-            } else {
-              console.log('❌ 手机元素: 未找到');
-            }
-          };
-
-          console.log('🧪 测试函数已添加:');
-          console.log('  - testPhoneWidth(350) - 测试宽度调节');
-          console.log('  - checkCloudflareCompatibility() - 检测环境兼容性');
-        }, 500);
       });
     </script>
 
