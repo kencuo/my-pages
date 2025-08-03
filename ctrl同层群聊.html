@@ -11277,14 +11277,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       function saveSettings() {
+        // 保存用户头像（包括清除的情况）
         if (settingsState.userAvatar) {
           localStorage.setItem('chatUserAvatar', settingsState.userAvatar);
+        } else {
+          localStorage.removeItem('chatUserAvatar');
         }
+
+        // 保存壁纸（包括清除的情况）
         if (settingsState.wallpaper) {
           localStorage.setItem('chatWallpaper', settingsState.wallpaper);
+        } else {
+          localStorage.removeItem('chatWallpaper');
         }
+
+        // 保存角色头像
         if (settingsState.charAvatars && Object.keys(settingsState.charAvatars).length > 0) {
           localStorage.setItem('chatCharAvatars', JSON.stringify(settingsState.charAvatars));
+        } else {
+          localStorage.removeItem('chatCharAvatars');
         }
       }
 
