@@ -1,4 +1,3 @@
-```
 <!DOCTYPE html>
 <html lang="zh-CN">
   <head>
@@ -10869,6 +10868,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function switchTheme(themeName) {
         document.documentElement.setAttribute('data-theme', themeName);
         localStorage.setItem('selectedTheme', themeName);
+
+        // 如果切换到自定义主题，需要应用自定义颜色
+        if (themeName === 'custom') {
+          loadCustomTheme();
+          applyCustomTheme();
+        }
+
         console.log('🎨 群聊切换到主题:', themeName);
       }
 
@@ -10881,6 +10887,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const themeRadio = document.querySelector(`input[name="theme"][value="${savedTheme}"]`);
         if (themeRadio) {
           themeRadio.checked = true;
+        }
+
+        // 如果是自定义主题，需要加载和应用自定义主题数据
+        if (savedTheme === 'custom') {
+          loadCustomTheme();
+          applyCustomTheme();
+
+          // 显示自定义主题编辑器
+          setTimeout(() => {
+            const customEditor = document.getElementById('customThemeEditor');
+            if (customEditor) {
+              customEditor.style.display = 'block';
+            }
+          }, 100);
         }
       }
 
@@ -11485,49 +11505,99 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const input = document.getElementById(id);
           if (input) {
             input.addEventListener('input', (e) => {
-              const key = id.replace('custom', '').replace(/([A-Z])/g, (match, letter) =>
-                letter === letter.toUpperCase() ? letter.toLowerCase() : letter
-              ).replace(/^./, str => str.toLowerCase());
+              // 正确的key映射
+              const keyMap = {
+                'customBgPrimary': 'bgPrimary',
+                'customBgSecondary': 'bgSecondary',
+                'customBgUserBubble': 'bgUserBubble',
+                'customBgCharBubble': 'bgCharBubble',
+                'customBgShell': 'bgShell',
+                'customAccentPrimary': 'accentPrimary',
+                'customTextPrimary': 'textPrimary',
+                'customTextSecondary': 'textSecondary'
+              };
 
-              customThemeData[key] = e.target.value;
-              updateCustomThemePreview();
+              const key = keyMap[id];
+              if (key) {
+                customThemeData[key] = e.target.value;
+                updateCustomThemePreview();
 
-              // 如果当前是自定义主题，实时预览
-              const currentTheme = document.documentElement.getAttribute('data-theme');
-              if (currentTheme === 'custom') {
-                applyCustomTheme();
+                // 如果当前是自定义主题，实时预览
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                if (currentTheme === 'custom') {
+                  applyCustomTheme();
+                }
+
+                console.log(`🎨 群聊更新颜色 ${key}:`, e.target.value);
               }
             });
           }
         });
 
-        // 按钮事件
-        document.getElementById('resetCustomTheme')?.addEventListener('click', () => {
-          customThemeData = {
-            bgPrimary: '#dbdbdb',
-            bgSecondary: '#ffffff',
-            bgUserBubble: '#95ec69',
-            bgCharBubble: '#ffffff',
-            bgShell: '#d5f2e4',
-            accentPrimary: '#07c160',
-            textPrimary: '#333333',
-            textSecondary: '#666666'
-          };
-          loadCustomTheme();
-        });
+        // 按钮事件 - 使用setTimeout确保DOM完全加载
+        setTimeout(() => {
+          const resetBtn = document.getElementById('resetCustomTheme');
+          const previewBtn = document.getElementById('previewCustomTheme');
+          const saveBtn = document.getElementById('saveCustomTheme');
 
-        document.getElementById('previewCustomTheme')?.addEventListener('click', () => {
-          switchTheme('custom');
-          document.querySelector('input[name="theme"][value="custom"]').checked = true;
-        });
+          if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+              customThemeData = {
+                bgPrimary: '#dbdbdb',
+                bgSecondary: '#ffffff',
+                bgUserBubble: '#95ec69',
+                bgCharBubble: '#ffffff',
+                bgShell: '#d5f2e4',
+                accentPrimary: '#07c160',
+                textPrimary: '#333333',
+                textSecondary: '#666666'
+              };
+              loadCustomTheme();
+              console.log('🔄 群聊自定义主题已重置');
+            });
+          }
 
-        document.getElementById('saveCustomTheme')?.addEventListener('click', () => {
-          localStorage.setItem('customThemeData', JSON.stringify(customThemeData));
-          showSuccessMessage('群聊自定义主题已保存！');
-          console.log('✅ 群聊自定义主题已保存到浏览器');
-        });
+          if (previewBtn) {
+            previewBtn.addEventListener('click', () => {
+              applyCustomTheme();
+              switchTheme('custom');
+              const customRadio = document.querySelector('input[name="theme"][value="custom"]');
+              if (customRadio) {
+                customRadio.checked = true;
+              }
+              console.log('👁️ 群聊预览自定义主题');
+            });
+          }
+
+          if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+              localStorage.setItem('customThemeData', JSON.stringify(customThemeData));
+              // 显示成功消息
+              const message = document.createElement('div');
+              message.textContent = '✅ 群聊自定义主题已保存！';
+              message.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #4CAF50;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                font-size: 14px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              `;
+              document.body.appendChild(message);
+              setTimeout(() => {
+                if (document.body.contains(message)) {
+                  document.body.removeChild(message);
+                }
+              }, 3000);
+              console.log('💾 群聊自定义主题已保存到浏览器');
+            });
+          }
+        }, 200);
       });
     </script>
   </body>
 </html>
-```
