@@ -403,6 +403,622 @@
         --shadow-heavy: var(--custom-shadow-heavy, rgba(0, 0, 0, 0.2));
       }
 
+      /* 气泡样式系统 */
+      /* 默认气泡样式 */
+      [data-bubble-style="default"] .message-content {
+        /* 保持原有样式 */
+      }
+
+      /* 可爱圆泡样式 - 粉色系 */
+      [data-bubble-style="round"] .message-content {
+        border-radius: 25px !important;
+        padding: 12px 18px !important;
+        box-shadow: 0 4px 12px rgba(255, 182, 193, 0.3) !important;
+        border: none !important;
+        background: linear-gradient(135deg, #FFE4E1 0%, #FFF0F5 100%) !important;
+        color: #8B4B8C !important;
+        position: relative;
+      }
+      [data-bubble-style="round"] .message.sent .message-content {
+        background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 100%) !important;
+        color: #8B0000 !important;
+        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3) !important;
+      }
+      [data-bubble-style="round"] .message-content::before {
+        content: '🌸' !important;
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        font-size: 12px;
+        opacity: 0.7;
+        z-index: 10;
+      }
+      /* 隐藏原有的猫耳朵装饰 */
+      [data-bubble-style="round"] .message-content::after {
+        display: none !important;
+      }
+
+      /* 方形卡片样式 - 蓝色系 */
+      [data-bubble-style="square"] .message-content {
+        border-radius: 8px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 2px 8px rgba(70, 130, 180, 0.2) !important;
+        border: 2px solid #87CEEB !important;
+        background: linear-gradient(135deg, #F0F8FF 0%, #E6F3FF 100%) !important;
+        color: #4682B4 !important;
+        position: relative;
+      }
+      [data-bubble-style="square"] .message.sent .message-content {
+        border: 2px solid #4169E1 !important;
+        background: linear-gradient(135deg, #B0E0E6 0%, #87CEEB 100%) !important;
+        color: #191970 !important;
+        box-shadow: 0 2px 8px rgba(65, 105, 225, 0.3) !important;
+      }
+      [data-bubble-style="square"] .message-content::before {
+        content: '📋' !important;
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        font-size: 14px;
+        opacity: 0.6;
+        z-index: 10;
+      }
+      /* 隐藏原有的猫耳朵装饰 */
+      [data-bubble-style="square"] .message-content::after {
+        display: none !important;
+      }
+
+      /* 彩虹渐变样式 */
+      [data-bubble-style="gradient"] .message-content {
+        border-radius: 20px !important;
+        padding: 12px 18px !important;
+        box-shadow: 0 4px 16px rgba(138, 43, 226, 0.2) !important;
+        border: none !important;
+        background: linear-gradient(135deg, #E6E6FA 0%, #DDA0DD 50%, #DA70D6 100%) !important;
+        color: #4B0082 !important;
+        position: relative;
+      }
+      [data-bubble-style="gradient"] .message.sent .message-content {
+        background: linear-gradient(135deg, #FF69B4 0%, #FF1493 50%, #DC143C 100%) !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 4px 16px rgba(255, 20, 147, 0.3) !important;
+      }
+      [data-bubble-style="gradient"] .message-content::before {
+        content: '🌈' !important;
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 14px;
+        z-index: 10;
+      }
+      /* 隐藏原有的猫耳朵装饰 */
+      [data-bubble-style="gradient"] .message-content::after {
+        display: none !important;
+      }
+
+      /* 霓虹发光样式 - 绿色系 */
+      [data-bubble-style="neon"] .message-content {
+        border-radius: 15px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 0 20px rgba(0, 255, 127, 0.4), inset 0 0 20px rgba(255,255,255,0.1) !important;
+        border: 2px solid #00FF7F !important;
+        background: linear-gradient(135deg, #F0FFF0 0%, #E0FFE0 100%) !important;
+        color: #006400 !important;
+        position: relative;
+      }
+      [data-bubble-style="neon"] .message.sent .message-content {
+        border: 2px solid #32CD32 !important;
+        background: linear-gradient(135deg, #98FB98 0%, #90EE90 100%) !important;
+        color: #228B22 !important;
+        box-shadow: 0 0 20px rgba(50, 205, 50, 0.5), inset 0 0 20px rgba(255,255,255,0.2) !important;
+      }
+      [data-bubble-style="neon"] .message-content::before {
+        content: '⚡' !important;
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        font-size: 16px;
+        color: #00FF7F;
+        text-shadow: 0 0 10px #00FF7F;
+        z-index: 10;
+      }
+      /* 隐藏原有的猫耳朵装饰 */
+      [data-bubble-style="neon"] .message-content::after {
+        display: none !important;
+      }
+
+      /* 立体卡片样式 - 橙色系 */
+      [data-bubble-style="card"] .message-content {
+        border-radius: 12px !important;
+        padding: 16px 20px !important;
+        box-shadow: 0 6px 20px rgba(255, 140, 0, 0.2), 0 2px 4px rgba(0,0,0,0.1) !important;
+        border: none !important;
+        background: linear-gradient(135deg, #FFF8DC 0%, #FFEBCD 100%) !important;
+        color: #D2691E !important;
+        position: relative;
+        transform: translateY(-2px);
+      }
+      [data-bubble-style="card"] .message.sent .message-content {
+        background: linear-gradient(135deg, #FFE4B5 0%, #FFDAB9 100%) !important;
+        color: #FF8C00 !important;
+        box-shadow: 0 6px 20px rgba(255, 165, 0, 0.3), 0 2px 4px rgba(0,0,0,0.1) !important;
+      }
+      [data-bubble-style="card"] .message-content::before {
+        content: '' !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #FF8C00, #FFD700, #FF6347);
+        border-radius: 12px 12px 0 0;
+        z-index: 1;
+      }
+      [data-bubble-style="card"] .message-content::after {
+        content: '🎨' !important;
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        font-size: 16px;
+        z-index: 10;
+      }
+
+      /* 云朵气泡样式 - 天空蓝 */
+      [data-bubble-style="bubble"] .message-content {
+        border-radius: 25px 25px 25px 5px !important;
+        padding: 12px 18px !important;
+        box-shadow: 0 4px 15px rgba(135, 206, 250, 0.3) !important;
+        border: none !important;
+        background: linear-gradient(135deg, #F0F8FF 0%, #E0F6FF 100%) !important;
+        color: #4682B4 !important;
+        position: relative;
+      }
+      [data-bubble-style="bubble"] .message.sent .message-content {
+        border-radius: 25px 25px 5px 25px !important;
+        background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 100%) !important;
+        color: #191970 !important;
+        box-shadow: 0 4px 15px rgba(176, 224, 230, 0.4) !important;
+      }
+      [data-bubble-style="bubble"] .message-content::before {
+        content: '☁️' !important;
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        font-size: 14px;
+        z-index: 10;
+      }
+      [data-bubble-style="bubble"] .message-content::after {
+        content: '' !important;
+        position: absolute;
+        bottom: -8px;
+        left: 15px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid #E0F6FF;
+        z-index: 10;
+      }
+      [data-bubble-style="bubble"] .message.sent .message-content::after {
+        left: auto;
+        right: 15px;
+        border-top-color: #B0E0E6;
+      }
+
+      /* 简约线条样式 - 紫色系 */
+      [data-bubble-style="minimal"] .message-content {
+        border-radius: 6px !important;
+        padding: 10px 14px !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-left: 5px solid #9370DB !important;
+        background: linear-gradient(135deg, #F8F8FF 0%, #E6E6FA 100%) !important;
+        color: #663399 !important;
+        position: relative;
+      }
+      [data-bubble-style="minimal"] .message.sent .message-content {
+        border-left: none !important;
+        border-right: 5px solid #8A2BE2 !important;
+        background: linear-gradient(135deg, #DDA0DD 0%, #D8BFD8 100%) !important;
+        color: #4B0082 !important;
+      }
+      [data-bubble-style="minimal"] .message-content::before {
+        content: '✨' !important;
+        position: absolute;
+        top: 50%;
+        left: -12px;
+        transform: translateY(-50%);
+        font-size: 12px;
+        z-index: 10;
+      }
+      [data-bubble-style="minimal"] .message.sent .message-content::before {
+        left: auto;
+        right: -12px;
+      }
+      /* 隐藏原有的猫耳朵装饰 */
+      [data-bubble-style="minimal"] .message-content::after {
+        display: none !important;
+      }
+
+      /* 🔥 着火小人样式 - 火焰橙红系 */
+      [data-bubble-style="fire"] .message-content {
+        border-radius: 15px 15px 15px 5px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 4px 20px rgba(255, 69, 0, 0.4), 0 0 15px rgba(255, 140, 0, 0.3) !important;
+        border: 2px solid #FF4500 !important;
+        background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 50%, #FFDAB9 100%) !important;
+        color: #8B0000 !important;
+        position: relative;
+        animation: fireGlow 2s ease-in-out infinite alternate;
+      }
+      [data-bubble-style="fire"] .message.sent .message-content {
+        border: 2px solid #FF6347 !important;
+        background: linear-gradient(135deg, #FFE4E1 0%, #FFA07A 50%, #FF7F50 100%) !important;
+        color: #B22222 !important;
+        box-shadow: 0 4px 20px rgba(255, 99, 71, 0.5), 0 0 15px rgba(255, 69, 0, 0.4) !important;
+      }
+      [data-bubble-style="fire"] .message-content::before {
+        content: '🔥' !important;
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        font-size: 16px;
+        z-index: 10;
+        animation: fireFlicker 1.5s ease-in-out infinite;
+      }
+      [data-bubble-style="fire"] .message-content::after {
+        content: '👤' !important;
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        z-index: 10;
+        animation: panic 0.8s ease-in-out infinite;
+      }
+      /* 隐藏原有的猫耳朵装饰 */
+      [data-bubble-style="fire"] .message-content::after {
+        display: block !important;
+      }
+
+      /* 火焰发光动画 */
+      @keyframes fireGlow {
+        0% { box-shadow: 0 4px 20px rgba(255, 69, 0, 0.4), 0 0 15px rgba(255, 140, 0, 0.3); }
+        100% { box-shadow: 0 6px 25px rgba(255, 69, 0, 0.6), 0 0 20px rgba(255, 140, 0, 0.5); }
+      }
+
+      /* 火焰闪烁动画 */
+      @keyframes fireFlicker {
+        0%, 100% { transform: scale(1) rotate(-2deg); }
+        25% { transform: scale(1.1) rotate(2deg); }
+        50% { transform: scale(0.9) rotate(-1deg); }
+        75% { transform: scale(1.05) rotate(1deg); }
+      }
+
+      /* 小人慌张动画 */
+      @keyframes panic {
+        0%, 100% { transform: translateX(-50%) rotate(0deg); }
+        25% { transform: translateX(-45%) rotate(-3deg); }
+        50% { transform: translateX(-50%) rotate(0deg); }
+        75% { transform: translateX(-55%) rotate(3deg); }
+      }
+
+      /* 🤡 小丑样式 - 彩虹马戏团 */
+      [data-bubble-style="clown"] .message-content {
+        border-radius: 18px 8px 18px 8px !important;
+        padding: 10px 14px !important;
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.3), inset 0 0 10px rgba(255, 255, 0, 0.2) !important;
+        border: 2px dashed #FF1493 !important;
+        background: linear-gradient(45deg, #FF69B4 0%, #FFD700 25%, #00CED1 50%, #FF6347 75%, #9370DB 100%) !important;
+        background-size: 200% 200% !important;
+        color: #FFFFFF !important;
+        position: relative;
+        animation: rainbowShift 3s ease-in-out infinite, wobble 1s ease-in-out infinite;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      }
+      [data-bubble-style="clown"] .message.sent .message-content {
+        background: linear-gradient(45deg, #FF1493 0%, #00FF00 25%, #FF4500 50%, #8A2BE2 75%, #FFD700 100%) !important;
+        background-size: 200% 200% !important;
+        border: 2px dashed #00CED1 !important;
+      }
+      [data-bubble-style="clown"] .message-content::before {
+        content: '🤡' !important;
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        font-size: 12px;
+        z-index: 10;
+        animation: spin 2s linear infinite;
+      }
+      [data-bubble-style="clown"] .message-content::after {
+        content: '🎪' !important;
+        position: absolute;
+        bottom: -8px;
+        right: -8px;
+        font-size: 10px;
+        z-index: 10;
+        animation: bounce 1.5s ease-in-out infinite;
+      }
+
+      /* 🍕 披萨样式 - 意大利风情 */
+      [data-bubble-style="pizza"] .message-content {
+        border-radius: 20px 6px 20px 6px !important;
+        padding: 10px 14px !important;
+        box-shadow: 0 3px 12px rgba(255, 165, 0, 0.3) !important;
+        border: 2px solid #8B4513 !important;
+        background: radial-gradient(circle, #FFD700 0%, #FF6347 30%, #228B22 60%, #8B0000 80%, #FFFF00 100%) !important;
+        color: #FFFFFF !important;
+        position: relative;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+      }
+      [data-bubble-style="pizza"] .message.sent .message-content {
+        background: radial-gradient(circle, #FF4500 0%, #FFD700 30%, #32CD32 60%, #DC143C 80%, #FFA500 100%) !important;
+        border: 2px solid #654321 !important;
+      }
+      [data-bubble-style="pizza"] .message-content::before {
+        content: '🍕' !important;
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 12px;
+        z-index: 10;
+        animation: rotate 4s linear infinite;
+      }
+      [data-bubble-style="pizza"] .message-content::after {
+        content: '🧀' !important;
+        position: absolute;
+        bottom: -6px;
+        left: -6px;
+        font-size: 10px;
+        z-index: 10;
+        animation: melt 2s ease-in-out infinite alternate;
+      }
+
+      /* 👻 幽灵样式 - 恐怖搞笑 */
+      [data-bubble-style="ghost"] .message-content {
+        border-radius: 20px 20px 0% 30px !important;
+        padding: 10px 14px !important;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), inset 0 0 8px rgba(0, 0, 0, 0.1) !important;
+        border: none !important;
+        background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,248,255,0.8) 100%) !important;
+        color: #2F4F4F !important;
+        position: relative;
+        animation: float 3s ease-in-out infinite, spooky 2s ease-in-out infinite alternate;
+      }
+      [data-bubble-style="ghost"] .message.sent .message-content {
+        background: linear-gradient(135deg, rgba(230,230,250,0.9) 0%, rgba(216,191,216,0.8) 100%) !important;
+        color: #4B0082 !important;
+      }
+      [data-bubble-style="ghost"] .message-content::before {
+        content: '👻' !important;
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        z-index: 10;
+        animation: haunt 1.5s ease-in-out infinite;
+      }
+      [data-bubble-style="ghost"] .message-content::after {
+        content: '💀' !important;
+        position: absolute;
+        bottom: -6px;
+        right: -6px;
+        font-size: 10px;
+        z-index: 10;
+        animation: rattle 0.5s ease-in-out infinite;
+      }
+
+      /* 🦄 独角兽样式 - 梦幻彩虹 */
+      [data-bubble-style="unicorn"] .message-content {
+        border-radius: 18px 4px 18px 4px !important;
+        padding: 10px 14px !important;
+        box-shadow: 0 0 15px rgba(255, 192, 203, 0.4), 0 0 25px rgba(255, 20, 147, 0.2) !important;
+        border: 2px solid transparent !important;
+        background: linear-gradient(45deg, #FFB6C1, #FF69B4, #DA70D6, #BA55D3, #9370DB) !important;
+        background-clip: padding-box !important;
+        color: #FFFFFF !important;
+        position: relative;
+        animation: sparkle 2s ease-in-out infinite, rainbow 4s linear infinite;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+      }
+      [data-bubble-style="unicorn"] .message.sent .message-content {
+        background: linear-gradient(45deg, #FF1493, #FF69B4, #FFB6C1, #FFC0CB, #FFCCCB) !important;
+      }
+      [data-bubble-style="unicorn"] .message-content::before {
+        content: '🦄' !important;
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 12px;
+        z-index: 10;
+        animation: gallop 1.8s ease-in-out infinite;
+      }
+      [data-bubble-style="unicorn"] .message-content::after {
+        content: '✨' !important;
+        position: absolute;
+        bottom: -6px;
+        left: -6px;
+        font-size: 10px;
+        z-index: 10;
+        animation: twinkle 1s ease-in-out infinite alternate;
+      }
+
+      /* 🤖 机器人样式 - 赛博朋克 */
+      [data-bubble-style="robot"] .message-content {
+        border-radius: 4px !important;
+        padding: 10px 14px !important;
+        box-shadow: 0 0 12px rgba(0, 255, 255, 0.4), inset 0 0 6px rgba(0, 0, 0, 0.2) !important;
+        border: 2px solid #00FFFF !important;
+        background: linear-gradient(135deg, #1a1a1a 0%, #333333 50%, #1a1a1a 100%) !important;
+        color: #00FF00 !important;
+        position: relative;
+        font-family: 'Courier New', monospace !important;
+        animation: glitch 3s ease-in-out infinite, scan 2s linear infinite;
+        text-shadow: 0 0 3px #00FF00;
+      }
+      [data-bubble-style="robot"] .message.sent .message-content {
+        background: linear-gradient(135deg, #2a2a2a 0%, #444444 50%, #2a2a2a 100%) !important;
+        color: #FF00FF !important;
+        border: 2px solid #FF00FF !important;
+        text-shadow: 0 0 3px #FF00FF;
+      }
+      [data-bubble-style="robot"] .message-content::before {
+        content: '🤖' !important;
+        position: absolute;
+        top: -6px;
+        left: -6px;
+        font-size: 12px;
+        z-index: 10;
+        animation: beep 1s ease-in-out infinite;
+      }
+      [data-bubble-style="robot"] .message-content::after {
+        content: '⚡' !important;
+        position: absolute;
+        bottom: -6px;
+        right: -6px;
+        font-size: 10px;
+        z-index: 10;
+        color: #FFFF00;
+        animation: electric 0.3s ease-in-out infinite alternate;
+      }
+
+      /* 🍌 香蕉样式 - 热带疯狂 */
+      [data-bubble-style="banana"] .message-content {
+        border-radius: 25px 6px 25px 6px !important;
+        padding: 10px 14px !important;
+        box-shadow: 0 3px 10px rgba(255, 255, 0, 0.3) !important;
+        border: 2px solid #DAA520 !important;
+        background: linear-gradient(135deg, #FFFF00 0%, #FFD700 50%, #FFA500 100%) !important;
+        color: #8B4513 !important;
+        position: relative;
+        animation: wiggle 2s ease-in-out infinite, peel 3s ease-in-out infinite alternate;
+        transform-origin: bottom center;
+      }
+      [data-bubble-style="banana"] .message.sent .message-content {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%) !important;
+        border: 2px solid #B8860B !important;
+      }
+      [data-bubble-style="banana"] .message-content::before {
+        content: '🍌' !important;
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 12px;
+        z-index: 10;
+        animation: swing 1.5s ease-in-out infinite;
+      }
+      [data-bubble-style="banana"] .message-content::after {
+        content: '🐒' !important;
+        position: absolute;
+        bottom: -6px;
+        left: -6px;
+        font-size: 10px;
+        z-index: 10;
+        animation: monkey 2s ease-in-out infinite;
+      }
+
+      /* 搞笑动画效果 */
+      @keyframes rainbowShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes wobble {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-3deg); }
+        75% { transform: rotate(3deg); }
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes melt {
+        0% { transform: translateY(0px) scaleY(1); }
+        100% { transform: translateY(2px) scaleY(0.8); }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+      }
+      @keyframes spooky {
+        0% { opacity: 0.8; }
+        100% { opacity: 1; }
+      }
+      @keyframes haunt {
+        0%, 100% { transform: translateX(-50%) scale(1); }
+        50% { transform: translateX(-50%) scale(1.2); }
+      }
+      @keyframes rattle {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-5deg); }
+        75% { transform: rotate(5deg); }
+      }
+      @keyframes sparkle {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      @keyframes rainbow {
+        0% { filter: hue-rotate(0deg); }
+        100% { filter: hue-rotate(360deg); }
+      }
+      @keyframes gallop {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        25% { transform: translateY(-3px) rotate(-5deg); }
+        75% { transform: translateY(-3px) rotate(5deg); }
+      }
+      @keyframes twinkle {
+        0% { opacity: 0.5; transform: scale(0.8); }
+        100% { opacity: 1; transform: scale(1.2); }
+      }
+      @keyframes glitch {
+        0%, 100% { transform: translateX(0px); }
+        10% { transform: translateX(-2px); }
+        20% { transform: translateX(2px); }
+        30% { transform: translateX(-1px); }
+        40% { transform: translateX(1px); }
+        50% { transform: translateX(0px); }
+      }
+      @keyframes scan {
+        0% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.3); }
+        50% { box-shadow: 0 0 30px rgba(0, 255, 255, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.5); }
+        100% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.3); }
+      }
+      @keyframes beep {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+      }
+      @keyframes electric {
+        0% { opacity: 0.7; }
+        100% { opacity: 1; }
+      }
+      @keyframes wiggle {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-2deg); }
+        75% { transform: rotate(2deg); }
+      }
+      @keyframes peel {
+        0% { border-radius: 50px 10px 50px 10px; }
+        100% { border-radius: 30px 20px 30px 20px; }
+      }
+      @keyframes swing {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-10deg); }
+        75% { transform: rotate(10deg); }
+      }
+      @keyframes monkey {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+      }
+
       /* 脉动动画 */
       @keyframes pulse {
         0% { opacity: 1; transform: scale(1); }
@@ -1174,6 +1790,383 @@
         border-radius: 50%;
         border: 1px solid var(--border-primary);
         display: inline-block;
+      }
+
+      /* 气泡样式选择器样式 */
+      .bubble-style-selector {
+        margin-top: 20px;
+        padding: 15px;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border-primary);
+      }
+
+      .bubble-style-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .bubble-style-option {
+        cursor: pointer;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+      }
+
+      .bubble-style-option:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--shadow-medium);
+      }
+
+      .bubble-style-option input[type="radio"] {
+        display: none;
+      }
+
+      .bubble-style-option input[type="radio"]:checked + .bubble-style-preview {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px var(--accent-primary);
+      }
+
+      .bubble-style-preview {
+        padding: 12px;
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-primary);
+        border-radius: 8px;
+        text-align: center;
+        transition: all 0.3s ease;
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .bubble-style-name {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+      }
+
+      .bubble-style-demo {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        align-items: center;
+      }
+
+      .demo-bubble {
+        padding: 4px 8px;
+        font-size: 10px;
+        color: var(--text-primary);
+        background: var(--bg-user-bubble);
+        max-width: 60px;
+        text-align: center;
+        word-break: break-all;
+      }
+
+      .demo-bubble.char {
+        background: var(--bg-char-bubble);
+        border: 1px solid var(--border-bubble-char);
+      }
+
+      .demo-bubble.user {
+        background: var(--bg-user-bubble);
+        border: 1px solid var(--border-bubble-user);
+      }
+
+      /* 气泡样式演示 */
+      .demo-bubble.style-default {
+        border-radius: 8px;
+        background: var(--bg-user-bubble);
+        border: 1px solid var(--border-bubble-user);
+      }
+      .demo-bubble.style-default.char {
+        background: var(--bg-char-bubble);
+        border: 1px solid var(--border-bubble-char);
+      }
+
+      .demo-bubble.style-round {
+        border-radius: 12px;
+        background: linear-gradient(135deg, #FFB6C1, #FFC0CB);
+        color: #8B0000;
+        position: relative;
+      }
+      .demo-bubble.style-round.char {
+        background: linear-gradient(135deg, #FFE4E1, #FFF0F5);
+        color: #8B4B8C;
+      }
+      .demo-bubble.style-round::before {
+        content: '🌸';
+        position: absolute;
+        top: -3px;
+        right: -3px;
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-square {
+        border-radius: 3px;
+        border: 2px solid #4169E1;
+        background: linear-gradient(135deg, #B0E0E6, #87CEEB);
+        color: #191970;
+        position: relative;
+      }
+      .demo-bubble.style-square.char {
+        border: 2px solid #87CEEB;
+        background: linear-gradient(135deg, #F0F8FF, #E6F3FF);
+        color: #4682B4;
+      }
+      .demo-bubble.style-square::after {
+        content: '📋';
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        font-size: 6px;
+      }
+
+      .demo-bubble.style-gradient {
+        border-radius: 10px;
+        background: linear-gradient(135deg, #FF69B4, #FF1493, #DC143C);
+        color: #FFFFFF;
+        position: relative;
+      }
+      .demo-bubble.style-gradient.char {
+        background: linear-gradient(135deg, #E6E6FA, #DDA0DD, #DA70D6);
+        color: #4B0082;
+      }
+      .demo-bubble.style-gradient::before {
+        content: '🌈';
+        position: absolute;
+        top: -3px;
+        right: -3px;
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-neon {
+        border-radius: 6px;
+        border: 2px solid #32CD32;
+        background: linear-gradient(135deg, #98FB98, #90EE90);
+        color: #228B22;
+        box-shadow: 0 0 6px rgba(50, 205, 50, 0.5);
+        position: relative;
+      }
+      .demo-bubble.style-neon.char {
+        border: 2px solid #00FF7F;
+        background: linear-gradient(135deg, #F0FFF0, #E0FFE0);
+        color: #006400;
+        box-shadow: 0 0 6px rgba(0, 255, 127, 0.4);
+      }
+      .demo-bubble.style-neon::after {
+        content: '⚡';
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
+        color: #00FF7F;
+      }
+
+      .demo-bubble.style-card {
+        border-radius: 6px;
+        background: linear-gradient(135deg, #FFE4B5, #FFDAB9);
+        color: #FF8C00;
+        position: relative;
+        transform: translateY(-1px);
+      }
+      .demo-bubble.style-card.char {
+        background: linear-gradient(135deg, #FFF8DC, #FFEBCD);
+        color: #D2691E;
+      }
+      .demo-bubble.style-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #FF8C00, #FFD700);
+        border-radius: 6px 6px 0 0;
+      }
+      .demo-bubble.style-card::after {
+        content: '🎨';
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-bubble {
+        border-radius: 12px 12px 12px 3px;
+        background: linear-gradient(135deg, #87CEEB, #B0E0E6);
+        color: #191970;
+        position: relative;
+      }
+      .demo-bubble.style-bubble.char {
+        border-radius: 12px 12px 3px 12px;
+        background: linear-gradient(135deg, #F0F8FF, #E0F6FF);
+        color: #4682B4;
+      }
+      .demo-bubble.style-bubble::before {
+        content: '☁️';
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-minimal {
+        border-radius: 3px;
+        border-left: 3px solid #8A2BE2;
+        border-right: none;
+        border-top: none;
+        border-bottom: none;
+        background: linear-gradient(135deg, #DDA0DD, #D8BFD8);
+        color: #4B0082;
+        position: relative;
+      }
+      .demo-bubble.style-minimal.char {
+        border-left: 3px solid #9370DB;
+        border-right: none;
+        background: linear-gradient(135deg, #F8F8FF, #E6E6FA);
+        color: #663399;
+      }
+      .demo-bubble.style-minimal::before {
+        content: '✨';
+        position: absolute;
+        top: 50%;
+        left: -8px;
+        transform: translateY(-50%);
+        font-size: 6px;
+      }
+
+      .demo-bubble.style-fire {
+        border-radius: 8px;
+        border: 2px solid #FF4500;
+        background: linear-gradient(135deg, #FFF8DC, #FFE4B5);
+        color: #8B0000;
+        position: relative;
+        box-shadow: 0 2px 8px rgba(255, 69, 0, 0.3);
+      }
+      .demo-bubble.style-fire.char {
+        border: 2px solid #FF4500;
+        background: linear-gradient(135deg, #FFF8DC, #FFE4B5);
+        color: #8B0000;
+      }
+      .demo-bubble.style-fire::before {
+        content: '🔥';
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
+      }
+      .demo-bubble.style-fire::after {
+        content: '👤';
+        position: absolute;
+        bottom: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 6px;
+      }
+
+      .demo-bubble.style-clown {
+        border-radius: 50% 20% 50% 20%;
+        border: 2px dashed #FF1493;
+        background: linear-gradient(45deg, #FF69B4, #FFD700, #00CED1, #FF6347);
+        color: #FFFFFF;
+        position: relative;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      }
+      .demo-bubble.style-clown::before {
+        content: '🤡';
+        position: absolute;
+        top: -6px;
+        left: -6px;
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-pizza {
+        border-radius: 50% 10% 50% 10%;
+        border: 2px solid #8B4513;
+        background: radial-gradient(circle, #FFD700, #FF6347, #228B22);
+        color: #FFFFFF;
+        position: relative;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+      }
+      .demo-bubble.style-pizza::before {
+        content: '🍕';
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-ghost {
+        border-radius: 50% 50% 0% 100%;
+        background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(240,248,255,0.8));
+        color: #2F4F4F;
+        position: relative;
+        box-shadow: 0 0 10px rgba(255,255,255,0.5);
+      }
+      .demo-bubble.style-ghost::before {
+        content: '👻';
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-unicorn {
+        border-radius: 25px 5px 25px 5px;
+        background: linear-gradient(45deg, #FFB6C1, #FF69B4, #DA70D6, #BA55D3);
+        color: #FFFFFF;
+        position: relative;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        box-shadow: 0 0 10px rgba(255,192,203,0.5);
+      }
+      .demo-bubble.style-unicorn::before {
+        content: '🦄';
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-robot {
+        border-radius: 2px;
+        border: 2px solid #00FFFF;
+        background: linear-gradient(135deg, #1a1a1a, #333333, #1a1a1a);
+        color: #00FF00;
+        position: relative;
+        font-family: 'Courier New', monospace;
+        text-shadow: 0 0 3px #00FF00;
+        box-shadow: 0 0 8px rgba(0,255,255,0.3);
+      }
+      .demo-bubble.style-robot::before {
+        content: '🤖';
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        font-size: 8px;
+      }
+
+      .demo-bubble.style-banana {
+        border-radius: 50px 10px 50px 10px;
+        border: 2px solid #DAA520;
+        background: linear-gradient(135deg, #FFFF00, #FFD700, #FFA500);
+        color: #8B4513;
+        position: relative;
+        box-shadow: 0 2px 8px rgba(255,255,0,0.3);
+      }
+      .demo-bubble.style-banana::before {
+        content: '🍌';
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 8px;
       }
 
       /* ========== WeChat style message layout override ========== */
@@ -5091,6 +6084,177 @@
                 <button id="saveCustomTheme" style="padding: 8px 16px; border: none; background: var(--accent-secondary); color: white; border-radius: 6px; cursor: pointer; font-size: 14px;">
                   💾 保存
                 </button>
+              </div>
+            </div>
+
+            <!-- 气泡样式选择器 -->
+            <div class="bubble-style-selector">
+              <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 14px;">💬 聊天气泡样式</h4>
+              <div class="bubble-style-grid">
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="default" checked>
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">默认</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-default user">你好</div>
+                      <div class="demo-bubble style-default char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="round">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">圆润</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-round user">你好</div>
+                      <div class="demo-bubble style-round char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="square">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">方形</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-square user">你好</div>
+                      <div class="demo-bubble style-square char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="gradient">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">渐变</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-gradient user">你好</div>
+                      <div class="demo-bubble style-gradient char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="neon">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">霓虹</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-neon user">你好</div>
+                      <div class="demo-bubble style-neon char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="card">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">卡片</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-card user">你好</div>
+                      <div class="demo-bubble style-card char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="bubble">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">气泡</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-bubble user">你好</div>
+                      <div class="demo-bubble style-bubble char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="minimal">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">简约</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-minimal user">你好</div>
+                      <div class="demo-bubble style-minimal char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="fire">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🔥着火</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-fire user">救命</div>
+                      <div class="demo-bubble style-fire char">怎么了</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="clown">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🤡小丑</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-clown user">哈哈</div>
+                      <div class="demo-bubble style-clown char">搞笑</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="pizza">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🍕披萨</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-pizza user">好饿</div>
+                      <div class="demo-bubble style-pizza char">吃吗</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="ghost">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">👻幽灵</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-ghost user">呜呜</div>
+                      <div class="demo-bubble style-ghost char">别怕</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="unicorn">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🦄独角兽</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-unicorn user">梦幻</div>
+                      <div class="demo-bubble style-unicorn char">彩虹</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="robot">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🤖机器人</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-robot user">BEEP</div>
+                      <div class="demo-bubble style-robot char">BOOP</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="banana">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🍌香蕉</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-banana user">香甜</div>
+                      <div class="demo-bubble style-banana char">好吃</div>
+                    </div>
+                  </div>
+                </label>
               </div>
             </div>
           </div>
@@ -12360,6 +13524,48 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       });
 
+      // 气泡样式功能
+      let currentBubbleStyle = 'default';
+
+      // 加载气泡样式
+      function loadBubbleStyle() {
+        const savedStyle = localStorage.getItem('bubbleStyle') || 'default';
+        currentBubbleStyle = savedStyle;
+
+        // 设置选中状态
+        const radio = document.querySelector(`input[name="bubbleStyle"][value="${savedStyle}"]`);
+        if (radio) {
+          radio.checked = true;
+        }
+
+        // 应用样式
+        applyBubbleStyle(savedStyle);
+      }
+
+      // 应用气泡样式
+      function applyBubbleStyle(style) {
+        const body = document.body;
+        // 移除所有气泡样式类
+        body.removeAttribute('data-bubble-style');
+        // 应用新样式
+        body.setAttribute('data-bubble-style', style);
+        currentBubbleStyle = style;
+
+        // 保存到localStorage
+        localStorage.setItem('bubbleStyle', style);
+
+        console.log('🎈 气泡样式已切换为:', style);
+      }
+
+      // 绑定气泡样式选择事件
+      document.querySelectorAll('input[name="bubbleStyle"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            applyBubbleStyle(e.target.value);
+          }
+        });
+      });
+
       // 自定义主题功能
       let customThemeData = {
         bgPrimary: '#dbdbdb',
@@ -13047,9 +14253,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 页面加载时加载设置
       // loadSettings(); // 这个现在在initApp中调用
 
-      // 页面加载时应用主题
+      // 页面加载时应用主题和气泡样式
       document.addEventListener('DOMContentLoaded', () => {
         loadTheme();
+        loadBubbleStyle();
       });
     </script>
   </body>
