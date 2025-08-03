@@ -15035,7 +15035,45 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             updatePhoneWidthUI(width);
           };
 
-          console.log('🧪 手机宽度测试函数已添加，可在控制台使用: testPhoneWidth(350)');
+          // Cloudflare环境检测
+          window.checkCloudflareCompatibility = function() {
+            console.log('🔍 Cloudflare兼容性检测:');
+            console.log('📍 当前域名:', window.location.hostname);
+            console.log('📍 User Agent:', navigator.userAgent);
+
+            // 检测CSP
+            try {
+              const testDiv = document.createElement('div');
+              testDiv.style.width = '100px';
+              console.log('✅ 内联样式设置: 正常');
+            } catch (e) {
+              console.log('❌ 内联样式设置: 被CSP阻止', e);
+            }
+
+            // 检测动态样式创建
+            try {
+              const testStyle = document.createElement('style');
+              testStyle.textContent = '.test { width: 100px; }';
+              document.head.appendChild(testStyle);
+              document.head.removeChild(testStyle);
+              console.log('✅ 动态样式创建: 正常');
+            } catch (e) {
+              console.log('❌ 动态样式创建: 被阻止', e);
+            }
+
+            // 检测手机元素
+            const phone = document.getElementById('phone');
+            if (phone) {
+              console.log('✅ 手机元素: 找到', phone);
+              console.log('📱 当前宽度:', window.getComputedStyle(phone).width);
+            } else {
+              console.log('❌ 手机元素: 未找到');
+            }
+          };
+
+          console.log('🧪 测试函数已添加:');
+          console.log('  - testPhoneWidth(350) - 测试宽度调节');
+          console.log('  - checkCloudflareCompatibility() - 检测环境兼容性');
         }, 500);
       });
     </script>
