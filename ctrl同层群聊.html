@@ -11169,6 +11169,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const savedWallpaper = localStorage.getItem('chatWallpaper');
         const savedCharAvatars = localStorage.getItem('chatCharAvatars');
         const savedJailbreak = localStorage.getItem('jailbreakEnabled');
+        const savedTheme = localStorage.getItem('chatTheme');
+        const savedBubbleStyle = localStorage.getItem('chatBubbleStyle');
 
         if (savedAvatar) {
           settingsState.userAvatar = savedAvatar;
@@ -11254,6 +11256,24 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         // 根据识图模式显示/隐藏配置
         updateVisionConfigDisplay();
+
+        // 加载主题设置
+        if (savedTheme) {
+          document.documentElement.setAttribute('data-theme', savedTheme);
+          const themeRadio = document.querySelector(`input[name="theme"][value="${savedTheme}"]`);
+          if (themeRadio) {
+            themeRadio.checked = true;
+          }
+        }
+
+        // 加载气泡样式设置
+        if (savedBubbleStyle) {
+          document.documentElement.setAttribute('data-bubble-style', savedBubbleStyle);
+          const bubbleRadio = document.querySelector(`input[name="bubbleStyle"][value="${savedBubbleStyle}"]`);
+          if (bubbleRadio) {
+            bubbleRadio.checked = true;
+          }
+        }
       }
 
       function saveSettings() {
@@ -11266,6 +11286,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (settingsState.charAvatars && Object.keys(settingsState.charAvatars).length > 0) {
           localStorage.setItem('chatCharAvatars', JSON.stringify(settingsState.charAvatars));
         }
+      }
+
+      // 保存主题设置
+      function saveTheme(theme) {
+        localStorage.setItem('chatTheme', theme);
+        console.log('主题已保存:', theme);
+      }
+
+      // 保存气泡样式设置
+      function saveBubbleStyle(bubbleStyle) {
+        localStorage.setItem('chatBubbleStyle', bubbleStyle);
+        console.log('气泡样式已保存:', bubbleStyle);
       }
 
       function updateUserAvatars() {
@@ -11930,6 +11962,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function switchTheme(themeName) {
         document.documentElement.setAttribute('data-theme', themeName);
         localStorage.setItem('selectedTheme', themeName);
+        saveTheme(themeName); // 同时保存到chatTheme以保持一致性
 
         // 如果切换到自定义主题，需要应用自定义颜色
         if (themeName === 'custom') {
@@ -12013,6 +12046,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         // 保存到localStorage
         localStorage.setItem('bubbleStyle', style);
+        saveBubbleStyle(style); // 同时保存到chatBubbleStyle以保持一致性
 
         console.log('🎈 气泡样式已切换为:', style);
       }
