@@ -622,19 +622,7 @@
         background: linear-gradient(135deg, #DDA0DD 0%, #D8BFD8 100%) !important;
         color: #4B0082 !important;
       }
-      [data-bubble-style="minimal"] .message-content::before {
-        content: '✨' !important;
-        position: absolute;
-        top: 50%;
-        left: -12px;
-        transform: translateY(-50%);
-        font-size: 12px;
-        z-index: 10;
-      }
-      [data-bubble-style="minimal"] .message.sent .message-content::before {
-        left: auto;
-        right: -12px;
-      }
+      /* 移除星星装饰，保持简约 */
       /* 隐藏原有的猫耳朵装饰 */
       [data-bubble-style="minimal"] .message-content::after {
         display: none !important;
@@ -1017,6 +1005,84 @@
       @keyframes monkey {
         0%, 100% { transform: translateY(0px); }
         50% { transform: translateY(-5px); }
+      }
+
+      /* 🌸 古风样式 - 淡雅水墨 */
+      [data-bubble-style="ancient"] .message-content {
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 2px 8px rgba(139, 69, 19, 0.1) !important;
+        border: 1px solid #D2B48C !important;
+        background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%) !important;
+        color: #8B4513 !important;
+        position: relative;
+        font-family: serif !important;
+      }
+      [data-bubble-style="ancient"] .message.sent .message-content {
+        background: linear-gradient(135deg, #F0E68C 0%, #DDD8C0 100%) !important;
+        border: 1px solid #B8860B !important;
+        color: #654321 !important;
+      }
+
+      /* 🍃 小资情调样式 - 温暖咖啡色 */
+      [data-bubble-style="cozy"] .message-content {
+        border-radius: 18px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 3px 12px rgba(160, 82, 45, 0.15) !important;
+        border: none !important;
+        background: linear-gradient(135deg, #FDF5E6 0%, #F5DEB3 100%) !important;
+        color: #8B4513 !important;
+        position: relative;
+      }
+      [data-bubble-style="cozy"] .message.sent .message-content {
+        background: linear-gradient(135deg, #DEB887 0%, #D2B48C 100%) !important;
+        color: #654321 !important;
+      }
+
+      /* 💕 浪漫样式 - 温柔粉色 */
+      [data-bubble-style="romantic"] .message-content {
+        border-radius: 20px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 3px 15px rgba(255, 182, 193, 0.2) !important;
+        border: none !important;
+        background: linear-gradient(135deg, #FFF0F5 0%, #FFE4E1 100%) !important;
+        color: #8B475D !important;
+        position: relative;
+      }
+      [data-bubble-style="romantic"] .message.sent .message-content {
+        background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 100%) !important;
+        color: #8B3A62 !important;
+      }
+
+      /* 🌿 护眼绿样式 - 清新自然 */
+      [data-bubble-style="nature"] .message-content {
+        border-radius: 15px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 2px 10px rgba(143, 188, 143, 0.15) !important;
+        border: 1px solid #98FB98 !important;
+        background: linear-gradient(135deg, #F0FFF0 0%, #F5FFFA 100%) !important;
+        color: #2E8B57 !important;
+        position: relative;
+      }
+      [data-bubble-style="nature"] .message.sent .message-content {
+        background: linear-gradient(135deg, #E0FFE0 0%, #F0FFF0 100%) !important;
+        border: 1px solid #90EE90 !important;
+        color: #228B22 !important;
+      }
+
+      /* 🌙 月光样式 - 温柔蓝灰 */
+      [data-bubble-style="moonlight"] .message-content {
+        border-radius: 16px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 3px 12px rgba(176, 196, 222, 0.2) !important;
+        border: none !important;
+        background: linear-gradient(135deg, #F8F8FF 0%, #E6E6FA 100%) !important;
+        color: #483D8B !important;
+        position: relative;
+      }
+      [data-bubble-style="moonlight"] .message.sent .message-content {
+        background: linear-gradient(135deg, #E0E6FF 0%, #D8BFD8 100%) !important;
+        color: #4B0082 !important;
       }
 
       /* 🎉 关键词特效样式 */
@@ -2282,6 +2348,49 @@
         top: -6px;
         right: -6px;
         font-size: 8px;
+      }
+
+      /* Demo样式 - 古风 */
+      .demo-bubble.style-ancient {
+        border-radius: 12px;
+        padding: 8px 12px;
+        border: 1px solid #D2B48C;
+        background: linear-gradient(135deg, #FFF8DC, #F5F5DC);
+        color: #8B4513;
+        font-family: serif;
+      }
+
+      /* Demo样式 - 小资 */
+      .demo-bubble.style-cozy {
+        border-radius: 18px;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #FDF5E6, #F5DEB3);
+        color: #8B4513;
+      }
+
+      /* Demo样式 - 浪漫 */
+      .demo-bubble.style-romantic {
+        border-radius: 20px;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #FFF0F5, #FFE4E1);
+        color: #8B475D;
+      }
+
+      /* Demo样式 - 护眼 */
+      .demo-bubble.style-nature {
+        border-radius: 15px;
+        padding: 8px 12px;
+        border: 1px solid #98FB98;
+        background: linear-gradient(135deg, #F0FFF0, #F5FFFA);
+        color: #2E8B57;
+      }
+
+      /* Demo样式 - 月光 */
+      .demo-bubble.style-moonlight {
+        border-radius: 16px;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #F8F8FF, #E6E6FA);
+        color: #483D8B;
       }
 
       /* ========== WeChat style message layout override ========== */
@@ -6367,6 +6476,61 @@
                     <div class="bubble-style-demo">
                       <div class="demo-bubble style-banana user">香甜</div>
                       <div class="demo-bubble style-banana char">好吃</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="ancient">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🌸古风</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-ancient user">雅致</div>
+                      <div class="demo-bubble style-ancient char">诗意</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="cozy">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🍃小资</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-cozy user">温馨</div>
+                      <div class="demo-bubble style-cozy char">惬意</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="romantic">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">💕浪漫</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-romantic user">甜蜜</div>
+                      <div class="demo-bubble style-romantic char">温柔</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="nature">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🌿护眼</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-nature user">清新</div>
+                      <div class="demo-bubble style-nature char">自然</div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="moonlight">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">🌙月光</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-moonlight user">静谧</div>
+                      <div class="demo-bubble style-moonlight char">优雅</div>
                     </div>
                   </div>
                 </label>
