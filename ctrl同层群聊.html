@@ -545,7 +545,18 @@
           inset 0 -1px 0 var(--bubble-inset-shadow-dark) !important;
         position: relative;
       }
-      [data-bubble-style="glossy-pink"] .message.sent .message-content {
+      [data-bubble-style="glossy-pink"] .message.received .message-content,
+      [data-bubble-style="glossy-pink"] .message.char .message-content {
+        background: linear-gradient(135deg, #F5D5D9 0%, #f8e8ea 50%, #fdf2f3 100%) !important;
+        color: #8b5a6b !important;
+        border: 1px solid rgba(245, 213, 217, 0.6) !important;
+        box-shadow:
+          0 8px 24px rgba(245, 213, 217, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8),
+          inset 0 -1px 0 var(--bubble-inset-shadow-dark) !important;
+      }
+      [data-bubble-style="glossy-pink"] .message.sent .message-content,
+      [data-bubble-style="glossy-pink"] .message.user .message-content {
         background: linear-gradient(135deg, #f0c5ca 0%, #F5D5D9 50%, #f8e8ea 100%) !important;
         color: #7a4d5a !important;
         box-shadow:
@@ -4693,6 +4704,17 @@
         background: rgba(255,240,250,0.7);
         display: inline-block;
         min-width: 40px;
+      }
+      /* 通用修复：确保所有气泡样式的对方消息都能正确显示 */
+      [data-bubble-style] .message.received .message-content,
+      [data-bubble-style] .message.char .message-content {
+        /* 继承基础样式，确保对方消息有正确的背景和文字颜色 */
+      }
+
+      /* 特别修复：确保所有气泡样式的用户消息都有明确的样式 */
+      [data-bubble-style] .message.sent .message-content,
+      [data-bubble-style] .message.user .message-content {
+        /* 继承基础样式，确保用户消息有正确的背景和文字颜色 */
       }
     </style>
   </head>
