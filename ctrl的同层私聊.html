@@ -953,7 +953,8 @@
         transition: all 0.3s ease;
       }
       .chat-header {
-        height: 44px;
+        min-height: 44px;
+        height: auto;
         background: var(--bg-header);
         border-bottom: 1px solid var(--border-secondary);
         flex-shrink: 0;
@@ -962,6 +963,7 @@
         align-items: center;
         justify-content: center;
         transition: all 0.3s ease;
+        padding: 8px 0;
       }
 
       .settings-btn {
@@ -4518,16 +4520,18 @@
         text-shadow: none;
         vertical-align: middle;
         position: absolute;
-        left: 20px;
+        left: 50px;
         top: 50%;
         transform: translateY(-50%);
-        padding: 2px 6px;
+        padding: 4px 8px;
         border-radius: 8px;
-        max-width: 48px;
+        max-width: 120px;
         word-wrap: break-word;
-        word-break: break-all;
-        line-height: 1.2;
-        text-align: left;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+        line-height: 1.3;
+        text-align: center;
+        white-space: normal;
         background: rgba(255,240,250,0.7);
         display: inline-block;
         min-width: 40px;
