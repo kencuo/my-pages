@@ -475,288 +475,202 @@
       }
 
       /* 气泡样式系统 */
+      :root {
+        /* 通用布局与质感变量 */
+        --bubble-padding: 10px 14px;
+        --bubble-radius: 24px;
+        --bubble-shadow-color-dark: rgba(136, 165, 191, 0.2);
+        --bubble-shadow-color-light: rgba(255, 255, 255, 0.8);
+        --bubble-inset-shadow-dark: rgba(136, 165, 191, 0.25);
+      }
+
       /* 默认气泡样式 */
       [data-bubble-style="default"] .message-content {
         /* 保持原有样式 */
       }
 
-      /* 可爱圆泡样式 - 粉色系 */
-      [data-bubble-style="round"] .message-content {
-        border-radius: 25px !important;
-        padding: 12px 18px !important;
-        box-shadow: 0 4px 12px rgba(255, 182, 193, 0.3) !important;
-        border: none !important;
-        background: linear-gradient(135deg, #FFE4E1 0%, #FFF0F5 100%) !important;
-        color: #8B4B8C !important;
+      /* 水光圆润黑色气泡 */
+      [data-bubble-style="glossy-black"] .message-content {
+        border-radius: var(--bubble-radius) !important;
+        padding: var(--bubble-padding) !important;
+        background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.5) !important;
         position: relative;
+        backdrop-filter: blur(10px);
       }
-      [data-bubble-style="round"] .message.sent .message-content {
-        background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 100%) !important;
-        color: #8B0000 !important;
-        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3) !important;
-      }
-      [data-bubble-style="round"] .message-content::before {
-        content: '🌸' !important;
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        font-size: 12px;
-        opacity: 0.7;
-        z-index: 10;
-      }
-      /* 隐藏原有的猫耳朵装饰 */
-      [data-bubble-style="round"] .message-content::after {
-        display: none !important;
+      [data-bubble-style="glossy-black"] .message.sent .message-content {
+        background: linear-gradient(135deg, #3a3a3a 0%, #2c2c2c 50%, #1a1a1a 100%) !important;
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.6) !important;
       }
 
-      /* 方形卡片样式 - 蓝色系 */
-      [data-bubble-style="square"] .message-content {
+      /* 水光淡粉色气泡 */
+      [data-bubble-style="glossy-pink"] .message-content {
+        border-radius: var(--bubble-radius) !important;
+        padding: var(--bubble-padding) !important;
+        background: linear-gradient(135deg, #F5D5D9 0%, #f8e8ea 50%, #fdf2f3 100%) !important;
+        color: #8b5a6b !important;
+        border: 1px solid rgba(245, 213, 217, 0.6) !important;
+        box-shadow:
+          0 8px 24px rgba(245, 213, 217, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8),
+          inset 0 -1px 0 var(--bubble-inset-shadow-dark) !important;
+        position: relative;
+      }
+      [data-bubble-style="glossy-pink"] .message.sent .message-content {
+        background: linear-gradient(135deg, #f0c5ca 0%, #F5D5D9 50%, #f8e8ea 100%) !important;
+        color: #7a4d5a !important;
+        box-shadow:
+          0 8px 24px rgba(240, 197, 202, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9),
+          inset 0 -1px 0 rgba(136, 165, 191, 0.3) !important;
+      }
+
+      /* 圆润浅蓝色气泡 */
+      [data-bubble-style="round-blue"] .message-content {
+        border-radius: var(--bubble-radius) !important;
+        padding: var(--bubble-padding) !important;
+        background: linear-gradient(135deg, #D8E6EA 0%, #e3f0f3 50%, #eef8fa 100%) !important;
+        color: #4a6b73 !important;
+        border: 1px solid rgba(216, 230, 234, 0.6) !important;
+        box-shadow:
+          0 8px 24px rgba(216, 230, 234, 0.3),
+          inset 0 1px 0 var(--bubble-shadow-color-light),
+          inset 0 -1px 0 var(--bubble-inset-shadow-dark) !important;
+        position: relative;
+      }
+      [data-bubble-style="round-blue"] .message.sent .message-content {
+        background: linear-gradient(135deg, #c8dde2 0%, #D8E6EA 50%, #e3f0f3 100%) !important;
+        color: #3d5a61 !important;
+        box-shadow:
+          0 8px 24px rgba(200, 221, 226, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9),
+          inset 0 -1px 0 rgba(136, 165, 191, 0.3) !important;
+      }
+
+      /* 仿微信绿白色气泡 */
+      [data-bubble-style="wechat-green"] .message-content {
         border-radius: 8px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 2px 8px rgba(70, 130, 180, 0.2) !important;
-        border: 2px solid #87CEEB !important;
-        background: linear-gradient(135deg, #F0F8FF 0%, #E6F3FF 100%) !important;
-        color: #4682B4 !important;
+        padding: 8px 12px !important;
+        background: #ffffff !important;
+        color: #333333 !important;
+        border: 1px solid #e5e5e5 !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
         position: relative;
       }
-      [data-bubble-style="square"] .message.sent .message-content {
-        border: 2px solid #4169E1 !important;
-        background: linear-gradient(135deg, #B0E0E6 0%, #87CEEB 100%) !important;
-        color: #191970 !important;
-        box-shadow: 0 2px 8px rgba(65, 105, 225, 0.3) !important;
+      [data-bubble-style="wechat-green"] .message.sent .message-content {
+        background: linear-gradient(135deg, #9DBFC3 0%, #a8c7cb 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #9DBFC3 !important;
+        border-radius: 8px 8px 2px 8px !important;
       }
-      [data-bubble-style="square"] .message-content::before {
-        content: '📋' !important;
-        position: absolute;
-        top: -8px;
-        left: -8px;
-        font-size: 14px;
-        opacity: 0.6;
-        z-index: 10;
-      }
-      /* 隐藏原有的猫耳朵装饰 */
-      [data-bubble-style="square"] .message-content::after {
-        display: none !important;
+      [data-bubble-style="wechat-green"] .message-content {
+        border-radius: 8px 8px 8px 2px !important;
       }
 
-      /* 彩虹渐变样式 */
-      [data-bubble-style="gradient"] .message-content {
-        border-radius: 20px !important;
-        padding: 12px 18px !important;
-        box-shadow: 0 4px 16px rgba(138, 43, 226, 0.2) !important;
+      /* 仿短信蓝白色气泡 */
+      [data-bubble-style="sms-blue"] .message-content {
+        border-radius: 18px !important;
+        padding: 8px 14px !important;
+        background: #f1f1f1 !important;
+        color: #333333 !important;
         border: none !important;
-        background: linear-gradient(135deg, #E6E6FA 0%, #DDA0DD 50%, #DA70D6 100%) !important;
-        color: #4B0082 !important;
-        position: relative;
-      }
-      [data-bubble-style="gradient"] .message.sent .message-content {
-        background: linear-gradient(135deg, #FF69B4 0%, #FF1493 50%, #DC143C 100%) !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 4px 16px rgba(255, 20, 147, 0.3) !important;
-      }
-      [data-bubble-style="gradient"] .message-content::before {
-        content: '🌈' !important;
-        position: absolute;
-        top: -6px;
-        right: -6px;
-        font-size: 14px;
-        z-index: 10;
-      }
-      /* 隐藏原有的猫耳朵装饰 */
-      [data-bubble-style="gradient"] .message-content::after {
-        display: none !important;
-      }
-
-      /* 霓虹发光样式 - 绿色系 */
-      [data-bubble-style="neon"] .message-content {
-        border-radius: 15px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 0 20px rgba(0, 255, 127, 0.4), inset 0 0 20px rgba(255,255,255,0.1) !important;
-        border: 2px solid #00FF7F !important;
-        background: linear-gradient(135deg, #F0FFF0 0%, #E0FFE0 100%) !important;
-        color: #006400 !important;
-        position: relative;
-      }
-      [data-bubble-style="neon"] .message.sent .message-content {
-        border: 2px solid #32CD32 !important;
-        background: linear-gradient(135deg, #98FB98 0%, #90EE90 100%) !important;
-        color: #228B22 !important;
-        box-shadow: 0 0 20px rgba(50, 205, 50, 0.5), inset 0 0 20px rgba(255,255,255,0.2) !important;
-      }
-      [data-bubble-style="neon"] .message-content::before {
-        content: '⚡' !important;
-        position: absolute;
-        top: -8px;
-        right: -8px;
-        font-size: 16px;
-        color: #00FF7F;
-        text-shadow: 0 0 10px #00FF7F;
-        z-index: 10;
-      }
-      /* 隐藏原有的猫耳朵装饰 */
-      [data-bubble-style="neon"] .message-content::after {
-        display: none !important;
-      }
-
-      /* 立体卡片样式 - 橙色系 */
-      [data-bubble-style="card"] .message-content {
-        border-radius: 12px !important;
-        padding: 16px 20px !important;
-        box-shadow: 0 6px 20px rgba(255, 140, 0, 0.2), 0 2px 4px rgba(0,0,0,0.1) !important;
-        border: none !important;
-        background: linear-gradient(135deg, #FFF8DC 0%, #FFEBCD 100%) !important;
-        color: #D2691E !important;
-        position: relative;
-        transform: translateY(-2px);
-      }
-      [data-bubble-style="card"] .message.sent .message-content {
-        background: linear-gradient(135deg, #FFE4B5 0%, #FFDAB9 100%) !important;
-        color: #FF8C00 !important;
-        box-shadow: 0 6px 20px rgba(255, 165, 0, 0.3), 0 2px 4px rgba(0,0,0,0.1) !important;
-      }
-      [data-bubble-style="card"] .message-content::before {
-        content: '' !important;
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #FF8C00, #FFD700, #FF6347);
-        border-radius: 12px 12px 0 0;
-        z-index: 1;
-      }
-      [data-bubble-style="card"] .message-content::after {
-        content: '🎨' !important;
-        position: absolute;
-        top: -10px;
-        right: -10px;
-        font-size: 16px;
-        z-index: 10;
-      }
-
-      /* 云朵气泡样式 - 天空蓝 */
-      [data-bubble-style="bubble"] .message-content {
-        border-radius: 25px 25px 25px 5px !important;
-        padding: 12px 18px !important;
-        box-shadow: 0 4px 15px rgba(135, 206, 250, 0.3) !important;
-        border: none !important;
-        background: linear-gradient(135deg, #F0F8FF 0%, #E0F6FF 100%) !important;
-        color: #4682B4 !important;
-        position: relative;
-      }
-      [data-bubble-style="bubble"] .message.sent .message-content {
-        border-radius: 25px 25px 5px 25px !important;
-        background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 100%) !important;
-        color: #191970 !important;
-        box-shadow: 0 4px 15px rgba(176, 224, 230, 0.4) !important;
-      }
-      [data-bubble-style="bubble"] .message-content::before {
-        content: '☁️' !important;
-        position: absolute;
-        top: -8px;
-        right: -8px;
-        font-size: 14px;
-        z-index: 10;
-      }
-      [data-bubble-style="bubble"] .message-content::after {
-        content: '' !important;
-        position: absolute;
-        bottom: -8px;
-        left: 15px;
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-top: 8px solid #E0F6FF;
-        z-index: 10;
-      }
-      [data-bubble-style="bubble"] .message.sent .message-content::after {
-        left: auto;
-        right: 15px;
-        border-top-color: #B0E0E6;
-      }
-
-      /* 简约线条样式 - 紫色系 */
-      [data-bubble-style="minimal"] .message-content {
-        border-radius: 6px !important;
-        padding: 10px 14px !important;
         box-shadow: none !important;
-        border: none !important;
-        border-left: 5px solid #9370DB !important;
-        background: linear-gradient(135deg, #F8F8FF 0%, #E6E6FA 100%) !important;
-        color: #663399 !important;
         position: relative;
       }
-      [data-bubble-style="minimal"] .message.sent .message-content {
-        border-left: none !important;
-        border-right: 5px solid #8A2BE2 !important;
-        background: linear-gradient(135deg, #DDA0DD 0%, #D8BFD8 100%) !important;
-        color: #4B0082 !important;
+      [data-bubble-style="sms-blue"] .message.sent .message-content {
+        background: linear-gradient(135deg, #007AFF 0%, #0056CC 100%) !important;
+        color: #ffffff !important;
+        border-radius: 18px 18px 4px 18px !important;
       }
-      /* 移除星星装饰，保持简约 */
-      /* 隐藏原有的猫耳朵装饰 */
-      [data-bubble-style="minimal"] .message-content::after {
-        display: none !important;
+      [data-bubble-style="sms-blue"] .message-content {
+        border-radius: 18px 18px 18px 4px !important;
       }
 
-      /* 🔥 着火小人样式 - 火焰橙红系 */
-      [data-bubble-style="fire"] .message-content {
-        border-radius: 15px 15px 15px 5px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 4px 20px rgba(255, 69, 0, 0.4), 0 0 15px rgba(255, 140, 0, 0.3) !important;
-        border: 2px solid #FF4500 !important;
-        background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 50%, #FFDAB9 100%) !important;
-        color: #8B0000 !important;
+      /* 水滴质感气泡 - 薄荷绿 */
+      [data-bubble-style="water-mint"] .message-content {
+        border-radius: 20px 20px 20px 4px !important;
+        padding: var(--bubble-padding) !important;
+        background: linear-gradient(135deg, #C8D3C0 0%, #d5e0cd 50%, #e2edda 100%) !important;
+        color: #4a5d42 !important;
+        border: 1px solid rgba(200, 211, 192, 0.6) !important;
+        box-shadow:
+          0 12px 28px rgba(200, 211, 192, 0.25),
+          inset 0 2px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.2) !important;
         position: relative;
-        animation: fireGlow 2s ease-in-out infinite alternate;
+        backdrop-filter: blur(5px);
       }
-      [data-bubble-style="fire"] .message.sent .message-content {
-        border: 2px solid #FF6347 !important;
-        background: linear-gradient(135deg, #FFE4E1 0%, #FFA07A 50%, #FF7F50 100%) !important;
-        color: #B22222 !important;
-        box-shadow: 0 4px 20px rgba(255, 99, 71, 0.5), 0 0 15px rgba(255, 69, 0, 0.4) !important;
-      }
-      [data-bubble-style="fire"] .message-content::before {
-        content: '🔥' !important;
-        position: absolute;
-        top: -8px;
-        right: -8px;
-        font-size: 16px;
-        z-index: 10;
-        animation: fireFlicker 1.5s ease-in-out infinite;
-      }
-      [data-bubble-style="fire"] .message-content::after {
-        content: '👤' !important;
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 12px;
-        z-index: 10;
-        animation: panic 0.8s ease-in-out infinite;
+      [data-bubble-style="water-mint"] .message.sent .message-content {
+        background: linear-gradient(135deg, #b8c8b0 0%, #C8D3C0 50%, #d5e0cd 100%) !important;
+        color: #3d4f36 !important;
+        border-radius: 20px 20px 4px 20px !important;
+        box-shadow:
+          0 12px 28px rgba(184, 200, 176, 0.3),
+          inset 0 2px 0 rgba(255, 255, 255, 0.8),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.25) !important;
       }
 
-      /* 火焰发光动画 */
-      @keyframes fireGlow {
-        0% { box-shadow: 0 4px 20px rgba(255, 69, 0, 0.4), 0 0 15px rgba(255, 140, 0, 0.3); }
-        100% { box-shadow: 0 6px 25px rgba(255, 69, 0, 0.6), 0 0 20px rgba(255, 140, 0, 0.5); }
+      /* 水滴质感气泡 - 紫罗兰 */
+      [data-bubble-style="water-violet"] .message-content {
+        border-radius: 20px 20px 20px 4px !important;
+        padding: var(--bubble-padding) !important;
+        background: linear-gradient(135deg, #B6A9C8 0%, #c4b8d5 50%, #d2c7e2 100%) !important;
+        color: #5a4d6b !important;
+        border: 1px solid rgba(182, 169, 200, 0.6) !important;
+        box-shadow:
+          0 12px 28px rgba(182, 169, 200, 0.25),
+          inset 0 2px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.2) !important;
+        position: relative;
+        backdrop-filter: blur(5px);
+      }
+      [data-bubble-style="water-violet"] .message.sent .message-content {
+        background: linear-gradient(135deg, #a699b8 0%, #B6A9C8 50%, #c4b8d5 100%) !important;
+        color: #4d405a !important;
+        border-radius: 20px 20px 4px 20px !important;
+        box-shadow:
+          0 12px 28px rgba(166, 153, 184, 0.3),
+          inset 0 2px 0 rgba(255, 255, 255, 0.8),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.25) !important;
       }
 
-      /* 火焰闪烁动画 */
-      @keyframes fireFlicker {
-        0%, 100% { transform: scale(1) rotate(-2deg); }
-        25% { transform: scale(1.1) rotate(2deg); }
-        50% { transform: scale(0.9) rotate(-1deg); }
-        75% { transform: scale(1.05) rotate(1deg); }
+      /* 水滴质感气泡 - 温暖米色 */
+      [data-bubble-style="water-beige"] .message-content {
+        border-radius: 20px 20px 20px 4px !important;
+        padding: var(--bubble-padding) !important;
+        background: linear-gradient(135deg, #D2C4B2 0%, #ddd0bf 50%, #e8dccc 100%) !important;
+        color: #6b5d4f !important;
+        border: 1px solid rgba(210, 196, 178, 0.6) !important;
+        box-shadow:
+          0 12px 28px rgba(210, 196, 178, 0.25),
+          inset 0 2px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.2) !important;
+        position: relative;
+        backdrop-filter: blur(5px);
+      }
+      [data-bubble-style="water-beige"] .message.sent .message-content {
+        background: linear-gradient(135deg, #c2b4a2 0%, #D2C4B2 50%, #ddd0bf 100%) !important;
+        color: #5a4d3f !important;
+        border-radius: 20px 20px 4px 20px !important;
+        box-shadow:
+          0 12px 28px rgba(194, 180, 162, 0.3),
+          inset 0 2px 0 rgba(255, 255, 255, 0.8),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.25) !important;
       }
 
-      /* 小人慌张动画 */
-      @keyframes panic {
-        0%, 100% { transform: translateX(-50%) rotate(0deg); }
-        25% { transform: translateX(-45%) rotate(-3deg); }
-        50% { transform: translateX(-50%) rotate(0deg); }
-        75% { transform: translateX(-55%) rotate(3deg); }
-      }
+
+
+
+
+
 
       /* 🎉 关键词特效样式 */
       .message-effects-container {
@@ -873,120 +787,7 @@
         }
       }
 
-      /* 🤡 小丑样式 - 彩虹马戏团 */
-      [data-bubble-style="clown"] .message-content {
-        border-radius: 18px 8px 18px 8px !important;
-        padding: 10px 14px !important;
-        box-shadow: 0 0 15px rgba(255, 0, 255, 0.3), inset 0 0 10px rgba(255, 255, 0, 0.2) !important;
-        border: 2px dashed #FF1493 !important;
-        background: linear-gradient(45deg, #FF69B4 0%, #FFD700 25%, #00CED1 50%, #FF6347 75%, #9370DB 100%) !important;
-        background-size: 200% 200% !important;
-        color: #FFFFFF !important;
-        position: relative;
-        animation: rainbowShift 3s ease-in-out infinite, wobble 1s ease-in-out infinite;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-      }
-      [data-bubble-style="clown"] .message.sent .message-content {
-        background: linear-gradient(45deg, #FF1493 0%, #00FF00 25%, #FF4500 50%, #8A2BE2 75%, #FFD700 100%) !important;
-        background-size: 200% 200% !important;
-        border: 2px dashed #00CED1 !important;
-      }
-      [data-bubble-style="clown"] .message-content::before {
-        content: '🤡' !important;
-        position: absolute;
-        top: -8px;
-        left: -8px;
-        font-size: 12px;
-        z-index: 10;
-        animation: spin 2s linear infinite;
-      }
-      [data-bubble-style="clown"] .message-content::after {
-        content: '🎪' !important;
-        position: absolute;
-        bottom: -8px;
-        right: -8px;
-        font-size: 10px;
-        z-index: 10;
-        animation: bounce 1.5s ease-in-out infinite;
-      }
 
-      /* 🌸 古风样式 - 淡雅水墨 */
-      [data-bubble-style="ancient"] .message-content {
-        border-radius: 12px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 2px 8px rgba(139, 69, 19, 0.1) !important;
-        border: 1px solid #D2B48C !important;
-        background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%) !important;
-        color: #8B4513 !important;
-        position: relative;
-        font-family: serif !important;
-      }
-      [data-bubble-style="ancient"] .message.sent .message-content {
-        background: linear-gradient(135deg, #F0E68C 0%, #DDD8C0 100%) !important;
-        border: 1px solid #B8860B !important;
-        color: #654321 !important;
-      }
-
-      /* 🍃 小资情调样式 - 温暖咖啡色 */
-      [data-bubble-style="cozy"] .message-content {
-        border-radius: 18px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 3px 12px rgba(160, 82, 45, 0.15) !important;
-        border: none !important;
-        background: linear-gradient(135deg, #FDF5E6 0%, #F5DEB3 100%) !important;
-        color: #8B4513 !important;
-        position: relative;
-      }
-      [data-bubble-style="cozy"] .message.sent .message-content {
-        background: linear-gradient(135deg, #DEB887 0%, #D2B48C 100%) !important;
-        color: #654321 !important;
-      }
-
-      /* 💕 浪漫样式 - 温柔粉色 */
-      [data-bubble-style="romantic"] .message-content {
-        border-radius: 20px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 3px 15px rgba(255, 182, 193, 0.2) !important;
-        border: none !important;
-        background: linear-gradient(135deg, #FFF0F5 0%, #FFE4E1 100%) !important;
-        color: #8B475D !important;
-        position: relative;
-      }
-      [data-bubble-style="romantic"] .message.sent .message-content {
-        background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 100%) !important;
-        color: #8B3A62 !important;
-      }
-
-      /* 🌿 护眼绿样式 - 清新自然 */
-      [data-bubble-style="nature"] .message-content {
-        border-radius: 15px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 2px 10px rgba(143, 188, 143, 0.15) !important;
-        border: 1px solid #98FB98 !important;
-        background: linear-gradient(135deg, #F0FFF0 0%, #F5FFFA 100%) !important;
-        color: #2E8B57 !important;
-        position: relative;
-      }
-      [data-bubble-style="nature"] .message.sent .message-content {
-        background: linear-gradient(135deg, #E0FFE0 0%, #F0FFF0 100%) !important;
-        border: 1px solid #90EE90 !important;
-        color: #228B22 !important;
-      }
-
-      /* 🌙 月光样式 - 温柔蓝灰 */
-      [data-bubble-style="moonlight"] .message-content {
-        border-radius: 16px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 3px 12px rgba(176, 196, 222, 0.2) !important;
-        border: none !important;
-        background: linear-gradient(135deg, #F8F8FF 0%, #E6E6FA 100%) !important;
-        color: #483D8B !important;
-        position: relative;
-      }
-      [data-bubble-style="moonlight"] .message.sent .message-content {
-        background: linear-gradient(135deg, #E0E6FF 0%, #D8BFD8 100%) !important;
-        color: #4B0082 !important;
-      }
 
       /* 脉动动画 */
       @keyframes pulse {
@@ -1762,222 +1563,95 @@
         border: 1px solid var(--border-bubble-char);
       }
 
-      .demo-bubble.style-round {
+      /* Demo样式 - 水光黑色 */
+      .demo-bubble.style-glossy-black {
         border-radius: 12px;
-        background: linear-gradient(135deg, #FFB6C1, #FFC0CB);
-        color: #8B0000;
-        position: relative;
-      }
-      .demo-bubble.style-round.char {
-        background: linear-gradient(135deg, #FFE4E1, #FFF0F5);
-        color: #8B4B8C;
-      }
-      .demo-bubble.style-round::before {
-        content: '🌸';
-        position: absolute;
-        top: -3px;
-        right: -3px;
-        font-size: 8px;
+        padding: 6px 10px;
+        background: linear-gradient(135deg, #2c2c2c, #1a1a1a);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
       }
 
-      .demo-bubble.style-square {
-        border-radius: 3px;
-        border: 2px solid #4169E1;
-        background: linear-gradient(135deg, #B0E0E6, #87CEEB);
-        color: #191970;
-        position: relative;
-      }
-      .demo-bubble.style-square.char {
-        border: 2px solid #87CEEB;
-        background: linear-gradient(135deg, #F0F8FF, #E6F3FF);
-        color: #4682B4;
-      }
-      .demo-bubble.style-square::after {
-        content: '📋';
-        position: absolute;
-        top: -4px;
-        left: -4px;
-        font-size: 6px;
-      }
-
-      .demo-bubble.style-gradient {
-        border-radius: 10px;
-        background: linear-gradient(135deg, #FF69B4, #FF1493, #DC143C);
-        color: #FFFFFF;
-        position: relative;
-      }
-      .demo-bubble.style-gradient.char {
-        background: linear-gradient(135deg, #E6E6FA, #DDA0DD, #DA70D6);
-        color: #4B0082;
-      }
-      .demo-bubble.style-gradient::before {
-        content: '🌈';
-        position: absolute;
-        top: -3px;
-        right: -3px;
-        font-size: 8px;
-      }
-
-      .demo-bubble.style-neon {
-        border-radius: 6px;
-        border: 2px solid #32CD32;
-        background: linear-gradient(135deg, #98FB98, #90EE90);
-        color: #228B22;
-        box-shadow: 0 0 6px rgba(50, 205, 50, 0.5);
-        position: relative;
-      }
-      .demo-bubble.style-neon.char {
-        border: 2px solid #00FF7F;
-        background: linear-gradient(135deg, #F0FFF0, #E0FFE0);
-        color: #006400;
-        box-shadow: 0 0 6px rgba(0, 255, 127, 0.4);
-      }
-      .demo-bubble.style-neon::after {
-        content: '⚡';
-        position: absolute;
-        top: -4px;
-        right: -4px;
-        font-size: 8px;
-        color: #00FF7F;
-      }
-
-      .demo-bubble.style-card {
-        border-radius: 6px;
-        background: linear-gradient(135deg, #FFE4B5, #FFDAB9);
-        color: #FF8C00;
-        position: relative;
-        transform: translateY(-1px);
-      }
-      .demo-bubble.style-card.char {
-        background: linear-gradient(135deg, #FFF8DC, #FFEBCD);
-        color: #D2691E;
-      }
-      .demo-bubble.style-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, #FF8C00, #FFD700);
-        border-radius: 6px 6px 0 0;
-      }
-      .demo-bubble.style-card::after {
-        content: '🎨';
-        position: absolute;
-        top: -4px;
-        right: -4px;
-        font-size: 8px;
-      }
-
-      .demo-bubble.style-bubble {
-        border-radius: 12px 12px 12px 3px;
-        background: linear-gradient(135deg, #87CEEB, #B0E0E6);
-        color: #191970;
-        position: relative;
-      }
-      .demo-bubble.style-bubble.char {
-        border-radius: 12px 12px 3px 12px;
-        background: linear-gradient(135deg, #F0F8FF, #E0F6FF);
-        color: #4682B4;
-      }
-      .demo-bubble.style-bubble::before {
-        content: '☁️';
-        position: absolute;
-        top: -4px;
-        right: -4px;
-        font-size: 8px;
-      }
-
-      .demo-bubble.style-minimal {
-        border-radius: 3px;
-        border-left: 3px solid #8A2BE2;
-        border-right: none;
-        border-top: none;
-        border-bottom: none;
-        background: linear-gradient(135deg, #DDA0DD, #D8BFD8);
-        color: #4B0082;
-        position: relative;
-      }
-      .demo-bubble.style-minimal.char {
-        border-left: 3px solid #9370DB;
-        border-right: none;
-        background: linear-gradient(135deg, #F8F8FF, #E6E6FA);
-        color: #663399;
-      }
-      /* 移除简约样式的星星装饰 */
-
-      .demo-bubble.style-fire {
-        border-radius: 8px;
-        border: 2px solid #FF4500;
-        background: linear-gradient(135deg, #FFF8DC, #FFE4B5);
-        color: #8B0000;
-        position: relative;
-        box-shadow: 0 2px 8px rgba(255, 69, 0, 0.3);
-      }
-      .demo-bubble.style-fire.char {
-        border: 2px solid #FF4500;
-        background: linear-gradient(135deg, #FFF8DC, #FFE4B5);
-        color: #8B0000;
-      }
-      .demo-bubble.style-fire::before {
-        content: '🔥';
-        position: absolute;
-        top: -4px;
-        right: -4px;
-        font-size: 8px;
-      }
-      .demo-bubble.style-fire::after {
-        content: '👤';
-        position: absolute;
-        bottom: -6px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 6px;
-      }
-
-      /* Demo样式 - 古风 */
-      .demo-bubble.style-ancient {
+      /* Demo样式 - 水光粉色 */
+      .demo-bubble.style-glossy-pink {
         border-radius: 12px;
-        padding: 8px 12px;
-        border: 1px solid #D2B48C;
-        background: linear-gradient(135deg, #FFF8DC, #F5F5DC);
-        color: #8B4513;
-        font-family: serif;
+        padding: 6px 10px;
+        background: linear-gradient(135deg, #F5D5D9, #f8e8ea);
+        color: #8b5a6b;
+        border: 1px solid rgba(245, 213, 217, 0.6);
+        box-shadow: 0 4px 12px rgba(245, 213, 217, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
-      /* Demo样式 - 小资 */
-      .demo-bubble.style-cozy {
-        border-radius: 18px;
-        padding: 8px 12px;
-        background: linear-gradient(135deg, #FDF5E6, #F5DEB3);
-        color: #8B4513;
+      /* Demo样式 - 圆润蓝色 */
+      .demo-bubble.style-round-blue {
+        border-radius: 12px;
+        padding: 6px 10px;
+        background: linear-gradient(135deg, #D8E6EA, #e3f0f3);
+        color: #4a6b73;
+        border: 1px solid rgba(216, 230, 234, 0.6);
+        box-shadow: 0 4px 12px rgba(216, 230, 234, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
-      /* Demo样式 - 浪漫 */
-      .demo-bubble.style-romantic {
-        border-radius: 20px;
-        padding: 8px 12px;
-        background: linear-gradient(135deg, #FFF0F5, #FFE4E1);
-        color: #8B475D;
+      /* Demo样式 - 仿微信 */
+      .demo-bubble.style-wechat-green {
+        border-radius: 4px;
+        padding: 6px 10px;
+        background: #ffffff;
+        color: #333333;
+        border: 1px solid #e5e5e5;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+      .demo-bubble.style-wechat-green.user {
+        background: #9DBFC3;
+        color: #ffffff;
+        border: 1px solid #9DBFC3;
       }
 
-      /* Demo样式 - 护眼 */
-      .demo-bubble.style-nature {
-        border-radius: 15px;
-        padding: 8px 12px;
-        border: 1px solid #98FB98;
-        background: linear-gradient(135deg, #F0FFF0, #F5FFFA);
-        color: #2E8B57;
+      /* Demo样式 - 仿短信 */
+      .demo-bubble.style-sms-blue {
+        border-radius: 9px;
+        padding: 6px 10px;
+        background: #f1f1f1;
+        color: #333333;
+        border: none;
+      }
+      .demo-bubble.style-sms-blue.user {
+        background: #007AFF;
+        color: #ffffff;
       }
 
-      /* Demo样式 - 月光 */
-      .demo-bubble.style-moonlight {
-        border-radius: 16px;
-        padding: 8px 12px;
-        background: linear-gradient(135deg, #F8F8FF, #E6E6FA);
-        color: #483D8B;
+      /* Demo样式 - 水滴薄荷 */
+      .demo-bubble.style-water-mint {
+        border-radius: 10px 10px 10px 2px;
+        padding: 6px 10px;
+        background: linear-gradient(135deg, #C8D3C0, #d5e0cd);
+        color: #4a5d42;
+        border: 1px solid rgba(200, 211, 192, 0.6);
+        box-shadow: 0 6px 14px rgba(200, 211, 192, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.7);
       }
+
+      /* Demo样式 - 水滴紫罗兰 */
+      .demo-bubble.style-water-violet {
+        border-radius: 10px 10px 10px 2px;
+        padding: 6px 10px;
+        background: linear-gradient(135deg, #B6A9C8, #c4b8d5);
+        color: #5a4d6b;
+        border: 1px solid rgba(182, 169, 200, 0.6);
+        box-shadow: 0 6px 14px rgba(182, 169, 200, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      }
+
+      /* Demo样式 - 水滴米色 */
+      .demo-bubble.style-water-beige {
+        border-radius: 10px 10px 10px 2px;
+        padding: 6px 10px;
+        background: linear-gradient(135deg, #D2C4B2, #ddd0bf);
+        color: #6b5d4f;
+        border: 1px solid rgba(210, 196, 178, 0.6);
+        box-shadow: 0 6px 14px rgba(210, 196, 178, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      }
+
+
 
       /* 角色头像设置样式 */
       .char-avatar-section {
@@ -5409,213 +5083,94 @@
                 </label>
 
                 <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="round">
+                  <input type="radio" name="bubbleStyle" value="glossy-black">
                   <div class="bubble-style-preview">
-                    <div class="bubble-style-name">圆润</div>
+                    <div class="bubble-style-name">水光黑色</div>
                     <div class="bubble-style-demo">
-                      <div class="demo-bubble style-round user">你好</div>
-                      <div class="demo-bubble style-round char">你好呀</div>
+                      <div class="demo-bubble style-glossy-black user">你好</div>
+                      <div class="demo-bubble style-glossy-black char">你好呀</div>
                     </div>
                   </div>
                 </label>
 
                 <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="square">
+                  <input type="radio" name="bubbleStyle" value="glossy-pink">
                   <div class="bubble-style-preview">
-                    <div class="bubble-style-name">方形</div>
+                    <div class="bubble-style-name">水光粉色</div>
                     <div class="bubble-style-demo">
-                      <div class="demo-bubble style-square user">你好</div>
-                      <div class="demo-bubble style-square char">你好呀</div>
+                      <div class="demo-bubble style-glossy-pink user">你好</div>
+                      <div class="demo-bubble style-glossy-pink char">你好呀</div>
                     </div>
                   </div>
                 </label>
 
                 <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="gradient">
+                  <input type="radio" name="bubbleStyle" value="round-blue">
                   <div class="bubble-style-preview">
-                    <div class="bubble-style-name">渐变</div>
+                    <div class="bubble-style-name">圆润蓝色</div>
                     <div class="bubble-style-demo">
-                      <div class="demo-bubble style-gradient user">你好</div>
-                      <div class="demo-bubble style-gradient char">你好呀</div>
+                      <div class="demo-bubble style-round-blue user">你好</div>
+                      <div class="demo-bubble style-round-blue char">你好呀</div>
                     </div>
                   </div>
                 </label>
 
                 <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="neon">
+                  <input type="radio" name="bubbleStyle" value="wechat-green">
                   <div class="bubble-style-preview">
-                    <div class="bubble-style-name">霓虹</div>
+                    <div class="bubble-style-name">仿微信</div>
                     <div class="bubble-style-demo">
-                      <div class="demo-bubble style-neon user">你好</div>
-                      <div class="demo-bubble style-neon char">你好呀</div>
+                      <div class="demo-bubble style-wechat-green user">你好</div>
+                      <div class="demo-bubble style-wechat-green char">你好呀</div>
                     </div>
                   </div>
                 </label>
 
                 <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="card">
+                  <input type="radio" name="bubbleStyle" value="sms-blue">
                   <div class="bubble-style-preview">
-                    <div class="bubble-style-name">卡片</div>
+                    <div class="bubble-style-name">仿短信</div>
                     <div class="bubble-style-demo">
-                      <div class="demo-bubble style-card user">你好</div>
-                      <div class="demo-bubble style-card char">你好呀</div>
+                      <div class="demo-bubble style-sms-blue user">你好</div>
+                      <div class="demo-bubble style-sms-blue char">你好呀</div>
                     </div>
                   </div>
                 </label>
 
                 <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="bubble">
+                  <input type="radio" name="bubbleStyle" value="water-mint">
                   <div class="bubble-style-preview">
-                    <div class="bubble-style-name">气泡</div>
+                    <div class="bubble-style-name">水滴薄荷</div>
                     <div class="bubble-style-demo">
-                      <div class="demo-bubble style-bubble user">你好</div>
-                      <div class="demo-bubble style-bubble char">你好呀</div>
+                      <div class="demo-bubble style-water-mint user">你好</div>
+                      <div class="demo-bubble style-water-mint char">你好呀</div>
                     </div>
                   </div>
                 </label>
 
                 <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="minimal">
+                  <input type="radio" name="bubbleStyle" value="water-violet">
                   <div class="bubble-style-preview">
-                    <div class="bubble-style-name">简约</div>
+                    <div class="bubble-style-name">水滴紫罗兰</div>
                     <div class="bubble-style-demo">
-                      <div class="demo-bubble style-minimal user">你好</div>
-                      <div class="demo-bubble style-minimal char">你好呀</div>
+                      <div class="demo-bubble style-water-violet user">你好</div>
+                      <div class="demo-bubble style-water-violet char">你好呀</div>
                     </div>
                   </div>
                 </label>
 
                 <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="fire">
+                  <input type="radio" name="bubbleStyle" value="water-beige">
                   <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🔥着火</div>
+                    <div class="bubble-style-name">水滴米色</div>
                     <div class="bubble-style-demo">
-                      <div class="demo-bubble style-fire user">救命</div>
-                      <div class="demo-bubble style-fire char">怎么了</div>
+                      <div class="demo-bubble style-water-beige user">你好</div>
+                      <div class="demo-bubble style-water-beige char">你好呀</div>
                     </div>
                   </div>
                 </label>
 
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="clown">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🤡小丑</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-clown user">哈哈</div>
-                      <div class="demo-bubble style-clown char">搞笑</div>
-                    </div>
-                  </div>
-                </label>
 
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="pizza">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🍕披萨</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-pizza user">好饿</div>
-                      <div class="demo-bubble style-pizza char">吃吗</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="ghost">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">👻幽灵</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-ghost user">呜呜</div>
-                      <div class="demo-bubble style-ghost char">别怕</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="unicorn">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🦄独角兽</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-unicorn user">梦幻</div>
-                      <div class="demo-bubble style-unicorn char">彩虹</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="robot">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🤖机器人</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-robot user">BEEP</div>
-                      <div class="demo-bubble style-robot char">BOOP</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="banana">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🍌香蕉</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-banana user">香甜</div>
-                      <div class="demo-bubble style-banana char">好吃</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="ancient">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🌸古风</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-ancient user">雅致</div>
-                      <div class="demo-bubble style-ancient char">诗意</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="cozy">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🍃小资</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-cozy user">温馨</div>
-                      <div class="demo-bubble style-cozy char">惬意</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="romantic">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">💕浪漫</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-romantic user">甜蜜</div>
-                      <div class="demo-bubble style-romantic char">温柔</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="nature">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🌿护眼</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-nature user">清新</div>
-                      <div class="demo-bubble style-nature char">自然</div>
-                    </div>
-                  </div>
-                </label>
-
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="moonlight">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">🌙月光</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-moonlight user">静谧</div>
-                      <div class="demo-bubble style-moonlight char">优雅</div>
-                    </div>
-                  </div>
-                </label>
               </div>
             </div>
           </div>
