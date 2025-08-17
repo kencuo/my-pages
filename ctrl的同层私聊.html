@@ -434,10 +434,31 @@
       }
       [data-bubble-style="glossy-black"] .message.sent .message-content {
         background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%) !important;
+        color: #ffffff !important;
         box-shadow:
           0 8px 32px rgba(0, 0, 0, 0.4),
           inset 0 1px 0 rgba(255, 255, 255, 0.2),
           inset 0 -1px 0 rgba(0, 0, 0, 0.6) !important;
+      }
+      /* 确保水光黑色气泡的文字颜色不被覆盖 */
+      [data-bubble-style="glossy-black"] .message-content,
+      [data-bubble-style="glossy-black"] .message-content *,
+      [data-bubble-style="glossy-black"] .message.sent .message-content,
+      [data-bubble-style="glossy-black"] .message.sent .message-content *,
+      [data-bubble-style="glossy-black"] .message.received .message-content,
+      [data-bubble-style="glossy-black"] .message.received .message-content *,
+      [data-bubble-style="glossy-black"] .message.char .message-content,
+      [data-bubble-style="glossy-black"] .message.char .message-content *,
+      [data-bubble-style="glossy-black"] .message.user .message-content,
+      [data-bubble-style="glossy-black"] .message.user .message-content * {
+        color: #ffffff !important;
+        background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 50%, #2a2a2a 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      }
+      /* 用户发送的消息使用更深的背景 */
+      [data-bubble-style="glossy-black"] .message.sent .message-content,
+      [data-bubble-style="glossy-black"] .message.user .message-content {
+        background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%) !important;
       }
 
       /* 水光淡粉色气泡 */
@@ -453,7 +474,18 @@
           inset 0 -1px 0 var(--bubble-inset-shadow-dark) !important;
         position: relative;
       }
-      [data-bubble-style="glossy-pink"] .message.sent .message-content {
+      [data-bubble-style="glossy-pink"] .message.received .message-content,
+      [data-bubble-style="glossy-pink"] .message.char .message-content {
+        background: linear-gradient(135deg, #F5D5D9 0%, #f8e8ea 50%, #fdf2f3 100%) !important;
+        color: #8b5a6b !important;
+        border: 1px solid rgba(245, 213, 217, 0.6) !important;
+        box-shadow:
+          0 8px 24px rgba(245, 213, 217, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8),
+          inset 0 -1px 0 var(--bubble-inset-shadow-dark) !important;
+      }
+      [data-bubble-style="glossy-pink"] .message.sent .message-content,
+      [data-bubble-style="glossy-pink"] .message.user .message-content {
         background: linear-gradient(135deg, #f0c5ca 0%, #F5D5D9 50%, #f8e8ea 100%) !important;
         color: #7a4d5a !important;
         box-shadow:
@@ -475,7 +507,18 @@
           inset 0 -1px 0 var(--bubble-inset-shadow-dark) !important;
         position: relative;
       }
-      [data-bubble-style="round-blue"] .message.sent .message-content {
+      [data-bubble-style="round-blue"] .message.received .message-content,
+      [data-bubble-style="round-blue"] .message.char .message-content {
+        background: linear-gradient(135deg, #D8E6EA 0%, #e3f0f3 50%, #eef8fa 100%) !important;
+        color: #4a6b73 !important;
+        border: 1px solid rgba(216, 230, 234, 0.6) !important;
+        box-shadow:
+          0 8px 24px rgba(216, 230, 234, 0.3),
+          inset 0 1px 0 var(--bubble-shadow-color-light),
+          inset 0 -1px 0 var(--bubble-inset-shadow-dark) !important;
+      }
+      [data-bubble-style="round-blue"] .message.sent .message-content,
+      [data-bubble-style="round-blue"] .message.user .message-content {
         background: linear-gradient(135deg, #c8dde2 0%, #D8E6EA 50%, #e3f0f3 100%) !important;
         color: #3d5a61 !important;
         box-shadow:
@@ -486,7 +529,7 @@
 
       /* 仿微信绿白色气泡 */
       [data-bubble-style="wechat-green"] .message-content {
-        border-radius: 8px !important;
+        border-radius: 8px 8px 8px 2px !important;
         padding: 8px 12px !important;
         background: #ffffff !important;
         color: #333333 !important;
@@ -494,19 +537,24 @@
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
         position: relative;
       }
-      [data-bubble-style="wechat-green"] .message.sent .message-content {
+      [data-bubble-style="wechat-green"] .message.received .message-content,
+      [data-bubble-style="wechat-green"] .message.char .message-content {
+        background: #ffffff !important;
+        color: #333333 !important;
+        border: 1px solid #e5e5e5 !important;
+        border-radius: 8px 8px 8px 2px !important;
+      }
+      [data-bubble-style="wechat-green"] .message.sent .message-content,
+      [data-bubble-style="wechat-green"] .message.user .message-content {
         background: linear-gradient(135deg, #9DBFC3 0%, #a8c7cb 100%) !important;
         color: #ffffff !important;
         border: 1px solid #9DBFC3 !important;
         border-radius: 8px 8px 2px 8px !important;
       }
-      [data-bubble-style="wechat-green"] .message-content {
-        border-radius: 8px 8px 8px 2px !important;
-      }
 
       /* 仿短信蓝白色气泡 */
       [data-bubble-style="sms-blue"] .message-content {
-        border-radius: 18px !important;
+        border-radius: 18px 18px 18px 4px !important;
         padding: 8px 14px !important;
         background: #f1f1f1 !important;
         color: #333333 !important;
@@ -514,13 +562,17 @@
         box-shadow: none !important;
         position: relative;
       }
-      [data-bubble-style="sms-blue"] .message.sent .message-content {
+      [data-bubble-style="sms-blue"] .message.received .message-content,
+      [data-bubble-style="sms-blue"] .message.char .message-content {
+        background: #f1f1f1 !important;
+        color: #333333 !important;
+        border-radius: 18px 18px 18px 4px !important;
+      }
+      [data-bubble-style="sms-blue"] .message.sent .message-content,
+      [data-bubble-style="sms-blue"] .message.user .message-content {
         background: linear-gradient(135deg, #007AFF 0%, #0056CC 100%) !important;
         color: #ffffff !important;
         border-radius: 18px 18px 4px 18px !important;
-      }
-      [data-bubble-style="sms-blue"] .message-content {
-        border-radius: 18px 18px 18px 4px !important;
       }
 
       /* 水滴质感气泡 - 薄荷绿 */
@@ -537,7 +589,19 @@
         position: relative;
         backdrop-filter: blur(5px);
       }
-      [data-bubble-style="water-mint"] .message.sent .message-content {
+      [data-bubble-style="water-mint"] .message.received .message-content,
+      [data-bubble-style="water-mint"] .message.char .message-content {
+        background: linear-gradient(135deg, #C8D3C0 0%, #d5e0cd 50%, #e2edda 100%) !important;
+        color: #4a5d42 !important;
+        border-radius: 20px 20px 20px 4px !important;
+        border: 1px solid rgba(200, 211, 192, 0.6) !important;
+        box-shadow:
+          0 12px 28px rgba(200, 211, 192, 0.25),
+          inset 0 2px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.2) !important;
+      }
+      [data-bubble-style="water-mint"] .message.sent .message-content,
+      [data-bubble-style="water-mint"] .message.user .message-content {
         background: linear-gradient(135deg, #b8c8b0 0%, #C8D3C0 50%, #d5e0cd 100%) !important;
         color: #3d4f36 !important;
         border-radius: 20px 20px 4px 20px !important;
@@ -561,7 +625,19 @@
         position: relative;
         backdrop-filter: blur(5px);
       }
-      [data-bubble-style="water-violet"] .message.sent .message-content {
+      [data-bubble-style="water-violet"] .message.received .message-content,
+      [data-bubble-style="water-violet"] .message.char .message-content {
+        background: linear-gradient(135deg, #B6A9C8 0%, #c4b8d5 50%, #d2c7e2 100%) !important;
+        color: #5a4d6b !important;
+        border-radius: 20px 20px 20px 4px !important;
+        border: 1px solid rgba(182, 169, 200, 0.6) !important;
+        box-shadow:
+          0 12px 28px rgba(182, 169, 200, 0.25),
+          inset 0 2px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.2) !important;
+      }
+      [data-bubble-style="water-violet"] .message.sent .message-content,
+      [data-bubble-style="water-violet"] .message.user .message-content {
         background: linear-gradient(135deg, #a699b8 0%, #B6A9C8 50%, #c4b8d5 100%) !important;
         color: #4d405a !important;
         border-radius: 20px 20px 4px 20px !important;
@@ -585,7 +661,19 @@
         position: relative;
         backdrop-filter: blur(5px);
       }
-      [data-bubble-style="water-beige"] .message.sent .message-content {
+      [data-bubble-style="water-beige"] .message.received .message-content,
+      [data-bubble-style="water-beige"] .message.char .message-content {
+        background: linear-gradient(135deg, #D2C4B2 0%, #ddd0bf 50%, #e8dccc 100%) !important;
+        color: #6b5d4f !important;
+        border-radius: 20px 20px 20px 4px !important;
+        border: 1px solid rgba(210, 196, 178, 0.6) !important;
+        box-shadow:
+          0 12px 28px rgba(210, 196, 178, 0.25),
+          inset 0 2px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -2px 0 rgba(136, 165, 191, 0.2) !important;
+      }
+      [data-bubble-style="water-beige"] .message.sent .message-content,
+      [data-bubble-style="water-beige"] .message.user .message-content {
         background: linear-gradient(135deg, #c2b4a2 0%, #D2C4B2 50%, #ddd0bf 100%) !important;
         color: #5a4d3f !important;
         border-radius: 20px 20px 4px 20px !important;
@@ -616,7 +704,19 @@
           0 2px 6px rgba(100, 150, 200, 0.15),
           0 0 0 1px rgba(255, 255, 255, 0.7) inset !important;
       }
-      [data-bubble-style="cute-gradient"] .message.sent .message-content {
+      [data-bubble-style="cute-gradient"] .message.received .message-content,
+      [data-bubble-style="cute-gradient"] .message.char .message-content {
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.95) 0%,
+          rgba(201, 245, 255, 0.95) 50%,
+          rgba(254, 235, 255, 0.95) 100%
+        ) !important;
+        border: 1.8px solid rgba(210, 230, 240, 0.6) !important;
+        color: #5a6a7b !important;
+      }
+      [data-bubble-style="cute-gradient"] .message.sent .message-content,
+      [data-bubble-style="cute-gradient"] .message.user .message-content {
         background: linear-gradient(
           145deg,
           rgba(255, 240, 245, 0.95) 0%,
@@ -5137,6 +5237,17 @@
       .test-btn:disabled {
         background: #ccc;
         cursor: not-allowed;
+      }
+      /* 通用修复：确保所有气泡样式的对方消息都能正确显示 */
+      [data-bubble-style] .message.received .message-content,
+      [data-bubble-style] .message.char .message-content {
+        /* 继承基础样式，确保对方消息有正确的背景和文字颜色 */
+      }
+
+      /* 特别修复：确保所有气泡样式的用户消息都有明确的样式 */
+      [data-bubble-style] .message.sent .message-content,
+      [data-bubble-style] .message.user .message-content {
+        /* 继承基础样式，确保用户消息有正确的背景和文字颜色 */
       }
     </style>
   </head>
