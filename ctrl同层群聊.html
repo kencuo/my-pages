@@ -505,10 +505,31 @@
       }
       [data-bubble-style="glossy-black"] .message.sent .message-content {
         background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%) !important;
+        color: #ffffff !important;
         box-shadow:
           0 8px 32px rgba(0, 0, 0, 0.4),
           inset 0 1px 0 rgba(255, 255, 255, 0.2),
           inset 0 -1px 0 rgba(0, 0, 0, 0.6) !important;
+      }
+      /* 确保水光黑色气泡的文字颜色不被覆盖 */
+      [data-bubble-style="glossy-black"] .message-content,
+      [data-bubble-style="glossy-black"] .message-content *,
+      [data-bubble-style="glossy-black"] .message.sent .message-content,
+      [data-bubble-style="glossy-black"] .message.sent .message-content *,
+      [data-bubble-style="glossy-black"] .message.received .message-content,
+      [data-bubble-style="glossy-black"] .message.received .message-content *,
+      [data-bubble-style="glossy-black"] .message.char .message-content,
+      [data-bubble-style="glossy-black"] .message.char .message-content *,
+      [data-bubble-style="glossy-black"] .message.user .message-content,
+      [data-bubble-style="glossy-black"] .message.user .message-content * {
+        color: #ffffff !important;
+        background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 50%, #2a2a2a 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      }
+      /* 用户发送的消息使用更深的背景 */
+      [data-bubble-style="glossy-black"] .message.sent .message-content,
+      [data-bubble-style="glossy-black"] .message.user .message-content {
+        background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%) !important;
       }
 
       /* 水光淡粉色气泡 */
