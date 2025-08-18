@@ -421,6 +421,88 @@
 
 
 
+      /* 深邃黑钻石3D气泡 */
+      [data-bubble-style="dark-diamond"] .message-content {
+        border-radius: 16px !important;
+        padding: 12px 16px !important;
+        position: relative;
+        transform: perspective(800px) rotateX(2deg) translateZ(15px);
+        transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+
+      /* 用户发送的黑钻石气泡 */
+      [data-bubble-style="dark-diamond"] .message.sent .message-content {
+        background: linear-gradient(
+          135deg,
+          #1a1a1a 0%,
+          #2d2d2d 25%,
+          #1f1f1f 50%,
+          #0d0d0d 100%
+        ) !important;
+        color: #ffffff !important;
+        box-shadow:
+          12px 8px 25px rgba(0, 0, 0, 0.6),
+          -3px 3px 8px rgba(255, 255, 255, 0.05),
+          inset 0 -6px 15px rgba(0, 0, 0, 0.4),
+          inset 0 6px 15px rgba(255, 255, 255, 0.1) !important;
+      }
+
+      /* AI回复的黑钻石气泡 */
+      [data-bubble-style="dark-diamond"] .message.received .message-content {
+        background: linear-gradient(
+          135deg,
+          #2a2a2a 0%,
+          #3d3d3d 25%,
+          #2f2f2f 50%,
+          #1d1d1d 100%
+        ) !important;
+        color: #e0e0e0 !important;
+        box-shadow:
+          -12px 8px 25px rgba(0, 0, 0, 0.5),
+          3px 3px 8px rgba(255, 255, 255, 0.08),
+          inset 0 -6px 15px rgba(0, 0, 0, 0.3),
+          inset 0 6px 15px rgba(255, 255, 255, 0.12) !important;
+      }
+
+      /* 钻石光点效果 */
+      [data-bubble-style="dark-diamond"] .message-content::before {
+        content: '';
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: radial-gradient(circle,
+          rgba(255, 255, 255, 0.8) 0%,
+          rgba(255, 255, 255, 0.3) 50%,
+          transparent 100%);
+        border-radius: 50%;
+        top: 8px;
+        animation: diamond-sparkle 3s ease-in-out infinite;
+      }
+
+      [data-bubble-style="dark-diamond"] .message.sent .message-content::before {
+        right: 12px;
+      }
+
+      [data-bubble-style="dark-diamond"] .message.received .message-content::before {
+        left: 12px;
+      }
+
+      @keyframes diamond-sparkle {
+        0%, 100% { opacity: 0.3; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+
+      /* 悬停效果 */
+      [data-bubble-style="dark-diamond"] .message-content:hover {
+        transform: perspective(800px) rotateX(5deg) translateZ(25px);
+        box-shadow:
+          0 15px 35px rgba(0, 0, 0, 0.7),
+          inset 0 -8px 20px rgba(0, 0, 0, 0.4),
+          inset 0 8px 20px rgba(255, 255, 255, 0.15) !important;
+      }
+
       /* 水光淡粉色气泡 */
       [data-bubble-style="glossy-pink"] .message-content {
         border-radius: var(--bubble-radius) !important;
@@ -1805,6 +1887,16 @@
       }
 
 
+
+      /* Demo样式 - 深邃黑钻石 */
+      .demo-bubble.style-dark-diamond {
+        border-radius: 16px;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #1a1a1a, #2d2d2d, #0d0d0d);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+      }
 
       /* Demo样式 - 水光粉色 */
       .demo-bubble.style-glossy-pink {
@@ -5900,6 +5992,17 @@
                 </label>
 
 
+
+                <label class="bubble-style-option">
+                  <input type="radio" name="bubbleStyle" value="dark-diamond">
+                  <div class="bubble-style-preview">
+                    <div class="bubble-style-name">深邃黑钻石</div>
+                    <div class="bubble-style-demo">
+                      <div class="demo-bubble style-dark-diamond user">你好</div>
+                      <div class="demo-bubble style-dark-diamond char">你好呀</div>
+                    </div>
+                  </div>
+                </label>
 
                 <label class="bubble-style-option">
                   <input type="radio" name="bubbleStyle" value="glossy-pink">
