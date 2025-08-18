@@ -489,48 +489,8 @@
         /* 保持原有样式 */
       }
 
-      /* 水光圆润黑色气泡 */
-      [data-bubble-style="glossy-black"] .message-content {
-        border-radius: var(--bubble-radius) !important;
-        padding: var(--bubble-padding) !important;
-        background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 50%, #2a2a2a 100%) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        box-shadow:
-          0 8px 32px rgba(0, 0, 0, 0.3),
-          inset 0 1px 0 rgba(255, 255, 255, 0.3),
-          inset 0 -1px 0 rgba(0, 0, 0, 0.4) !important;
-        position: relative;
-        backdrop-filter: blur(10px);
-      }
-      [data-bubble-style="glossy-black"] .message.sent .message-content {
-        background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%) !important;
-        color: #ffffff !important;
-        box-shadow:
-          0 8px 32px rgba(0, 0, 0, 0.4),
-          inset 0 1px 0 rgba(255, 255, 255, 0.2),
-          inset 0 -1px 0 rgba(0, 0, 0, 0.6) !important;
-      }
-      /* 确保水光黑色气泡的文字颜色不被覆盖 */
-      [data-bubble-style="glossy-black"] .message-content,
-      [data-bubble-style="glossy-black"] .message-content *,
-      [data-bubble-style="glossy-black"] .message.sent .message-content,
-      [data-bubble-style="glossy-black"] .message.sent .message-content *,
-      [data-bubble-style="glossy-black"] .message.received .message-content,
-      [data-bubble-style="glossy-black"] .message.received .message-content *,
-      [data-bubble-style="glossy-black"] .message.char .message-content,
-      [data-bubble-style="glossy-black"] .message.char .message-content *,
-      [data-bubble-style="glossy-black"] .message.user .message-content,
-      [data-bubble-style="glossy-black"] .message.user .message-content * {
-        color: #ffffff !important;
-        background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 50%, #2a2a2a 100%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-      }
-      /* 用户发送的消息使用更深的背景 */
-      [data-bubble-style="glossy-black"] .message.sent .message-content,
-      [data-bubble-style="glossy-black"] .message.user .message-content {
-        background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%) !important;
-      }
+
+
 
       /* 水光淡粉色气泡 */
       [data-bubble-style="glossy-pink"] .message-content {
@@ -980,28 +940,36 @@
         align-items: center;
         justify-content: center;
         transition: background-color 0.3s ease;
+        margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
       }
       /* 外框包裹层 */
       .phone-shell {
-        padding: 18px; /* 壳厚度 */
-        background: var(--bg-shell); /* 薄荷绿 */
-        border-radius: 48px;
-        box-shadow: 0 4px 12px var(--shadow-light);
+        padding: 8px; /* 更薄的外边框 */
+        background: var(--bg-shell);
+        border-radius: 32px;
+        box-shadow: 0 2px 8px var(--shadow-light);
         display: inline-block;
         transition: all 0.3s ease;
+        /* 固定尺寸容器 */
+        width: 271px; /* 255 + 8*2 */
+        height: 616px; /* 600 + 8*2 */
+        box-sizing: border-box;
       }
       .cute-phone {
-        width: 255px; /* 更纤细 */
-        height: 650px; /* 增加高度以显示挂断键 */
-        background: var(--bg-secondary); /* 机身本体纯白，壁纸由内部 chat-messages 控制 */
-        border-radius: 38px;
-        box-shadow: inset 0 0 0 2px var(--border-shell); /* 内描边，呼应外壳 */
+        width: 255px; /* 固定宽度 */
+        height: 600px; /* 固定高度 */
+        background: var(--bg-secondary);
+        border-radius: 24px;
+        /* 移除内边框 */
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        border: 5px solid var(--text-primary);
+        border: 2px solid var(--text-primary); /* 更薄的边框 */
         position: relative;
         transition: all 0.3s ease;
+        box-sizing: border-box;
       }
       /* ===== 可爱装饰 ===== */
       .cute-phone::before,
@@ -1807,15 +1775,7 @@
         border: 1px solid var(--border-bubble-char);
       }
 
-      /* Demo样式 - 水光黑色 */
-      .demo-bubble.style-glossy-black {
-        border-radius: 12px;
-        padding: 6px 10px;
-        background: linear-gradient(135deg, #2c2c2c, #1a1a1a);
-        color: #ffffff;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-      }
+
 
       /* Demo样式 - 水光粉色 */
       .demo-bubble.style-glossy-pink {
@@ -5547,16 +5507,7 @@
                   </div>
                 </label>
 
-                <label class="bubble-style-option">
-                  <input type="radio" name="bubbleStyle" value="glossy-black">
-                  <div class="bubble-style-preview">
-                    <div class="bubble-style-name">水光黑色</div>
-                    <div class="bubble-style-demo">
-                      <div class="demo-bubble style-glossy-black user">你好</div>
-                      <div class="demo-bubble style-glossy-black char">你好呀</div>
-                    </div>
-                  </div>
-                </label>
+
 
                 <label class="bubble-style-option">
                   <input type="radio" name="bubbleStyle" value="glossy-pink">
