@@ -3726,6 +3726,79 @@
         margin: 0 auto;
       }
 
+      /* AI识图功能样式 */
+      .settings-section {
+        margin-bottom: 20px;
+      }
+
+      .setting-item {
+        margin-bottom: 15px;
+        padding: 10px;
+        background: #f8f8f8;
+        border-radius: 6px;
+      }
+
+      .setting-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        margin-bottom: 5px;
+      }
+
+      .setting-label input[type="checkbox"] {
+        margin-right: 8px;
+      }
+
+      .setting-title {
+        font-weight: 500;
+        color: #333;
+      }
+
+      .setting-desc {
+        font-size: 12px;
+        color: #666;
+        line-height: 1.4;
+        margin-top: 5px;
+      }
+
+      .setting-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .status-indicator {
+        font-size: 16px;
+      }
+
+      .test-btn {
+        padding: 6px 12px;
+        background: #07c160;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .test-btn:hover {
+        background: #06a552;
+      }
+
+      .test-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .sticker-ai-note {
+        font-size: 10px;
+        color: #999;
+        text-align: center;
+        margin-top: 2px;
+        font-style: italic;
+      }
+
       .music-player-container {
         display: none;
         border-radius: 8px;
@@ -5040,6 +5113,7 @@
           <div class="sticker-tab active" data-tab="my-stickers">我的表情包</div>
           <div class="sticker-tab" data-tab="add-sticker">添加表情包</div>
           <div class="sticker-tab" data-tab="manage-tags">管理标签</div>
+          <div class="sticker-tab" data-tab="sticker-settings">设置</div>
         </div>
 
         <!-- 我的表情包标签页 -->
@@ -5091,6 +5165,42 @@
               <button type="button" id="addTagBtn" class="add-tag-btn">添加标签</button>
             </div>
             <div class="tag-list" id="tagList"></div>
+          </div>
+        </div>
+
+        <!-- 表情包设置标签页 -->
+        <div class="sticker-tab-content" id="sticker-settings">
+          <div class="settings-section">
+            <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">🤖 AI识图功能</h3>
+
+            <div class="setting-item">
+              <label class="setting-label">
+                <input type="checkbox" id="stickerAIVisionToggle" checked>
+                <span class="setting-title">启用表情包AI识图</span>
+              </label>
+              <div class="setting-desc">
+                发送表情包时自动调用AI识别图片内容，为没有备注的表情包生成描述
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-title">AI识图状态</div>
+              <div class="setting-status" id="aiVisionStatus">
+                <span class="status-indicator" id="statusIndicator">🔄</span>
+                <span id="statusText">检测中...</span>
+              </div>
+              <button class="test-btn" id="testAIVisionBtn">测试AI识图</button>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-title">使用说明</div>
+              <div class="setting-desc">
+                • 启用后，发送表情包时会自动调用AI识别图片内容<br>
+                • 如果表情包已有备注，AI描述会作为补充信息保存<br>
+                • 如果表情包没有备注，AI描述会作为表情包内容显示<br>
+                • 需要安装并启用AI识图插件才能使用此功能
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -6284,11 +6394,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 使用酒馆内置API进行识图
       async function requestVisionAnalysisWithTavern(imageMsg, indicator) {
-        console.log('🔍 开始酒馆识图，AI_GENERATE可用性:', !!AI_GENERATE);
-        console.log('🔍 图片数据:', imageMsg.imageData ? '有图片数据' : '无图片数据');
-
         if (!AI_GENERATE) {
-          console.error('❌ 酒馆AI不可用');
           if (indicator) {
             indicator.textContent = '❌ 酒馆AI不可用';
             indicator.style.background = 'rgba(255, 0, 0, 0.8)';
@@ -6389,14 +6495,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // AI视觉分析功能
       async function requestVisionAnalysis(imageMsg, indicator) {
-        console.log('🔍 开始识图分析，模式:', state.visionMode);
-        console.log('🔍 图片消息:', imageMsg);
-        console.log('🔍 指示器:', indicator);
-
         // 根据选择的识图方式进行处理
         if (state.visionMode === 'tavern') {
           // 使用酒馆内置API进行识图
-          console.log('🔍 使用酒馆内置API识图');
           return await requestVisionAnalysisWithTavern(imageMsg, indicator);
         } else if (state.visionMode === 'kimi') {
           // 使用Kimi API进行识图
@@ -8572,12 +8673,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (parsedMsg.needsVisionAnalysis === undefined) {
             parsedMsg.needsVisionAnalysis = !!parsedMsg.imageData;
           }
-          console.log('🔍 图片消息处理:', {
-            hasImageData: !!parsedMsg.imageData,
-            needsVisionAnalysis: parsedMsg.needsVisionAnalysis,
-            fileName: parsedMsg.fileName,
-            description: parsedMsg.imageDescription
-          });
           // 在渲染时会添加识图指示器
         }
 
@@ -8645,15 +8740,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           msg.type === 'image' && msg.needsVisionAnalysis && msg.visionIndicator
         );
 
-        console.log('🔍 检查待识图消息:', pendingVisionMessages.length, '条');
-        console.log('🔍 消息历史:', state.messageHistory.map(m => ({type: m.type, needsVision: m.needsVisionAnalysis, hasIndicator: !!m.visionIndicator})));
-
         if (pendingVisionMessages.length > 0) {
-          console.log('🔍 开始处理', pendingVisionMessages.length, '条待识图消息');
           // 先处理所有需要识图的图片
           for (const imageMsg of pendingVisionMessages) {
             if (imageMsg.visionIndicator) {
-              console.log('🔍 处理图片消息:', imageMsg);
               await requestVisionAnalysis(imageMsg, imageMsg.visionIndicator);
               // 标记该图片已处理
               imageMsg.needsVisionAnalysis = false;
@@ -9180,36 +9270,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         previewArea.style.display = 'block';
 
         try {
-          let imageUrl;
-
-          // 首先尝试使用插件上传功能
+          // 按照流式同层文件的逻辑，直接使用插件上传
           if (typeof top.window.__uploadImageByPlugin === 'function') {
-            try {
-              const result = await top.window.__uploadImageByPlugin(file);
-              imageUrl = result.url;
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 好了，来玩吧孩子`;
-            } catch (uploadError) {
-              console.warn('使用本地base64方案:', uploadError);
-              // 如果服务器上传失败，使用本地base64方案
-              imageUrl = await convertFileToBase64(file);
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
-            }
+            const result = await top.window.__uploadImageByPlugin(file);
+            const imageUrl = result.url;
+
+            preview.src = imageUrl;
+            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 上传成功`;
+            descInput.placeholder = '请输入图片备注（可选）';
+
+            modal.dataset.mode = 'upload';
+            modal.dataset.imageData = imageUrl;
+            modal.dataset.fileName = file.name;
           } else {
-            // 如果没有上传插件，直接使用本地base64方案
-            console.log('未检测到插件，使用本地base64方案');
-            imageUrl = await convertFileToBase64(file);
-            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+            throw new Error('图片上传插件未加载');
           }
 
-          preview.src = imageUrl;
-          descInput.placeholder = '请输入图片备注（可选）';
 
-          modal.dataset.mode = 'upload';
-          modal.dataset.imageData = imageUrl;
-          modal.dataset.fileName = file.name;
-
-          console.log('🔍 图片上传完成，数据长度:', imageUrl.length);
-          console.log('🔍 文件名:', file.name);
         } catch (error) {
           console.error('图片处理失败:', error);
           info.textContent = '图片处理失败，请重试';
@@ -10455,15 +10532,45 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       // 发送表情包
-      function sendSticker(sticker) {
+      async function sendSticker(sticker) {
         // 简化：只发送备注，不发送完整的图片数据
-        const content = sticker.note || '表情包';
+        let content = sticker.note || '表情包';
+        let aiDescription = null;
+
+        // 检查是否启用AI识图功能
+        const enableAIVision = localStorage.getItem('sticker-ai-vision-enabled') !== 'false'; // 默认启用
+
+        if (enableAIVision && typeof top.window.__uploadImageByPlugin === 'function') {
+          try {
+            // 将DataURL转换为File对象
+            const response = await fetch(sticker.dataURL);
+            const blob = await response.blob();
+            const file = new File([blob], 'sticker.png', { type: 'image/png' });
+
+            // 调用插件进行图像识别
+            const result = await top.window.__uploadImageByPlugin(file, {
+              enableAIVision: true,
+              aiPrompt: '请简单描述这个表情包的内容，用一句话概括即可'
+            });
+
+            if (result.success && result.aiDescription) {
+              aiDescription = result.aiDescription;
+              // 如果没有用户备注，使用AI描述作为内容
+              if (!sticker.note || sticker.note.trim() === '') {
+                content = `AI识图: ${aiDescription}`;
+              }
+            }
+          } catch (error) {
+            console.log('[表情包识图] AI识图失败，使用原始备注:', error.message);
+          }
+        }
 
         const newMessage = {
           sender: 'user',
           type: 'sticker',
           content: content,
           stickerData: sticker.dataURL, // 图片数据单独存储，不放在消息内容中
+          aiDescription: aiDescription, // 保存AI描述
           time: getTimeStr(),
         };
 
@@ -10711,6 +10818,21 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           console.error('❌ 表情包系统初始化失败:', error);
         }
       }
+
+      // 表情包标签页切换
+      stickerTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetTab = tab.dataset.tab;
+
+          // 移除所有活动状态
+          stickerTabs.forEach(t => t.classList.remove('active'));
+          stickerTabContents.forEach(content => content.classList.remove('active'));
+
+          // 添加当前活动状态
+          tab.classList.add('active');
+          document.getElementById(targetTab).classList.add('active');
+        });
+      });
 
       // 启动表情包应用
       initStickerApp();
@@ -13434,6 +13556,108 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
         }, 200);
       });
+
+      // ========== AI识图功能 ==========
+
+      // 初始化表情包设置
+      function initStickerSettings() {
+        // 加载AI识图设置
+        const aiVisionEnabled = localStorage.getItem('sticker-ai-vision-enabled') !== 'false';
+        const toggle = document.getElementById('stickerAIVisionToggle');
+        if (toggle) {
+          toggle.checked = aiVisionEnabled;
+        }
+
+        // 检测AI识图状态
+        checkAIVisionStatus();
+
+        // 绑定设置事件
+        if (toggle) {
+          toggle.onchange = (e) => {
+            localStorage.setItem('sticker-ai-vision-enabled', e.target.checked);
+            checkAIVisionStatus();
+          };
+        }
+
+        const testBtn = document.getElementById('testAIVisionBtn');
+        if (testBtn) {
+          testBtn.onclick = testAIVision;
+        }
+      }
+
+      // 检测AI识图状态
+      function checkAIVisionStatus() {
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const testBtn = document.getElementById('testAIVisionBtn');
+
+        if (statusIndicator && statusText && testBtn) {
+          if (typeof top.window.__uploadImageByPlugin === 'function') {
+            statusIndicator.textContent = '✅';
+            statusText.textContent = 'AI识图插件可用';
+            testBtn.disabled = false;
+          } else {
+            statusIndicator.textContent = '❌';
+            statusText.textContent = 'AI识图插件未加载';
+            testBtn.disabled = true;
+          }
+        }
+      }
+
+      // 测试AI识图功能
+      async function testAIVision() {
+        const testBtn = document.getElementById('testAIVisionBtn');
+        const statusText = document.getElementById('statusText');
+
+        if (!testBtn || !statusText) return;
+
+        testBtn.disabled = true;
+        testBtn.textContent = '测试中...';
+        statusText.textContent = '正在测试AI识图功能...';
+
+        try {
+          // 创建一个测试图片（简单的canvas）
+          const canvas = document.createElement('canvas');
+          canvas.width = 100;
+          canvas.height = 100;
+          const ctx = canvas.getContext('2d');
+
+          // 绘制一个简单的测试图案
+          ctx.fillStyle = '#07c160';
+          ctx.fillRect(0, 0, 100, 100);
+          ctx.fillStyle = '#fff';
+          ctx.font = '20px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('测试', 50, 55);
+
+          // 转换为blob
+          const blob = await new Promise(resolve => canvas.toBlob(resolve));
+          const file = new File([blob], 'test.png', { type: 'image/png' });
+
+          // 调用插件测试
+          const result = await top.window.__uploadImageByPlugin(file, {
+            enableAIVision: true,
+            aiPrompt: '请描述这个测试图片'
+          });
+
+          if (result.success) {
+            statusText.textContent = `测试成功！AI识图结果: ${result.aiDescription || '无描述'}`;
+          } else {
+            statusText.textContent = `测试失败: ${result.error || '未知错误'}`;
+          }
+
+        } catch (error) {
+          statusText.textContent = `测试失败: ${error.message}`;
+        } finally {
+          testBtn.disabled = false;
+          testBtn.textContent = '测试AI识图';
+        }
+      }
+
+      // 初始化AI识图功能
+      setTimeout(() => {
+        initStickerSettings();
+      }, 1000);
     </script>
 
     <!-- 🎉 消息特效容器 -->
