@@ -406,8 +406,8 @@
       /* 气泡样式系统 */
       :root {
         /* 通用布局与质感变量 */
-        --bubble-padding: 10px 14px;
-        --bubble-radius: 24px;
+        --bubble-padding: 8px 12px;
+        --bubble-radius: 20px;
         --bubble-shadow-color-dark: rgba(136, 165, 191, 0.2);
         --bubble-shadow-color-light: rgba(255, 255, 255, 0.8);
         --bubble-inset-shadow-dark: rgba(136, 165, 191, 0.25);
@@ -423,8 +423,8 @@
 
       /* 深邃黑钻石3D气泡 */
       [data-bubble-style="dark-diamond"] .message-content {
-        border-radius: 16px !important;
-        padding: 12px 16px !important;
+        border-radius: 14px !important;
+        padding: 8px 12px !important;
         position: relative;
         transform: perspective(800px) rotateX(2deg) translateZ(15px);
         transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -1199,11 +1199,11 @@
       .chat-messages {
         flex: 1;
         background: url('https://files.catbox.moe/e1xk9k.jpeg') center/cover;
-        padding: 18px 10px 10px 10px;
+        padding: 15px 8px 8px 8px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 6px;
         padding-bottom: 80px;
       }
       .bubble-row {
@@ -1227,10 +1227,10 @@
       }
       .bubble {
         max-width: 65%;
-        padding: 10px 16px;
+        padding: 8px 12px;
         border-radius: 18px;
-        font-size: 15px;
-        line-height: 1.5;
+        font-size: 13px;
+        line-height: 1.4;
         background: var(--bg-char-bubble);
         color: var(--text-char);
         box-shadow: 0 1px 4px var(--shadow-light);
