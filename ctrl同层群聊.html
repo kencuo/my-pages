@@ -477,8 +477,8 @@
       /* 气泡样式系统 */
       :root {
         /* 通用布局与质感变量 */
-        --bubble-padding: 8px 12px;
-        --bubble-radius: 20px;
+        --bubble-padding: 6px 10px;
+        --bubble-radius: 16px;
         --bubble-shadow-color-dark: rgba(136, 165, 191, 0.2);
         --bubble-shadow-color-light: rgba(255, 255, 255, 0.8);
         --bubble-inset-shadow-dark: rgba(136, 165, 191, 0.25);
@@ -494,8 +494,8 @@
 
       /* 深邃黑钻石3D气泡 */
       [data-bubble-style="dark-diamond"] .message-content {
-        border-radius: 14px !important;
-        padding: 8px 12px !important;
+        border-radius: 12px !important;
+        padding: 6px 10px !important;
         position: relative;
         transform: perspective(800px) rotateX(2deg) translateZ(15px);
         transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -631,8 +631,8 @@
 
       /* 仿微信绿白色气泡 */
       [data-bubble-style="wechat-green"] .message-content {
-        border-radius: 8px !important;
-        padding: 8px 12px !important;
+        border-radius: 6px !important;
+        padding: 6px 10px !important;
         background: #ffffff !important;
         color: #333333 !important;
         border: 1px solid #e5e5e5 !important;
@@ -651,8 +651,8 @@
 
       /* 仿短信蓝白色气泡 */
       [data-bubble-style="sms-blue"] .message-content {
-        border-radius: 18px !important;
-        padding: 8px 14px !important;
+        border-radius: 16px !important;
+        padding: 6px 12px !important;
         background: #f1f1f1 !important;
         color: #333333 !important;
         border: none !important;
@@ -662,23 +662,23 @@
       [data-bubble-style="sms-blue"] .message.sent .message-content {
         background: linear-gradient(135deg, #007AFF 0%, #0056CC 100%) !important;
         color: #ffffff !important;
-        border-radius: 18px 18px 4px 18px !important;
+        border-radius: 16px 16px 4px 16px !important;
       }
       [data-bubble-style="sms-blue"] .message-content {
-        border-radius: 18px 18px 18px 4px !important;
+        border-radius: 16px 16px 16px 4px !important;
       }
 
       /* 水滴质感气泡 - 薄荷绿 */
       [data-bubble-style="water-mint"] .message-content {
-        border-radius: 20px 20px 20px 4px !important;
+        border-radius: 16px 16px 16px 3px !important;
         padding: var(--bubble-padding) !important;
         background: linear-gradient(135deg, #C8D3C0 0%, #d5e0cd 50%, #e2edda 100%) !important;
         color: #4a5d42 !important;
         border: 1px solid rgba(200, 211, 192, 0.6) !important;
         box-shadow:
-          0 12px 28px rgba(200, 211, 192, 0.25),
-          inset 0 2px 0 rgba(255, 255, 255, 0.7),
-          inset 0 -2px 0 rgba(136, 165, 191, 0.2) !important;
+          0 8px 20px rgba(200, 211, 192, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -1px 0 rgba(136, 165, 191, 0.15) !important;
         position: relative;
         backdrop-filter: blur(5px);
       }
@@ -745,17 +745,17 @@
       /* 可爱淡色渐变气泡 - 三色梦幻 */
       [data-bubble-style="cute-gradient"] .message-content {
         position: relative;
-        padding: 10px 15px !important;
-        border-radius: 16px !important;
-        line-height: 1.6;
-        font-size: 15px;
+        padding: 6px 10px !important;
+        border-radius: 12px !important;
+        line-height: 1.3;
+        font-size: 12px;
         background: linear-gradient(
           145deg,
           rgba(255, 255, 255, 0.95) 0%,
           rgba(201, 245, 255, 0.95) 50%,
           rgba(254, 235, 255, 0.95) 100%
         ) !important;
-        border: 1.8px solid rgba(210, 230, 240, 0.6) !important;
+        border: 1.2px solid rgba(210, 230, 240, 0.6) !important;
         color: #5a6a7b !important;
         box-shadow:
           0 2px 6px rgba(100, 150, 200, 0.15),
@@ -775,8 +775,8 @@
       /* 可爱淡色渐变气泡 - 薄荷奶昔 */
       [data-bubble-style="mint-shake"] .message-content {
         position: relative;
-        padding: 10px 15px !important;
-        border-radius: 16px !important;
+        padding: 8px 12px !important;
+        border-radius: 14px !important;
         background: linear-gradient(
           135deg,
           rgba(240, 253, 244, 0.95) 0%,
@@ -803,8 +803,8 @@
       /* 可爱淡色渐变气泡 - 桃花粉 */
       [data-bubble-style="peach-blossom"] .message-content {
         position: relative;
-        padding: 10px 15px !important;
-        border-radius: 16px !important;
+        padding: 8px 12px !important;
+        border-radius: 14px !important;
         background: linear-gradient(
           135deg,
           rgba(254, 242, 242, 0.95) 0%,
@@ -831,8 +831,8 @@
       /* 可爱淡色渐变气泡 - 紫罗兰梦境 */
       [data-bubble-style="violet-dream"] .message-content {
         position: relative;
-        padding: 10px 15px !important;
-        border-radius: 16px !important;
+        padding: 8px 12px !important;
+        border-radius: 14px !important;
         background: linear-gradient(
           135deg,
           rgba(250, 245, 255, 0.95) 0%,
@@ -859,8 +859,8 @@
       /* 可爱淡色渐变气泡 - 天空蓝 */
       [data-bubble-style="sky-blue"] .message-content {
         position: relative;
-        padding: 10px 15px !important;
-        border-radius: 16px !important;
+        padding: 8px 12px !important;
+        border-radius: 14px !important;
         background: linear-gradient(
           135deg,
           rgba(240, 249, 255, 0.95) 0%,
@@ -1200,11 +1200,11 @@
       .chat-messages {
         flex: 1;
         background: url('https://files.catbox.moe/g299b6.jpeg') center/cover;
-        padding: 15px 8px 8px 8px;
+        padding: 18px 10px 10px 10px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 10px;
         padding-bottom: 80px;
       }
       .bubble-row {
@@ -1227,10 +1227,10 @@
         flex-shrink: 0;
       }
       .bubble {
-        max-width: 70%;
-        padding: 8px 12px;
+        max-width: 65%;
+        padding: 6px 10px;
         border-radius: 16px;
-        font-size: 11px;
+        font-size: 12px;
         line-height: 1.3;
         background: #fff;
         color: #333;
@@ -2071,7 +2071,7 @@
       /* ========== WeChat style message layout override ========== */
       .message {
         display: flex;
-        margin-bottom: 8px;
+        margin-bottom: 15px;
         align-items: flex-start;
       }
       .message.sent {
