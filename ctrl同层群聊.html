@@ -9270,13 +9270,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         previewArea.style.display = 'block';
 
         try {
-          // 按照流式同层文件的逻辑，直接使用插件上传
+          // 直接使用插件上传
           if (typeof top.window.__uploadImageByPlugin === 'function') {
             const result = await top.window.__uploadImageByPlugin(file);
             const imageUrl = result.url;
 
             preview.src = imageUrl;
-            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 上传成功`;
+            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 好了来玩吧孩子`;
             descInput.placeholder = '请输入图片备注（可选）';
 
             modal.dataset.mode = 'upload';
