@@ -6284,7 +6284,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 使用酒馆内置API进行识图
       async function requestVisionAnalysisWithTavern(imageMsg, indicator) {
+        console.log('🔍 开始酒馆识图，AI_GENERATE可用性:', !!AI_GENERATE);
+        console.log('🔍 图片数据:', imageMsg.imageData ? '有图片数据' : '无图片数据');
+
         if (!AI_GENERATE) {
+          console.error('❌ 酒馆AI不可用');
           if (indicator) {
             indicator.textContent = '❌ 酒馆AI不可用';
             indicator.style.background = 'rgba(255, 0, 0, 0.8)';
@@ -6385,9 +6389,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // AI视觉分析功能
       async function requestVisionAnalysis(imageMsg, indicator) {
+        console.log('🔍 开始识图分析，模式:', state.visionMode);
+        console.log('🔍 图片消息:', imageMsg);
+        console.log('🔍 指示器:', indicator);
+
         // 根据选择的识图方式进行处理
         if (state.visionMode === 'tavern') {
           // 使用酒馆内置API进行识图
+          console.log('🔍 使用酒馆内置API识图');
           return await requestVisionAnalysisWithTavern(imageMsg, indicator);
         } else if (state.visionMode === 'kimi') {
           // 使用Kimi API进行识图
@@ -8563,6 +8572,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (parsedMsg.needsVisionAnalysis === undefined) {
             parsedMsg.needsVisionAnalysis = !!parsedMsg.imageData;
           }
+          console.log('🔍 图片消息处理:', {
+            hasImageData: !!parsedMsg.imageData,
+            needsVisionAnalysis: parsedMsg.needsVisionAnalysis,
+            fileName: parsedMsg.fileName,
+            description: parsedMsg.imageDescription
+          });
           // 在渲染时会添加识图指示器
         }
 
@@ -8630,10 +8645,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           msg.type === 'image' && msg.needsVisionAnalysis && msg.visionIndicator
         );
 
+        console.log('🔍 检查待识图消息:', pendingVisionMessages.length, '条');
+        console.log('🔍 消息历史:', state.messageHistory.map(m => ({type: m.type, needsVision: m.needsVisionAnalysis, hasIndicator: !!m.visionIndicator})));
+
         if (pendingVisionMessages.length > 0) {
+          console.log('🔍 开始处理', pendingVisionMessages.length, '条待识图消息');
           // 先处理所有需要识图的图片
           for (const imageMsg of pendingVisionMessages) {
             if (imageMsg.visionIndicator) {
+              console.log('🔍 处理图片消息:', imageMsg);
               await requestVisionAnalysis(imageMsg, imageMsg.visionIndicator);
               // 标记该图片已处理
               imageMsg.needsVisionAnalysis = false;
@@ -9187,6 +9207,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           modal.dataset.mode = 'upload';
           modal.dataset.imageData = imageUrl;
           modal.dataset.fileName = file.name;
+
+          console.log('🔍 图片上传完成，数据长度:', imageUrl.length);
+          console.log('🔍 文件名:', file.name);
         } catch (error) {
           console.error('图片处理失败:', error);
           info.textContent = '图片处理失败，请重试';
