@@ -406,8 +406,8 @@
       /* 气泡样式系统 */
       :root {
         /* 通用布局与质感变量 */
-        --bubble-padding: 8px 12px;
-        --bubble-radius: 18px;
+        --bubble-padding: 6px 10px;
+        --bubble-radius: 16px;
         --bubble-shadow-color-dark: rgba(136, 165, 191, 0.2);
         --bubble-shadow-color-light: rgba(255, 255, 255, 0.8);
         --bubble-inset-shadow-dark: rgba(136, 165, 191, 0.25);
@@ -423,8 +423,8 @@
 
       /* 深邃黑钻石3D气泡 */
       [data-bubble-style="dark-diamond"] .message-content {
-        border-radius: 14px !important;
-        padding: 8px 12px !important;
+        border-radius: 12px !important;
+        padding: 6px 10px !important;
         position: relative;
         transform: perspective(800px) rotateX(2deg) translateZ(15px);
         transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -571,8 +571,8 @@
 
       /* 仿微信绿白色气泡 */
       [data-bubble-style="wechat-green"] .message-content {
-        border-radius: 6px 6px 6px 2px !important;
-        padding: 6px 10px !important;
+        border-radius: 5px 5px 5px 2px !important;
+        padding: 5px 8px !important;
         background: #ffffff !important;
         color: #333333 !important;
         border: 1px solid #e5e5e5 !important;
@@ -591,7 +591,7 @@
         background: linear-gradient(135deg, #9DBFC3 0%, #a8c7cb 100%) !important;
         color: #ffffff !important;
         border: 1px solid #9DBFC3 !important;
-        border-radius: 6px 6px 2px 6px !important;
+        border-radius: 5px 5px 2px 5px !important;
       }
 
       /* 仿短信蓝白色气泡 */
@@ -619,15 +619,15 @@
 
       /* 水滴质感气泡 - 薄荷绿 */
       [data-bubble-style="water-mint"] .message-content {
-        border-radius: 20px 20px 20px 4px !important;
+        border-radius: 16px 16px 16px 3px !important;
         padding: var(--bubble-padding) !important;
         background: linear-gradient(135deg, #C8D3C0 0%, #d5e0cd 50%, #e2edda 100%) !important;
         color: #4a5d42 !important;
         border: 1px solid rgba(200, 211, 192, 0.6) !important;
         box-shadow:
-          0 12px 28px rgba(200, 211, 192, 0.25),
-          inset 0 2px 0 rgba(255, 255, 255, 0.7),
-          inset 0 -2px 0 rgba(136, 165, 191, 0.2) !important;
+          0 8px 20px rgba(200, 211, 192, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -1px 0 rgba(136, 165, 191, 0.15) !important;
         position: relative;
         backdrop-filter: blur(5px);
       }
@@ -646,11 +646,11 @@
       [data-bubble-style="water-mint"] .message.user .message-content {
         background: linear-gradient(135deg, #b8c8b0 0%, #C8D3C0 50%, #d5e0cd 100%) !important;
         color: #3d4f36 !important;
-        border-radius: 20px 20px 4px 20px !important;
+        border-radius: 16px 16px 3px 16px !important;
         box-shadow:
-          0 12px 28px rgba(184, 200, 176, 0.3),
-          inset 0 2px 0 rgba(255, 255, 255, 0.8),
-          inset 0 -2px 0 rgba(136, 165, 191, 0.25) !important;
+          0 8px 20px rgba(184, 200, 176, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8),
+          inset 0 -1px 0 rgba(136, 165, 191, 0.2) !important;
       }
 
       /* 水滴质感气泡 - 紫罗兰 */
@@ -730,17 +730,17 @@
       /* 可爱淡色渐变气泡 - 三色梦幻 */
       [data-bubble-style="cute-gradient"] .message-content {
         position: relative;
-        padding: 8px 12px !important;
-        border-radius: 14px !important;
-        line-height: 1.4;
-        font-size: 13px;
+        padding: 6px 10px !important;
+        border-radius: 12px !important;
+        line-height: 1.3;
+        font-size: 12px;
         background: linear-gradient(
           145deg,
           rgba(255, 255, 255, 0.95) 0%,
           rgba(201, 245, 255, 0.95) 50%,
           rgba(254, 235, 255, 0.95) 100%
         ) !important;
-        border: 1.5px solid rgba(210, 230, 240, 0.6) !important;
+        border: 1.2px solid rgba(210, 230, 240, 0.6) !important;
         color: #5a6a7b !important;
         box-shadow:
           0 2px 6px rgba(100, 150, 200, 0.15),
@@ -772,15 +772,15 @@
       /* 可爱淡色渐变气泡 - 薄荷奶昔 */
       [data-bubble-style="mint-shake"] .message-content {
         position: relative;
-        padding: 8px 12px !important;
-        border-radius: 14px !important;
+        padding: 6px 10px !important;
+        border-radius: 12px !important;
         background: linear-gradient(
           135deg,
           rgba(240, 253, 244, 0.95) 0%,
           rgba(220, 252, 231, 0.95) 50%,
           rgba(187, 247, 208, 0.95) 100%
         ) !important;
-        border: 1.5px solid rgba(167, 243, 208, 0.5) !important;
+        border: 1.2px solid rgba(167, 243, 208, 0.5) !important;
         color: #065f46 !important;
         box-shadow:
           0 2px 8px rgba(34, 197, 94, 0.1),
@@ -1199,17 +1199,17 @@
       .chat-messages {
         flex: 1;
         background: url('https://files.catbox.moe/e1xk9k.jpeg') center/cover;
-        padding: 15px 8px 8px 8px;
+        padding: 18px 10px 10px 10px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
         padding-bottom: 80px;
       }
       .bubble-row {
         display: flex;
         align-items: flex-end;
-        gap: 4px;
+        gap: 6px;
         position: relative;
       }
       .bubble-row.user {
@@ -1227,10 +1227,10 @@
       }
       .bubble {
         max-width: 65%;
-        padding: 8px 12px;
+        padding: 6px 10px;
         border-radius: 16px;
-        font-size: 13px;
-        line-height: 1.4;
+        font-size: 12px;
+        line-height: 1.3;
         background: var(--bg-char-bubble);
         color: var(--text-char);
         box-shadow: 0 1px 4px var(--shadow-light);
