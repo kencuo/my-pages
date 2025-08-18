@@ -7381,20 +7381,34 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           updateAiRequestButtonVisibility();
         }
 
-        // 点击图片显示/隐藏描述（从中间向下延伸动画）
-        img.onclick = () => {
-          if (description.classList.contains('show')) {
-            // 隐藏描述
-            description.classList.remove('show');
-            setTimeout(() => {
-              description.style.display = 'none';
-            }, 300);
+        // 点击图片的处理：双击放大预览，单击显示/隐藏描述
+        let clickTimer = null;
+        img.onclick = (e) => {
+          e.preventDefault();
+
+          if (clickTimer) {
+            // 双击 - 显示图片放大预览
+            clearTimeout(clickTimer);
+            clickTimer = null;
+            showImagePreview(img.src, msg.imageDescription || '图片', msg.fileName);
           } else {
-            // 显示描述
-            description.style.display = 'block';
-            setTimeout(() => {
-              description.classList.add('show');
-            }, 10);
+            // 单击 - 显示/隐藏描述（延迟执行以区分双击）
+            clickTimer = setTimeout(() => {
+              clickTimer = null;
+              if (description.classList.contains('show')) {
+                // 隐藏描述
+                description.classList.remove('show');
+                setTimeout(() => {
+                  description.style.display = 'none';
+                }, 300);
+              } else {
+                // 显示描述
+                description.style.display = 'block';
+                setTimeout(() => {
+                  description.classList.add('show');
+                }, 10);
+              }
+            }, 250);
           }
         };
 
@@ -7407,6 +7421,191 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         imageContainer.appendChild(img);
         contentDiv.appendChild(imageContainer);
         contentDiv.appendChild(description);
+      }
+
+      // 显示图片放大预览
+      function showImagePreview(imageSrc, description, fileName) {
+        // 创建预览模态框
+        const modal = document.createElement('div');
+        modal.id = 'imagePreviewModal';
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        `;
+
+        modal.innerHTML = `
+          <div style="position: relative; max-width: 90%; max-height: 90%; display: flex; flex-direction: column; align-items: center;">
+            <img id="previewImage" src="${imageSrc}" style="max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); cursor: zoom-in; transition: transform 0.3s ease;">
+
+            <div style="background: rgba(0,0,0,0.7); color: white; padding: 12px 20px; border-radius: 20px; margin-top: 15px; max-width: 300px; text-align: center;">
+              <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">${fileName || '图片'}</div>
+              <div style="font-size: 12px; opacity: 0.9;">${description}</div>
+              <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px;">
+                <button id="saveImageBtn" style="padding: 6px 12px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 15px; cursor: pointer; font-size: 11px; transition: all 0.3s;">💾 保存</button>
+                <button id="copyImageBtn" style="padding: 6px 12px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 15px; cursor: pointer; font-size: 11px; transition: all 0.3s;">📋 复制</button>
+              </div>
+              <div style="font-size: 11px; opacity: 0.7; margin-top: 8px;">点击任意位置关闭 • 双击图片放大</div>
+            </div>
+
+            <button id="closePreview" style="position: absolute; top: -10px; right: -10px; width: 40px; height: 40px; border: none; background: rgba(255,255,255,0.9); color: #333; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">×</button>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // 显示动画
+        setTimeout(() => {
+          modal.style.opacity = '1';
+        }, 10);
+
+        // 关闭功能
+        const closePreview = () => {
+          modal.style.opacity = '0';
+          setTimeout(() => {
+            if (modal.parentNode) {
+              document.body.removeChild(modal);
+            }
+          }, 300);
+        };
+
+        // 绑定关闭事件
+        modal.onclick = (e) => {
+          if (e.target === modal) closePreview();
+        };
+
+        modal.querySelector('#closePreview').onclick = closePreview;
+
+        // 保存图片功能
+        modal.querySelector('#saveImageBtn').onclick = (e) => {
+          e.stopPropagation();
+          saveImageFromUrl(imageSrc, fileName || 'image.jpg');
+        };
+
+        // 复制图片功能
+        modal.querySelector('#copyImageBtn').onclick = async (e) => {
+          e.stopPropagation();
+          try {
+            if (imageSrc.startsWith('data:')) {
+              // Base64图片，转换为Blob后复制
+              const response = await fetch(imageSrc);
+              const blob = await response.blob();
+              await navigator.clipboard.write([
+                new ClipboardItem({ [blob.type]: blob })
+              ]);
+              showToast('图片已复制到剪贴板');
+            } else {
+              // URL图片，复制URL
+              await navigator.clipboard.writeText(imageSrc);
+              showToast('图片链接已复制到剪贴板');
+            }
+          } catch (error) {
+            console.error('复制失败:', error);
+            showToast('复制失败，请手动保存图片');
+          }
+        };
+
+        // ESC键关闭
+        const handleKeydown = (e) => {
+          if (e.key === 'Escape') {
+            closePreview();
+            document.removeEventListener('keydown', handleKeydown);
+          }
+        };
+        document.addEventListener('keydown', handleKeydown);
+
+        // 图片加载错误处理
+        const previewImg = modal.querySelector('#previewImage');
+        previewImg.onerror = () => {
+          previewImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCA0MEgxMjBWODBIODBWNDBaIiBmaWxsPSIjREREIi8+CjxjaXJjbGUgY3g9IjkwIiBjeT0iNTUiIHI9IjUiIGZpbGw9IiNBQUEiLz4KPHBhdGggZD0iTTkwIDY1TDEwMCA3NUg4MEw5MCA2NVoiIGZpbGw9IiNBQUEiLz4KPHRleHQgeD0iMTAwIiB5PSIxMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTkiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiI+5Zu+54mH5Yqg6L295aSx6LSlPC90ZXh0Pgo8L3N2Zz4K';
+        };
+
+        // 图片双击缩放功能
+        let isZoomed = false;
+        previewImg.ondblclick = (e) => {
+          e.stopPropagation();
+          if (isZoomed) {
+            // 缩小到原始大小
+            previewImg.style.transform = 'scale(1)';
+            previewImg.style.cursor = 'zoom-in';
+            isZoomed = false;
+          } else {
+            // 放大到2倍
+            previewImg.style.transform = 'scale(2)';
+            previewImg.style.cursor = 'zoom-out';
+            isZoomed = true;
+          }
+        };
+      }
+
+      // 从URL保存图片
+      function saveImageFromUrl(imageUrl, fileName) {
+        try {
+          const link = document.createElement('a');
+          link.href = imageUrl;
+          link.download = fileName;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showToast('图片保存成功');
+        } catch (error) {
+          console.error('保存图片失败:', error);
+          showToast('保存失败，请右键图片另存为');
+        }
+      }
+
+      // 显示提示消息
+      function showToast(message, duration = 2000) {
+        // 移除已存在的toast
+        const existingToast = document.querySelector('.toast-message');
+        if (existingToast) {
+          existingToast.remove();
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.textContent = message;
+        toast.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 12px 20px;
+          border-radius: 20px;
+          font-size: 14px;
+          z-index: 10001;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        `;
+
+        document.body.appendChild(toast);
+
+        // 显示动画
+        setTimeout(() => {
+          toast.style.opacity = '1';
+        }, 10);
+
+        // 自动隐藏
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => {
+            if (toast.parentNode) {
+              document.body.removeChild(toast);
+            }
+          }, 300);
+        }, duration);
       }
 
       function renderTransferMessage(contentDiv, msg, idx) {
@@ -8780,6 +8979,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 </div>
 
                 <textarea id="imageDescriptionInput" placeholder="请输入图片描述或备注（可选）" style="width: 100%; min-height: 60px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;"></textarea>
+
+                <div style="margin-top: 8px; font-size: 11px; color: #999; text-align: center;">
+                  💡 提示：可以直接拖拽图片到此处或使用 Ctrl+V 粘贴图片
+                </div>
               </div>
 
               <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -8853,16 +9056,73 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         confirmBtn.onclick = () => {
           handleImageSend(modal);
         };
+
+        // 为模态框添加拖拽上传支持
+        const modalContent = modal.querySelector('div');
+        modalContent.ondragover = (e) => {
+          e.preventDefault();
+          modalContent.style.borderColor = '#07c160';
+          modalContent.style.backgroundColor = '#f8f8f8';
+        };
+
+        modalContent.ondragleave = (e) => {
+          // 只有当离开模态框内容区域时才重置样式
+          if (!modalContent.contains(e.relatedTarget)) {
+            modalContent.style.borderColor = '';
+            modalContent.style.backgroundColor = '';
+          }
+        };
+
+        modalContent.ondrop = (e) => {
+          e.preventDefault();
+          modalContent.style.borderColor = '';
+          modalContent.style.backgroundColor = '';
+
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            const file = files[0];
+            if (file.type.startsWith('image/')) {
+              handleImageFileSelect(file, modal);
+            } else {
+              alert('请拖拽图片文件！');
+            }
+          }
+        };
+
+        // 为模态框添加粘贴上传支持
+        const handlePaste = (e) => {
+          const items = e.clipboardData.items;
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.type.indexOf('image') !== -1) {
+              const file = item.getAsFile();
+              if (file) {
+                handleImageFileSelect(file, modal);
+                e.preventDefault();
+                break;
+              }
+            }
+          }
+        };
+
+        // 绑定粘贴事件到模态框
+        modal.addEventListener('paste', handlePaste);
+
+        // 确保模态框可以接收焦点以捕获粘贴事件
+        modal.tabIndex = -1;
+        modal.focus();
       }
 
-      // 将文件转换为base64格式
+            // 将文件转换为base64格式
       function convertFileToBase64(file) {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = function(e) {
             resolve(e.target.result);
           };
-          reader.onerror = reject;
+          reader.onerror = function(error) {
+            reject(error);
+          };
           reader.readAsDataURL(file);
         });
       }
