@@ -1215,6 +1215,72 @@
         margin: 2px 0;
         display: block;
         box-shadow: 0 1px 4px #e0c6f7;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      }
+
+      .bubble img.chat-img:hover {
+        transform: scale(1.02);
+      }
+
+      .image-container {
+        position: relative;
+        display: inline-block;
+        max-width: 200px;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .vision-analysis-indicator {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(7, 193, 96, 0.9);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 500;
+        z-index: 10;
+        transition: opacity 0.3s ease;
+      }
+
+      .image-description {
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 8px 12px;
+        font-size: 12px;
+        line-height: 1.4;
+        border-radius: 6px;
+        margin-top: 6px;
+        display: none;
+        word-wrap: break-word;
+        max-width: 200px;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        opacity: 0;
+        transition: all 0.3s ease;
+        z-index: 20;
+      }
+
+      .image-description.show {
+        display: block;
+        opacity: 1;
+        animation: slideDownFromCenter 0.3s ease-out;
+      }
+
+      @keyframes slideDownFromCenter {
+        0% {
+          transform: translateY(-50%) scaleY(0);
+          opacity: 0;
+        }
+        100% {
+          transform: translateY(-50%) scaleY(1);
+          opacity: 1;
+        }
       }
       .bubble .quote {
         display: block;
@@ -6158,6 +6224,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               imageMsg.visionResult = `用户发送了一张图片。\n\n图片内容描述：${imageDescription}`;
             }
 
+            // 标记用户发送了新消息，允许AI回复
+            state.userHasSentNewMessage = true;
+            updateAiRequestButtonVisibility();
+
             return;
           }
 
@@ -6193,6 +6263,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           } else {
             imageMsg.visionResult = `用户发送了一张图片。\n\n图片内容描述：${imageDescription}`;
           }
+
+          // 标记用户发送了新消息，允许AI回复
+          state.userHasSentNewMessage = true;
+          updateAiRequestButtonVisibility();
 
           return;
 
@@ -6290,6 +6364,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             } else {
               imageMsg.visionResult = `用户发送了一张图片。\n\n图片内容描述：${response.trim()}`;
             }
+
+            // 标记用户发送了新消息，允许AI回复
+            state.userHasSentNewMessage = true;
+            updateAiRequestButtonVisibility();
 
             return;
           } else {
@@ -6391,6 +6469,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             } else {
               imageMsg.visionResult = `用户发送了一张图片。\n\n图片内容描述：${imageDescription}`;
             }
+
+            // 标记用户发送了新消息，允许AI回复
+            state.userHasSentNewMessage = true;
+            updateAiRequestButtonVisibility();
 
             return;
 
@@ -7221,56 +7303,94 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function renderImageMessage(contentDiv, msg) {
         contentDiv.classList.add('image-message');
 
-        // Create image element
+        // 创建图片容器
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'image-container';
+        imageContainer.style.cssText = `
+          position: relative;
+          display: inline-block;
+          max-width: 200px;
+          border-radius: 8px;
+          overflow: hidden;
+        `;
+
+        // 创建图片元素
         const img = document.createElement('img');
         img.className = 'chat-img';
-        img.src = msg.imageData || 'https://files.catbox.moe/wveq3r.jpeg';
-        img.style.cursor = 'pointer';
+        img.style.cssText = `
+          max-width: 100%;
+          max-height: 200px;
+          border-radius: 8px;
+          cursor: pointer;
+          display: block;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        `;
 
-        // Add description tooltip
+        // 设置图片源
+        if (msg.imageData) {
+          // 如果有真实图片数据，显示真实图片
+          img.src = msg.imageData;
+          img.alt = msg.fileName || '图片';
+        } else {
+          // 如果只有描述，显示占位图片
+          img.src = 'https://files.catbox.moe/wveq3r.jpeg';
+          img.alt = msg.imageDescription || '图片';
+        }
+
+        // 创建描述区域
         const description = document.createElement('div');
         description.className = 'image-description';
-        description.textContent = msg.imageDescription;
-        description.style.display = 'none';
+        description.style.cssText = `
+          background: rgba(0,0,0,0.7);
+          color: white;
+          padding: 8px 12px;
+          font-size: 12px;
+          line-height: 1.4;
+          border-radius: 6px;
+          margin-top: 6px;
+          display: none;
+          word-wrap: break-word;
+        `;
+        description.textContent = msg.imageDescription || '图片';
 
-        // 如果需要识图分析，添加识图指示器
+        // 如果需要AI视觉分析，添加分析状态指示
         if (msg.needsVisionAnalysis && msg.sender === 'user') {
-          const visionIndicator = document.createElement('div');
-          visionIndicator.className = 'vision-analysis-indicator';
-          visionIndicator.textContent = '👆 点击AI回复开始识图';
-          visionIndicator.style.cssText = `
+          const analysisIndicator = document.createElement('div');
+          analysisIndicator.className = 'vision-analysis-indicator';
+          analysisIndicator.style.cssText = `
             position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(255, 165, 0, 0.9);
+            top: 4px;
+            right: 4px;
+            background: rgba(7, 193, 96, 0.9);
             color: white;
             padding: 2px 6px;
             border-radius: 10px;
             font-size: 10px;
-            z-index: 10;
-            animation: pulse 2s infinite;
+            font-weight: 500;
           `;
+          analysisIndicator.textContent = '👆 点击AI回复开始识图';
+          analysisIndicator.style.background = 'rgba(255, 165, 0, 0.9)';
+          analysisIndicator.style.animation = 'pulse 2s infinite';
+          imageContainer.appendChild(analysisIndicator);
 
-          // 将指示器引用保存到消息对象中，供识图函数使用
-          msg.visionIndicator = visionIndicator;
+          // 标记图片需要识图分析，但不自动触发
+          msg.needsVisionAnalysis = true;
+          msg.visionIndicator = analysisIndicator;
 
-          // 设置图片容器为相对定位
-          contentDiv.style.position = 'relative';
-          contentDiv.appendChild(visionIndicator);
+          // 更新AI请求按钮的可见性
+          updateAiRequestButtonVisibility();
         }
 
         // 点击图片显示/隐藏描述（从中间向下延伸动画）
         img.onclick = () => {
           if (description.classList.contains('show')) {
-            // 隐藏描述 - 添加收回动画
+            // 隐藏描述
             description.classList.remove('show');
-            description.classList.add('hide');
             setTimeout(() => {
               description.style.display = 'none';
-              description.classList.remove('hide');
             }, 300);
           } else {
-            // 显示描述 - 从中间向下延伸
+            // 显示描述
             description.style.display = 'block';
             setTimeout(() => {
               description.classList.add('show');
@@ -7278,7 +7398,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
         };
 
-        contentDiv.appendChild(img);
+        // 图片加载错误处理
+        img.onerror = () => {
+          img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCA0MEgxMjBWODBIODBWNDBaIiBmaWxsPSIjREREIi8+CjxjaXJjbGUgY3g9IjkwIiBjeT0iNTUiIHI9IjUiIGZpbGw9IiNBQUEiLz4KPHBhdGggZD0iTTkwIDY1TDEwMCA3NUg4MEw5MCA2NVoiIGZpbGw9IiNBQUEiLz4KPHRleHQgeD0iMTAwIiB5PSIxMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTkiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiI+5Zu+54mH5Yqg6L295aSx6LSlPC90ZXh0Pgo8L3N2Zz4K';
+          img.alt = '图片加载失败';
+        };
+
+        imageContainer.appendChild(img);
+        contentDiv.appendChild(imageContainer);
         contentDiv.appendChild(description);
       }
 
@@ -8224,7 +8351,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         // 如果是图片消息，添加识图标记但不立即触发识图
         if (parsedMsg.type === 'image') {
-          parsedMsg.needsVisionAnalysis = true;
+          // 如果消息中没有设置needsVisionAnalysis，则根据是否有真实图片数据来决定
+          if (parsedMsg.needsVisionAnalysis === undefined) {
+            parsedMsg.needsVisionAnalysis = !!parsedMsg.imageData;
+          }
           // 在渲染时会添加识图指示器
         }
 
@@ -8252,6 +8382,28 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         deferredSync();
         if (state.inVoiceCall) {
           requestAiReply(); // 语音通话中自动触发AI回复
+        }
+      }
+
+      // 控制AI请求按钮的可见性
+      function updateAiRequestButtonVisibility() {
+        const btn = document.getElementById('requestAiBtn');
+        const voiceCallBtn = document.getElementById('voiceCallRequestAiBtn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const callTypingIndicator = document.getElementById('call-typing-indicator');
+        const lastMessage = state.messageHistory[state.messageHistory.length - 1];
+
+        // 显示按钮的条件：AI不在输入中，且最后一条消息不是AI刚发送的（或用户有新消息）
+        const shouldShow = !typingIndicator && !callTypingIndicator && (!lastMessage || lastMessage.sender !== 'char' || state.userHasSentNewMessage);
+
+        // 主聊天界面按钮
+        if (btn) {
+          btn.style.display = shouldShow ? 'flex' : 'none';
+        }
+
+        // 语音通话界面按钮（只在通话中显示）
+        if (voiceCallBtn) {
+          voiceCallBtn.style.display = (state.inVoiceCall && shouldShow) ? 'flex' : 'none';
         }
       }
 
@@ -8446,27 +8598,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 控制AI请求按钮的可见性
-      function updateAiRequestButtonVisibility() {
-        const btn = document.getElementById('requestAiBtn');
-        const voiceCallBtn = document.getElementById('voiceCallRequestAiBtn');
-        const typingIndicator = document.getElementById('typing-indicator');
-        const callTypingIndicator = document.getElementById('call-typing-indicator');
-        const lastMessage = state.messageHistory[state.messageHistory.length - 1];
-        
-        // 显示按钮的条件：AI不在输入中，且最后一条消息不是AI刚发送的（或用户有新消息）
-        const shouldShow = !typingIndicator && !callTypingIndicator && (!lastMessage || lastMessage.sender !== 'char' || state.userHasSentNewMessage);
-        
-        // 主聊天界面按钮
-        if (btn) {
-          btn.style.display = shouldShow ? 'flex' : 'none';
-        }
-        
-        // 语音通话界面按钮（只在通话中显示）
-        if (voiceCallBtn) {
-          voiceCallBtn.style.display = (state.inVoiceCall && shouldShow) ? 'flex' : 'none';
-        }
-      }
+
 
       // 🚀 优化：更快响应的输入指示器
       function showTypingIndicator() {
@@ -8600,91 +8732,264 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 发送图片
+      // 发送图片 - 支持上传和描述两种方式
       function sendImage() {
-        // 创建选择对话框
-        const choice = confirm('选择图片发送方式：\n\n确定 = 上传本地图片\n取消 = 输入图片描述');
+        // 创建图片发送模态框
+        showImageSendModal();
+      }
 
-        if (choice) {
-          // 用户选择上传本地图片
-          const fileInput = document.createElement('input');
-          fileInput.type = 'file';
-          fileInput.accept = 'image/*';
-          fileInput.style.display = 'none';
+      // 显示图片发送模态框
+      function showImageSendModal() {
+        let modal = document.getElementById('imageSendModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'imageSendModal';
+          modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+          `;
 
-          fileInput.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+          modal.innerHTML = `
+            <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 240px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; font-size: 18px; color: #333;">发送图片</h3>
+                <button id="closeImageModal" style="background: none; border: none; font-size: 24px; color: #666; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">×</button>
+              </div>
 
-            // 验证文件类型和大小
-            if (!file.type.startsWith('image/')) {
-              alert('请选择图片文件！');
-              return;
-            }
+              <div style="margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                  <button id="uploadImageBtn" style="flex: 1; padding: 12px; border: 2px dashed #07c160; background: #f8f8f8; color: #07c160; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s;">
+                    📁 上传本地图片
+                  </button>
+                  <button id="describeImageBtn" style="flex: 1; padding: 12px; border: 2px solid #07c160; background: #07c160; color: white; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s;">
+                    ✏️ 描述图片
+                  </button>
+                </div>
 
-            if (file.size > 10 * 1024 * 1024) { // 10MB限制
-              alert('图片文件过大，请选择小于10MB的图片！');
-              return;
-            }
+                <div id="imagePreviewArea" style="display: none; margin-bottom: 15px;">
+                  <img id="imagePreview" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
+                  <div style="margin-top: 8px; font-size: 12px; color: #666;" id="imageInfo"></div>
+                </div>
 
-            try {
-              // 获取图片描述
-              const description = prompt('请描述图片内容（可选）:') || '发送了一张图片';
+                <textarea id="imageDescriptionInput" placeholder="请输入图片描述或备注（可选）" style="width: 100%; min-height: 60px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;"></textarea>
+              </div>
 
-              // 尝试使用SillyTavern的上传功能
-              let imageData = null;
+              <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="cancelImageSend" style="padding: 8px 20px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 6px; cursor: pointer;">取消</button>
+                <button id="confirmImageSend" style="padding: 8px 20px; border: none; background: #07c160; color: white; border-radius: 6px; cursor: pointer;">发送</button>
+              </div>
+            </div>
+            <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+          `;
 
-              if (window.parent && window.parent.uploadImageByPlugin) {
-                try {
-                  imageData = await window.parent.uploadImageByPlugin(file);
-                  console.log('✅ 使用SillyTavern上传成功');
-                } catch (error) {
-                  console.warn('SillyTavern上传失败，使用base64备用方案:', error);
-                }
-              }
+          document.body.appendChild(modal);
 
-              // 如果SillyTavern上传失败，使用base64备用方案
-              if (!imageData) {
-                try {
-                  imageData = await convertFileToBase64(file);
-                  console.log('✅ 使用base64备用方案成功');
-                } catch (error) {
-                  console.error('base64转换失败:', error);
-                  alert('图片上传失败，请重试！');
-                  return;
-                }
-              }
+          // 绑定事件
+          setupImageModalEvents(modal);
+        }
 
-              // 构造图片消息
-              const time = getTimeStr();
-              sendMessage({
-                type: 'image',
-                imageDescription: description,
-                imageData: imageData,
-                time
-              });
+        modal.style.display = 'flex';
+        // 重置状态
+        resetImageModal();
+      }
 
-            } catch (error) {
-              console.error('图片处理失败:', error);
-              alert('图片处理失败，请重试！');
-            }
-          };
+      // 设置图片模态框事件
+      function setupImageModalEvents(modal) {
+        const closeBtn = modal.querySelector('#closeImageModal');
+        const cancelBtn = modal.querySelector('#cancelImageSend');
+        const confirmBtn = modal.querySelector('#confirmImageSend');
+        const uploadBtn = modal.querySelector('#uploadImageBtn');
+        const describeBtn = modal.querySelector('#describeImageBtn');
+        const fileInput = modal.querySelector('#imageFileInput');
 
-          // 触发文件选择
-          document.body.appendChild(fileInput);
+        // 关闭模态框
+        const closeModal = () => {
+          modal.style.display = 'none';
+          resetImageModal();
+        };
+
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+
+        // 点击遮罩关闭
+        modal.onclick = (e) => {
+          if (e.target === modal) closeModal();
+        };
+
+        // 上传图片
+        uploadBtn.onclick = () => {
           fileInput.click();
-          document.body.removeChild(fileInput);
+        };
+
+        // 描述图片模式
+        describeBtn.onclick = () => {
+          const previewArea = modal.querySelector('#imagePreviewArea');
+          const descInput = modal.querySelector('#imageDescriptionInput');
+          previewArea.style.display = 'none';
+          descInput.placeholder = '请描述图片内容';
+          descInput.focus();
+          // 清除已选择的文件
+          fileInput.value = '';
+          modal.dataset.mode = 'describe';
+        };
+
+        // 文件选择
+        fileInput.onchange = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            handleImageFileSelect(file, modal);
+          }
+        };
+
+        // 确认发送
+        confirmBtn.onclick = () => {
+          handleImageSend(modal);
+        };
+      }
+
+      // 将文件转换为base64格式
+      function convertFileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            resolve(e.target.result);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // 处理图片文件选择
+      async function handleImageFileSelect(file, modal) {
+        // 检查文件类型
+        if (!file.type.startsWith('image/')) {
+          alert('请选择图片文件！');
+          return;
+        }
+
+        // 检查文件大小 (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('图片文件不能超过5MB！');
+          return;
+        }
+
+        const previewArea = modal.querySelector('#imagePreviewArea');
+        const preview = modal.querySelector('#imagePreview');
+        const info = modal.querySelector('#imageInfo');
+        const descInput = modal.querySelector('#imageDescriptionInput');
+
+        // 显示上传中状态
+        info.textContent = '正在上传图片...';
+        previewArea.style.display = 'block';
+
+        try {
+          let imageUrl;
+
+          // 首先尝试使用插件上传功能
+          if (typeof top.window.__uploadImageByPlugin === 'function') {
+            try {
+              const result = await top.window.__uploadImageByPlugin(file);
+              imageUrl = result.url;
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 好了，来玩吧孩子`;
+            } catch (uploadError) {
+              console.warn('使用本地base64方案:', uploadError);
+              // 如果服务器上传失败，使用本地base64方案
+              imageUrl = await convertFileToBase64(file);
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+            }
+          } else {
+            // 如果没有上传插件，直接使用本地base64方案
+            console.log('未检测到插件，使用本地base64方案');
+            imageUrl = await convertFileToBase64(file);
+            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+          }
+
+          preview.src = imageUrl;
+          descInput.placeholder = '请输入图片备注（可选）';
+
+          modal.dataset.mode = 'upload';
+          modal.dataset.imageData = imageUrl;
+          modal.dataset.fileName = file.name;
+        } catch (error) {
+          console.error('图片处理失败:', error);
+          info.textContent = '图片处理失败，请重试';
+          previewArea.style.display = 'none';
+          alert('图片处理失败，请重试！');
+        }
+      }
+
+      // 重置图片模态框
+      function resetImageModal() {
+        const modal = document.getElementById('imageSendModal');
+        if (!modal) return;
+
+        const previewArea = modal.querySelector('#imagePreviewArea');
+        const descInput = modal.querySelector('#imageDescriptionInput');
+        const fileInput = modal.querySelector('#imageFileInput');
+
+        previewArea.style.display = 'none';
+        descInput.value = '';
+        descInput.placeholder = '请输入图片描述或备注（可选）';
+        fileInput.value = '';
+        delete modal.dataset.mode;
+        delete modal.dataset.imageData;
+        delete modal.dataset.fileName;
+      }
+
+      // 处理图片发送
+      function handleImageSend(modal) {
+        const mode = modal.dataset.mode;
+        const description = modal.querySelector('#imageDescriptionInput').value.trim();
+
+        if (mode === 'upload') {
+          // 上传模式
+          const imageData = modal.dataset.imageData;
+          const fileName = modal.dataset.fileName;
+
+          if (!imageData) {
+            alert('请先选择图片！');
+            return;
+          }
+
+          sendMessage({
+            type: 'image',
+            imageData: imageData,
+            fileName: fileName,
+            imageDescription: description || '发送了一张图片',
+            time: getTimeStr(),
+            needsVisionAnalysis: true // 标记需要AI视觉分析
+          });
+
+        } else if (mode === 'describe') {
+          // 描述模式
+          if (!description) {
+            alert('请输入图片描述！');
+            return;
+          }
+
+          sendMessage({
+            type: 'image',
+            imageDescription: description,
+            time: getTimeStr(),
+            needsVisionAnalysis: false // 不需要AI分析，只是文字描述
+          });
 
         } else {
-          // 用户选择输入图片描述
-          const description = prompt('请描述图片内容:');
-          if (description) {
-            // 构造新格式 [我方消息|图片|{{描述的内容}}|{{时间}}]
-            const time = getTimeStr();
-            // 直接插入到消息历史，type 用 image
-            sendMessage({ type: 'image', imageDescription: description, time });
-          }
+          alert('请选择发送方式！');
+          return;
         }
+
+        // 关闭模态框
+        modal.style.display = 'none';
+        resetImageModal();
       }
 
       // 发送语音消息
