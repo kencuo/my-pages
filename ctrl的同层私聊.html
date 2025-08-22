@@ -7204,7 +7204,7 @@
               : `[${currentCharName}|${m.avatar || ''}|图片|${imageInfo}|${m.time}]`;
           } else if (m.type === 'status-check') {
             // 系统消息：查看状态
-            return `[查看对方的状态|${m.content}|${m.time}]`;
+            return `[我方消息|查看对方的状态|${m.content}|${m.time}]`;
           }
 
           // 其他消息类型的通用逻辑
