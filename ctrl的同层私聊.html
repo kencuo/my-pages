@@ -5041,7 +5041,31 @@
         display: inline-block;
       }
 
+      /* 全局状态控制按钮样式 */
+      .global-status-toggle {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        font-size: 16px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+      }
 
+      .global-status-toggle:hover {
+        background: rgba(0,0,0,0.1);
+        color: #333;
+      }
+
+      .global-status-toggle:active {
+        transform: scale(0.95);
+      }
 
       .file-option {
         display: flex;
@@ -7204,7 +7228,7 @@
               : `[${currentCharName}|${m.avatar || ''}|图片|${imageInfo}|${m.time}]`;
           } else if (m.type === 'status-check') {
             // 系统消息：查看状态
-            return `[我方消息|查看对方的状态|${m.content}|${m.time}]`;
+            return `[查看对方的状态|${m.content}|${m.time}]`;
           }
 
           // 其他消息类型的通用逻辑
@@ -7214,6 +7238,10 @@
             if (m.callContext) {
 
               return `[我方消息|语音通话|${content}|${m.time}]`;
+            }
+            // 特殊处理：查看对方状态
+            if (content === '查看对方状态') {
+              return `[我方消息|查看对方状态|${m.time}]`;
             }
             if (m.quote) return `<我方消息|${m.quote}|${content}|${m.time}>`;
             return `[我方消息|${content}|${m.time}]`;
@@ -12363,15 +12391,11 @@ if (systemInterference.detected()) {
       function checkCharacterStatus() {
         console.log(' 查看对方状态');
 
-        // 获取当前角色名称
-        const charNameElement = document.getElementById('chatPersonName');
-        const charName = charNameElement ? charNameElement.textContent.trim() : '对方';
-
-        // 生成查看状态的系统消息
+        // 生成查看状态的用户消息
         const statusMessage = {
-          sender: 'system',
-          type: 'status-check',
-          content: `查看${charName}的状态`,
+          sender: 'user',
+          type: 'text',
+          content: '查看对方状态',
           time: getTimeStr(),
           timestamp: Date.now()
         };
@@ -12379,7 +12403,7 @@ if (systemInterference.detected()) {
         // 添加到消息历史
         state.messageHistory.push(statusMessage);
 
-        // 渲染系统消息
+        // 渲染用户消息
         appendMessage(statusMessage, state.messageHistory.length - 1);
 
         // 滚动到底部
@@ -12391,7 +12415,7 @@ if (systemInterference.detected()) {
         }, 500);
 
         // 提示用户
-        showToast(`正在查看${charName}的状态...`);
+        showToast('正在查看对方状态...');
       }
 
       // ==================== 状态消息展开/收起功能 ====================
