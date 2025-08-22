@@ -4978,15 +4978,53 @@
         text-align: left;
       }
 
-      .status-icon {
+      .status-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .status-header .status-icon {
         font-size: 16px;
         margin-right: 8px;
-        vertical-align: middle;
+      }
+
+      .status-title {
+        font-weight: 500;
+        color: #495057;
+        flex-grow: 1;
+      }
+
+      .status-toggle-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #6c757d;
+        font-size: 12px;
+        transition: all 0.2s ease;
+        margin-left: 8px;
+      }
+
+      .status-toggle-btn:hover {
+        background: rgba(0,0,0,0.1);
+        color: #495057;
+      }
+
+      .toggle-icon {
+        font-family: monospace;
+        font-weight: bold;
       }
 
       .status-text {
         font-weight: 400;
-        display: inline;
+        line-height: 1.5;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
       }
 
       /* 系统通知消息的通用样式 */
@@ -5002,6 +5040,8 @@
         margin: 0 auto;
         display: inline-block;
       }
+
+
 
       .file-option {
         display: flex;
@@ -6327,6 +6367,28 @@
             </div>
 
               <div id="visionTestResult" style="margin-top: 10px; padding: 8px; border-radius: 4px; font-size: 12px; display: none;"></div>
+            </div>
+          </div>
+
+          <!-- 状态消息控制 -->
+          <div class="setting-section">
+            <label class="setting-label">💓 状态消息控制</label>
+            <div class="setting-description" style="margin-bottom: 15px; font-size: 12px; color: #666;">
+              管理聊天中的状态查看消息显示
+            </div>
+
+            <div class="setting-preview">
+              <div class="preview-info" style="flex: 1;">
+                <div class="preview-title">批量展开/收起</div>
+                <div class="preview-desc">一键控制所有状态消息的显示状态</div>
+              </div>
+              <button class="upload-btn" id="settingsToggleAllStatus" onclick="toggleAllStatusMessages()" style="white-space: nowrap;">
+                💓 收起所有状态
+              </button>
+            </div>
+
+            <div style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 6px; font-size: 11px; color: #666;">
+              💡 提示：状态消息是指"[查看xxx的状态|...]"格式的系统消息。您可以单独点击每个状态消息的▼/▶按钮，或使用此处的批量控制功能。
             </div>
           </div>
         </div>
@@ -7831,7 +7893,7 @@
         // 系统消息样式
         contentDiv.innerHTML = `
           <div class="status-check-content">
-            <span class="status-icon">👁️</span>
+            <span class="status-icon">💓</span>
             <span class="status-text">${msg.content}</span>
           </div>
         `;
@@ -7875,9 +7937,17 @@
           const statusContent = match ? match[1] : msg.content;
 
           contentDiv.innerHTML = `
-            <div class="status-check-content">
-              <span class="status-icon">👁️</span>
-              <span class="status-text">${statusContent}</span>
+            <div class="status-check-content" data-status-id="${idx}">
+              <div class="status-header">
+                <span class="status-icon">💓</span>
+                <span class="status-title">查看状态</span>
+                <button class="status-toggle-btn" onclick="toggleStatusMessage(${idx})" title="点击展开/收起">
+                  <span class="toggle-icon">▼</span>
+                </button>
+              </div>
+              <div class="status-text" style="display: block;">
+                ${statusContent}
+              </div>
             </div>
           `;
 
@@ -12323,6 +12393,72 @@ if (systemInterference.detected()) {
         // 提示用户
         showToast(`正在查看${charName}的状态...`);
       }
+
+      // ==================== 状态消息展开/收起功能 ====================
+
+      // 切换状态消息的显示/隐藏
+      function toggleStatusMessage(messageIndex) {
+        const statusContent = document.querySelector(`[data-status-id="${messageIndex}"]`);
+        if (!statusContent) return;
+
+        const statusText = statusContent.querySelector('.status-text');
+        const toggleIcon = statusContent.querySelector('.toggle-icon');
+
+        if (!statusText || !toggleIcon) return;
+
+        const isVisible = statusText.style.display !== 'none';
+
+        if (isVisible) {
+          // 隐藏状态内容
+          statusText.style.display = 'none';
+          toggleIcon.textContent = '▶';
+          toggleIcon.parentElement.title = '点击展开';
+        } else {
+          // 显示状态内容
+          statusText.style.display = 'block';
+          toggleIcon.textContent = '▼';
+          toggleIcon.parentElement.title = '点击收起';
+        }
+      }
+
+      // 批量切换所有状态消息的显示/隐藏
+      function toggleAllStatusMessages() {
+        const allStatusContents = document.querySelectorAll('.status-check-content');
+        if (allStatusContents.length === 0) return;
+
+        // 检查第一个状态消息的显示状态来决定操作
+        const firstStatusText = allStatusContents[0].querySelector('.status-text');
+        const shouldHide = firstStatusText && firstStatusText.style.display !== 'none';
+
+        allStatusContents.forEach((statusContent, index) => {
+          const statusText = statusContent.querySelector('.status-text');
+          const toggleIcon = statusContent.querySelector('.toggle-icon');
+
+          if (!statusText || !toggleIcon) return;
+
+          if (shouldHide) {
+            // 隐藏所有状态内容
+            statusText.style.display = 'none';
+            toggleIcon.textContent = '▶';
+            toggleIcon.parentElement.title = '点击展开';
+          } else {
+            // 显示所有状态内容
+            statusText.style.display = 'block';
+            toggleIcon.textContent = '▼';
+            toggleIcon.parentElement.title = '点击收起';
+          }
+        });
+
+        // 更新设置面板中的按钮文本
+        const settingsToggleBtn = document.getElementById('settingsToggleAllStatus');
+        if (settingsToggleBtn) {
+          settingsToggleBtn.textContent = shouldHide ? '💓 展开所有状态' : '💓 收起所有状态';
+        }
+      }
+
+      // 全局函数，供HTML onclick调用
+      window.toggleStatusMessage = toggleStatusMessage;
+      window.toggleAllStatusMessages = toggleAllStatusMessages;
 
       // 兼容 SillyTavern 渲染
       if (document.readyState === 'loading') {
