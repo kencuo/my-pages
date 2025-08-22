@@ -4907,6 +4907,144 @@
       [data-bubble-style] .message.user .message-content {
         /* 继承基础样式，确保用户消息有正确的背景和文字颜色 */
       }
+
+      /* 时间选择弹窗样式 */
+      .simple-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .simple-modal {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        width: 90%;
+        max-width: 240px;
+        animation: modalSlideIn 0.3s ease-out;
+      }
+
+      @keyframes modalSlideIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9) translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      .simple-modal-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #eee;
+        font-weight: 600;
+        font-size: 16px;
+        color: #333;
+        text-align: center;
+        background: #f8f9fa;
+      }
+
+      .simple-modal-body {
+        padding: 20px;
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+
+      .simple-modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        background: #f8f9fa;
+      }
+
+      .modal-btn {
+        padding: 8px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        min-width: 60px;
+      }
+
+      .cancel-btn {
+        background: #f0f0f0;
+        color: #666;
+      }
+
+      .cancel-btn:hover {
+        background: #e0e0e0;
+        color: #333;
+      }
+
+      .confirm-btn {
+        background: #07c160;
+        color: white;
+      }
+
+      .confirm-btn:hover {
+        background: #06ad56;
+      }
+
+      .confirm-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .time-select-container {
+        text-align: center;
+      }
+
+      .time-input-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 10px 0;
+      }
+
+      .time-input-wrapper input[type="number"] {
+        -webkit-appearance: none;
+        -moz-appearance: textfield;
+        appearance: none;
+      }
+
+      .time-input-wrapper input[type="number"]::-webkit-outer-spin-button,
+      .time-input-wrapper input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .time-preset-btn {
+        padding: 6px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #f8f9fa;
+        color: #333;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s ease;
+      }
+
+      .time-preset-btn:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+      }
+
+      .time-preset-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
     </style>
   </head>
   <body>
@@ -5058,6 +5196,10 @@
           <div class="action-grid-item" id="voiceChangerBtn" title="变声语音">
             <div class="icon-wrapper">🎭</div>
             <span class="action-label">变声语音</span>
+          </div>
+          <div class="action-grid-item" id="timeSelectBtn" title="自定义时间">
+            <div class="icon-wrapper">🕐</div>
+            <span class="action-label">自定义时间</span>
           </div>
         </div>
       </div>
@@ -5844,6 +5986,44 @@
     </div>
     </div></div>
 
+    <!-- 时间选择弹窗 -->
+    <div class="simple-modal-overlay" id="timeSelectModalOverlay" style="display: none;">
+      <div class="simple-modal" id="timeSelectModal">
+        <div class="simple-modal-header">
+          <span>🕐 自定义时间</span>
+        </div>
+        <div class="simple-modal-body">
+          <div class="time-select-container">
+            <div class="time-input-group">
+              <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #333;">选择时间 (24小时制)</label>
+              <div class="time-input-wrapper">
+                <input type="number" id="customHour" min="0" max="23" value="12" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 16px;">
+                <span style="margin: 0 8px; font-size: 18px; font-weight: bold;">:</span>
+                <input type="number" id="customMinute" min="0" max="59" value="00" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 16px;">
+              </div>
+              <div style="font-size: 12px; color: #666; margin-top: 8px;">
+                当前时间: <span id="currentTimeDisplay"></span>
+              </div>
+            </div>
+            <div class="time-preset-buttons" style="margin-top: 15px;">
+              <div style="margin-bottom: 8px; font-size: 14px; color: #333;">快速选择:</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="time-preset-btn" data-time="09:00">09:00</button>
+                <button class="time-preset-btn" data-time="12:00">12:00</button>
+                <button class="time-preset-btn" data-time="18:00">18:00</button>
+                <button class="time-preset-btn" data-time="21:00">21:00</button>
+                <button class="time-preset-btn" data-time="23:59">23:59</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="simple-modal-footer">
+          <button class="modal-btn cancel-btn" id="timeSelectCancel">取消</button>
+          <button class="modal-btn confirm-btn" id="timeSelectConfirm">确定</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 作者 ctrl 不许偷盗喵喵喵喵 -->
     <script>
       // ========== 可爱同层手机核心逻辑 ==========
@@ -5882,6 +6062,9 @@
         songNotes: new Map(), // Store song notes/descriptions
         isAiReplying: false, // Added flag to track AI reply status
         jailbreakEnabled: false, // 破限模式开关
+        // 时间选择功能
+        customTimeEnabled: false, // 是否启用自定义时间
+        customTime: null, // 自定义时间字符串 (HH:MM)
         // 识图API配置
         visionMode: 'tavern', // 识图方式：'tavern'、'kimi' 或 'custom'
         // Kimi配置
@@ -6670,6 +6853,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 工具函数：获取当前时间字符串
       function getTimeStr() {
+        // 如果启用了自定义时间，使用自定义时间
+        if (state.customTimeEnabled && state.customTime) {
+          // 使用一次后自动关闭自定义时间
+          state.customTimeEnabled = false;
+          const customTime = state.customTime;
+          state.customTime = null;
+          updateTimeSelectButton(); // 更新按钮状态
+          return customTime;
+        }
+
         const now = new Date();
         return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
       }
@@ -9461,6 +9654,132 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         sendMessage({ type: 'location', locationText: locationText });
       }
 
+      // ==================== 时间选择功能 ====================
+
+      // 显示时间选择弹窗
+      function showTimeSelectModal() {
+        console.log('🕐 打开时间选择弹窗');
+        const overlay = document.getElementById('timeSelectModalOverlay');
+        const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+
+        if (!overlay) {
+          console.error('❌ 未找到时间选择弹窗元素');
+          alert('时间选择功能初始化失败');
+          return;
+        }
+
+        // 更新当前时间显示
+        const now = new Date();
+        const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        if (currentTimeDisplay) {
+          currentTimeDisplay.textContent = currentTime;
+        }
+
+        // 设置默认值为当前时间
+        const hourInput = document.getElementById('customHour');
+        const minuteInput = document.getElementById('customMinute');
+        if (hourInput) hourInput.value = now.getHours();
+        if (minuteInput) minuteInput.value = now.getMinutes();
+
+        overlay.style.display = 'flex';
+      }
+
+      // 隐藏时间选择弹窗
+      function hideTimeSelectModal() {
+        const overlay = document.getElementById('timeSelectModalOverlay');
+        overlay.style.display = 'none';
+      }
+
+      // 更新时间选择按钮状态
+      function updateTimeSelectButton() {
+        const btn = document.getElementById('timeSelectBtn');
+        if (state.customTimeEnabled && state.customTime) {
+          btn.style.background = '#007bff';
+          btn.style.color = 'white';
+          btn.querySelector('.action-label').textContent = state.customTime;
+        } else {
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.querySelector('.action-label').textContent = '自定义时间';
+        }
+      }
+
+      // 设置自定义时间
+      function setCustomTime() {
+        console.log('⏰ 设置自定义时间');
+        const hourInput = document.getElementById('customHour');
+        const minuteInput = document.getElementById('customMinute');
+
+        if (!hourInput || !minuteInput) {
+          console.error('❌ 未找到时间输入框');
+          alert('时间输入框未找到');
+          return;
+        }
+
+        const hour = parseInt(hourInput.value);
+        const minute = parseInt(minuteInput.value);
+
+        // 验证时间有效性
+        if (isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+          alert('请输入有效的时间！');
+          return;
+        }
+
+        // 格式化时间
+        const timeStr = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+        console.log('✅ 设置时间为:', timeStr);
+
+        // 设置自定义时间状态
+        state.customTimeEnabled = true;
+        state.customTime = timeStr;
+
+        // 更新按钮状态
+        updateTimeSelectButton();
+
+        // 隐藏弹窗
+        hideTimeSelectModal();
+
+        // 提示用户
+        showToast(`已设置自定义时间: ${timeStr}，下次发送消息将使用此时间`);
+      }
+
+      // 显示Toast提示消息
+      function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+          color: white;
+          padding: 12px 20px;
+          border-radius: 6px;
+          font-size: 14px;
+          z-index: 10000;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        // 淡入动画
+        setTimeout(() => {
+          toast.style.opacity = '1';
+        }, 10);
+
+        // 自动消失
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => {
+            if (document.body.contains(toast)) {
+              document.body.removeChild(toast);
+            }
+          }, 300);
+        }, 3000);
+      }
+
       // 事件绑定
       document.getElementById('sendBtn').onclick = () => sendMessage({});
               document.getElementById('requestAiBtn').onclick = requestAiReply;
@@ -9474,6 +9793,42 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       document.getElementById('voiceCallBtn').onclick = startVoiceCall;
       document.getElementById('fileBtn').onclick = sendFile;
       document.getElementById('locationBtn').onclick = sendLocation;
+      document.getElementById('timeSelectBtn').onclick = showTimeSelectModal;
+
+      // ==================== 时间选择弹窗事件监听器 ====================
+
+      // 时间选择弹窗事件绑定
+      document.getElementById('timeSelectCancel').onclick = hideTimeSelectModal;
+      document.getElementById('timeSelectConfirm').onclick = setCustomTime;
+
+      // 点击遮罩层关闭时间选择弹窗
+      document.getElementById('timeSelectModalOverlay').addEventListener('click', (e) => {
+        if (e.target.id === 'timeSelectModalOverlay') {
+          hideTimeSelectModal();
+        }
+      });
+
+      // 时间预设按钮事件
+      document.querySelectorAll('.time-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const time = btn.dataset.time;
+          const [hour, minute] = time.split(':');
+          document.getElementById('customHour').value = parseInt(hour);
+          document.getElementById('customMinute').value = parseInt(minute);
+
+          // 更新按钮状态
+          document.querySelectorAll('.time-preset-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+
+      // 时间输入框变化时清除预设按钮状态
+      document.getElementById('customHour').addEventListener('input', () => {
+        document.querySelectorAll('.time-preset-btn').forEach(b => b.classList.remove('active'));
+      });
+      document.getElementById('customMinute').addEventListener('input', () => {
+        document.querySelectorAll('.time-preset-btn').forEach(b => b.classList.remove('active'));
+      });
 
       // ==================== 音乐播放器功能 ====================
 
