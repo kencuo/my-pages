@@ -6019,6 +6019,7 @@
         </div>
         <div class="simple-modal-footer">
           <button class="modal-btn cancel-btn" id="timeSelectCancel">取消</button>
+          <button class="modal-btn reset-btn" id="timeSelectReset" style="background: #6c757d; color: white;">恢复当前时间</button>
           <button class="modal-btn confirm-btn" id="timeSelectConfirm">确定</button>
         </div>
       </div>
@@ -6841,14 +6842,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 工具函数：获取当前时间字符串
       function getTimeStr() {
-        // 如果启用了自定义时间，使用自定义时间
+        // 如果启用了自定义时间，使用自定义时间（不再自动关闭）
         if (state.customTimeEnabled && state.customTime) {
-          // 使用一次后自动关闭自定义时间
-          state.customTimeEnabled = false;
-          const customTime = state.customTime;
-          state.customTime = null;
-          updateTimeSelectButton(); // 更新按钮状态
-          return customTime;
+          return state.customTime;
         }
 
         const now = new Date();
@@ -9663,11 +9659,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           currentTimeDisplay.textContent = currentTime;
         }
 
-        // 设置默认值为当前时间
+        // 设置默认值
         const hourInput = document.getElementById('customHour');
         const minuteInput = document.getElementById('customMinute');
-        if (hourInput) hourInput.value = now.getHours();
-        if (minuteInput) minuteInput.value = now.getMinutes();
+
+        if (state.customTimeEnabled && state.customTime) {
+          // 如果已设置自定义时间，显示当前设置的时间
+          const [hour, minute] = state.customTime.split(':');
+          if (hourInput) hourInput.value = parseInt(hour);
+          if (minuteInput) minuteInput.value = parseInt(minute);
+        } else {
+          // 否则显示当前时间
+          if (hourInput) hourInput.value = now.getHours();
+          if (minuteInput) minuteInput.value = now.getMinutes();
+        }
 
         overlay.style.display = 'flex';
       }
@@ -9728,7 +9733,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         hideTimeSelectModal();
 
         // 提示用户
-        showToast(`已设置自定义时间: ${timeStr}，下次发送消息将使用此时间`);
+        showToast(`已设置自定义时间: ${timeStr}，将持续使用此时间直到手动恢复`);
+      }
+
+      // 恢复当前时间
+      function resetToCurrentTime() {
+        console.log('🔄 恢复当前时间');
+
+        // 关闭自定义时间
+        state.customTimeEnabled = false;
+        state.customTime = null;
+
+        // 更新按钮状态
+        updateTimeSelectButton();
+
+        // 隐藏弹窗
+        hideTimeSelectModal();
+
+        // 提示用户
+        showToast('已恢复使用当前时间');
       }
 
       // 显示Toast提示消息
@@ -9787,6 +9810,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 时间选择弹窗事件绑定
       document.getElementById('timeSelectCancel').onclick = hideTimeSelectModal;
+      document.getElementById('timeSelectReset').onclick = resetToCurrentTime;
       document.getElementById('timeSelectConfirm').onclick = setCustomTime;
 
       // 点击遮罩层关闭时间选择弹窗
