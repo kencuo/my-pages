@@ -7029,23 +7029,35 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 图片消息
         {
           regex: /^\[我方消息\|图片\|(.*?)\|(\d{2}:\d{2})\]$/,
-          handler: ([, description, time]) => ({
-            sender: 'user',
-            type: 'image',
-            imageDescription: description,
-            time,
-          }),
+          handler: ([, description, time]) => {
+            // 解析图片信息，提取URL和文件名
+            const imageData = parseImageInfo(description);
+            return {
+              sender: 'user',
+              type: 'image',
+              imageDescription: imageData.description,
+              imageData: imageData.url,
+              fileName: imageData.fileName,
+              time,
+            };
+          },
         },
         {
           regex: /^\[(.+?)\|(.+?)\|图片\|(.*?)\|(\d{2}:\d{2})\]$/,
-          handler: ([, charName, avatar, description, time]) => ({
-            sender: 'char',
-            type: 'image',
-            charName,
-            avatar,
-            imageDescription: description,
-            time,
-          }),
+          handler: ([, charName, avatar, description, time]) => {
+            // 解析图片信息，提取URL和文件名
+            const imageData = parseImageInfo(description);
+            return {
+              sender: 'char',
+              type: 'image',
+              charName,
+              avatar,
+              imageDescription: imageData.description,
+              imageData: imageData.url,
+              fileName: imageData.fileName,
+              time,
+            };
+          },
         },
         // 消息撤回
         {
@@ -7343,6 +7355,31 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         return parsedMessages;
       }
 
+      // ==================== IMAGE INFO PARSING HELPER ====================
+
+      function parseImageInfo(description) {
+        // 解析格式：描述|IMGDATA:URL|FILENAME:文件名
+        const parts = description.split('|');
+        let desc = parts[0] || '图片';
+        let url = null;
+        let fileName = null;
+
+        for (let i = 1; i < parts.length; i++) {
+          const part = parts[i];
+          if (part.startsWith('IMGDATA:')) {
+            url = part.substring(8); // 移除 'IMGDATA:' 前缀
+          } else if (part.startsWith('FILENAME:')) {
+            fileName = part.substring(9); // 移除 'FILENAME:' 前缀
+          }
+        }
+
+        return {
+          description: desc,
+          url: url,
+          fileName: fileName
+        };
+      }
+
       // ==================== REFACTORED SERIALIZATION LOGIC ====================
 
       function serializeQunliaoLog(msgArr) {
@@ -7450,10 +7487,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               ? `[我方消息|变音特效|${m.voiceEffect}|${m.voiceEffectContent}|${m.time}]`
               : `[${currentCharName}|${m.avatar || ''}|变音特效|${m.voiceEffect}|${m.voiceEffectContent}|${m.time}]`;
           } else if (m.type === 'image') {
-            // 图片消息处理 - 区分真实图片和描述图片
+            // 图片消息处理 - 保存图片URL和描述信息
             let imageInfo = m.imageDescription || '图片';
             if (m.imageData && m.fileName) {
-              imageInfo = `${m.imageDescription || '图片'}(${m.fileName})`;
+              // 将图片URL和描述信息都保存到序列化文本中
+              imageInfo = `${imageInfo}|IMGDATA:${m.imageData}|FILENAME:${m.fileName}`;
             }
 
             return m.sender === 'user'
