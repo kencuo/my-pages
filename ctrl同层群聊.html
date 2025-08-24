@@ -7741,33 +7741,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
         description.textContent = descriptionText;
 
-        // 如果需要AI视觉分析，添加分析状态指示
-        if (msg.needsVisionAnalysis && msg.sender === 'user') {
-          const analysisIndicator = document.createElement('div');
-          analysisIndicator.className = 'vision-analysis-indicator';
-          analysisIndicator.style.cssText = `
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            background: rgba(7, 193, 96, 0.9);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 500;
-          `;
-          analysisIndicator.textContent = '👆 点击AI回复开始识图';
-          analysisIndicator.style.background = 'rgba(255, 165, 0, 0.9)';
-          analysisIndicator.style.animation = 'pulse 2s infinite';
-          imageContainer.appendChild(analysisIndicator);
-
-          // 标记图片需要识图分析，但不自动触发
-          msg.needsVisionAnalysis = true;
-          msg.visionIndicator = analysisIndicator;
-
-          // 更新AI请求按钮的可见性
-          updateAiRequestButtonVisibility();
-        }
+        // 移除自动识图逻辑，改为直接传图片给AI处理
 
         // 点击图片的处理：双击放大预览，单击显示/隐藏描述
         let clickTimer = null;
@@ -9004,24 +8978,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
-        // 首先检查是否有需要识图的图片
-        const pendingVisionMessages = state.messageHistory.filter(msg =>
-          msg.type === 'image' && msg.needsVisionAnalysis && msg.visionIndicator
-        );
-
-        if (pendingVisionMessages.length > 0) {
-          // 先处理所有需要识图的图片
-          for (const imageMsg of pendingVisionMessages) {
-            if (imageMsg.visionIndicator) {
-              await requestVisionAnalysis(imageMsg, imageMsg.visionIndicator);
-              // 标记该图片已处理
-              imageMsg.needsVisionAnalysis = false;
-            }
-          }
-
-          // 识图完成后，等待一下再继续AI回复
-          await sleep(1500);
-        }
+        // 移除复杂的识图逻辑，改为直接传图片给AI处理
 
         // 语音通话中允许AI主动回复，普通聊天中防止AI连续回复
         if (!state.inVoiceCall) {
@@ -9040,7 +8997,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         // 统一上下文长度，保证稳定性
         const maxContext = 120; // 语音通话和普通聊天使用相同的上下文长度
-        const context = serializeQunliaoLog(state.messageHistory.slice(-maxContext));
+        const recentMessages = state.messageHistory.slice(-maxContext);
+        const context = serializeQunliaoLog(recentMessages);
+
+        // 查找最近的图片消息（最多查找最近10条消息）
+        const recentImageMsg = recentMessages.slice(-10).reverse().find(msg =>
+          msg.type === 'image' && msg.imageData && msg.sender === 'user'
+        );
 
         let stream;
 
@@ -9074,6 +9037,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               should_stream: true
             };
 
+            if (recentImageMsg) {
+              rawRequestData.image = recentImageMsg.imageData;
+            }
+
             stream = await Promise.race([
               AI_GENERATE_RAW(rawRequestData),
               timeoutPromise
@@ -9082,8 +9049,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             // 普通模式：使用标准generate函数
             console.log('🔒 破限模式未启用，使用SillyTavern预设');
 
+            const requestData = { user_input: context, should_stream: true };
+
+            if (recentImageMsg) {
+              requestData.image = recentImageMsg.imageData;
+            }
+
             stream = await Promise.race([
-              AI_GENERATE({ user_input: context, should_stream: true }),
+              AI_GENERATE(requestData),
               timeoutPromise
             ]);
           }
@@ -9603,7 +9576,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             fileName: fileName,
             imageDescription: description || '发送了一张图片',
             time: getTimeStr(),
-            needsVisionAnalysis: true // 标记需要AI视觉分析
+            // 移除needsVisionAnalysis标记，改为直接传图片给AI
           });
 
         } else if (mode === 'describe') {
