@@ -7366,33 +7366,7 @@
         `;
         description.textContent = msg.imageDescription || '图片';
 
-        // 如果需要AI视觉分析，添加分析状态指示
-        if (msg.needsVisionAnalysis && msg.sender === 'user') {
-          const analysisIndicator = document.createElement('div');
-          analysisIndicator.className = 'vision-analysis-indicator';
-          analysisIndicator.style.cssText = `
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            background: rgba(7, 193, 96, 0.9);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 500;
-          `;
-          analysisIndicator.textContent = '👆 点击AI回复开始识图';
-          analysisIndicator.style.background = 'rgba(255, 165, 0, 0.9)';
-          analysisIndicator.style.animation = 'pulse 2s infinite';
-          imageContainer.appendChild(analysisIndicator);
-
-          // 标记图片需要识图分析，但不自动触发
-          msg.needsVisionAnalysis = true;
-          msg.visionIndicator = analysisIndicator;
-
-          // 更新AI请求按钮的可见性
-          updateAiRequestButtonVisibility();
-        }
+        // 移除自动识图逻辑，改为直接传图片给AI处理
 
         // 点击图片显示/隐藏描述（从中间向下延伸动画）
         img.onclick = () => {
@@ -9322,24 +9296,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
-        // 首先检查是否有需要识图的图片
-        const pendingVisionMessages = state.messageHistory.filter(msg =>
-          msg.type === 'image' && msg.needsVisionAnalysis && msg.visionIndicator
-        );
-
-        if (pendingVisionMessages.length > 0) {
-          // 先处理所有需要识图的图片
-          for (const imageMsg of pendingVisionMessages) {
-            if (imageMsg.visionIndicator) {
-              await requestVisionAnalysis(imageMsg, imageMsg.visionIndicator);
-              // 标记该图片已处理
-              imageMsg.needsVisionAnalysis = false;
-            }
-          }
-
-          // 识图完成后，等待一下再继续AI回复
-          await sleep(1500);
-        }
+        // 移除复杂的识图逻辑，改为直接传图片给AI处理
 
         // 语音通话中允许AI主动回复，普通聊天中防止AI连续回复
         if (!state.inVoiceCall) {
@@ -9923,7 +9880,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             fileName: fileName,
             imageDescription: description || '发送了一张图片',
             time: getTimeStr(),
-            needsVisionAnalysis: true // 标记需要AI视觉分析
+            // 移除needsVisionAnalysis标记，改为直接传图片给AI
           });
 
         } else if (mode === 'describe') {
@@ -11043,6 +11000,53 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         musicState.currentSongInfo = null;
         musicAddBtn.disabled = true;
         musicAddBtn.textContent = '添加到播放列表';
+      });
+
+      // 本地文件按钮
+      musicAddLocalBtn.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'audio/*';
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const url = URL.createObjectURL(file);
+            const title = file.name.replace(/\.[^/.]+$/, ""); // 移除文件扩展名
+            addToPlaylist(title, '本地文件', url, 'local');
+            musicInfo.innerHTML = `✅ 已添加本地文件<br/>${title}`;
+            musicInfo.classList.add('success');
+            setTimeout(() => {
+              musicInfo.innerHTML = '请粘贴网易云/QQ音乐链接，点击解析按钮';
+              musicInfo.classList.remove('success');
+            }, 3000);
+          }
+        };
+        input.click();
+      });
+
+      // 网络链接按钮
+      musicAddUrlBtn.addEventListener('click', () => {
+        const url = prompt('请输入音频文件的网络链接:');
+        if (url && url.trim()) {
+          const title = prompt('请输入歌曲标题:') || '网络音频';
+          const artist = prompt('请输入艺术家名称:') || '未知艺术家';
+          addToPlaylist(title, artist, url.trim(), 'url');
+          musicInfo.innerHTML = `✅ 已添加网络链接<br/>${title}`;
+          musicInfo.classList.add('success');
+          setTimeout(() => {
+            musicInfo.innerHTML = '请粘贴网易云/QQ音乐链接，点击解析按钮';
+            musicInfo.classList.remove('success');
+          }, 3000);
+        }
+      });
+
+      // 查看播放列表按钮
+      musicViewPlaylistBtn.addEventListener('click', () => {
+        musicPlayerContainer.classList.add('active');
+        switchToLocalPlayer();
+        musicState.isPlaylistVisible = true;
+        playlistContainer.classList.add('active');
+        playlistToggleBtn.textContent = '📋';
       });
 
       // 播放控制
