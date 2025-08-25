@@ -12018,17 +12018,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
           const log = serializeShoujiLog(state.messageHistory); // 保留完整的消息历史，包括头像信息
-
-          // 添加头像设置信息到消息末尾
-          let finalLog = log;
-          if (settingsState.charAvatars && Object.keys(settingsState.charAvatars).length > 0) {
-            finalLog += '\n\n<!-- 角色头像设置 -->\n';
-            for (const [charName, avatarUrl] of Object.entries(settingsState.charAvatars)) {
-              finalLog += `<!-- CHAR_AVATAR:${charName}:${avatarUrl} -->\n`;
-            }
-          }
-
-          await setChatMessages([{ message_id: state.currentMsgId, message: finalLog }], { refresh: 'none' });
+          await setChatMessages([{ message_id: state.currentMsgId, message: log }], { refresh: 'none' });
         }
       }
 
@@ -12057,16 +12047,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           state.currentMsgId = getCurrentMessageId();
           const msg = getChatMessages(state.currentMsgId)[0];
           if (msg && msg.message) {
-            // 解析头像设置信息
-            const lines = msg.message.split('\n');
-            lines.forEach(line => {
-              const avatarMatch = line.match(/<!-- CHAR_AVATAR:(.+?):(.+?) -->/);
-              if (avatarMatch) {
-                const [, charName, avatarUrl] = avatarMatch;
-                settingsState.charAvatars[charName] = avatarUrl;
-              }
-            });
-
             // 新增：自动解析人名
             const personName = parsePersonNameFromShouji(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
@@ -13296,11 +13276,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
 
           saveSettings(); // 统一保存所有设置
-
-          // 同步头像设置到SillyTavern
-          if (type === 'charAvatar') {
-            syncToSillyTavern();
-          }
         };
         reader.readAsDataURL(file);
       }
@@ -13321,9 +13296,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             delete settingsState.charAvatars[charName];
             updateCharAvatars();
             saveSettings();
-
-            // 同步头像设置到SillyTavern
-            syncToSillyTavern();
           }
         }
       }
