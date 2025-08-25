@@ -9371,11 +9371,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           msg.type === 'image' && msg.imageData && msg.sender === 'user'
         );
 
-        // 如果用户发送了图片，添加换头像提示
-        if (recentImageMsg) {
-          context += '\n\n[系统提示：如果用户发送的图片是想让你换头像的，你可以在回复中加入"换头像:' + recentImageMsg.imageData + '"来自动换头像。这个指令不会显示给用户。]';
-        }
-
         let stream;
 
         try {
@@ -9480,26 +9475,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               if (state.inVoiceCall && msg.callContext) {
                 state.currentCallTranscript.push(msg);
                 appendMessageToCallView(msg);
-              }
-
-              // 检查AI是否要换头像
-              if (msg.sender === 'char' && msg.content && msg.content.includes('换头像:')) {
-                const avatarMatch = msg.content.match(/换头像:(\S+)/);
-                if (avatarMatch) {
-                  const avatarUrl = avatarMatch[1];
-                  const charName = msg.charName || getCurrentCharName();
-                  if (charName) {
-                    // 设置AI的新头像
-                    settingsState.charAvatars[charName] = avatarUrl;
-                    saveSettings();
-                    syncToSillyTavern();
-                    updateCharAvatars();
-                    console.log(`AI ${charName} 换头像为:`, avatarUrl);
-
-                    // 从消息内容中移除换头像指令，避免显示给用户
-                    msg.content = msg.content.replace(/换头像:\S+\s*/g, '').trim();
-                  }
-                }
               }
 
               // AI 主动挂断
