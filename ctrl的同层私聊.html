@@ -9371,6 +9371,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           msg.type === 'image' && msg.imageData && msg.sender === 'user'
         );
 
+        // 如果用户发送了图片，添加换头像提示
+        if (recentImageMsg) {
+          context += '\n\n[系统提示：如果用户发送的图片是想让你换头像的，你可以在回复中加入"换头像:' + recentImageMsg.imageData + '"来自动换头像。这个指令不会显示给用户。]';
+        }
+
         let stream;
 
         try {
@@ -9475,6 +9480,26 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               if (state.inVoiceCall && msg.callContext) {
                 state.currentCallTranscript.push(msg);
                 appendMessageToCallView(msg);
+              }
+
+              // 检查AI是否要换头像
+              if (msg.sender === 'char' && msg.content && msg.content.includes('换头像:')) {
+                const avatarMatch = msg.content.match(/换头像:(\S+)/);
+                if (avatarMatch) {
+                  const avatarUrl = avatarMatch[1];
+                  const charName = msg.charName || getCurrentCharName();
+                  if (charName) {
+                    // 设置AI的新头像
+                    settingsState.charAvatars[charName] = avatarUrl;
+                    saveSettings();
+                    syncToSillyTavern();
+                    updateCharAvatars();
+                    console.log(`AI ${charName} 换头像为:`, avatarUrl);
+
+                    // 从消息内容中移除换头像指令，避免显示给用户
+                    msg.content = msg.content.replace(/换头像:\S+\s*/g, '').trim();
+                  }
+                }
               }
 
               // AI 主动挂断
@@ -12018,7 +12043,17 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
           const log = serializeShoujiLog(state.messageHistory); // 保留完整的消息历史，包括头像信息
-          await setChatMessages([{ message_id: state.currentMsgId, message: log }], { refresh: 'none' });
+
+          // 添加头像设置信息到消息末尾
+          let finalLog = log;
+          if (settingsState.charAvatars && Object.keys(settingsState.charAvatars).length > 0) {
+            finalLog += '\n\n<!-- 角色头像设置 -->\n';
+            for (const [charName, avatarUrl] of Object.entries(settingsState.charAvatars)) {
+              finalLog += `<!-- CHAR_AVATAR:${charName}:${avatarUrl} -->\n`;
+            }
+          }
+
+          await setChatMessages([{ message_id: state.currentMsgId, message: finalLog }], { refresh: 'none' });
         }
       }
 
@@ -12047,6 +12082,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           state.currentMsgId = getCurrentMessageId();
           const msg = getChatMessages(state.currentMsgId)[0];
           if (msg && msg.message) {
+            // 解析头像设置信息
+            const lines = msg.message.split('\n');
+            lines.forEach(line => {
+              const avatarMatch = line.match(/<!-- CHAR_AVATAR:(.+?):(.+?) -->/);
+              if (avatarMatch) {
+                const [, charName, avatarUrl] = avatarMatch;
+                settingsState.charAvatars[charName] = avatarUrl;
+              }
+            });
+
             // 新增：自动解析人名
             const personName = parsePersonNameFromShouji(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
@@ -13276,6 +13321,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
 
           saveSettings(); // 统一保存所有设置
+
+          // 同步头像设置到SillyTavern
+          if (type === 'charAvatar') {
+            syncToSillyTavern();
+          }
         };
         reader.readAsDataURL(file);
       }
@@ -13296,6 +13346,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             delete settingsState.charAvatars[charName];
             updateCharAvatars();
             saveSettings();
+
+            // 同步头像设置到SillyTavern
+            syncToSillyTavern();
           }
         }
       }
