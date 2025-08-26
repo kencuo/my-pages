@@ -6505,11 +6505,17 @@
         }
       }
 
-      // 工具函数：获取当前时间字符串
+      // 工具函数：获取当前时间字符串（只返回HH:MM格式）
       function getTimeStr() {
-        // 如果启用了自定义时间，使用自定义时间（不再自动关闭）
+        // 如果启用了自定义时间，使用自定义时间
         if (state.customTimeEnabled && state.customTime) {
-          return state.customTime;
+          // 如果自定义时间包含日期，只提取时间部分
+          if (state.customTime.includes('/')) {
+            const parts = state.customTime.split(' ');
+            return parts[1] || '00:00';
+          } else {
+            return state.customTime;
+          }
         }
 
         const now = new Date();
@@ -6555,7 +6561,7 @@
       }
 
       // 工具函数：检查是否需要插入系统消息
-      function shouldInsertSystemMessage(newTimeStr) {
+      function shouldInsertSystemMessage() {
         if (state.messageHistory.length === 0) return null;
 
         const lastMessage = state.messageHistory[state.messageHistory.length - 1];
@@ -6564,21 +6570,31 @@
         // 跳过系统消息
         if (lastMessage.type === 'system-time') return null;
 
-        const lastTime = parseTimeStr(lastMessage.time);
-        const newTime = parseTimeStr(newTimeStr);
+        // 获取完整的时间信息进行比较
+        const lastFullTime = getFullTimeStr(); // 当前完整时间
+        const lastMsgTime = lastMessage.fullTime || parseTimeStr(lastMessage.time); // 上一条消息的完整时间
+        const currentTime = parseTimeStr(lastFullTime); // 当前时间解析
+
+        // 如果上一条消息没有完整时间信息，使用当前日期补充
+        let lastTime;
+        if (typeof lastMsgTime === 'string') {
+          lastTime = parseTimeStr(lastMsgTime);
+        } else {
+          lastTime = lastMsgTime;
+        }
 
         // 检查日期是否改变
-        if (lastTime.date !== newTime.date) {
-          return `[系统消息|${newTime.date}]`;
+        if (lastTime.date !== currentTime.date) {
+          return `[系统消息|${currentTime.date}]`;
         }
 
         // 检查时间间隔是否超过1小时
         const lastTimeMinutes = parseInt(lastTime.time.split(':')[0]) * 60 + parseInt(lastTime.time.split(':')[1]);
-        const newTimeMinutes = parseInt(newTime.time.split(':')[0]) * 60 + parseInt(newTime.time.split(':')[1]);
+        const newTimeMinutes = parseInt(currentTime.time.split(':')[0]) * 60 + parseInt(currentTime.time.split(':')[1]);
         const timeDiff = Math.abs(newTimeMinutes - lastTimeMinutes);
 
         if (timeDiff >= 60) { // 60分钟 = 1小时
-          return `[系统消息|${newTime.date}]`;
+          return `[系统消息|${currentTime.date}]`;
         }
 
         return null;
@@ -6634,6 +6650,16 @@
       }
 
       const messageParsers = [
+        // 系统时间消息（优先级最高）
+        {
+          regex: /^\[系统消息\|(.+?)\]$/,
+          handler: ([, dateText]) => ({
+            sender: 'system',
+            type: 'system-time',
+            content: `[系统消息|${dateText}]`,
+            time: '00:00', // 系统消息不需要具体时间
+          }),
+        },
         // 🔄 新格式：转账消息
         {
           regex: /^\[我方消息\|转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
@@ -8516,26 +8542,28 @@
         // 如果最终没有文本内容 (例如，只发送了图片URL但没有输入框文本)，则返回
         if (!text && !finalExtra.imgUrl && !finalExtra.voiceText) return;
 
-        // 获取当前时间（可能是自定义时间）
-        const currentTime = getTimeStr();
-
         // 检查是否需要插入系统消息
-        const systemMessage = shouldInsertSystemMessage(currentTime);
+        const systemMessage = shouldInsertSystemMessage();
         if (systemMessage) {
           // 插入系统消息
           const sysMsg = {
             sender: 'system',
             type: 'system-time',
             content: systemMessage,
-            time: currentTime,
+            time: '00:00', // 系统消息不需要具体时间
           };
           state.messageHistory.push(sysMsg);
           appendMessage(sysMsg, state.messageHistory.length - 1);
         }
 
+        // 获取当前时间（消息框中只显示HH:MM格式）
+        const currentTime = getTimeStr();
+        const fullTime = getFullTimeStr(); // 保存完整时间用于下次比较
+
         const msg = {
           sender: 'user',
-          time: currentTime,
+          time: currentTime, // 消息框中显示的时间格式
+          fullTime: fullTime, // 完整时间信息，用于系统消息判断
           content: text,
           ...finalExtra,
         };
