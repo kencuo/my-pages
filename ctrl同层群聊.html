@@ -4181,6 +4181,27 @@
         display: none;
       }
 
+      /* 系统时间消息样式 */
+      .message.system-time-notification {
+        justify-content: center;
+        margin: 15px 0;
+        padding: 0 10px;
+      }
+
+      .system-time-content {
+        background: #f0f0f0;
+        color: #666;
+        font-size: 12px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        border: none;
+        width: auto;
+        display: table;
+        margin: 0 auto;
+        font-weight: 400;
+        text-align: center;
+      }
+
       .together-listen-icon {
         display: inline-block;
         margin-right: 6px;
@@ -5995,6 +6016,24 @@
         </div>
         <div class="simple-modal-body">
           <div class="time-select-container">
+            <!-- 日期选择 -->
+            <div class="date-input-group" style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #333;">选择日期</label>
+              <div class="date-input-wrapper" style="display: flex; align-items: center; gap: 8px;">
+                <input type="number" id="customYear" min="2020" max="2030" value="2024" style="width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 16px;">
+                <span style="font-size: 16px; color: #666;">/</span>
+                <input type="number" id="customMonth" min="1" max="12" value="1" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 16px;">
+                <span style="font-size: 16px; color: #666;">/</span>
+                <input type="number" id="customDay" min="1" max="31" value="1" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 16px;">
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button class="date-preset-btn" data-action="today" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa; font-size: 12px;">今天</button>
+                <button class="date-preset-btn" data-action="tomorrow" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa; font-size: 12px;">明天</button>
+                <button class="date-preset-btn" data-action="yesterday" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa; font-size: 12px;">昨天</button>
+              </div>
+            </div>
+
+            <!-- 时间选择 -->
             <div class="time-input-group">
               <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #333;">选择时间 (24小时制)</label>
               <div class="time-input-wrapper">
@@ -6841,15 +6880,99 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 工具函数：获取当前时间字符串
+      // 工具函数：获取当前时间字符串（只返回HH:MM格式）
       function getTimeStr() {
-        // 如果启用了自定义时间，使用自定义时间（不再自动关闭）
+        // 如果启用了自定义时间，使用自定义时间
         if (state.customTimeEnabled && state.customTime) {
-          return state.customTime;
+          // 如果自定义时间包含日期，只提取时间部分
+          if (state.customTime.includes('/')) {
+            const parts = state.customTime.split(' ');
+            return parts[1] || '00:00';
+          } else {
+            return state.customTime;
+          }
         }
 
         const now = new Date();
         return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+      }
+
+      // 工具函数：获取完整时间字符串（包含年月日）
+      function getFullTimeStr() {
+        // 如果启用了自定义时间，使用自定义时间
+        if (state.customTimeEnabled && state.customTime) {
+          // 如果自定义时间包含日期，直接返回；否则添加当前日期
+          if (state.customTime.includes('/')) {
+            return state.customTime;
+          } else {
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+            return `${dateStr} ${state.customTime}`;
+          }
+        }
+
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        return `${dateStr} ${timeStr}`;
+      }
+
+      // 工具函数：解析时间字符串获取日期和时间
+      function parseTimeStr(timeStr) {
+        if (timeStr.includes('/')) {
+          const parts = timeStr.split(' ');
+          return {
+            date: parts[0],
+            time: parts[1] || '00:00'
+          };
+        } else {
+          const now = new Date();
+          const dateStr = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+          return {
+            date: dateStr,
+            time: timeStr
+          };
+        }
+      }
+
+      // 工具函数：检查是否需要插入系统消息
+      function shouldInsertSystemMessage() {
+        if (state.messageHistory.length === 0) return null;
+
+        const lastMessage = state.messageHistory[state.messageHistory.length - 1];
+        if (!lastMessage || !lastMessage.time) return null;
+
+        // 跳过系统消息
+        if (lastMessage.type === 'system-time') return null;
+
+        // 获取完整的时间信息进行比较
+        const lastFullTime = getFullTimeStr(); // 当前完整时间
+        const lastMsgTime = lastMessage.fullTime || parseTimeStr(lastMessage.time); // 上一条消息的完整时间
+        const currentTime = parseTimeStr(lastFullTime); // 当前时间解析
+
+        // 如果上一条消息没有完整时间信息，使用当前日期补充
+        let lastTime;
+        if (typeof lastMsgTime === 'string') {
+          lastTime = parseTimeStr(lastMsgTime);
+        } else {
+          lastTime = lastMsgTime;
+        }
+
+        // 检查日期是否改变
+        if (lastTime.date !== currentTime.date) {
+          return `[系统消息|${currentTime.date}]`;
+        }
+
+        // 检查时间间隔是否超过1小时
+        const lastTimeMinutes = parseInt(lastTime.time.split(':')[0]) * 60 + parseInt(lastTime.time.split(':')[1]);
+        const newTimeMinutes = parseInt(currentTime.time.split(':')[0]) * 60 + parseInt(currentTime.time.split(':')[1]);
+        const timeDiff = Math.abs(newTimeMinutes - lastTimeMinutes);
+
+        if (timeDiff >= 60) { // 60分钟 = 1小时
+          return `[系统消息|${currentTime.date}]`;
+        }
+
+        return null;
       }
 
       // ==================== REFACTORED PARSING LOGIC ====================
@@ -6901,6 +7024,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       const messageParsers = [
+        // 系统时间消息（优先级最高）
+        {
+          regex: /^\[系统消息\|(.+?)\]$/,
+          handler: ([, dateText]) => ({
+            sender: 'system',
+            type: 'system-time',
+            content: `[系统消息|${dateText}]`,
+            time: '00:00', // 系统消息不需要具体时间
+          }),
+        },
         // 🔄 新格式：转账消息
         {
           regex: /^\[我方消息\|给(.+?)转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
@@ -7456,6 +7589,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           // 语音未接听
           else if (m.type === 'voice-unanswered') {
             return `[${currentCharName}|语音未接听|${m.content}|${m.time}]`;
+          } else if (m.type === 'system-time') {
+            return m.content; // 系统时间消息直接返回内容，格式已经是 [系统消息|日期]
           } else if (m.type === 'together-listen-start') {
             return `[系统消息|开始一起听歌|${m.time}]`;
           } else if (m.type === 'together-listen-end') {
@@ -8333,6 +8468,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function createMessageElement(msg, idx) {
         // 作者 ctrl 不许偷盗喵喵喵喵
         // Special case for system notifications that have a different structure
+        if (msg.type === 'system-time') {
+          return createSystemTimeMessageElement(msg, idx);
+        }
         if (msg.type === 'voicecall-end') {
           return renderVoiceCallEndMessage(msg);
         }
@@ -8915,9 +9053,28 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 如果最终没有文本内容 (例如，只发送了图片URL但没有输入框文本)，则返回
         if (!text && !finalExtra.imgUrl && !finalExtra.voiceText) return;
 
+        // 检查是否需要插入系统消息
+        const systemMessage = shouldInsertSystemMessage();
+        if (systemMessage) {
+          // 插入系统消息
+          const sysMsg = {
+            sender: 'system',
+            type: 'system-time',
+            content: systemMessage,
+            time: '00:00', // 系统消息不需要具体时间
+          };
+          state.messageHistory.push(sysMsg);
+          appendMessage(sysMsg, state.messageHistory.length - 1);
+        }
+
+        // 获取当前时间（消息框中只显示HH:MM格式）
+        const currentTime = getTimeStr();
+        const fullTime = getFullTimeStr(); // 保存完整时间用于下次比较
+
         const msg = {
           sender: 'user',
-          time: getTimeStr(),
+          time: currentTime, // 消息框中显示的时间格式
+          fullTime: fullTime, // 完整时间信息，用于系统消息判断
           content: text,
           ...finalExtra,
         };
@@ -9713,22 +9870,45 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         // 更新当前时间显示
         const now = new Date();
-        const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        const currentTime = getFullTimeStr();
         if (currentTimeDisplay) {
           currentTimeDisplay.textContent = currentTime;
         }
 
         // 设置默认值
+        const yearInput = document.getElementById('customYear');
+        const monthInput = document.getElementById('customMonth');
+        const dayInput = document.getElementById('customDay');
         const hourInput = document.getElementById('customHour');
         const minuteInput = document.getElementById('customMinute');
 
         if (state.customTimeEnabled && state.customTime) {
           // 如果已设置自定义时间，显示当前设置的时间
-          const [hour, minute] = state.customTime.split(':');
-          if (hourInput) hourInput.value = parseInt(hour);
-          if (minuteInput) minuteInput.value = parseInt(minute);
+          if (state.customTime.includes('/')) {
+            // 包含日期的格式：2024/01/15 12:30
+            const parts = state.customTime.split(' ');
+            const dateParts = parts[0].split('/');
+            const timeParts = parts[1].split(':');
+
+            if (yearInput) yearInput.value = parseInt(dateParts[0]);
+            if (monthInput) monthInput.value = parseInt(dateParts[1]);
+            if (dayInput) dayInput.value = parseInt(dateParts[2]);
+            if (hourInput) hourInput.value = parseInt(timeParts[0]);
+            if (minuteInput) minuteInput.value = parseInt(timeParts[1]);
+          } else {
+            // 只有时间的格式：12:30
+            const timeParts = state.customTime.split(':');
+            if (yearInput) yearInput.value = now.getFullYear();
+            if (monthInput) monthInput.value = now.getMonth() + 1;
+            if (dayInput) dayInput.value = now.getDate();
+            if (hourInput) hourInput.value = parseInt(timeParts[0]);
+            if (minuteInput) minuteInput.value = parseInt(timeParts[1]);
+          }
         } else {
           // 否则显示当前时间
+          if (yearInput) yearInput.value = now.getFullYear();
+          if (monthInput) monthInput.value = now.getMonth() + 1;
+          if (dayInput) dayInput.value = now.getDate();
           if (hourInput) hourInput.value = now.getHours();
           if (minuteInput) minuteInput.value = now.getMinutes();
         }
@@ -9748,7 +9928,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (state.customTimeEnabled && state.customTime) {
           btn.style.background = '#007bff';
           btn.style.color = 'white';
-          btn.querySelector('.action-label').textContent = state.customTime;
+          // 显示简化的时间格式在按钮上
+          let displayTime = state.customTime;
+          if (state.customTime.includes('/')) {
+            // 如果包含日期，只显示月日和时间
+            const parts = state.customTime.split(' ');
+            const dateParts = parts[0].split('/');
+            displayTime = `${dateParts[1]}/${dateParts[2]} ${parts[1]}`;
+          }
+          btn.querySelector('.action-label').textContent = displayTime;
         } else {
           btn.style.background = '';
           btn.style.color = '';
@@ -9759,31 +9947,45 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 设置自定义时间
       function setCustomTime() {
         console.log('⏰ 设置自定义时间');
+        const yearInput = document.getElementById('customYear');
+        const monthInput = document.getElementById('customMonth');
+        const dayInput = document.getElementById('customDay');
         const hourInput = document.getElementById('customHour');
         const minuteInput = document.getElementById('customMinute');
 
-        if (!hourInput || !minuteInput) {
+        if (!yearInput || !monthInput || !dayInput || !hourInput || !minuteInput) {
           console.error('❌ 未找到时间输入框');
           alert('时间输入框未找到');
           return;
         }
 
+        const year = parseInt(yearInput.value);
+        const month = parseInt(monthInput.value);
+        const day = parseInt(dayInput.value);
         const hour = parseInt(hourInput.value);
         const minute = parseInt(minuteInput.value);
 
-        // 验证时间有效性
-        if (isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-          alert('请输入有效的时间！');
+        // 验证日期时间有效性
+        if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hour) || isNaN(minute) ||
+            year < 2020 || year > 2030 ||
+            month < 1 || month > 12 ||
+            day < 1 || day > 31 ||
+            hour < 0 || hour > 23 ||
+            minute < 0 || minute > 59) {
+          alert('请输入有效的日期和时间！');
           return;
         }
 
-        // 格式化时间
-        const timeStr = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
-        console.log('✅ 设置时间为:', timeStr);
+        // 格式化日期时间
+        const dateStr = `${year}/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
+        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const fullTimeStr = `${dateStr} ${timeStr}`;
+
+        console.log('✅ 设置时间为:', fullTimeStr);
 
         // 设置自定义时间状态
         state.customTimeEnabled = true;
-        state.customTime = timeStr;
+        state.customTime = fullTimeStr;
 
         // 更新按钮状态
         updateTimeSelectButton();
@@ -9792,7 +9994,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         hideTimeSelectModal();
 
         // 提示用户
-        showToast(`已设置自定义时间: ${timeStr}，将持续使用此时间直到手动恢复`);
+        showToast(`已设置自定义时间: ${fullTimeStr}，将持续使用此时间直到手动恢复`);
       }
 
       // 恢复当前时间
@@ -9899,6 +10101,42 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       });
       document.getElementById('customMinute').addEventListener('input', () => {
         document.querySelectorAll('.time-preset-btn').forEach(b => b.classList.remove('active'));
+      });
+
+      // 日期预设按钮事件
+      document.querySelectorAll('.date-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.action;
+          const now = new Date();
+          let targetDate = new Date(now);
+
+          switch (action) {
+            case 'today':
+              // 保持当前日期
+              break;
+            case 'tomorrow':
+              targetDate.setDate(now.getDate() + 1);
+              break;
+            case 'yesterday':
+              targetDate.setDate(now.getDate() - 1);
+              break;
+          }
+
+          document.getElementById('customYear').value = targetDate.getFullYear();
+          document.getElementById('customMonth').value = targetDate.getMonth() + 1;
+          document.getElementById('customDay').value = targetDate.getDate();
+
+          // 更新按钮状态
+          document.querySelectorAll('.date-preset-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+
+      // 日期输入框变化时清除预设按钮状态
+      ['customYear', 'customMonth', 'customDay'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          document.querySelectorAll('.date-preset-btn').forEach(b => b.classList.remove('active'));
+        });
       });
 
       // ==================== 音乐播放器功能 ====================
@@ -12109,6 +12347,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
           message.appendChild(wrapper);
         }
+
+        return message;
+      }
+
+      // 创建系统时间消息元素
+      function createSystemTimeMessageElement(msg, idx) {
+        const message = document.createElement('div');
+        message.className = 'message system-time-notification';
+        message.dataset.index = idx;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'system-time-content';
+
+        // 解析系统消息内容，提取日期
+        const match = msg.content.match(/\[系统消息\|(.+?)\]/);
+        const dateText = match ? match[1] : msg.content;
+
+        contentDiv.textContent = dateText;
+        message.appendChild(contentDiv);
 
         return message;
       }
