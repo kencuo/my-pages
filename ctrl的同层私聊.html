@@ -4035,6 +4035,62 @@
         text-align: center;
       }
 
+      /* 戳一戳消息样式 */
+      .message.poke-notification {
+        justify-content: center;
+        margin: 10px 0;
+        padding: 0 10px;
+      }
+
+      .poke-content {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        color: #e65100;
+        font-size: 13px;
+        padding: 8px 16px;
+        border-radius: 16px;
+        border: 1px solid #ffcc02;
+        width: auto;
+        display: table;
+        margin: 0 auto;
+        font-weight: 500;
+        text-align: center;
+        animation: pokeShake 0.6s ease-in-out;
+      }
+
+      .poke-icon {
+        font-size: 16px;
+        margin-right: 4px;
+      }
+
+      @keyframes pokeShake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+        20%, 40%, 60%, 80% { transform: translateX(2px); }
+      }
+
+      /* 戳一戳预设按钮样式 */
+      .poke-preset-btn {
+        padding: 6px 12px;
+        border: 1px solid #ddd;
+        border-radius: 16px;
+        background: #f8f9fa;
+        color: #333;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .poke-preset-btn:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+      }
+
+      .poke-preset-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
+
       .together-listen-icon {
         display: inline-block;
         margin-right: 6px;
@@ -6428,6 +6484,40 @@
       </div>
     </div>
 
+    <!-- 戳一戳弹窗 -->
+    <div class="simple-modal-overlay" id="pokeModalOverlay" style="display: none;">
+      <div class="simple-modal" id="pokeModal">
+        <div class="simple-modal-header">
+          <span>👆 戳一戳</span>
+        </div>
+        <div class="simple-modal-body">
+          <div class="poke-container">
+            <div class="poke-input-group">
+              <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #333;">戳一戳文案</label>
+              <textarea id="pokeTextInput" placeholder="输入戳一戳时想说的话..." style="width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical; box-sizing: border-box;"></textarea>
+              <div style="font-size: 12px; color: #666; margin-top: 8px;">
+                留空则使用默认文案
+              </div>
+            </div>
+            <div class="poke-preset-buttons" style="margin-top: 15px;">
+              <div style="margin-bottom: 8px; font-size: 14px; color: #333;">快速选择:</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="poke-preset-btn" data-text="想你了~">想你了~</button>
+                <button class="poke-preset-btn" data-text="在干嘛呢？">在干嘛呢？</button>
+                <button class="poke-preset-btn" data-text="快回我消息！">快回我消息！</button>
+                <button class="poke-preset-btn" data-text="注意到我！">注意到我！</button>
+                <button class="poke-preset-btn" data-text="">默认</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="simple-modal-footer">
+          <button class="modal-btn cancel-btn" id="pokeCancel">取消</button>
+          <button class="modal-btn confirm-btn" id="pokeConfirm">戳一戳</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 作者 ctrl 不许偷盗喵喵喵喵 -->
     <script>
       // ========== 可爱同层手机核心逻辑 ==========
@@ -6658,6 +6748,16 @@
             type: 'system-time',
             content: `[系统消息|${dateText}]`,
             time: '00:00', // 系统消息不需要具体时间
+          }),
+        },
+        // 戳一戳消息解析
+        {
+          regex: /^\[系统消息\|戳一戳\|(.+?)\]$/,
+          handler: ([, pokeText]) => ({
+            sender: 'system',
+            type: 'poke',
+            content: pokeText,
+            time: '00:00',
           }),
         },
         // 🔄 新格式：转账消息
@@ -7220,6 +7320,8 @@
             return `[${currentCharName}|语音未接听|${m.content}|${m.time}]`;
           } else if (m.type === 'system-time') {
             return m.content; // 系统时间消息直接返回内容，格式已经是 [系统消息|日期]
+          } else if (m.type === 'poke') {
+            return `[系统消息|戳一戳|${m.content}]`; // 戳一戳消息
           } else if (m.type === 'together-listen-start') {
             return `[系统消息|开始一起听歌|${m.time}]`;
           } else if (m.type === 'together-listen-end') {
@@ -7972,6 +8074,9 @@
         if (msg.type === 'system-time') {
           return createSystemTimeMessageElement(msg, idx);
         }
+        if (msg.type === 'poke') {
+          return createPokeMessageElement(msg, idx);
+        }
         if (msg.type === 'voicecall-end') {
           return renderVoiceCallEndMessage(msg);
         }
@@ -8009,7 +8114,7 @@
             message.appendChild(avatarDiv);
           } else if (msg.avatar) {
             const avatar = document.createElement('img');
-            avatar.className = 'avatar';
+            avatar.className = 'avatar char-avatar';
 
             // 优先使用用户设置的头像，如果没有设置则使用格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
@@ -8022,6 +8127,15 @@
               // 使用格式中的头像
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
+
+            // 添加双击戳一戳事件
+            avatar.addEventListener('dblclick', () => {
+              showPokeModal();
+            });
+
+            // 添加戳一戳提示样式
+            avatar.style.cursor = 'pointer';
+            avatar.title = '双击戳一戳';
 
             message.appendChild(avatar);
           }
@@ -8151,7 +8265,7 @@
         } else {
           if (msg.avatar) {
             const avatar = document.createElement('img');
-            avatar.className = 'avatar';
+            avatar.className = 'avatar char-avatar';
 
             // 优先使用用户设置的头像，如果没有设置则使用格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
@@ -8164,6 +8278,15 @@
               // 使用格式中的头像
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
+
+            // 添加双击戳一戳事件
+            avatar.addEventListener('dblclick', () => {
+              showPokeModal();
+            });
+
+            // 添加戳一戳提示样式
+            avatar.style.cursor = 'pointer';
+            avatar.title = '双击戳一戳';
 
             message.appendChild(avatar);
           }
@@ -10312,6 +10435,76 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         showToast('已恢复使用当前时间');
       }
 
+      // ==================== 戳一戳功能 ====================
+
+      // 显示戳一戳弹窗
+      function showPokeModal() {
+        console.log('👆 打开戳一戳弹窗');
+        const overlay = document.getElementById('pokeModalOverlay');
+        const textInput = document.getElementById('pokeTextInput');
+
+        if (!overlay) {
+          console.error('❌ 未找到戳一戳弹窗元素');
+          alert('戳一戳功能初始化失败');
+          return;
+        }
+
+        // 清空输入框
+        if (textInput) {
+          textInput.value = '';
+        }
+
+        // 清除预设按钮状态
+        document.querySelectorAll('.poke-preset-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+
+        overlay.style.display = 'flex';
+      }
+
+      // 隐藏戳一戳弹窗
+      function hidePokeModal() {
+        const overlay = document.getElementById('pokeModalOverlay');
+        overlay.style.display = 'none';
+      }
+
+      // 发送戳一戳消息
+      function sendPokeMessage() {
+        console.log('👆 发送戳一戳消息');
+        const textInput = document.getElementById('pokeTextInput');
+
+        if (!textInput) {
+          console.error('❌ 未找到戳一戳文案输入框');
+          return;
+        }
+
+        const customText = textInput.value.trim();
+        const pokeText = customText ?
+          `{{user}}戳了戳你的头像并说（${customText}）` :
+          `{{user}}戳了戳你的头像`;
+
+        // 创建戳一戳系统消息
+        const pokeMsg = {
+          sender: 'system',
+          type: 'poke',
+          content: pokeText,
+          time: '00:00',
+        };
+
+        // 添加到消息历史
+        state.messageHistory.push(pokeMsg);
+        appendMessage(pokeMsg, state.messageHistory.length - 1);
+
+        // 隐藏弹窗
+        hidePokeModal();
+
+        // 提示用户
+        showToast('已发送戳一戳！');
+
+        // 滚动到底部
+        scrollToBottom();
+      }
+
       // ==================== 文件发送功能 ====================
 
       let selectedFile = null;
@@ -10605,6 +10798,36 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         document.getElementById(id).addEventListener('input', () => {
           document.querySelectorAll('.date-preset-btn').forEach(b => b.classList.remove('active'));
         });
+      });
+
+      // ==================== 戳一戳弹窗事件监听器 ====================
+
+      // 戳一戳弹窗事件绑定
+      document.getElementById('pokeCancel').onclick = hidePokeModal;
+      document.getElementById('pokeConfirm').onclick = sendPokeMessage;
+
+      // 点击遮罩层关闭戳一戳弹窗
+      document.getElementById('pokeModalOverlay').addEventListener('click', (e) => {
+        if (e.target.id === 'pokeModalOverlay') {
+          hidePokeModal();
+        }
+      });
+
+      // 戳一戳预设按钮事件
+      document.querySelectorAll('.poke-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const text = btn.dataset.text;
+          document.getElementById('pokeTextInput').value = text;
+
+          // 更新按钮状态
+          document.querySelectorAll('.poke-preset-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+
+      // 戳一戳文案输入框变化时清除预设按钮状态
+      document.getElementById('pokeTextInput').addEventListener('input', () => {
+        document.querySelectorAll('.poke-preset-btn').forEach(b => b.classList.remove('active'));
       });
 
       // ==================== 音乐播放器功能 ====================
@@ -13094,6 +13317,22 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const dateText = match ? match[1] : msg.content;
 
         contentDiv.textContent = dateText;
+        message.appendChild(contentDiv);
+
+        return message;
+      }
+
+      // 创建戳一戳消息元素
+      function createPokeMessageElement(msg, idx) {
+        const message = document.createElement('div');
+        message.className = 'message poke-notification';
+        message.dataset.index = idx;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'poke-content';
+
+        // 添加戳一戳图标和文本
+        contentDiv.innerHTML = `<span class="poke-icon">👆</span> ${msg.content}`;
         message.appendChild(contentDiv);
 
         return message;
