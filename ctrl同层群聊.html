@@ -5066,6 +5066,157 @@
         color: white;
         border-color: #007bff;
       }
+
+      /* ==================== 收藏功能样式 ==================== */
+
+      /* 收藏标识 */
+      .favorite-indicator {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        font-size: 12px;
+        background: rgba(255, 215, 0, 0.9);
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        z-index: 10;
+        animation: favoriteGlow 0.3s ease-out;
+      }
+
+      @keyframes favoriteGlow {
+        0% { transform: scale(0.8); opacity: 0; }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      /* 收藏列表项 */
+      .favorite-item {
+        transition: background-color 0.2s;
+        border-radius: 8px;
+        margin: 8px;
+      }
+
+      .favorite-item:hover {
+        background-color: #f8f9fa !important;
+      }
+
+      /* 删除收藏按钮 */
+      .remove-favorite-btn {
+        transition: all 0.2s;
+      }
+
+      .remove-favorite-btn:hover {
+        background-color: rgba(255, 71, 87, 0.1) !important;
+        transform: scale(1.1);
+      }
+
+      /* 收藏模态框滚动条美化 */
+      #favoritesContainer::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      #favoritesContainer::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+
+      #favoritesContainer::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+      }
+
+      #favoritesContainer::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+      }
+
+      /* ==================== 右键菜单手机端优化 ==================== */
+
+      /* 右键菜单容器优化 */
+      .context-menu {
+        position: fixed;
+        background: white;
+        border: 1.5px solid #e0c6f7;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(224, 198, 247, 0.25);
+        z-index: 10000;
+        min-width: 160px;
+        font-size: 17px;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+      }
+
+      /* 右键菜单项优化 */
+      .context-menu div[data-action] {
+        padding: 18px 24px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-height: 24px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        position: relative;
+        font-weight: 500;
+      }
+
+      .context-menu div[data-action]:hover,
+      .context-menu div[data-action]:active {
+        background-color: #e8f4fd;
+        transform: scale(1.02);
+      }
+
+      /* 手机端专用优化 */
+      @media (max-width: 768px) {
+        .context-menu {
+          min-width: 180px;
+          font-size: 18px;
+          border-width: 2px;
+        }
+
+        .context-menu div[data-action] {
+          padding: 20px 28px;
+          min-height: 28px;
+          font-size: 18px;
+        }
+
+        .context-menu div[data-action] span {
+          font-size: 20px;
+        }
+      }
+
+      /* 触摸设备优化 */
+      @media (hover: none) and (pointer: coarse) {
+        .context-menu {
+          min-width: 200px;
+          font-size: 19px;
+        }
+
+        .context-menu div[data-action] {
+          padding: 22px 30px;
+          min-height: 32px;
+        }
+      }
+
+      /* 长按指示器动画 */
+      @keyframes longPressGrow {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.5);
+        }
+        50% {
+          opacity: 0.8;
+          transform: translate(-50%, -50%) scale(1.1);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
     </style>
   </head>
   <body>
@@ -5914,6 +6065,20 @@
             </div>
           </div>
 
+          <!-- 收藏管理 -->
+          <div class="setting-section">
+            <label class="setting-label">⭐ 收藏管理</label>
+            <div class="setting-preview">
+              <div class="preview-info" style="flex: 1;">
+                <div class="preview-title">查看收藏的消息</div>
+                <div class="preview-desc">管理你在群聊中收藏的重要消息</div>
+              </div>
+              <button class="upload-btn" id="viewFavoritesBtn" style="white-space: nowrap;">
+                ⭐ 查看收藏
+              </button>
+            </div>
+          </div>
+
           <!-- 导出功能 -->
           <div class="setting-section">
             <label class="setting-label">📄 导出聊天记录</label>
@@ -6061,6 +6226,26 @@
           <button class="modal-btn cancel-btn" id="timeSelectCancel">取消</button>
           <button class="modal-btn reset-btn" id="timeSelectReset" style="background: #6c757d; color: white;">恢复当前时间</button>
           <button class="modal-btn confirm-btn" id="timeSelectConfirm">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 收藏消息查看模态框 -->
+    <div class="settings-overlay" id="favoritesOverlay" style="display: none;">
+      <div class="settings-modal" style="max-width: 500px; max-height: 80vh;">
+        <div class="settings-header">
+          <div class="settings-title">⭐ 收藏的消息</div>
+          <button class="settings-close-btn" id="favoritesCloseBtn">×</button>
+        </div>
+        <div class="settings-content" style="padding: 0;">
+          <div id="favoritesContainer" style="max-height: 60vh; overflow-y: auto;">
+            <!-- 收藏消息列表将在这里动态生成 -->
+          </div>
+          <div style="padding: 15px; border-top: 1px solid #e0e0e0; text-align: center;">
+            <button id="clearAllFavoritesBtn" style="padding: 8px 16px; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+              🗑️ 清空所有收藏
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -7690,6 +7875,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         setTimeout(() => {
           chat.scrollTop = chat.scrollHeight;
           console.log('Rendered messages in DOM:', chat.children.length);
+          // 添加收藏标识
+          addFavoriteIndicatorToRenderedMessages();
         }, 50);
       }
 
@@ -7700,6 +7887,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 只渲染新添加的消息
         for (let i = lastHistoryCount; i < state.messageHistory.length; i++) {
           appendMessage(state.messageHistory[i], i);
+          // 为新消息添加收藏标识
+          setTimeout(() => updateMessageFavoriteIndicator(i), 10);
         }
         lastHistoryCount = state.messageHistory.length;
 
@@ -8745,16 +8934,53 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           showContextMenu(e, idx);
         });
 
-        // 移动端长按支持 - 只对非交互式消息启用
+        // 移动端长按支持 - 只对非交互式消息启用，增强视觉反馈
         if (!['transfer', 'redpacket'].includes(msg.type) || msg.claimed) {
           let longPressTimer = null;
           let isLongPress = false;
+          let pressIndicator = null;
 
           contentDiv.addEventListener('touchstart', e => {
             isLongPress = false;
+
+            // 创建长按指示器
+            pressIndicator = document.createElement('div');
+            pressIndicator.style.cssText = `
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 40px;
+              height: 40px;
+              background: rgba(224, 198, 247, 0.8);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 18px;
+              z-index: 100;
+              animation: longPressGrow 0.5s ease-out;
+              pointer-events: none;
+            `;
+            pressIndicator.innerHTML = '👆';
+            contentDiv.style.position = 'relative';
+            contentDiv.appendChild(pressIndicator);
+
             longPressTimer = setTimeout(() => {
               isLongPress = true;
               e.preventDefault();
+
+              // 移除指示器
+              if (pressIndicator) {
+                pressIndicator.remove();
+                pressIndicator = null;
+              }
+
+              // 添加触觉反馈
+              if (navigator.vibrate) {
+                navigator.vibrate(50);
+              }
+
               // 模拟右键事件
               const touch = e.touches[0];
               const mockEvent = {
@@ -8771,6 +8997,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               clearTimeout(longPressTimer);
               longPressTimer = null;
             }
+
+            // 清理长按指示器
+            if (pressIndicator) {
+              pressIndicator.remove();
+              pressIndicator = null;
+            }
+
             if (isLongPress) {
               e.preventDefault();
               e.stopPropagation();
@@ -8861,24 +9094,31 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         menu.style.position = 'fixed';
         menu.style.background = '#fff';
         menu.style.border = '1.5px solid #e0c6f7';
-        menu.style.borderRadius = '10px';
-        menu.style.boxShadow = '0 2px 8px #f3d6f7';
+        menu.style.borderRadius = '12px';
+        menu.style.boxShadow = '0 4px 16px rgba(224, 198, 247, 0.3)';
         menu.style.zIndex = 9999;
-        menu.style.padding = '6px 0';
-        menu.style.minWidth = '80px';
-        menu.style.fontSize = '14px';
+        menu.style.padding = '8px 0';
+        menu.style.minWidth = '140px';
+        menu.style.fontSize = '16px';
 
         let menuItems = '';
         const message = state.messageHistory[idx];
 
-        // Quote action is always available
+        // Quote action is always available - 增大触摸区域，优化手机体验
         menuItems +=
-          '<div style="padding:8px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0;" data-action="quote">📝 引用</div>';
+          '<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="quote"><span style="font-size:20px;">📝</span> 引用</div>';
 
         // Recall action only for user's own, non-recalled messages
         if (message.sender === 'user' && message.type !== 'recalled') {
-          menuItems += '<div style="padding:8px 16px;cursor:pointer;" data-action="recall">↩️ 撤回</div>';
+          menuItems += '<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="recall"><span style="font-size:20px;">↩️</span> 撤回</div>';
         }
+
+        // Favorite action for all messages
+        const isFavorited = isMessageFavorited(idx);
+        const favoriteIcon = isFavorited ? '💔' : '⭐';
+        const favoriteText = isFavorited ? '取消收藏' : '收藏';
+        menuItems += `<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="favorite"><span style="font-size:20px;">${favoriteIcon}</span> ${favoriteText}</div>`;
+
         menu.innerHTML = menuItems;
 
         // 计算菜单位置，确保不超出屏幕边界
@@ -8903,39 +9143,114 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         menu.style.top = menuY + 'px';
         menu.style.visibility = 'visible';
 
+        // 修复点击问题：使用事件委托，确保点击事件正确处理
         menu.addEventListener('click', e => {
+          e.preventDefault();
           e.stopPropagation();
-          const action = e.target.dataset.action;
+          e.stopImmediatePropagation();
+
+          const action = e.target.dataset.action || e.target.closest('[data-action]')?.dataset.action;
+
           if (action === 'quote') {
             const contentToQuote = message.content || message.originalContent || '';
             state.quoteContent = contentToQuote;
             const input = document.getElementById('chatInput');
             input.placeholder = `引用: ${contentToQuote.substring(0, 20)}...`;
             input.focus();
+            removeContextMenu();
           } else if (action === 'recall') {
             recallMessage(idx);
+            removeContextMenu();
+          } else if (action === 'favorite') {
+            toggleMessageFavorite(idx);
+            removeContextMenu();
           }
-          removeContextMenu();
         });
 
-        // 添加悬停效果
+        // 为每个菜单项单独绑定事件，确保点击响应
+        menu.querySelectorAll('[data-action]').forEach(item => {
+          item.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          });
+
+          // 添加触摸事件处理，确保移动端响应
+          item.addEventListener('touchend', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            const action = item.dataset.action;
+            if (action) {
+              // 延迟执行，确保事件处理完成
+              setTimeout(() => {
+                if (action === 'quote') {
+                  const contentToQuote = message.content || message.originalContent || '';
+                  state.quoteContent = contentToQuote;
+                  const input = document.getElementById('chatInput');
+                  input.placeholder = `引用: ${contentToQuote.substring(0, 20)}...`;
+                  input.focus();
+                } else if (action === 'recall') {
+                  recallMessage(idx);
+                } else if (action === 'favorite') {
+                  toggleMessageFavorite(idx);
+                }
+                removeContextMenu();
+              }, 50);
+            }
+          });
+        });
+
+        // 添加悬停和触摸效果
         menu.addEventListener('mouseover', e => {
           if (e.target.dataset.action) {
-            e.target.style.backgroundColor = '#f5f5f5';
+            e.target.style.backgroundColor = '#e8f4fd';
+            e.target.style.transform = 'scale(1.02)';
           }
         });
 
         menu.addEventListener('mouseout', e => {
           if (e.target.dataset.action) {
             e.target.style.backgroundColor = 'transparent';
+            e.target.style.transform = 'scale(1)';
           }
         });
 
-        // 延迟添加全局点击监听器，避免立即触发
+        // 添加触摸反馈
+        menu.addEventListener('touchstart', e => {
+          if (e.target.dataset.action) {
+            e.target.style.backgroundColor = '#e8f4fd';
+            e.target.style.transform = 'scale(0.98)';
+            // 添加触觉反馈（如果支持）
+            if (navigator.vibrate) {
+              navigator.vibrate(10);
+            }
+          }
+        });
+
+        menu.addEventListener('touchend', e => {
+          if (e.target.dataset.action) {
+            setTimeout(() => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.transform = 'scale(1)';
+            }, 150);
+          }
+        });
+
+        // 延迟添加全局点击监听器，避免立即触发，但排除菜单内部点击
         setTimeout(() => {
-          document.addEventListener('click', removeContextMenu, { once: true });
-          document.addEventListener('touchstart', removeContextMenu, { once: true });
-        }, 100);
+          const globalClickHandler = (e) => {
+            // 如果点击的是菜单内部，不关闭菜单
+            if (e.target.closest('.context-menu')) {
+              return;
+            }
+            removeContextMenu();
+          };
+
+          document.addEventListener('click', globalClickHandler, { once: true });
+          document.addEventListener('touchstart', globalClickHandler, { once: true });
+        }, 150);
       }
       function removeContextMenu() {
         const menu = document.querySelector('.context-menu');
@@ -12677,6 +12992,577 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
 
+      // ==================== 收藏消息功能 ====================
+
+      // 获取收藏数据的存储键名（群聊专用）
+      function getFavoriteStorageKey() {
+        return 'group_chat_favorites';
+      }
+
+      // 从 SillyTavern extension_settings 加载收藏数据
+      function loadFavoriteMessages() {
+        try {
+          // 优先从 SillyTavern extension_settings 读取
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            const favorites = parent.extension_settings[getFavoriteStorageKey()];
+            return favorites ? JSON.parse(JSON.stringify(favorites)) : [];
+          }
+
+          // 回退到 localStorage
+          const saved = localStorage.getItem(getFavoriteStorageKey());
+          return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+          console.error('加载收藏消息失败:', e);
+          return [];
+        }
+      }
+
+      // 保存收藏数据到 SillyTavern extension_settings
+      function saveFavoriteMessages(favorites) {
+        try {
+          // 优先保存到 SillyTavern extension_settings
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            parent.extension_settings[getFavoriteStorageKey()] = JSON.parse(JSON.stringify(favorites));
+            // 触发 SillyTavern 的设置保存
+            if (typeof parent.saveSettingsDebounced === 'function') {
+              parent.saveSettingsDebounced();
+            }
+          }
+
+          // 同时保存到 localStorage 作为备份
+          localStorage.setItem(getFavoriteStorageKey(), JSON.stringify(favorites));
+
+          console.log('群聊收藏数据已保存:', favorites.length, '条');
+        } catch (e) {
+          console.error('保存收藏消息失败:', e);
+        }
+      }
+
+      // 检查消息是否已收藏
+      function isMessageFavorited(messageIndex) {
+        const favorites = loadFavoriteMessages();
+        return favorites.some(fav => fav.originalIndex === messageIndex && fav.chatId === state.currentMsgId);
+      }
+
+      // 切换消息收藏状态
+      function toggleMessageFavorite(messageIndex) {
+        const message = state.messageHistory[messageIndex];
+        if (!message) return;
+
+        const favorites = loadFavoriteMessages();
+        const existingIndex = favorites.findIndex(fav =>
+          fav.originalIndex === messageIndex && fav.chatId === state.currentMsgId
+        );
+
+        if (existingIndex >= 0) {
+          // 取消收藏
+          favorites.splice(existingIndex, 1);
+          showToast('已取消收藏 💔');
+        } else {
+          // 添加收藏
+          const favoriteItem = {
+            id: Date.now() + Math.random(), // 唯一ID
+            chatId: state.currentMsgId, // 当前聊天ID
+            originalIndex: messageIndex, // 原始消息索引
+            timestamp: new Date().toISOString(), // 收藏时间
+            chatType: 'group', // 标记为群聊收藏
+            message: {
+              sender: message.sender,
+              content: message.content,
+              type: message.type,
+              time: message.time,
+              avatar: message.avatar,
+              charName: message.charName,
+              // 保存特殊消息的额外数据
+              imageData: message.imageData,
+              stickerData: message.stickerData,
+              voiceText: message.voiceText,
+              amount: message.amount,
+              locationText: message.locationText,
+              fileContent: message.fileContent,
+              fileFormat: message.fileFormat,
+              customAvatarUrl: message.customAvatarUrl,
+              callContext: message.callContext
+            }
+          };
+
+          favorites.push(favoriteItem);
+          showToast('已收藏 ⭐');
+        }
+
+        saveFavoriteMessages(favorites);
+
+        // 更新消息显示（如果需要显示收藏标识）
+        updateMessageFavoriteIndicator(messageIndex);
+      }
+
+      // 更新消息的收藏标识显示
+      function updateMessageFavoriteIndicator(messageIndex) {
+        const messageElement = document.querySelector(`[data-index="${messageIndex}"]`);
+        if (!messageElement) return;
+
+        const isFavorited = isMessageFavorited(messageIndex);
+        let indicator = messageElement.querySelector('.favorite-indicator');
+
+        if (isFavorited && !indicator) {
+          // 添加收藏标识
+          indicator = document.createElement('div');
+          indicator.className = 'favorite-indicator';
+          indicator.innerHTML = '⭐';
+          indicator.style.cssText = `
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 12px;
+            background: rgba(255, 215, 0, 0.9);
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            z-index: 10;
+          `;
+
+          const contentDiv = messageElement.querySelector('.message-content');
+          if (contentDiv) {
+            contentDiv.style.position = 'relative';
+            contentDiv.appendChild(indicator);
+          }
+        } else if (!isFavorited && indicator) {
+          // 移除收藏标识
+          indicator.remove();
+        }
+      }
+
+      // 显示收藏消息列表
+      function showFavorites() {
+        const overlay = document.getElementById('favoritesOverlay');
+        const container = document.getElementById('favoritesContainer');
+
+        overlay.style.display = 'flex';
+
+        const favorites = loadFavoriteMessages();
+
+        if (favorites.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; color: #666;">
+              <div style="font-size: 48px; margin-bottom: 16px;">⭐</div>
+              <div style="font-size: 16px; margin-bottom: 8px;">还没有收藏的消息</div>
+              <div style="font-size: 14px;">长按消息选择"收藏"来保存重要内容</div>
+            </div>
+          `;
+          return;
+        }
+
+        // 按收藏时间倒序排列
+        favorites.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        let html = '';
+        favorites.forEach((fav, index) => {
+          const msg = fav.message;
+          const favoriteTime = new Date(fav.timestamp).toLocaleString('zh-CN');
+
+          // 根据消息类型生成预览内容
+          let previewContent = '';
+          let messageTypeIcon = '';
+
+          if (msg.type === 'image') {
+            messageTypeIcon = '🖼️';
+            previewContent = msg.content || '图片消息';
+          } else if (msg.type === 'voice') {
+            messageTypeIcon = '🎤';
+            previewContent = msg.voiceText || '语音消息';
+          } else if (msg.type === 'sticker') {
+            messageTypeIcon = '😊';
+            previewContent = '表情包';
+          } else if (msg.type === 'transfer') {
+            messageTypeIcon = '💰';
+            previewContent = `转账 ${msg.amount}元`;
+          } else if (msg.type === 'redpacket') {
+            messageTypeIcon = '🧧';
+            previewContent = `红包 ${msg.amount}元`;
+          } else if (msg.type === 'file') {
+            messageTypeIcon = '📄';
+            previewContent = `${msg.fileFormat || 'FILE'} 文件`;
+          } else if (msg.type === 'location') {
+            messageTypeIcon = '📍';
+            previewContent = msg.locationText || '位置信息';
+          } else if (msg.callContext) {
+            messageTypeIcon = '📞';
+            previewContent = msg.content || '语音通话消息';
+          } else {
+            messageTypeIcon = '💬';
+            previewContent = msg.content || '';
+          }
+
+          // 限制预览内容长度
+          if (previewContent.length > 50) {
+            previewContent = previewContent.substring(0, 50) + '...';
+          }
+
+          // 显示发送者信息（群聊中更重要）
+          let senderName = '';
+          if (msg.sender === 'user') {
+            senderName = '我';
+          } else {
+            senderName = msg.charName || '群友';
+          }
+
+          html += `
+            <div class="favorite-item" data-favorite-index="${index}" style="
+              padding: 15px;
+              border-bottom: 1px solid #f0f0f0;
+              cursor: pointer;
+              transition: background-color 0.2s;
+            ">
+              <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <div style="font-size: 20px; flex-shrink: 0;">${messageTypeIcon}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="font-weight: 500; color: #333; font-size: 14px;">
+                      ${senderName}
+                    </div>
+                    <div style="font-size: 12px; color: #999;">
+                      ${favoriteTime}
+                    </div>
+                  </div>
+                  <div style="color: #666; font-size: 14px; line-height: 1.4; word-break: break-word;">
+                    ${previewContent}
+                  </div>
+                  ${fav.chatType === 'group' ? '<div style="font-size: 12px; color: #999; margin-top: 4px;">📱 群聊消息</div>' : ''}
+                </div>
+                <button class="remove-favorite-btn" data-favorite-index="${index}" style="
+                  background: none;
+                  border: none;
+                  color: #ff4757;
+                  font-size: 16px;
+                  cursor: pointer;
+                  padding: 4px;
+                  border-radius: 4px;
+                  flex-shrink: 0;
+                " title="删除收藏">🗑️</button>
+              </div>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+
+        // 绑定点击事件
+        container.querySelectorAll('.favorite-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-favorite-btn')) return;
+
+            const index = parseInt(item.dataset.favoriteIndex);
+            const favorite = favorites[index];
+            showFavoriteDetail(favorite);
+          });
+        });
+
+        // 绑定删除按钮事件
+        container.querySelectorAll('.remove-favorite-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.favoriteIndex);
+            removeFavorite(index);
+          });
+        });
+      }
+
+      // 显示收藏消息详情
+      function showFavoriteDetail(favorite) {
+        const msg = favorite.message;
+        const favoriteTime = new Date(favorite.timestamp).toLocaleString('zh-CN');
+
+        let detailContent = '';
+
+        // 根据消息类型生成详细内容
+        if (msg.type === 'image' && msg.imageData) {
+          detailContent = `
+            <div style="text-align: center; margin-bottom: 15px;">
+              <img src="${msg.imageData}" style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" alt="收藏的图片">
+            </div>
+            <div style="color: #666; font-size: 14px;">${msg.content || '图片消息'}</div>
+          `;
+        } else if (msg.type === 'sticker' && msg.stickerData) {
+          detailContent = `
+            <div style="text-align: center; margin-bottom: 15px;">
+              <img src="${msg.stickerData}" style="max-width: 150px; max-height: 150px;" alt="表情包">
+            </div>
+            <div style="color: #666; font-size: 14px;">表情包</div>
+          `;
+        } else if (msg.type === 'voice') {
+          detailContent = `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <div style="font-size: 16px; margin-bottom: 8px;">🎤 语音消息</div>
+              <div style="color: #666; font-size: 14px;">${msg.voiceText || '语音内容'}</div>
+            </div>
+          `;
+        } else if (msg.type === 'transfer') {
+          detailContent = `
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 15px;">
+              <div style="font-size: 18px; margin-bottom: 8px;">💰 转账</div>
+              <div style="font-size: 24px; font-weight: bold;">¥${msg.amount}</div>
+            </div>
+          `;
+        } else if (msg.type === 'redpacket') {
+          detailContent = `
+            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 15px;">
+              <div style="font-size: 18px; margin-bottom: 8px;">🧧 红包</div>
+              <div style="font-size: 24px; font-weight: bold;">¥${msg.amount}</div>
+            </div>
+          `;
+        } else if (msg.type === 'file') {
+          detailContent = `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <div style="font-size: 16px; margin-bottom: 8px;">📄 ${msg.fileFormat || 'FILE'} 文件</div>
+              <div style="color: #666; font-size: 14px; white-space: pre-wrap;">${msg.fileContent || '文件内容'}</div>
+            </div>
+          `;
+        } else if (msg.type === 'location') {
+          detailContent = `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <div style="font-size: 16px; margin-bottom: 8px;">📍 位置信息</div>
+              <div style="color: #666; font-size: 14px;">${msg.locationText || msg.content}</div>
+            </div>
+          `;
+        } else if (msg.callContext) {
+          detailContent = `
+            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <div style="font-size: 16px; margin-bottom: 8px;">📞 语音通话消息</div>
+              <div style="color: #666; font-size: 14px; white-space: pre-wrap;">${msg.content || ''}</div>
+            </div>
+          `;
+        } else {
+          // 普通文字消息
+          detailContent = `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <div style="color: #333; font-size: 16px; line-height: 1.5; white-space: pre-wrap;">${msg.content || ''}</div>
+            </div>
+          `;
+        }
+
+        // 显示发送者信息
+        let senderInfo = '';
+        if (msg.sender === 'user') {
+          senderInfo = '我';
+        } else {
+          senderInfo = msg.charName || '群友';
+        }
+
+        // 创建详情模态框
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10001;
+          padding: 20px;
+          box-sizing: border-box;
+        `;
+
+        modal.innerHTML = `
+          <div style="
+            background: white;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          ">
+            <div style="
+              padding: 20px 20px 15px 20px;
+              border-bottom: 1px solid #e0e0e0;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            ">
+              <div>
+                <div style="font-size: 18px; font-weight: 500; color: #333; margin-bottom: 4px;">
+                  群聊收藏详情
+                </div>
+                <div style="font-size: 12px; color: #999;">
+                  ${senderInfo} • ${favoriteTime}
+                </div>
+              </div>
+              <button id="closeFavoriteDetail" style="
+                background: none;
+                border: none;
+                font-size: 24px;
+                color: #999;
+                cursor: pointer;
+                padding: 4px;
+                line-height: 1;
+              ">×</button>
+            </div>
+            <div style="padding: 20px;">
+              ${detailContent}
+              <div style="text-align: center; margin-top: 20px;">
+                <button id="copyFavoriteContent" style="
+                  padding: 8px 16px;
+                  background: #007AFF;
+                  color: white;
+                  border: none;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  font-size: 14px;
+                  margin-right: 10px;
+                ">📋 复制内容</button>
+                <button id="removeFavoriteDetail" style="
+                  padding: 8px 16px;
+                  background: #ff4757;
+                  color: white;
+                  border: none;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  font-size: 14px;
+                ">🗑️ 删除收藏</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // 绑定事件
+        modal.querySelector('#closeFavoriteDetail').onclick = () => {
+          document.body.removeChild(modal);
+        };
+
+        modal.querySelector('#copyFavoriteContent').onclick = () => {
+          const textToCopy = msg.content || msg.voiceText || msg.locationText || msg.fileContent || '收藏的消息';
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast('内容已复制到剪贴板 📋');
+          }).catch(() => {
+            showToast('复制失败，请手动复制');
+          });
+        };
+
+        modal.querySelector('#removeFavoriteDetail').onclick = () => {
+          const favorites = loadFavoriteMessages();
+          const index = favorites.findIndex(f => f.id === favorite.id);
+          if (index >= 0) {
+            removeFavorite(index);
+            document.body.removeChild(modal);
+          }
+        };
+
+        // 点击背景关闭
+        modal.onclick = (e) => {
+          if (e.target === modal) {
+            document.body.removeChild(modal);
+          }
+        };
+      }
+
+      // 删除单个收藏
+      function removeFavorite(index) {
+        const favorites = loadFavoriteMessages();
+        if (index >= 0 && index < favorites.length) {
+          const removedFavorite = favorites[index];
+          favorites.splice(index, 1);
+          saveFavoriteMessages(favorites);
+
+          // 更新原消息的收藏标识
+          if (removedFavorite.chatId === state.currentMsgId) {
+            updateMessageFavoriteIndicator(removedFavorite.originalIndex);
+          }
+
+          // 刷新收藏列表显示
+          showFavorites();
+          showToast('已删除收藏 🗑️');
+        }
+      }
+
+      // 清空所有收藏
+      function clearAllFavorites() {
+        if (confirm('确定要清空所有收藏的消息吗？此操作不可撤销。')) {
+          saveFavoriteMessages([]);
+
+          // 更新当前聊天中所有消息的收藏标识
+          state.messageHistory.forEach((msg, index) => {
+            updateMessageFavoriteIndicator(index);
+          });
+
+          showFavorites();
+          showToast('已清空所有收藏 🗑️');
+        }
+      }
+
+      // 隐藏收藏列表
+      function hideFavorites() {
+        const overlay = document.getElementById('favoritesOverlay');
+        overlay.style.display = 'none';
+      }
+
+      // 在消息渲染时添加收藏标识
+      function addFavoriteIndicatorToRenderedMessages() {
+        state.messageHistory.forEach((msg, index) => {
+          updateMessageFavoriteIndicator(index);
+        });
+      }
+
+      // 显示长按提示（仅在首次使用时显示）
+      function showLongPressHint() {
+        const hintShown = localStorage.getItem('groupChatLongPressHintShown');
+        if (hintShown) return;
+
+        const hint = document.createElement('div');
+        hint.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 20px 24px;
+          border-radius: 12px;
+          font-size: 16px;
+          text-align: center;
+          z-index: 10002;
+          max-width: 280px;
+          line-height: 1.5;
+          animation: fadeInOut 4s ease-in-out;
+        `;
+
+        hint.innerHTML = `
+          <div style="font-size: 24px; margin-bottom: 8px;">👆</div>
+          <div>长按群聊消息可以</div>
+          <div><strong>引用 • 撤回 • 收藏</strong></div>
+        `;
+
+        document.body.appendChild(hint);
+
+        setTimeout(() => {
+          if (hint.parentNode) {
+            hint.remove();
+          }
+        }, 4000);
+
+        localStorage.setItem('groupChatLongPressHintShown', 'true');
+      }
+
+      // 添加淡入淡出动画
+      const hintStyle = document.createElement('style');
+      hintStyle.textContent = `
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+          20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        }
+      `;
+      document.head.appendChild(hintStyle);
+
       // 角色配置管理 - 类似SillyTavern的角色数据保存机制
       function getCharacterProfile(charName) {
         if (!charName) return null;
@@ -13523,6 +14409,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       document.getElementById('screenshotBtn').addEventListener('click', (event) => takeScreenshot(event));
       document.getElementById('settingsBtn').addEventListener('click', showSettings);
       document.getElementById('settingsCloseBtn').addEventListener('click', hideSettings);
+
+      // 绑定收藏相关事件
+      document.getElementById('viewFavoritesBtn').addEventListener('click', showFavorites);
+      document.getElementById('favoritesCloseBtn').addEventListener('click', hideFavorites);
+      document.getElementById('clearAllFavoritesBtn').addEventListener('click', clearAllFavorites);
       document.getElementById('avatarUploadBtn').addEventListener('click', () => {
         document.getElementById('avatarFileInput').click();
       });
@@ -14253,6 +15144,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 初始化角色头像配置
       initializeCharacterAvatars();
+
+      // 显示长按提示（延迟3秒，让用户先熟悉界面）
+      setTimeout(() => {
+        showLongPressHint();
+      }, 3000);
 
       // 🎉 关键词特效系统
       const MESSAGE_EFFECTS = {
