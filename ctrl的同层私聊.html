@@ -5576,6 +5576,214 @@
           transform: translate(-50%, -50%) scale(1);
         }
       }
+
+      /* ==================== 氛围贴纸/心情反应样式 ==================== */
+
+      /* 氛围贴纸面板 */
+      .atmosphere-panel {
+        display: none;
+        position: fixed;
+        bottom: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 400px;
+        background: white;
+        border: 2px solid #e0c6f7;
+        border-radius: 20px;
+        box-shadow: 0 8px 24px rgba(224, 198, 247, 0.3);
+        z-index: 1000;
+        animation: atmospherePanelShow 0.3s ease-out;
+      }
+
+      .atmosphere-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        background: linear-gradient(135deg, #e0c6f7 0%, #f3d6f7 100%);
+        border-radius: 18px 18px 0 0;
+      }
+
+      .atmosphere-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .atmosphere-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #666;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 50%;
+        transition: all 0.2s;
+      }
+
+      .atmosphere-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+      }
+
+      .atmosphere-tabs {
+        display: flex;
+        padding: 12px 16px;
+        gap: 8px;
+        overflow-x: auto;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .atmosphere-tab {
+        padding: 8px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+        user-select: none;
+        border: 1px solid transparent;
+      }
+
+      .atmosphere-tab:hover {
+        background: rgba(224, 198, 247, 0.2);
+      }
+
+      .atmosphere-tab.active {
+        background: #e0c6f7;
+        color: white;
+        border-color: #c8a2db;
+      }
+
+      .atmosphere-content {
+        padding: 16px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      /* 反应选择器 */
+      .reaction-picker {
+        animation: reactionPickerShow 0.3s ease-out;
+      }
+
+      /* 心情标签选择器 */
+      .mood-tag-picker {
+        animation: moodPickerShow 0.3s ease-out;
+      }
+
+      /* 氛围消息样式 */
+      .atmosphere-message .atmosphere-card {
+        animation: atmosphereMessageShow 0.6s ease-out;
+      }
+
+      /* 动画定义 */
+      @keyframes atmospherePanelShow {
+        0% {
+          opacity: 0;
+          transform: translateX(-50%) translateY(20px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+
+      @keyframes reactionPickerShow {
+        0% {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes moodPickerShow {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.9);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+
+      @keyframes atmosphereMessageShow {
+        0% {
+          opacity: 0;
+          transform: scale(0.8) rotate(-5deg);
+        }
+        50% {
+          transform: scale(1.05) rotate(2deg);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+        }
+      }
+
+      @keyframes atmosphereGlow {
+        0%, 100% {
+          opacity: 0.3;
+          transform: rotate(0deg);
+        }
+        50% {
+          opacity: 0.6;
+          transform: rotate(180deg);
+        }
+      }
+
+      @keyframes atmosphereBounce {
+        0% {
+          transform: scale(0.3) translateY(20px);
+        }
+        50% {
+          transform: scale(1.1) translateY(-10px);
+        }
+        100% {
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      @keyframes moodTagShow {
+        0% {
+          opacity: 0;
+          transform: scale(0.5) rotate(-10deg);
+        }
+        50% {
+          transform: scale(1.2) rotate(5deg);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+        }
+      }
+
+      /* 手机端优化 */
+      @media (max-width: 768px) {
+        .atmosphere-panel {
+          width: 95%;
+          bottom: 100px;
+        }
+
+        .atmosphere-tabs {
+          padding: 8px 12px;
+          gap: 6px;
+        }
+
+        .atmosphere-tab {
+          font-size: 13px;
+          padding: 6px 10px;
+        }
+
+        .atmosphere-content {
+          padding: 12px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -5622,6 +5830,14 @@
             <path
               fill="currentColor"
               d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8s8 3.58 8 8s-3.58 8-8 8m3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8S14 8.67 14 9.5s.67 1.5 1.5 1.5m-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8S7 8.67 7 9.5s.67 1.5 1.5 1.5m-2.16 4h9.32c-.46 2.28-2.48 4-4.66 4s-4.2-1.72-4.66-4Z"
+            ></path>
+          </svg>
+        </button>
+        <button class="action-btn" id="atmosphereBtn" title="氛围贴纸">
+          <svg viewBox="0 0 24 24">
+            <path
+              fill="currentColor"
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m-5-9c.83 0 1.5-.67 1.5-1.5S7.83 8 7 8s-1.5.67-1.5 1.5S6.17 11 7 11m10 0c.83 0 1.5-.67 1.5-1.5S17.83 8 17 8s-1.5.67-1.5 1.5s.67 1.5 1.5 1.5m-5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5Z"
             ></path>
           </svg>
         </button>
@@ -5934,6 +6150,24 @@
 
       <div class="emoji-panel" id="emojiPanel">
         <div class="emoji-grid-container"></div>
+      </div>
+
+      <!-- 氛围贴纸面板 -->
+      <div class="atmosphere-panel" id="atmospherePanel">
+        <div class="atmosphere-header">
+          <div class="atmosphere-title">🎭 氛围贴纸</div>
+          <button class="atmosphere-close" id="atmosphereCloseBtn">×</button>
+        </div>
+        <div class="atmosphere-tabs">
+          <div class="atmosphere-tab active" data-category="happy">😊 开心</div>
+          <div class="atmosphere-tab" data-category="sad">😢 难过</div>
+          <div class="atmosphere-tab" data-category="angry">😡 生气</div>
+          <div class="atmosphere-tab" data-category="surprise">😮 惊讶</div>
+          <div class="atmosphere-tab" data-category="celebrate">🎉 庆祝</div>
+        </div>
+        <div class="atmosphere-content" id="atmosphereContent">
+          <!-- 氛围贴纸内容将在这里动态生成 -->
+        </div>
       </div>
 
       <div class="voice-call-overlay" id="voiceCallOverlay">
@@ -7619,8 +7853,12 @@
         // 只渲染新添加的消息
         for (let i = lastHistoryCount; i < state.messageHistory.length; i++) {
           appendMessage(state.messageHistory[i], i);
-          // 为新消息添加收藏标识
-          setTimeout(() => updateMessageFavoriteIndicator(i), 10);
+          // 为新消息添加收藏标识、反应和心情标签
+          setTimeout(() => {
+            updateMessageFavoriteIndicator(i);
+            updateMessageReactionDisplay(i);
+            updateMessageMoodTagDisplay(i);
+          }, 10);
         }
         lastHistoryCount = state.messageHistory.length;
 
@@ -8297,7 +8535,49 @@
         `;
       }
 
+      // 渲染氛围贴纸消息
+      function renderAtmosphereMessage(contentDiv, msg) {
+        contentDiv.classList.add('atmosphere-message');
 
+        const categoryData = atmosphereStickers[msg.category] || { name: '氛围', icon: '🎭' };
+
+        contentDiv.innerHTML = `
+          <div class="atmosphere-card" style="
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #e0c6f7 0%, #f3d6f7 100%);
+            border-radius: 20px;
+            border: 2px solid rgba(224, 198, 247, 0.5);
+            box-shadow: 0 4px 12px rgba(224, 198, 247, 0.3);
+            position: relative;
+            overflow: hidden;
+          ">
+            <div class="atmosphere-bg" style="
+              position: absolute;
+              top: -50%;
+              left: -50%;
+              width: 200%;
+              height: 200%;
+              background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+              animation: atmosphereGlow 3s ease-in-out infinite;
+            "></div>
+            <div style="position: relative; z-index: 2;">
+              <div class="atmosphere-sticker" style="
+                font-size: 64px;
+                margin-bottom: 12px;
+                animation: atmosphereBounce 0.6s ease-out;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              ">${msg.content}</div>
+              <div class="atmosphere-label" style="
+                font-size: 14px;
+                color: #666;
+                font-weight: 500;
+                opacity: 0.8;
+              ">${categoryData.name}氛围</div>
+            </div>
+          </div>
+        `;
+      }
 
       const messageRenderers = {
         text: renderTextMessage,
@@ -8316,6 +8596,7 @@
         file: renderFileMessage,
         document: renderFileMessage, // 文档消息也使用 renderFileMessage，内部会自动判断类型
         location: renderLocationMessage,
+        atmosphere: renderAtmosphereMessage,
       };
 
       // 检查消息中是否包含图片URL并提取
@@ -8668,6 +8949,51 @@
           message.appendChild(wrapper);
         }
 
+        // 添加反应按钮（除了系统消息和撤回消息）
+        if (msg.type !== 'system' && msg.type !== 'recalled') {
+          const reactionButton = document.createElement('div');
+          reactionButton.className = 'reaction-button';
+          reactionButton.style.cssText = `
+            position: absolute;
+            bottom: -8px;
+            right: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #e0c6f7;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            backdrop-filter: blur(5px);
+          `;
+          reactionButton.innerHTML = '😊+';
+          reactionButton.title = '添加反应';
+
+          // 点击显示反应选择器
+          reactionButton.addEventListener('click', e => {
+            e.stopPropagation();
+            showReactionPicker(idx, reactionButton);
+          });
+
+          // 悬停效果
+          reactionButton.addEventListener('mouseenter', () => {
+            reactionButton.style.transform = 'scale(1.1)';
+            reactionButton.style.background = 'rgba(224, 198, 247, 0.3)';
+          });
+
+          reactionButton.addEventListener('mouseleave', () => {
+            reactionButton.style.transform = 'scale(1)';
+            reactionButton.style.background = 'rgba(255, 255, 255, 0.9)';
+          });
+
+          // 确保消息容器有相对定位
+          wrapper.style.position = 'relative';
+          wrapper.appendChild(reactionButton);
+        }
+
         return message;
       }
 
@@ -8712,7 +9038,10 @@
         const isFavorited = isMessageFavorited(idx);
         const favoriteIcon = isFavorited ? '💔' : '⭐';
         const favoriteText = isFavorited ? '取消收藏' : '收藏';
-        menuItems += `<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="favorite"><span style="font-size:20px;">${favoriteIcon}</span> ${favoriteText}</div>`;
+        menuItems += `<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;border-bottom:1px solid #f0f0f0;" data-action="favorite"><span style="font-size:20px;">${favoriteIcon}</span> ${favoriteText}</div>`;
+
+        // Mood tag action for all messages
+        menuItems += `<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="mood"><span style="font-size:20px;">🏷️</span> 心情标签</div>`;
 
         menu.innerHTML = menuItems;
 
@@ -8764,6 +9093,10 @@
             console.log('执行收藏操作');
             toggleMessageFavorite(idx);
             removeContextMenu();
+          } else if (action === 'mood') {
+            console.log('执行心情标签操作');
+            showMoodTagPicker(idx);
+            removeContextMenu();
           }
         });
 
@@ -8795,6 +9128,8 @@
                   recallMessage(idx);
                 } else if (action === 'favorite') {
                   toggleMessageFavorite(idx);
+                } else if (action === 'mood') {
+                  showMoodTagPicker(idx);
                 }
                 removeContextMenu();
               }, 50);
@@ -14447,7 +14782,677 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function addFavoriteIndicatorToRenderedMessages() {
         state.messageHistory.forEach((msg, index) => {
           updateMessageFavoriteIndicator(index);
+          updateMessageReactionDisplay(index);
+          updateMessageMoodTagDisplay(index);
         });
+      }
+
+      // ==================== 氛围贴纸/心情反应功能 ====================
+
+      // 表情反应数据结构
+      const reactionEmojis = {
+        laugh: { emoji: '😂', name: '哈哈' },
+        love: { emoji: '❤️', name: '爱心' },
+        like: { emoji: '👍', name: '赞' },
+        wow: { emoji: '😮', name: '哇' },
+        sad: { emoji: '😢', name: '难过' },
+        angry: { emoji: '😡', name: '生气' },
+        party: { emoji: '🎉', name: '庆祝' },
+        fire: { emoji: '🔥', name: '火' }
+      };
+
+      // 氛围贴纸分类
+      const atmosphereStickers = {
+        happy: {
+          name: '开心',
+          icon: '😊',
+          stickers: ['😄', '😆', '🥰', '😍', '🤗', '😋', '🤤', '🥳', '🤩', '😇']
+        },
+        sad: {
+          name: '难过',
+          icon: '😢',
+          stickers: ['😭', '😔', '💔', '😞', '🥺', '😿', '😰', '😨', '😱', '🤧']
+        },
+        angry: {
+          name: '生气',
+          icon: '😡',
+          stickers: ['😠', '😤', '💢', '🤬', '😾', '👿', '💀', '🔥', '⚡', '💥']
+        },
+        surprise: {
+          name: '惊讶',
+          icon: '😮',
+          stickers: ['😲', '🤯', '😱', '🙄', '😵', '🤔', '🧐', '🤨', '😏', '🤭']
+        },
+        celebrate: {
+          name: '庆祝',
+          icon: '🎉',
+          stickers: ['🎉', '🥳', '🎊', '✨', '🎈', '🎁', '🏆', '🌟', '💫', '🎯']
+        }
+      };
+
+      // 心情标签选项
+      const moodTags = [
+        { id: 'happy', name: '开心', color: '#FFD700', emoji: '😊' },
+        { id: 'excited', name: '兴奋', color: '#FF6B6B', emoji: '🤩' },
+        { id: 'love', name: '喜欢', color: '#FF69B4', emoji: '🥰' },
+        { id: 'funny', name: '搞笑', color: '#32CD32', emoji: '😂' },
+        { id: 'surprised', name: '惊讶', color: '#1E90FF', emoji: '😮' },
+        { id: 'sad', name: '难过', color: '#87CEEB', emoji: '😢' },
+        { id: 'angry', name: '生气', color: '#DC143C', emoji: '😡' },
+        { id: 'thinking', name: '思考', color: '#9370DB', emoji: '🤔' },
+        { id: 'sleepy', name: '困了', color: '#708090', emoji: '😴' },
+        { id: 'cool', name: '酷', color: '#000000', emoji: '😎' }
+      ];
+
+      // 获取消息反应存储键名
+      function getReactionStorageKey() {
+        return 'message_reactions';
+      }
+
+      // 获取心情标签存储键名
+      function getMoodTagStorageKey() {
+        return 'message_mood_tags';
+      }
+
+      // 加载消息反应数据
+      function loadMessageReactions() {
+        try {
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            const reactions = parent.extension_settings[getReactionStorageKey()];
+            return reactions ? JSON.parse(JSON.stringify(reactions)) : {};
+          }
+          const saved = localStorage.getItem(getReactionStorageKey());
+          return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+          console.error('加载消息反应失败:', e);
+          return {};
+        }
+      }
+
+      // 保存消息反应数据
+      function saveMessageReactions(reactions) {
+        try {
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            parent.extension_settings[getReactionStorageKey()] = JSON.parse(JSON.stringify(reactions));
+            if (typeof parent.saveSettingsDebounced === 'function') {
+              parent.saveSettingsDebounced();
+            }
+          }
+          localStorage.setItem(getReactionStorageKey(), JSON.stringify(reactions));
+        } catch (e) {
+          console.error('保存消息反应失败:', e);
+        }
+      }
+
+      // 加载心情标签数据
+      function loadMoodTags() {
+        try {
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            const tags = parent.extension_settings[getMoodTagStorageKey()];
+            return tags ? JSON.parse(JSON.stringify(tags)) : {};
+          }
+          const saved = localStorage.getItem(getMoodTagStorageKey());
+          return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+          console.error('加载心情标签失败:', e);
+          return {};
+        }
+      }
+
+      // 保存心情标签数据
+      function saveMoodTags(tags) {
+        try {
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            parent.extension_settings[getMoodTagStorageKey()] = JSON.parse(JSON.stringify(tags));
+            if (typeof parent.saveSettingsDebounced === 'function') {
+              parent.saveSettingsDebounced();
+            }
+          }
+          localStorage.setItem(getMoodTagStorageKey(), JSON.stringify(tags));
+        } catch (e) {
+          console.error('保存心情标签失败:', e);
+        }
+      }
+
+      // 获取消息的唯一ID
+      function getMessageId(messageIndex) {
+        return `${state.currentMsgId}_${messageIndex}`;
+      }
+
+      // 添加消息反应
+      function addMessageReaction(messageIndex, reactionType) {
+        const messageId = getMessageId(messageIndex);
+        const reactions = loadMessageReactions();
+
+        if (!reactions[messageId]) {
+          reactions[messageId] = {};
+        }
+
+        if (!reactions[messageId][reactionType]) {
+          reactions[messageId][reactionType] = [];
+        }
+
+        const userId = 'user'; // 简化版，实际可以用真实用户ID
+        if (!reactions[messageId][reactionType].includes(userId)) {
+          reactions[messageId][reactionType].push(userId);
+          saveMessageReactions(reactions);
+          updateMessageReactionDisplay(messageIndex);
+          showToast(`已添加反应 ${reactionEmojis[reactionType].emoji}`);
+        } else {
+          // 移除反应
+          reactions[messageId][reactionType] = reactions[messageId][reactionType].filter(id => id !== userId);
+          if (reactions[messageId][reactionType].length === 0) {
+            delete reactions[messageId][reactionType];
+          }
+          if (Object.keys(reactions[messageId]).length === 0) {
+            delete reactions[messageId];
+          }
+          saveMessageReactions(reactions);
+          updateMessageReactionDisplay(messageIndex);
+          showToast(`已移除反应 ${reactionEmojis[reactionType].emoji}`);
+        }
+      }
+
+      // 显示消息反应选择器
+      function showReactionPicker(messageIndex, buttonElement) {
+        // 移除已存在的反应选择器
+        const existingPicker = document.querySelector('.reaction-picker');
+        if (existingPicker) {
+          existingPicker.remove();
+        }
+
+        const picker = document.createElement('div');
+        picker.className = 'reaction-picker';
+        picker.style.cssText = `
+          position: absolute;
+          background: white;
+          border: 2px solid #e0c6f7;
+          border-radius: 25px;
+          padding: 8px 12px;
+          box-shadow: 0 4px 16px rgba(224, 198, 247, 0.3);
+          z-index: 1000;
+          display: flex;
+          gap: 8px;
+          animation: reactionPickerShow 0.3s ease-out;
+        `;
+
+        let reactionHtml = '';
+        Object.entries(reactionEmojis).forEach(([type, data]) => {
+          reactionHtml += `
+            <div class="reaction-option" data-reaction="${type}" style="
+              font-size: 24px;
+              cursor: pointer;
+              padding: 6px;
+              border-radius: 50%;
+              transition: all 0.2s;
+              user-select: none;
+              -webkit-tap-highlight-color: transparent;
+            " title="${data.name}">
+              ${data.emoji}
+            </div>
+          `;
+        });
+
+        picker.innerHTML = reactionHtml;
+
+        // 计算位置
+        const buttonRect = buttonElement.getBoundingClientRect();
+        const phoneRect = document.querySelector('.cute-phone').getBoundingClientRect();
+
+        picker.style.bottom = (phoneRect.bottom - buttonRect.top + 10) + 'px';
+        picker.style.right = (phoneRect.right - buttonRect.right) + 'px';
+
+        // 绑定点击事件
+        picker.querySelectorAll('.reaction-option').forEach(option => {
+          option.addEventListener('click', e => {
+            e.stopPropagation();
+            const reactionType = option.dataset.reaction;
+            addMessageReaction(messageIndex, reactionType);
+            picker.remove();
+          });
+
+          // 悬停效果
+          option.addEventListener('mouseenter', () => {
+            option.style.transform = 'scale(1.3)';
+            option.style.backgroundColor = '#f0f8ff';
+          });
+
+          option.addEventListener('mouseleave', () => {
+            option.style.transform = 'scale(1)';
+            option.style.backgroundColor = 'transparent';
+          });
+        });
+
+        document.querySelector('.cute-phone').appendChild(picker);
+
+        // 点击外部关闭
+        setTimeout(() => {
+          document.addEventListener('click', () => picker.remove(), { once: true });
+        }, 100);
+      }
+
+      // 更新消息反应显示
+      function updateMessageReactionDisplay(messageIndex) {
+        const messageElement = document.querySelector(`[data-index="${messageIndex}"]`);
+        if (!messageElement) return;
+
+        const messageId = getMessageId(messageIndex);
+        const reactions = loadMessageReactions();
+        const messageReactions = reactions[messageId] || {};
+
+        // 移除旧的反应显示
+        const oldReactionBar = messageElement.querySelector('.reaction-bar');
+        if (oldReactionBar) {
+          oldReactionBar.remove();
+        }
+
+        // 如果没有反应，不显示
+        if (Object.keys(messageReactions).length === 0) {
+          return;
+        }
+
+        // 创建反应显示条
+        const reactionBar = document.createElement('div');
+        reactionBar.className = 'reaction-bar';
+        reactionBar.style.cssText = `
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 8px;
+          padding: 0 8px;
+        `;
+
+        Object.entries(messageReactions).forEach(([reactionType, users]) => {
+          if (users.length > 0) {
+            const reactionBadge = document.createElement('div');
+            reactionBadge.className = 'reaction-badge';
+            reactionBadge.style.cssText = `
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              background: rgba(224, 198, 247, 0.2);
+              border: 1px solid #e0c6f7;
+              border-radius: 12px;
+              padding: 4px 8px;
+              font-size: 14px;
+              cursor: pointer;
+              transition: all 0.2s;
+              user-select: none;
+            `;
+
+            const isUserReacted = users.includes('user');
+            if (isUserReacted) {
+              reactionBadge.style.background = '#e0c6f7';
+              reactionBadge.style.borderColor = '#c8a2db';
+            }
+
+            reactionBadge.innerHTML = `
+              <span style="font-size: 16px;">${reactionEmojis[reactionType].emoji}</span>
+              <span style="font-size: 12px; color: #666;">${users.length}</span>
+            `;
+
+            // 点击切换反应
+            reactionBadge.addEventListener('click', e => {
+              e.stopPropagation();
+              addMessageReaction(messageIndex, reactionType);
+            });
+
+            // 悬停效果
+            reactionBadge.addEventListener('mouseenter', () => {
+              reactionBadge.style.transform = 'scale(1.1)';
+            });
+
+            reactionBadge.addEventListener('mouseleave', () => {
+              reactionBadge.style.transform = 'scale(1)';
+            });
+
+            reactionBar.appendChild(reactionBadge);
+          }
+        });
+
+        // 将反应条添加到消息元素
+        const messageContent = messageElement.querySelector('.message-content');
+        if (messageContent) {
+          messageContent.appendChild(reactionBar);
+        }
+      }
+
+      // 显示心情标签选择器
+      function showMoodTagPicker(messageIndex) {
+        // 移除已存在的心情标签选择器
+        const existingPicker = document.querySelector('.mood-tag-picker');
+        if (existingPicker) {
+          existingPicker.remove();
+        }
+
+        const picker = document.createElement('div');
+        picker.className = 'mood-tag-picker';
+        picker.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          border: 2px solid #e0c6f7;
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 0 8px 24px rgba(224, 198, 247, 0.3);
+          z-index: 10001;
+          max-width: 320px;
+          width: 90%;
+          animation: moodPickerShow 0.3s ease-out;
+        `;
+
+        let pickerHtml = `
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 500; color: #333; margin-bottom: 4px;">选择心情标签</div>
+            <div style="font-size: 14px; color: #666;">为这条消息添加心情标签</div>
+          </div>
+          <div class="mood-tags-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
+        `;
+
+        moodTags.forEach(tag => {
+          pickerHtml += `
+            <div class="mood-tag-option" data-mood="${tag.id}" style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              padding: 12px;
+              border: 2px solid ${tag.color}20;
+              border-radius: 12px;
+              cursor: pointer;
+              transition: all 0.2s;
+              background: ${tag.color}10;
+              user-select: none;
+            ">
+              <span style="font-size: 20px;">${tag.emoji}</span>
+              <span style="font-size: 14px; font-weight: 500; color: #333;">${tag.name}</span>
+            </div>
+          `;
+        });
+
+        pickerHtml += `
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="cancelMoodTag" style="
+              padding: 10px 20px;
+              border: 1px solid #ddd;
+              background: white;
+              color: #666;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 14px;
+            ">取消</button>
+            <button id="clearMoodTag" style="
+              padding: 10px 20px;
+              border: 1px solid #ff4757;
+              background: white;
+              color: #ff4757;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 14px;
+            ">清除标签</button>
+          </div>
+        `;
+
+        picker.innerHTML = pickerHtml;
+
+        // 绑定事件
+        picker.querySelectorAll('.mood-tag-option').forEach(option => {
+          option.addEventListener('click', e => {
+            e.stopPropagation();
+            const moodId = option.dataset.mood;
+            addMoodTagToMessage(messageIndex, moodId);
+            picker.remove();
+          });
+
+          // 悬停效果
+          option.addEventListener('mouseenter', () => {
+            const tag = moodTags.find(t => t.id === option.dataset.mood);
+            option.style.background = tag.color + '30';
+            option.style.borderColor = tag.color + '60';
+            option.style.transform = 'scale(1.05)';
+          });
+
+          option.addEventListener('mouseleave', () => {
+            const tag = moodTags.find(t => t.id === option.dataset.mood);
+            option.style.background = tag.color + '10';
+            option.style.borderColor = tag.color + '20';
+            option.style.transform = 'scale(1)';
+          });
+        });
+
+        picker.querySelector('#cancelMoodTag').addEventListener('click', () => {
+          picker.remove();
+        });
+
+        picker.querySelector('#clearMoodTag').addEventListener('click', () => {
+          removeMoodTagFromMessage(messageIndex);
+          picker.remove();
+        });
+
+        document.body.appendChild(picker);
+
+        // 点击背景关闭
+        setTimeout(() => {
+          document.addEventListener('click', (e) => {
+            if (!picker.contains(e.target)) {
+              picker.remove();
+            }
+          }, { once: true });
+        }, 100);
+      }
+
+      // 为消息添加心情标签
+      function addMoodTagToMessage(messageIndex, moodId) {
+        const messageId = getMessageId(messageIndex);
+        const tags = loadMoodTags();
+
+        tags[messageId] = moodId;
+        saveMoodTags(tags);
+
+        const tag = moodTags.find(t => t.id === moodId);
+        updateMessageMoodTagDisplay(messageIndex);
+        showToast(`已添加心情标签：${tag.emoji} ${tag.name}`);
+      }
+
+      // 从消息移除心情标签
+      function removeMoodTagFromMessage(messageIndex) {
+        const messageId = getMessageId(messageIndex);
+        const tags = loadMoodTags();
+
+        if (tags[messageId]) {
+          delete tags[messageId];
+          saveMoodTags(tags);
+          updateMessageMoodTagDisplay(messageIndex);
+          showToast('已移除心情标签');
+        }
+      }
+
+      // 更新消息的心情标签显示
+      function updateMessageMoodTagDisplay(messageIndex) {
+        const messageElement = document.querySelector(`[data-index="${messageIndex}"]`);
+        if (!messageElement) return;
+
+        const messageId = getMessageId(messageIndex);
+        const tags = loadMoodTags();
+        const moodId = tags[messageId];
+
+        // 移除旧的心情标签
+        const oldTag = messageElement.querySelector('.mood-tag');
+        if (oldTag) {
+          oldTag.remove();
+        }
+
+        // 如果没有标签，不显示
+        if (!moodId) return;
+
+        const tag = moodTags.find(t => t.id === moodId);
+        if (!tag) return;
+
+        // 创建心情标签显示
+        const moodTagElement = document.createElement('div');
+        moodTagElement.className = 'mood-tag';
+        moodTagElement.style.cssText = `
+          position: absolute;
+          top: -12px;
+          left: -8px;
+          background: ${tag.color};
+          color: white;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+          z-index: 10;
+          animation: moodTagShow 0.3s ease-out;
+        `;
+
+        moodTagElement.innerHTML = `
+          <span style="font-size: 14px;">${tag.emoji}</span>
+          <span>${tag.name}</span>
+        `;
+
+        // 点击可以修改标签
+        moodTagElement.addEventListener('click', e => {
+          e.stopPropagation();
+          showMoodTagPicker(messageIndex);
+        });
+
+        // 将标签添加到消息元素
+        const messageContent = messageElement.querySelector('.message-content');
+        if (messageContent) {
+          messageContent.style.position = 'relative';
+          messageContent.appendChild(moodTagElement);
+        }
+      }
+
+      // 显示氛围贴纸面板
+      function showAtmospherePanel() {
+        const panel = document.getElementById('atmospherePanel');
+        const content = document.getElementById('atmosphereContent');
+
+        panel.style.display = 'block';
+
+        // 默认显示开心分类
+        showAtmosphereCategory('happy');
+      }
+
+      // 隐藏氛围贴纸面板
+      function hideAtmospherePanel() {
+        const panel = document.getElementById('atmospherePanel');
+        panel.style.display = 'none';
+      }
+
+      // 显示指定分类的氛围贴纸
+      function showAtmosphereCategory(category) {
+        const content = document.getElementById('atmosphereContent');
+        const categoryData = atmosphereStickers[category];
+
+        if (!categoryData) return;
+
+        let html = `
+          <div class="atmosphere-category-header" style="
+            text-align: center;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: linear-gradient(135deg, #e0c6f7 0%, #f3d6f7 100%);
+            border-radius: 12px;
+          ">
+            <div style="font-size: 24px; margin-bottom: 4px;">${categoryData.icon}</div>
+            <div style="font-size: 16px; font-weight: 500; color: #333;">${categoryData.name}系列</div>
+          </div>
+          <div class="atmosphere-stickers-grid" style="
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            padding: 0 8px;
+          ">
+        `;
+
+        categoryData.stickers.forEach(sticker => {
+          html += `
+            <div class="atmosphere-sticker" data-sticker="${sticker}" style="
+              font-size: 32px;
+              text-align: center;
+              padding: 12px;
+              border-radius: 12px;
+              cursor: pointer;
+              transition: all 0.2s;
+              user-select: none;
+              -webkit-tap-highlight-color: transparent;
+              background: rgba(255, 255, 255, 0.5);
+              border: 2px solid transparent;
+            ">
+              ${sticker}
+            </div>
+          `;
+        });
+
+        html += '</div>';
+        content.innerHTML = html;
+
+        // 绑定点击事件
+        content.querySelectorAll('.atmosphere-sticker').forEach(stickerElement => {
+          stickerElement.addEventListener('click', e => {
+            e.stopPropagation();
+            const sticker = stickerElement.dataset.sticker;
+            sendAtmosphereSticker(sticker, category);
+          });
+
+          // 悬停效果
+          stickerElement.addEventListener('mouseenter', () => {
+            stickerElement.style.transform = 'scale(1.2)';
+            stickerElement.style.background = 'rgba(224, 198, 247, 0.3)';
+            stickerElement.style.borderColor = '#e0c6f7';
+          });
+
+          stickerElement.addEventListener('mouseleave', () => {
+            stickerElement.style.transform = 'scale(1)';
+            stickerElement.style.background = 'rgba(255, 255, 255, 0.5)';
+            stickerElement.style.borderColor = 'transparent';
+          });
+        });
+
+        // 更新标签页状态
+        document.querySelectorAll('.atmosphere-tab').forEach(tab => {
+          tab.classList.remove('active');
+        });
+        document.querySelector(`[data-category="${category}"]`).classList.add('active');
+      }
+
+      // 发送氛围贴纸
+      function sendAtmosphereSticker(sticker, category) {
+        const categoryData = atmosphereStickers[category];
+        const message = {
+          type: 'atmosphere',
+          content: sticker,
+          category: category,
+          categoryName: categoryData.name,
+          time: getCurrentTime(),
+          sender: 'user'
+        };
+
+        // 添加到消息历史
+        state.messageHistory.push(message);
+
+        // 渲染消息
+        renderNewMessages();
+
+        // 隐藏面板
+        hideAtmospherePanel();
+
+        // 显示提示
+        showToast(`已发送${categoryData.name}贴纸 ${sticker}`);
+
+        // 滚动到底部
+        setTimeout(() => {
+          const chat = document.getElementById('chatMessages');
+          chat.scrollTop = chat.scrollHeight;
+        }, 100);
       }
 
       // 显示长按提示（仅在首次使用时显示）
@@ -15375,6 +16380,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       document.getElementById('viewFavoritesBtn').addEventListener('click', showFavorites);
       document.getElementById('favoritesCloseBtn').addEventListener('click', hideFavorites);
       document.getElementById('clearAllFavoritesBtn').addEventListener('click', clearAllFavorites);
+
+      // 绑定氛围贴纸相关事件
+      document.getElementById('atmosphereBtn').addEventListener('click', showAtmospherePanel);
+      document.getElementById('atmosphereCloseBtn').addEventListener('click', hideAtmospherePanel);
+
+      // 绑定氛围贴纸标签页切换事件
+      document.querySelectorAll('.atmosphere-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const category = tab.dataset.category;
+          showAtmosphereCategory(category);
+        });
+      });
 
       // 头像上传
       document.getElementById('avatarUploadBtn').addEventListener('click', () => {
