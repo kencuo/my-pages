@@ -8116,11 +8116,15 @@
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
 
-            // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+            // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
+            const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
 
-            if (msg.customAvatarUrl) {
-              // 最高优先级：使用消息中保存的自定义头像
+            if (characterAvatarUrl) {
+              // 最高优先级：使用角色配置中的头像（类似SillyTavern）
+              avatar.src = characterAvatarUrl;
+            } else if (msg.customAvatarUrl) {
+              // 次高优先级：使用消息中保存的自定义头像
               avatar.src = msg.customAvatarUrl;
             } else if (settingsState.charAvatars[charName]) {
               // 中等优先级：使用设置中的角色头像
@@ -8269,11 +8273,15 @@
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
 
-            // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+            // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
+            const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
 
-            if (msg.customAvatarUrl) {
-              // 最高优先级：使用消息中保存的自定义头像
+            if (characterAvatarUrl) {
+              // 最高优先级：使用角色配置中的头像（类似SillyTavern）
+              avatar.src = characterAvatarUrl;
+            } else if (msg.customAvatarUrl) {
+              // 次高优先级：使用消息中保存的自定义头像
               avatar.src = msg.customAvatarUrl;
             } else if (settingsState.charAvatars[charName]) {
               // 中等优先级：使用设置中的角色头像
@@ -12572,6 +12580,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           // 加载设置
           loadSettings();
 
+          // 初始化角色头像配置
+          initializeCharacterAvatars();
+
           // 绑定所有事件监听器
           bindEventListeners();
 
@@ -13494,6 +13505,45 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
 
+      // 角色配置管理 - 类似SillyTavern的角色数据保存机制
+      function getCharacterProfile(charName) {
+        if (!charName) return null;
+        const savedProfile = localStorage.getItem(`char_profile_${charName}`);
+        return savedProfile ? JSON.parse(savedProfile) : null;
+      }
+
+      function saveCharacterProfile(charName, profileData) {
+        if (!charName) return;
+        localStorage.setItem(`char_profile_${charName}`, JSON.stringify(profileData));
+      }
+
+      function getCharacterAvatarUrl(charName) {
+        if (!charName) return null;
+        const profile = getCharacterProfile(charName);
+        return profile?.avatarUrl || null;
+      }
+
+      function setCharacterAvatarUrl(charName, avatarUrl) {
+        if (!charName) return;
+        let profile = getCharacterProfile(charName) || {};
+        profile.avatarUrl = avatarUrl;
+        profile.lastUpdated = new Date().toISOString();
+        saveCharacterProfile(charName, profile);
+      }
+
+      // 初始化角色头像配置
+      function initializeCharacterAvatars() {
+        const charName = getCurrentCharName();
+        if (charName) {
+          const characterAvatarUrl = getCharacterAvatarUrl(charName);
+          if (characterAvatarUrl) {
+            // 如果角色配置中有头像，同步到设置状态中
+            settingsState.charAvatars[charName] = characterAvatarUrl;
+            console.log(`从角色配置中恢复 ${charName} 的头像`);
+          }
+        }
+      }
+
       // 从localStorage加载设置
       function loadSettings() {
         const savedAvatar = localStorage.getItem('chatUserAvatar');
@@ -13720,10 +13770,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             if (!isNaN(messageIndex) && state.messageHistory[messageIndex]) {
               const msg = state.messageHistory[messageIndex];
               const charName = msg.charName || '对方'; // 获取角色名称
+              const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
 
-              // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
-              if (msg.customAvatarUrl) {
-                // 最高优先级：使用消息中保存的自定义头像
+              // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+              if (characterAvatarUrl) {
+                // 最高优先级：使用角色配置中的头像（类似SillyTavern）
+                avatar.src = characterAvatarUrl;
+              } else if (msg.customAvatarUrl) {
+                // 次高优先级：使用消息中保存的自定义头像
                 avatar.src = msg.customAvatarUrl;
               } else if (settingsState.charAvatars[charName]) {
                 // 中等优先级：使用设置中的角色头像
@@ -13773,6 +13827,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           } else if (type === 'charAvatar') {
             const charName = getCurrentCharName();
             if (charName) {
+              // 保存到角色配置中（类似SillyTavern的角色数据保存）
+              setCharacterAvatarUrl(charName, dataUrl);
+
+              // 同时保存到设置状态中（向后兼容）
               settingsState.charAvatars[charName] = dataUrl;
 
               // 同时更新消息历史中的角色头像信息，确保持久化
@@ -13784,6 +13842,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               });
 
               updateCharAvatars();
+              console.log(`角色 ${charName} 的头像已保存到角色配置中`);
             }
           }
 
