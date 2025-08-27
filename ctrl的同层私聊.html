@@ -8116,15 +8116,17 @@
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
 
-            // 优先使用用户设置的头像，如果没有设置则使用格式中的头像
+            // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
-            const userSetAvatar = settingsState.charAvatars[charName]; // 检查用户是否设置了该角色的头像
 
-            if (userSetAvatar) {
-              // 使用用户设置的头像
-              avatar.src = userSetAvatar;
+            if (msg.customAvatarUrl) {
+              // 最高优先级：使用消息中保存的自定义头像
+              avatar.src = msg.customAvatarUrl;
+            } else if (settingsState.charAvatars[charName]) {
+              // 中等优先级：使用设置中的角色头像
+              avatar.src = settingsState.charAvatars[charName];
             } else {
-              // 使用格式中的头像
+              // 最低优先级：使用格式中的头像
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
 
@@ -8267,15 +8269,17 @@
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
 
-            // 优先使用用户设置的头像，如果没有设置则使用格式中的头像
+            // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
-            const userSetAvatar = settingsState.charAvatars[charName]; // 检查用户是否设置了该角色的头像
 
-            if (userSetAvatar) {
-              // 使用用户设置的头像
-              avatar.src = userSetAvatar;
+            if (msg.customAvatarUrl) {
+              // 最高优先级：使用消息中保存的自定义头像
+              avatar.src = msg.customAvatarUrl;
+            } else if (settingsState.charAvatars[charName]) {
+              // 中等优先级：使用设置中的角色头像
+              avatar.src = settingsState.charAvatars[charName];
             } else {
-              // 使用格式中的头像
+              // 最低优先级：使用格式中的头像
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
 
@@ -13716,13 +13720,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             if (!isNaN(messageIndex) && state.messageHistory[messageIndex]) {
               const msg = state.messageHistory[messageIndex];
               const charName = msg.charName || '对方'; // 获取角色名称
-              const userSetAvatar = settingsState.charAvatars[charName]; // 检查用户是否设置了该角色的头像
 
-              if (userSetAvatar) {
-                // 使用用户设置的头像
-                avatar.src = userSetAvatar;
+              // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+              if (msg.customAvatarUrl) {
+                // 最高优先级：使用消息中保存的自定义头像
+                avatar.src = msg.customAvatarUrl;
+              } else if (settingsState.charAvatars[charName]) {
+                // 中等优先级：使用设置中的角色头像
+                avatar.src = settingsState.charAvatars[charName];
               } else if (msg.avatar) {
-                // 使用格式中的头像
+                // 最低优先级：使用格式中的头像
                 avatar.src = 'https://files.catbox.moe/' + msg.avatar;
               }
             }
@@ -13767,6 +13774,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const charName = getCurrentCharName();
             if (charName) {
               settingsState.charAvatars[charName] = dataUrl;
+
+              // 同时更新消息历史中的角色头像信息，确保持久化
+              state.messageHistory.forEach(msg => {
+                if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
+                  msg.customAvatarUrl = dataUrl; // 添加自定义头像标记
+                  msg.charName = charName; // 确保角色名一致
+                }
+              });
+
               updateCharAvatars();
             }
           }
@@ -13790,6 +13806,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const charName = getCurrentCharName();
           if (charName && settingsState.charAvatars[charName]) {
             delete settingsState.charAvatars[charName];
+
+            // 同时清除消息历史中的自定义头像
+            state.messageHistory.forEach(msg => {
+              if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName)) {
+                delete msg.customAvatarUrl; // 移除自定义头像标记
+              }
+            });
+
             updateCharAvatars();
             saveSettings();
           }
