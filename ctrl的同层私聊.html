@@ -5585,10 +5585,6 @@
             <div class="icon-wrapper">👁️</div>
             <span class="action-label">查看状态</span>
           </div>
-          <div class="action-grid-item" id="setAvatarFromImageBtn" title="用图片设头像">
-            <div class="icon-wrapper">🖼️</div>
-            <span class="action-label">设头像</span>
-          </div>
         </div>
       </div>
 
@@ -9765,11 +9761,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 }
               }
 
-              // 处理AI的特殊指令
-              if (msg.sender === 'char') {
-                msg = processAiSpecialCommands(msg);
-              }
-
               state.messageHistory.push(msg);
               appendMessage(msg, state.messageHistory.length - 1);
 
@@ -13507,52 +13498,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       });
 
-      // 绑定设头像按钮事件
-      document.getElementById('setAvatarFromImageBtn').addEventListener('click', () => {
-        const latestImageUrl = getLatestUserImageUrl();
-        if (!latestImageUrl) {
-          alert('没有找到最近发送的图片！请先发送一张图片。');
-          return;
-        }
-
-        const nameInput = document.getElementById('charNameInput');
-        const charName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : getCurrentCharName();
-
-        if (!charName || charName === '对方') {
-          alert('请先设置角色名称！');
-          return;
-        }
-
-        if (confirm(`确定要将最近发送的图片设置为角色 "${charName}" 的头像吗？`)) {
-          setCharacterAvatarFromUserImage(latestImageUrl, charName);
-          // 关闭操作面板
-          moreActionsGrid.style.display = 'none';
-        }
-      });
-
-      // 绑定设头像按钮事件
-      document.getElementById('setAvatarFromImageBtn').addEventListener('click', () => {
-        const latestImageUrl = getLatestUserImageUrl();
-        if (!latestImageUrl) {
-          alert('没有找到最近发送的图片！请先发送一张图片。');
-          return;
-        }
-
-        const nameInput = document.getElementById('charNameInput');
-        const charName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : getCurrentCharName();
-
-        if (!charName || charName === '对方') {
-          alert('请先设置角色名称！');
-          return;
-        }
-
-        if (confirm(`确定要将最近发送的图片设置为角色 "${charName}" 的头像吗？`)) {
-          setCharacterAvatarFromUserImage(latestImageUrl, charName);
-          // 关闭操作面板
-          moreActionsGrid.style.display = 'none';
-        }
-      });
-
       // 设置功能相关代码
       const settingsState = {
         userAvatar: null,
@@ -13584,133 +13529,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         profile.avatarUrl = avatarUrl;
         profile.lastUpdated = new Date().toISOString();
         saveCharacterProfile(charName, profile);
-      }
-
-      // 从用户发送的图片中设置角色头像
-      function setCharacterAvatarFromUserImage(imageUrl, charName = null) {
-        if (!imageUrl) {
-          alert('没有找到有效的图片URL');
-          return false;
-        }
-
-        // 如果没有指定角色名，使用当前角色名
-        if (!charName) {
-          const nameInput = document.getElementById('charNameInput');
-          charName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : getCurrentCharName();
-        }
-
-        if (!charName || charName === '对方') {
-          alert('请先设置角色名称');
-          return false;
-        }
-
-        // 保存到角色配置中
-        setCharacterAvatarUrl(charName, imageUrl);
-
-        // 同时保存到设置状态中（向后兼容）
-        settingsState.charAvatars[charName] = imageUrl;
-
-        // 更新消息历史中的角色头像信息
-        state.messageHistory.forEach(msg => {
-          if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
-            msg.customAvatarUrl = imageUrl;
-            msg.charName = charName;
-          }
-        });
-
-        updateCharAvatars();
-        saveSettings();
-
-        console.log(`角色 ${charName} 的头像已设置为用户发送的图片`);
-        alert(`角色 "${charName}" 的头像已设置为你发送的图片！`);
-        return true;
-      }
-
-      // 获取最近用户发送的图片URL
-      function getLatestUserImageUrl() {
-        // 从消息历史中找到最近的用户图片消息
-        const userImageMessages = state.messageHistory
-          .filter(msg => msg.sender === 'user' && msg.type === 'image' && msg.imageData)
-          .reverse(); // 最新的在前面
-
-        if (userImageMessages.length === 0) {
-          return null;
-        }
-
-        return userImageMessages[0].imageData;
-      }
-
-      // 处理AI的特殊指令
-      function processAiSpecialCommands(msg) {
-        if (!msg.content || typeof msg.content !== 'string') {
-          return msg;
-        }
-
-        let content = msg.content;
-        let modified = false;
-
-        // 处理发送图片指令：[发送图片]
-        if (content.includes('[发送图片]') || content.includes('[转发图片]') || content.includes('[发送照片]')) {
-          const latestImageUrl = getLatestUserImageUrl();
-          if (latestImageUrl) {
-            // 将文本消息转换为图片消息
-            msg.type = 'image';
-            msg.imageData = latestImageUrl;
-            msg.imageDescription = '转发了你发送的图片';
-            // 移除指令文本，保留其他内容
-            content = content
-              .replace(/\[发送图片\]/g, '')
-              .replace(/\[转发图片\]/g, '')
-              .replace(/\[发送照片\]/g, '')
-              .trim();
-            if (content) {
-              msg.imageDescription = content;
-            }
-            modified = true;
-          } else {
-            // 没有找到图片，替换为提示文本
-            content = content
-              .replace(/\[发送图片\]/g, '(想发送图片，但没有找到可用的图片)')
-              .replace(/\[转发图片\]/g, '(想转发图片，但没有找到可用的图片)')
-              .replace(/\[发送照片\]/g, '(想发送照片，但没有找到可用的照片)');
-            modified = true;
-          }
-        }
-
-        // 处理设置头像指令：[设置头像]
-        if (content.includes('[设置头像]') || content.includes('[换头像]') || content.includes('[用这张图做头像]')) {
-          const latestImageUrl = getLatestUserImageUrl();
-          if (latestImageUrl) {
-            const charName = getCurrentCharName();
-            if (charName && charName !== '对方') {
-              setCharacterAvatarFromUserImage(latestImageUrl, charName);
-              // 替换指令为成功提示
-              content = content
-                .replace(/\[设置头像\]/g, '(已将你发送的图片设置为我的头像)')
-                .replace(/\[换头像\]/g, '(已将你发送的图片设置为我的头像)')
-                .replace(/\[用这张图做头像\]/g, '(已将这张图片设置为我的头像)');
-              modified = true;
-            } else {
-              content = content
-                .replace(/\[设置头像\]/g, '(想设置头像，但角色名称未设置)')
-                .replace(/\[换头像\]/g, '(想换头像，但角色名称未设置)')
-                .replace(/\[用这张图做头像\]/g, '(想用这张图做头像，但角色名称未设置)');
-              modified = true;
-            }
-          } else {
-            content = content
-              .replace(/\[设置头像\]/g, '(想设置头像，但没有找到可用的图片)')
-              .replace(/\[换头像\]/g, '(想换头像，但没有找到可用的图片)')
-              .replace(/\[用这张图做头像\]/g, '(想用这张图做头像，但没有找到可用的图片)');
-            modified = true;
-          }
-        }
-
-        if (modified) {
-          msg.content = content;
-        }
-
-        return msg;
       }
 
       // 初始化角色头像配置
