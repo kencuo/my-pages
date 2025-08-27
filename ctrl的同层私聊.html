@@ -13825,25 +13825,33 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             settingsState.wallpaper = dataUrl;
             updateWallpaper();
           } else if (type === 'charAvatar') {
-            const charName = getCurrentCharName();
-            if (charName) {
-              // 保存到角色配置中（类似SillyTavern的角色数据保存）
-              setCharacterAvatarUrl(charName, dataUrl);
+            // 优先使用输入框中的角色名，如果没有则使用当前角色名
+            const nameInput = document.getElementById('charNameInput');
+            let charName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : getCurrentCharName();
 
-              // 同时保存到设置状态中（向后兼容）
-              settingsState.charAvatars[charName] = dataUrl;
-
-              // 同时更新消息历史中的角色头像信息，确保持久化
-              state.messageHistory.forEach(msg => {
-                if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
-                  msg.customAvatarUrl = dataUrl; // 添加自定义头像标记
-                  msg.charName = charName; // 确保角色名一致
-                }
-              });
-
-              updateCharAvatars();
-              console.log(`角色 ${charName} 的头像已保存到角色配置中`);
+            // 如果角色名是默认值"对方"，提示用户输入具体角色名
+            if (!charName || charName === '对方') {
+              alert('请先在角色名称输入框中输入具体的角色名称，然后再上传头像。');
+              return;
             }
+
+            // 保存到角色配置中（类似SillyTavern的角色数据保存）
+            setCharacterAvatarUrl(charName, dataUrl);
+
+            // 同时保存到设置状态中（向后兼容）
+            settingsState.charAvatars[charName] = dataUrl;
+
+            // 同时更新消息历史中的角色头像信息，确保持久化
+            state.messageHistory.forEach(msg => {
+              if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
+                msg.customAvatarUrl = dataUrl; // 添加自定义头像标记
+                msg.charName = charName; // 确保角色名一致
+              }
+            });
+
+            updateCharAvatars();
+            console.log(`角色 ${charName} 的头像已保存到角色配置中`);
+            alert(`角色 "${charName}" 的头像已成功保存！`);
           }
 
           saveSettings(); // 统一保存所有设置
