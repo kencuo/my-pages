@@ -5491,6 +5491,91 @@
       #favoritesContainer::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8;
       }
+
+      /* ==================== 右键菜单手机端优化 ==================== */
+
+      /* 右键菜单容器优化 */
+      .context-menu {
+        position: fixed;
+        background: white;
+        border: 1.5px solid #e0c6f7;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(224, 198, 247, 0.25);
+        z-index: 10000;
+        min-width: 160px;
+        font-size: 17px;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+      }
+
+      /* 右键菜单项优化 */
+      .context-menu div[data-action] {
+        padding: 18px 24px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-height: 24px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        position: relative;
+        font-weight: 500;
+      }
+
+      .context-menu div[data-action]:hover,
+      .context-menu div[data-action]:active {
+        background-color: #e8f4fd;
+        transform: scale(1.02);
+      }
+
+      /* 手机端专用优化 */
+      @media (max-width: 768px) {
+        .context-menu {
+          min-width: 180px;
+          font-size: 18px;
+          border-width: 2px;
+        }
+
+        .context-menu div[data-action] {
+          padding: 20px 28px;
+          min-height: 28px;
+          font-size: 18px;
+        }
+
+        .context-menu div[data-action] span {
+          font-size: 20px;
+        }
+      }
+
+      /* 触摸设备优化 */
+      @media (hover: none) and (pointer: coarse) {
+        .context-menu {
+          min-width: 200px;
+          font-size: 19px;
+        }
+
+        .context-menu div[data-action] {
+          padding: 22px 30px;
+          min-height: 32px;
+        }
+      }
+
+      /* 长按指示器动画 */
+      @keyframes longPressGrow {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.5);
+        }
+        50% {
+          opacity: 0.8;
+          transform: translate(-50%, -50%) scale(1.1);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
     </style>
   </head>
   <body>
@@ -8447,16 +8532,53 @@
           showContextMenu(e, idx);
         });
 
-        // 移动端长按支持 - 只对非交互式消息启用
+        // 移动端长按支持 - 只对非交互式消息启用，增强视觉反馈
         if (!['transfer', 'redpacket'].includes(msg.type) || msg.claimed) {
           let longPressTimer = null;
           let isLongPress = false;
+          let pressIndicator = null;
 
           contentDiv.addEventListener('touchstart', e => {
             isLongPress = false;
+
+            // 创建长按指示器
+            pressIndicator = document.createElement('div');
+            pressIndicator.style.cssText = `
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 40px;
+              height: 40px;
+              background: rgba(224, 198, 247, 0.8);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 18px;
+              z-index: 100;
+              animation: longPressGrow 0.5s ease-out;
+              pointer-events: none;
+            `;
+            pressIndicator.innerHTML = '👆';
+            contentDiv.style.position = 'relative';
+            contentDiv.appendChild(pressIndicator);
+
             longPressTimer = setTimeout(() => {
               isLongPress = true;
               e.preventDefault();
+
+              // 移除指示器
+              if (pressIndicator) {
+                pressIndicator.remove();
+                pressIndicator = null;
+              }
+
+              // 添加触觉反馈
+              if (navigator.vibrate) {
+                navigator.vibrate(50);
+              }
+
               // 模拟右键事件
               const touch = e.touches[0];
               const mockEvent = {
@@ -8473,6 +8595,13 @@
               clearTimeout(longPressTimer);
               longPressTimer = null;
             }
+
+            // 清理长按指示器
+            if (pressIndicator) {
+              pressIndicator.remove();
+              pressIndicator = null;
+            }
+
             if (isLongPress) {
               e.preventDefault();
               e.stopPropagation();
@@ -8560,28 +8689,30 @@
         menu.style.position = 'fixed';
         menu.style.background = '#fff';
         menu.style.border = '1.5px solid #e0c6f7';
-        menu.style.borderRadius = '10px';
-        menu.style.boxShadow = '0 2px 8px #f3d6f7';
+        menu.style.borderRadius = '12px';
+        menu.style.boxShadow = '0 4px 16px rgba(224, 198, 247, 0.3)';
         menu.style.zIndex = 9999;
-        menu.style.padding = '6px 0';
-        menu.style.minWidth = '80px';
-        menu.style.fontSize = '14px';
+        menu.style.padding = '8px 0';
+        menu.style.minWidth = '140px';
+        menu.style.fontSize = '16px';
 
         let menuItems = '';
         const message = state.messageHistory[idx];
 
-        // Quote action is always available
+        // Quote action is always available - 增大触摸区域，优化手机体验
         menuItems +=
-          '<div style="padding:8px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0;" data-action="quote">📝 引用</div>';
+          '<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="quote"><span style="font-size:20px;">📝</span> 引用</div>';
 
         // Recall action only for user's own, non-recalled messages
         if (message.sender === 'user' && message.type !== 'recalled') {
-          menuItems += '<div style="padding:8px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0;" data-action="recall">↩️ 撤回</div>';
+          menuItems += '<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="recall"><span style="font-size:20px;">↩️</span> 撤回</div>';
         }
 
         // Favorite action for all messages
         const isFavorited = isMessageFavorited(idx);
-        menuItems += `<div style="padding:8px 16px;cursor:pointer;" data-action="favorite">${isFavorited ? '💔 取消收藏' : '⭐ 收藏'}</div>`;
+        const favoriteIcon = isFavorited ? '💔' : '⭐';
+        const favoriteText = isFavorited ? '取消收藏' : '收藏';
+        menuItems += `<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="favorite"><span style="font-size:20px;">${favoriteIcon}</span> ${favoriteText}</div>`;
 
         menu.innerHTML = menuItems;
 
@@ -8624,16 +8755,39 @@
           removeContextMenu();
         });
 
-        // 添加悬停效果
+        // 添加悬停和触摸效果
         menu.addEventListener('mouseover', e => {
           if (e.target.dataset.action) {
-            e.target.style.backgroundColor = '#f5f5f5';
+            e.target.style.backgroundColor = '#e8f4fd';
+            e.target.style.transform = 'scale(1.02)';
           }
         });
 
         menu.addEventListener('mouseout', e => {
           if (e.target.dataset.action) {
             e.target.style.backgroundColor = 'transparent';
+            e.target.style.transform = 'scale(1)';
+          }
+        });
+
+        // 添加触摸反馈
+        menu.addEventListener('touchstart', e => {
+          if (e.target.dataset.action) {
+            e.target.style.backgroundColor = '#e8f4fd';
+            e.target.style.transform = 'scale(0.98)';
+            // 添加触觉反馈（如果支持）
+            if (navigator.vibrate) {
+              navigator.vibrate(10);
+            }
+          }
+        });
+
+        menu.addEventListener('touchend', e => {
+          if (e.target.dataset.action) {
+            setTimeout(() => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.transform = 'scale(1)';
+            }, 150);
           }
         });
 
@@ -12827,6 +12981,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           // 绑定所有事件监听器
           bindEventListeners();
 
+          // 显示长按提示（延迟3秒，让用户先熟悉界面）
+          setTimeout(() => {
+            showLongPressHint();
+          }, 3000);
+
         } catch (error) {
           // 显示错误提示
           showErrorMessage('应用初始化失败，请刷新页面重试');
@@ -14235,6 +14394,58 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           updateMessageFavoriteIndicator(index);
         });
       }
+
+      // 显示长按提示（仅在首次使用时显示）
+      function showLongPressHint() {
+        const hintShown = localStorage.getItem('longPressHintShown');
+        if (hintShown) return;
+
+        const hint = document.createElement('div');
+        hint.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 20px 24px;
+          border-radius: 12px;
+          font-size: 16px;
+          text-align: center;
+          z-index: 10002;
+          max-width: 280px;
+          line-height: 1.5;
+          animation: fadeInOut 4s ease-in-out;
+        `;
+
+        hint.innerHTML = `
+          <div style="font-size: 24px; margin-bottom: 8px;">👆</div>
+          <div>长按消息可以</div>
+          <div><strong>引用 • 撤回 • 收藏</strong></div>
+        `;
+
+        document.body.appendChild(hint);
+
+        setTimeout(() => {
+          if (hint.parentNode) {
+            hint.remove();
+          }
+        }, 4000);
+
+        localStorage.setItem('longPressHintShown', 'true');
+      }
+
+      // 添加淡入淡出动画
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+          20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        }
+      `;
+      document.head.appendChild(style);
 
       // 角色配置管理 - 类似SillyTavern的角色数据保存机制
       function getCharacterProfile(charName) {
