@@ -7776,6 +7776,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           content = '(空消息)';
         }
 
+        // 检查消息中是否包含图片URL
+        const imageUrls = extractImageUrlsFromMessage(content);
+
         // 处理表情符号
         if (typeof EMOJIS !== 'undefined' && Array.isArray(EMOJIS)) {
           EMOJIS.forEach(e => {
@@ -7788,9 +7791,68 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           });
         }
 
-        const textSpan = document.createElement('span');
-        textSpan.innerHTML = content;
-        contentDiv.appendChild(textSpan);
+        // 如果是角色的消息且包含图片URL，显示图片
+        if (msg.sender === 'char' && imageUrls.length > 0) {
+          // 先显示文本内容
+          if (content && content !== '(空消息)') {
+            const textSpan = document.createElement('span');
+            textSpan.innerHTML = content;
+            contentDiv.appendChild(textSpan);
+          }
+
+          // 然后显示图片
+          imageUrls.forEach((imageUrl, index) => {
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'message-image-container';
+            imageContainer.style.cssText = `
+              margin-top: 8px;
+              border-radius: 8px;
+              overflow: hidden;
+              max-width: 200px;
+              position: relative;
+            `;
+
+            const img = document.createElement('img');
+            img.className = 'message-image';
+            img.src = imageUrl;
+            img.alt = '角色发送的图片';
+            img.style.cssText = `
+              width: 100%;
+              height: auto;
+              display: block;
+              cursor: pointer;
+              transition: transform 0.2s ease;
+            `;
+
+            // 图片加载失败时显示占位符
+            img.onerror = function() {
+              this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+';
+              this.alt = '图片加载失败';
+            };
+
+            // 点击图片放大查看
+            img.addEventListener('click', () => {
+              showImageModal(imageUrl);
+            });
+
+            // 鼠标悬停效果
+            img.addEventListener('mouseenter', () => {
+              img.style.transform = 'scale(1.02)';
+            });
+
+            img.addEventListener('mouseleave', () => {
+              img.style.transform = 'scale(1)';
+            });
+
+            imageContainer.appendChild(img);
+            contentDiv.appendChild(imageContainer);
+          });
+        } else {
+          // 普通文本消息
+          const textSpan = document.createElement('span');
+          textSpan.innerHTML = content;
+          contentDiv.appendChild(textSpan);
+        }
       }
 
       function renderRecalledMessage(contentDiv, msg) {
@@ -8463,6 +8525,74 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         file: renderFileMessage,
         location: renderLocationMessage,
       };
+
+      // 检查消息中是否包含图片URL并提取
+      function extractImageUrlsFromMessage(content) {
+        if (!content) return [];
+
+        // 匹配各种图片URL格式
+        const urlPatterns = [
+          // catbox.moe格式
+          /https:\/\/files\.catbox\.moe\/[a-zA-Z0-9]+\.(jpg|jpeg|png|gif|webp)/gi,
+          // 其他常见图片URL格式
+          /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)/gi,
+          // base64图片格式
+          /data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/gi
+        ];
+
+        const urls = [];
+        urlPatterns.forEach(pattern => {
+          const matches = content.match(pattern);
+          if (matches) {
+            urls.push(...matches);
+          }
+        });
+
+        return [...new Set(urls)]; // 去重
+      }
+
+      // 显示图片模态框
+      function showImageModal(imageUrl) {
+        // 创建模态框
+        const modal = document.createElement('div');
+        modal.className = 'image-modal';
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          cursor: pointer;
+        `;
+
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.style.cssText = `
+          max-width: 90%;
+          max-height: 90%;
+          object-fit: contain;
+          border-radius: 8px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        `;
+
+        // 点击模态框关闭
+        modal.addEventListener('click', () => {
+          document.body.removeChild(modal);
+        });
+
+        // 阻止图片点击事件冒泡
+        img.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+
+        modal.appendChild(img);
+        document.body.appendChild(modal);
+      }
 
       // Create DOM element for a single message
       function createMessageElement(msg, idx) {
