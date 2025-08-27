@@ -15634,13 +15634,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         document.getElementById('customPreview3').style.background = customThemeData.bgShell;
       }
 
-      // 导出PDF功能
+      // 改进的PDF导出功能
       async function exportToPDF() {
+        let loadingMsg = null;
+
         try {
           console.log('📄 开始导出PDF...');
 
           // 显示加载提示
-          const loadingMsg = document.createElement('div');
+          loadingMsg = document.createElement('div');
           loadingMsg.id = 'pdf-loading';
           loadingMsg.style.cssText = `
             position: fixed;
@@ -15650,134 +15652,284 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 20px 30px;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             z-index: 10000;
             display: flex;
             align-items: center;
             gap: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
           `;
           loadingMsg.innerHTML = `
             <div style="width: 24px; height: 24px; border: 2px solid #fff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            正在生成PDF文档...
+            <div>
+              <div>正在生成PDF文档...</div>
+              <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">请稍候，正在处理聊天记录</div>
+            </div>
           `;
           document.body.appendChild(loadingMsg);
 
-          // 动态加载jsPDF库
-          if (typeof window.jsPDF === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            document.head.appendChild(script);
+          // 多重加载策略：优先本地，然后多个CDN
+          await loadPDFLibrary();
 
-            await new Promise((resolve, reject) => {
-              script.onload = resolve;
-              script.onerror = () => reject(new Error('无法加载PDF库'));
-              setTimeout(() => reject(new Error('加载PDF库超时')), 10000);
-            });
+          // 验证库是否正确加载
+          if (typeof window.jsPDF === 'undefined') {
+            throw new Error('PDF库加载失败，请检查网络连接');
           }
 
-          // 获取聊天内容
-          const chatContainer = document.getElementById('chatMessages');
-          const messages = Array.from(chatContainer.querySelectorAll('.message'));
+          // 更新加载状态
+          loadingMsg.querySelector('div:last-child div:last-child').textContent = '正在处理聊天记录...';
 
-          if (messages.length === 0) {
+          // 获取聊天数据
+          const chatData = await extractChatData();
+
+          if (chatData.messages.length === 0) {
             throw new Error('没有聊天记录可以导出');
           }
 
-          // 创建PDF文档
-          const { jsPDF } = window.jsPDF;
-          const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-          });
+          // 更新加载状态
+          loadingMsg.querySelector('div:last-child div:last-child').textContent = '正在生成PDF文档...';
 
-          // 设置字体（支持中文）
-          pdf.setFont('helvetica');
+          // 生成PDF
+          const pdfBlob = await generatePDFDocument(chatData);
 
-          let yPosition = 20;
-          const pageHeight = pdf.internal.pageSize.height;
-          const margin = 20;
-          const maxWidth = pdf.internal.pageSize.width - 2 * margin;
-
-          // 添加标题
-          pdf.setFontSize(16);
-          pdf.text('聊天记录导出', margin, yPosition);
-          yPosition += 10;
-
-          // 添加导出时间
-          pdf.setFontSize(10);
-          pdf.text(`导出时间: ${new Date().toLocaleString()}`, margin, yPosition);
-          yPosition += 15;
-
-          // 处理每条消息
-          for (let i = 0; i < messages.length; i++) {
-            const message = messages[i];
-            const isUser = message.classList.contains('sent');
-            const messageContent = message.querySelector('.message-content');
-
-            if (!messageContent) continue;
-
-            // 获取消息文本
-            let text = messageContent.textContent || messageContent.innerText || '';
-            text = text.trim();
-
-            if (!text) continue;
-
-            // 检查是否需要换页
-            if (yPosition > pageHeight - 30) {
-              pdf.addPage();
-              yPosition = 20;
-            }
-
-            // 设置消息样式
-            pdf.setFontSize(12);
-            const sender = isUser ? '我' : (document.getElementById('chatPersonName').textContent || '对方');
-
-            // 添加发送者
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(`${sender}:`, margin, yPosition);
-            yPosition += 6;
-
-            // 添加消息内容
-            pdf.setFont('helvetica', 'normal');
-            const lines = pdf.splitTextToSize(text, maxWidth);
-
-            for (const line of lines) {
-              if (yPosition > pageHeight - 20) {
-                pdf.addPage();
-                yPosition = 20;
-              }
-              pdf.text(line, margin + 5, yPosition);
-              yPosition += 5;
-            }
-
-            yPosition += 5; // 消息间距
-          }
-
-          // 保存PDF
-          const fileName = `聊天记录_${new Date().toISOString().slice(0, 10)}.pdf`;
-          pdf.save(fileName);
+          // 下载文件
+          const fileName = `聊天记录_${chatData.chatName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+          downloadBlob(pdfBlob, fileName);
 
           // 移除加载提示
-          document.body.removeChild(loadingMsg);
+          if (loadingMsg && loadingMsg.parentNode) {
+            document.body.removeChild(loadingMsg);
+          }
 
           // 显示成功提示
-          showSuccessMessage('PDF导出成功！文件已保存到下载文件夹');
+          showToast('PDF导出成功！文件已保存到下载文件夹 📄');
           console.log('✅ PDF导出完成:', fileName);
 
         } catch (error) {
           console.error('❌ PDF导出失败:', error);
 
           // 移除加载提示
-          const loadingElement = document.getElementById('pdf-loading');
-          if (loadingElement) {
-            document.body.removeChild(loadingElement);
+          if (loadingMsg && loadingMsg.parentNode) {
+            document.body.removeChild(loadingMsg);
           }
 
-          // 显示错误提示
-          showErrorMessage('PDF导出失败: ' + error.message);
+          // 显示详细错误信息
+          let errorMessage = 'PDF导出失败';
+          if (error.message.includes('网络')) {
+            errorMessage = '网络连接失败，请检查网络后重试';
+          } else if (error.message.includes('没有聊天记录')) {
+            errorMessage = '当前没有聊天记录可以导出';
+          } else if (error.message.includes('PDF库')) {
+            errorMessage = 'PDF功能加载失败，请刷新页面重试';
+          } else {
+            errorMessage = `导出失败: ${error.message}`;
+          }
+
+          showToast(errorMessage + ' ❌');
         }
+      }
+
+      // PDF库加载函数（多重备用方案）
+      async function loadPDFLibrary() {
+        if (typeof window.jsPDF !== 'undefined') {
+          return; // 已经加载
+        }
+
+        const cdnUrls = [
+          'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+          'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
+          'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'
+        ];
+
+        for (const url of cdnUrls) {
+          try {
+            console.log(`尝试从 ${url} 加载PDF库...`);
+            await loadScriptFromUrl(url);
+            if (typeof window.jsPDF !== 'undefined') {
+              console.log('✅ PDF库加载成功');
+              return;
+            }
+          } catch (error) {
+            console.warn(`从 ${url} 加载失败:`, error.message);
+            continue;
+          }
+        }
+
+        throw new Error('所有PDF库加载源都失败，请检查网络连接');
+      }
+
+      // 从URL加载脚本
+      function loadScriptFromUrl(url) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = url;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`无法从 ${url} 加载脚本`));
+
+          // 设置超时
+          const timeout = setTimeout(() => {
+            script.remove();
+            reject(new Error(`加载 ${url} 超时`));
+          }, 8000);
+
+          script.onload = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+
+          document.head.appendChild(script);
+        });
+      }
+
+      // 提取聊天数据
+      async function extractChatData() {
+        const chatContainer = document.getElementById('chatMessages');
+        const messages = Array.from(chatContainer.querySelectorAll('.message'));
+        const chatName = document.getElementById('chatPersonName')?.textContent || '未知联系人';
+
+        const chatData = {
+          chatName: chatName,
+          exportTime: new Date().toLocaleString('zh-CN'),
+          messages: []
+        };
+
+        for (const messageElement of messages) {
+          try {
+            const messageContent = messageElement.querySelector('.message-content');
+            if (!messageContent) continue;
+
+            const isUser = messageElement.classList.contains('sent') || messageElement.classList.contains('user');
+            const timeElement = messageElement.querySelector('.message-time');
+
+            // 提取纯文本内容，排除按钮等交互元素
+            let text = '';
+            const textNodes = messageContent.childNodes;
+            for (const node of textNodes) {
+              if (node.nodeType === Node.TEXT_NODE) {
+                text += node.textContent;
+              } else if (node.nodeType === Node.ELEMENT_NODE &&
+                        !node.classList.contains('message-actions') &&
+                        !node.classList.contains('favorite-indicator')) {
+                text += node.textContent;
+              }
+            }
+
+            text = text.trim();
+            if (!text) continue;
+
+            chatData.messages.push({
+              sender: isUser ? '我' : chatName,
+              content: text,
+              time: timeElement ? timeElement.textContent : '',
+              isUser: isUser
+            });
+          } catch (error) {
+            console.warn('处理消息时出错:', error);
+            continue;
+          }
+        }
+
+        return chatData;
+      }
+
+      // 生成PDF文档
+      async function generatePDFDocument(chatData) {
+        const { jsPDF } = window.jsPDF;
+
+        // 创建PDF文档
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        // 页面设置
+        const pageHeight = pdf.internal.pageSize.height;
+        const pageWidth = pdf.internal.pageSize.width;
+        const margin = 20;
+        const maxWidth = pageWidth - 2 * margin;
+        let yPosition = 20;
+
+        // 添加标题
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('聊天记录导出', margin, yPosition);
+        yPosition += 12;
+
+        // 添加聊天对象和导出时间
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`聊天对象: ${chatData.chatName}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`导出时间: ${chatData.exportTime}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`消息总数: ${chatData.messages.length} 条`, margin, yPosition);
+        yPosition += 15;
+
+        // 添加分隔线
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+        yPosition += 10;
+
+        // 处理每条消息
+        for (let i = 0; i < chatData.messages.length; i++) {
+          const message = chatData.messages[i];
+
+          // 检查是否需要换页
+          if (yPosition > pageHeight - 40) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          // 添加发送者和时间
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'bold');
+          const senderText = `${message.sender}${message.time ? ' (' + message.time + ')' : ''}`;
+          pdf.text(senderText, margin, yPosition);
+          yPosition += 6;
+
+          // 添加消息内容
+          pdf.setFontSize(11);
+          pdf.setFont('helvetica', 'normal');
+
+          // 处理长文本换行
+          const lines = pdf.splitTextToSize(message.content, maxWidth - 10);
+
+          for (const line of lines) {
+            if (yPosition > pageHeight - 20) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+            pdf.text(line, margin + 5, yPosition);
+            yPosition += 5;
+          }
+
+          yPosition += 8; // 消息间距
+        }
+
+        // 添加页脚
+        const totalPages = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`第 ${i} 页，共 ${totalPages} 页`, pageWidth - margin - 30, pageHeight - 10);
+        }
+
+        return pdf.output('blob');
+      }
+
+      // 下载Blob文件
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
 
       // 绑定导出PDF按钮事件
