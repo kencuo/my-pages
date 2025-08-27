@@ -5348,7 +5348,7 @@
             <div class="upload-zone" id="uploadZone">
               <div class="upload-icon">📁</div>
               <div class="upload-text">点击选择图片或拖拽到此处</div>
-              <div class="upload-hint">支持 JPG、PNG、GIF 格式，最大 5MB</div>
+              <div class="upload-hint">支持 JPG、PNG、GIF 格式，最大 10MB</div>
               <input type="file" id="stickerFileInput" accept="image/*" multiple style="display: none" />
             </div>
 
@@ -8527,10 +8527,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
 
-            // 检查是否有自定义角色头像
-            if (charName && settingsState.charAvatars[charName]) {
+            // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+            const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
+
+            if (characterAvatarUrl) {
+              // 最高优先级：使用角色配置中的头像（类似SillyTavern）
+              avatar.src = characterAvatarUrl;
+            } else if (msg.customAvatarUrl) {
+              // 次高优先级：使用消息中保存的自定义头像
+              avatar.src = msg.customAvatarUrl;
+            } else if (charName && settingsState.charAvatars[charName]) {
+              // 中等优先级：使用设置中的角色头像
               avatar.src = settingsState.charAvatars[charName];
             } else {
+              // 最低优先级：使用格式中的头像
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
 
@@ -8682,10 +8692,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
 
-            // 检查是否有自定义角色头像
-            if (charName && settingsState.charAvatars[charName]) {
+            // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+            if (msg.customAvatarUrl) {
+              // 最高优先级：使用消息中保存的自定义头像
+              avatar.src = msg.customAvatarUrl;
+            } else if (charName && settingsState.charAvatars[charName]) {
+              // 中等优先级：使用设置中的角色头像
               avatar.src = settingsState.charAvatars[charName];
             } else {
+              // 最低优先级：使用格式中的头像
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
 
@@ -9701,9 +9716,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
-        // 检查文件大小 (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          alert('图片文件不能超过5MB！');
+        // 检查文件大小 (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          alert('图片文件不能超过10MB！');
           return;
         }
 
@@ -11448,8 +11463,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             alert(`${file.name} 不是图片文件`);
             return false;
           }
-          if (file.size > 5 * 1024 * 1024) {
-            alert(`${file.name} 文件过大，最大支持5MB`);
+          if (file.size > 10 * 1024 * 1024) {
+            alert(`${file.name} 文件过大，最大支持10MB`);
             return false;
           }
           return true;
@@ -12077,10 +12092,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const charInfo = getLastCharInfo();
           const charName = msg.charName || charInfo.name || getCurrentCharName();
 
-          // 检查是否有自定义角色头像
-          if (charName && settingsState.charAvatars[charName]) {
+          // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+          if (msg.customAvatarUrl) {
+            // 最高优先级：使用消息中保存的自定义头像
+            avatarEl.src = msg.customAvatarUrl;
+          } else if (charName && settingsState.charAvatars[charName]) {
+            // 中等优先级：使用设置中的角色头像
             avatarEl.src = settingsState.charAvatars[charName];
           } else {
+            // 最低优先级：使用格式中的头像或默认头像
             avatarEl.src = msg.avatar ? 'https://files.catbox.moe/' + msg.avatar : charInfo.avatarUrl || 'https://files.catbox.moe/g299b6.jpeg';
           }
 
@@ -12335,10 +12355,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
 
-            // 检查是否有自定义角色头像
-            if (charName && settingsState.charAvatars[charName]) {
+            // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+            if (msg.customAvatarUrl) {
+              // 最高优先级：使用消息中保存的自定义头像
+              avatar.src = msg.customAvatarUrl;
+            } else if (charName && settingsState.charAvatars[charName]) {
+              // 中等优先级：使用设置中的角色头像
               avatar.src = settingsState.charAvatars[charName];
             } else {
+              // 最低优先级：使用格式中的头像
               avatar.src = 'https://files.catbox.moe/' + msg.avatar;
             }
 
@@ -12521,6 +12546,45 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         wallpaper: null,
         charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
+
+      // 角色配置管理 - 类似SillyTavern的角色数据保存机制
+      function getCharacterProfile(charName) {
+        if (!charName) return null;
+        const savedProfile = localStorage.getItem(`char_profile_${charName}`);
+        return savedProfile ? JSON.parse(savedProfile) : null;
+      }
+
+      function saveCharacterProfile(charName, profileData) {
+        if (!charName) return;
+        localStorage.setItem(`char_profile_${charName}`, JSON.stringify(profileData));
+      }
+
+      function getCharacterAvatarUrl(charName) {
+        if (!charName) return null;
+        const profile = getCharacterProfile(charName);
+        return profile?.avatarUrl || null;
+      }
+
+      function setCharacterAvatarUrl(charName, avatarUrl) {
+        if (!charName) return;
+        let profile = getCharacterProfile(charName) || {};
+        profile.avatarUrl = avatarUrl;
+        profile.lastUpdated = new Date().toISOString();
+        saveCharacterProfile(charName, profile);
+      }
+
+      // 初始化角色头像配置
+      function initializeCharacterAvatars() {
+        const charName = getCurrentCharName();
+        if (charName) {
+          const characterAvatarUrl = getCharacterAvatarUrl(charName);
+          if (characterAvatarUrl) {
+            // 如果角色配置中有头像，同步到设置状态中
+            settingsState.charAvatars[charName] = characterAvatarUrl;
+            console.log(`从角色配置中恢复 ${charName} 的头像`);
+          }
+        }
+      }
 
       function loadSettings() {
         const savedAvatar = localStorage.getItem('chatUserAvatar');
@@ -12717,10 +12781,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         charAvatars.forEach(avatar => {
           const messageElement = avatar.closest('.message');
           if (messageElement && messageElement.classList.contains('received')) {
-            // 这是角色的头像，尝试从消息中获取角色名
-            const charName = getCurrentCharName();
-            if (charName && settingsState.charAvatars[charName]) {
-              avatar.src = settingsState.charAvatars[charName];
+            // 从消息索引获取对应的消息数据
+            const messageIndex = parseInt(messageElement.dataset.index);
+            if (!isNaN(messageIndex) && state.messageHistory[messageIndex]) {
+              const msg = state.messageHistory[messageIndex];
+              const charName = msg.charName || getCurrentCharName();
+
+              // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+              if (msg.customAvatarUrl) {
+                // 最高优先级：使用消息中保存的自定义头像
+                avatar.src = msg.customAvatarUrl;
+              } else if (charName && settingsState.charAvatars[charName]) {
+                // 中等优先级：使用设置中的角色头像
+                avatar.src = settingsState.charAvatars[charName];
+              } else if (msg.avatar) {
+                // 最低优先级：使用格式中的头像
+                avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+              }
             }
           }
         });
@@ -12775,11 +12852,33 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             settingsState.wallpaper = dataUrl;
             updateWallpaper();
           } else if (type === 'charAvatar') {
-            const charName = getCurrentCharName();
-            if (charName) {
-              settingsState.charAvatars[charName] = dataUrl;
-              updateCharAvatars();
+            // 优先使用输入框中的角色名，如果没有则使用当前角色名
+            const nameInput = document.getElementById('charNameInput');
+            let charName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : getCurrentCharName();
+
+            // 如果角色名是默认值"对方"或"Character"，提示用户输入具体角色名
+            if (!charName || charName === '对方' || charName === 'Character') {
+              alert('请先在角色名称输入框中输入具体的角色名称，然后再上传头像。');
+              return;
             }
+
+            // 保存到角色配置中（类似SillyTavern的角色数据保存）
+            setCharacterAvatarUrl(charName, dataUrl);
+
+            // 同时保存到设置状态中（向后兼容）
+            settingsState.charAvatars[charName] = dataUrl;
+
+            // 同时更新消息历史中的角色头像信息，确保持久化
+            state.messageHistory.forEach(msg => {
+              if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
+                msg.customAvatarUrl = dataUrl; // 添加自定义头像标记
+                msg.charName = charName; // 确保角色名一致
+              }
+            });
+
+            updateCharAvatars();
+            console.log(`角色 ${charName} 的头像已保存到角色配置中`);
+            alert(`角色 "${charName}" 的头像已成功保存！`);
           }
           saveSettings();
         };
@@ -12796,12 +12895,37 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           localStorage.removeItem('chatWallpaper');
           updateWallpaper();
         } else if (type === 'charAvatar') {
-          const charName = getCurrentCharName();
-          if (charName && settingsState.charAvatars[charName]) {
-            delete settingsState.charAvatars[charName];
-            updateCharAvatars();
-            saveSettings();
+          // 优先使用输入框中的角色名，如果没有则使用当前角色名
+          const nameInput = document.getElementById('charNameInput');
+          let charName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : getCurrentCharName();
+
+          if (!charName || charName === '对方' || charName === 'Character') {
+            alert('请先在角色名称输入框中输入具体的角色名称，然后再重置头像。');
+            return;
           }
+
+          // 清除角色配置中的头像
+          const profile = getCharacterProfile(charName);
+          if (profile && profile.avatarUrl) {
+            delete profile.avatarUrl;
+            saveCharacterProfile(charName, profile);
+          }
+
+          // 清除设置状态中的头像
+          if (settingsState.charAvatars[charName]) {
+            delete settingsState.charAvatars[charName];
+          }
+
+          // 清除消息历史中的自定义头像
+          state.messageHistory.forEach(msg => {
+            if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName)) {
+              delete msg.customAvatarUrl; // 移除自定义头像标记
+            }
+          });
+
+          updateCharAvatars();
+          saveSettings();
+          alert(`角色 "${charName}" 的头像已重置为默认头像！`);
         }
       }
 
@@ -13996,6 +14120,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 页面加载时自动应用设置
       loadSettings();
+
+      // 初始化角色头像配置
+      initializeCharacterAvatars();
 
       // 🎉 关键词特效系统
       const MESSAGE_EFFECTS = {
