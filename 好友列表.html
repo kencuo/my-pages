@@ -324,6 +324,68 @@
         transform: scale(0.95);
       }
 
+      /* 导入/导出模态框样式 */
+      .import-export-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background: #fafafa;
+      }
+
+      .import-export-section h3 {
+        margin: 0 0 10px 0;
+        color: #8b7355;
+        font-size: 16px;
+      }
+
+      .import-export-section p {
+        margin: 0 0 15px 0;
+        color: #666;
+        font-size: 14px;
+      }
+
+      .divider {
+        height: 1px;
+        background: linear-gradient(to right, transparent, #d4c294, transparent);
+        margin: 20px 0;
+      }
+
+      /* 文件选择样式 */
+      #selectedFileName {
+        min-height: 16px;
+        font-style: italic;
+      }
+
+      #selectedFileName:empty::before {
+        content: '未选择文件';
+        color: #999;
+      }
+
+      /* JSON预览区域 */
+      #jsonPreview {
+        resize: vertical;
+        min-height: 100px;
+        max-height: 300px;
+      }
+
+      /* 单选按钮样式 */
+      input[type='radio'] {
+        accent-color: #d4c294;
+      }
+
+      /* 禁用按钮样式 */
+      .submit-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .submit-btn:disabled:hover {
+        background: #ccc;
+        transform: none;
+      }
+
       .pin-btn {
         background: rgba(255, 193, 7, 0.8);
         color: white;
@@ -484,11 +546,11 @@
           </button>
           <button
             class="add-btn"
-            onclick="testDeleteFunction()"
+            onclick="showImportExportModal()"
             style="right: 105px; font-size: 12px"
-            title="测试删除功能"
+            title="导入/导出好友"
           >
-            🧪
+            📁
           </button>
         </div>
 
@@ -544,6 +606,91 @@
           <div class="btn-group">
             <button class="btn btn-secondary" onclick="backToTypeSelection()">返回</button>
             <button class="btn btn-primary" onclick="addGroup()">添加群聊</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 导入/导出模态框 -->
+    <div class="modal-overlay" id="importExportOverlay" style="display: none">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>📁 导入/导出好友列表</h2>
+          <button class="close-btn" onclick="closeImportExportModal()">×</button>
+        </div>
+        <div class="modal-content">
+          <!-- 导出区域 -->
+          <div class="import-export-section">
+            <h3>📤 导出好友列表</h3>
+            <p>将当前角色的好友列表导出为JSON文件</p>
+            <div style="margin: 15px 0">
+              <button class="submit-btn" onclick="exportFriends()" style="width: 100%">📥 导出为JSON文件</button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- 导入区域 -->
+          <div class="import-export-section">
+            <h3>📤 导入好友列表</h3>
+            <p>从JSON文件导入好友列表到当前角色</p>
+
+            <!-- 文件选择 -->
+            <div style="margin: 15px 0">
+              <input
+                type="file"
+                id="importFileInput"
+                accept=".json"
+                style="display: none"
+                onchange="handleFileSelect(event)"
+              />
+              <button
+                class="submit-btn"
+                onclick="document.getElementById('importFileInput').click()"
+                style="width: 100%; margin-bottom: 10px"
+              >
+                📁 选择JSON文件
+              </button>
+              <div id="selectedFileName" style="font-size: 12px; color: #666; text-align: center"></div>
+            </div>
+
+            <!-- 导入选项 -->
+            <div style="margin: 15px 0">
+              <label style="display: flex; align-items: center; margin-bottom: 10px">
+                <input type="radio" name="importMode" value="replace" checked style="margin-right: 8px" />
+                <span>替换现有好友列表</span>
+              </label>
+              <label style="display: flex; align-items: center">
+                <input type="radio" name="importMode" value="merge" style="margin-right: 8px" />
+                <span>合并到现有好友列表（跳过重复）</span>
+              </label>
+            </div>
+
+            <!-- 导入按钮 -->
+            <div style="margin: 15px 0">
+              <button class="submit-btn" onclick="importFriends()" style="width: 100%" id="importBtn" disabled>
+                📥 导入好友列表
+              </button>
+            </div>
+          </div>
+
+          <!-- JSON预览区域 -->
+          <div class="import-export-section" id="jsonPreviewSection" style="display: none">
+            <h3>📋 JSON预览</h3>
+            <textarea
+              id="jsonPreview"
+              readonly
+              style="
+                width: 100%;
+                height: 150px;
+                font-family: monospace;
+                font-size: 12px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 8px;
+                background: #f9f9f9;
+              "
+            ></textarea>
           </div>
         </div>
       </div>
@@ -1153,49 +1300,282 @@ ${
         alert(debugInfo);
       }
 
-      // 测试删除功能
-      function testDeleteFunction() {
-        const storageKey = getFriendsStorageKey();
-        let friends = [];
-        if (typeof parent !== 'undefined' && parent.extension_settings) {
-          friends = parent.extension_settings[storageKey] || [];
-        } else {
-          friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        }
+      // ==================== 导入/导出功能 ====================
 
-        if (friends.length === 0) {
-          alert('没有好友可以测试删除功能。请先添加一些好友。');
+      let selectedImportFile = null;
+
+      // 显示导入/导出模态框
+      function showImportExportModal() {
+        document.getElementById('importExportOverlay').style.display = 'flex';
+
+        // 重置状态
+        selectedImportFile = null;
+        document.getElementById('selectedFileName').textContent = '';
+        document.getElementById('importBtn').disabled = true;
+        document.getElementById('jsonPreviewSection').style.display = 'none';
+
+        // 重置单选按钮
+        document.querySelector('input[name="importMode"][value="replace"]').checked = true;
+      }
+
+      // 关闭导入/导出模态框
+      function closeImportExportModal() {
+        document.getElementById('importExportOverlay').style.display = 'none';
+      }
+
+      // 导出好友列表
+      function exportFriends() {
+        try {
+          const charInfo = getCurrentCharacterInfo();
+          const storageKey = getFriendsStorageKey();
+
+          // 获取当前好友列表
+          let friends = [];
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            friends = parent.extension_settings[storageKey] || [];
+          } else {
+            friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          }
+
+          // 创建导出数据
+          const exportData = {
+            version: '1.0',
+            exportTime: new Date().toISOString(),
+            character: {
+              id: charInfo.id,
+              name: charInfo.name,
+              source: charInfo.source,
+            },
+            friendsCount: friends.length,
+            friends: friends,
+          };
+
+          // 创建JSON字符串
+          const jsonString = JSON.stringify(exportData, null, 2);
+
+          // 创建下载链接
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+
+          // 生成文件名
+          const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+          const fileName = `好友列表_${charInfo.name}_${timestamp}.json`;
+
+          // 下载文件
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          alert(`✅ 导出成功！\n\n文件名: ${fileName}\n好友数量: ${friends.length}\n角色: ${charInfo.name}`);
+
+          console.log('导出好友列表成功:', {
+            fileName,
+            friendsCount: friends.length,
+            character: charInfo.name,
+          });
+        } catch (error) {
+          console.error('导出好友列表失败:', error);
+          alert('❌ 导出失败: ' + error.message);
+        }
+      }
+
+      // 处理文件选择
+      function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) {
+          selectedImportFile = null;
+          document.getElementById('selectedFileName').textContent = '';
+          document.getElementById('importBtn').disabled = true;
+          document.getElementById('jsonPreviewSection').style.display = 'none';
           return;
         }
 
-        const testMessage = `
-🧪 删除功能测试
+        if (!file.name.toLowerCase().endsWith('.json')) {
+          alert('请选择JSON格式的文件');
+          event.target.value = '';
+          return;
+        }
 
-当前好友列表:
-${friends.map((f, i) => `${i}. ${f.name} (${f.type === 'group' ? '群聊' : '好友'})`).join('\n')}
+        selectedImportFile = file;
+        document.getElementById('selectedFileName').textContent = file.name;
+        document.getElementById('importBtn').disabled = false;
 
-测试方法:
-1. 悬停在任意好友上
-2. 点击右侧的红色 🗑️ 按钮
-3. 确认删除对话框
-4. 检查好友是否被成功删除
+        // 读取并预览文件内容
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const jsonData = JSON.parse(e.target.result);
+            document.getElementById('jsonPreview').value = JSON.stringify(jsonData, null, 2);
+            document.getElementById('jsonPreviewSection').style.display = 'block';
+          } catch (error) {
+            console.error('JSON解析失败:', error);
+            document.getElementById('jsonPreview').value = '文件格式错误，无法预览';
+            document.getElementById('jsonPreviewSection').style.display = 'block';
+          }
+        };
+        reader.readAsText(file);
+      }
 
-如果删除按钮无响应，请查看浏览器控制台的错误信息。
-        `.trim();
+      // 导入好友列表
+      function importFriends() {
+        if (!selectedImportFile) {
+          alert('请先选择要导入的JSON文件');
+          return;
+        }
 
-        alert(testMessage);
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            // 解析JSON数据
+            const importData = JSON.parse(e.target.result);
 
-        // 在控制台输出详细信息
-        console.log('=== 删除功能测试信息 ===');
-        console.log('当前好友列表:', friends);
-        console.log('handleDeleteClick 函数:', typeof handleDeleteClick);
-        console.log('deleteFriend 函数:', typeof deleteFriend);
+            // 验证数据格式
+            if (!validateImportData(importData)) {
+              return;
+            }
 
-        // 测试函数是否可调用
-        if (typeof handleDeleteClick === 'function' && typeof deleteFriend === 'function') {
-          console.log('✅ 删除相关函数都已正确定义');
-        } else {
-          console.error('❌ 删除相关函数定义有问题');
+            const importFriends = importData.friends || [];
+            if (importFriends.length === 0) {
+              alert('❌ 导入失败: 文件中没有好友数据');
+              return;
+            }
+
+            // 获取导入模式
+            const importMode = document.querySelector('input[name="importMode"]:checked').value;
+            const charInfo = getCurrentCharacterInfo();
+
+            // 获取当前好友列表
+            const storageKey = getFriendsStorageKey();
+            let currentFriends = [];
+            if (typeof parent !== 'undefined' && parent.extension_settings) {
+              currentFriends = parent.extension_settings[storageKey] || [];
+            } else {
+              currentFriends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            }
+
+            let finalFriends = [];
+            let importedCount = 0;
+            let skippedCount = 0;
+
+            if (importMode === 'replace') {
+              // 替换模式：直接使用导入的好友列表
+              finalFriends = importFriends.map(friend => ({
+                ...friend,
+                addTime: friend.addTime || new Date().toISOString(),
+              }));
+              importedCount = finalFriends.length;
+            } else if (importMode === 'merge') {
+              // 合并模式：合并到现有列表，跳过重复
+              finalFriends = [...currentFriends];
+
+              for (const importFriend of importFriends) {
+                // 检查是否已存在（按名称和类型）
+                const exists = finalFriends.some(
+                  existing => existing.name === importFriend.name && existing.type === importFriend.type,
+                );
+
+                if (!exists) {
+                  finalFriends.push({
+                    ...importFriend,
+                    addTime: importFriend.addTime || new Date().toISOString(),
+                  });
+                  importedCount++;
+                } else {
+                  skippedCount++;
+                }
+              }
+            }
+
+            // 保存更新后的好友列表
+            saveFriends(finalFriends);
+
+            // 刷新显示
+            displayFriends(finalFriends);
+
+            // 关闭模态框
+            closeImportExportModal();
+
+            // 显示导入结果
+            let resultMessage = `✅ 导入完成！\n\n`;
+            resultMessage += `角色: ${charInfo.name}\n`;
+            resultMessage += `导入模式: ${importMode === 'replace' ? '替换' : '合并'}\n`;
+            resultMessage += `成功导入: ${importedCount} 个好友\n`;
+            if (skippedCount > 0) {
+              resultMessage += `跳过重复: ${skippedCount} 个好友\n`;
+            }
+            resultMessage += `当前总数: ${finalFriends.length} 个好友`;
+
+            alert(resultMessage);
+
+            console.log('导入好友列表成功:', {
+              importMode,
+              importedCount,
+              skippedCount,
+              totalCount: finalFriends.length,
+              character: charInfo.name,
+            });
+          } catch (error) {
+            console.error('导入好友列表失败:', error);
+            alert('❌ 导入失败: ' + error.message);
+          }
+        };
+
+        reader.readAsText(selectedImportFile);
+      }
+
+      // 验证导入数据格式
+      function validateImportData(data) {
+        try {
+          // 检查基本结构
+          if (!data || typeof data !== 'object') {
+            alert('❌ 导入失败: 文件格式不正确');
+            return false;
+          }
+
+          // 检查是否有friends数组
+          if (!Array.isArray(data.friends)) {
+            alert('❌ 导入失败: 文件中缺少好友数据');
+            return false;
+          }
+
+          // 验证每个好友的数据格式
+          for (let i = 0; i < data.friends.length; i++) {
+            const friend = data.friends[i];
+
+            if (!friend.name || typeof friend.name !== 'string') {
+              alert(`❌ 导入失败: 第${i + 1}个好友缺少有效的名称`);
+              return false;
+            }
+
+            if (!friend.type || !['friend', 'group'].includes(friend.type)) {
+              alert(`❌ 导入失败: 第${i + 1}个好友的类型无效`);
+              return false;
+            }
+          }
+
+          // 显示导入预览信息
+          const friendCount = data.friends.filter(f => f.type === 'friend').length;
+          const groupCount = data.friends.filter(f => f.type === 'group').length;
+
+          const previewMessage =
+            `📋 导入预览\n\n` +
+            `文件版本: ${data.version || '未知'}\n` +
+            `导出时间: ${data.exportTime ? new Date(data.exportTime).toLocaleString('zh-CN') : '未知'}\n` +
+            `原角色: ${data.character?.name || '未知'}\n` +
+            `好友数量: ${friendCount} 个\n` +
+            `群聊数量: ${groupCount} 个\n` +
+            `总计: ${data.friends.length} 个\n\n` +
+            `确定要导入这些数据吗？`;
+
+          return confirm(previewMessage);
+        } catch (error) {
+          console.error('验证导入数据失败:', error);
+          alert('❌ 导入失败: 数据验证出错');
+          return false;
         }
       }
 
