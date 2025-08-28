@@ -797,16 +797,18 @@
           return;
         }
 
-        // 按置顶状态排序，置顶的在前面
-        const sortedFriends = friends.sort((a, b) => {
-          if (a.pinned && !b.pinned) return -1;
-          if (!a.pinned && b.pinned) return 1;
-          return 0;
-        });
+        // 按置顶状态排序，置顶的在前面，但保留原始索引
+        const sortedFriends = friends
+          .map((friend, originalIndex) => ({ ...friend, originalIndex }))
+          .sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return 0;
+          });
 
         friendsList.innerHTML = sortedFriends
           .map(
-            (friend, index) => `
+            (friend, displayIndex) => `
                 <div class="friend-item ${friend.pinned ? 'pinned' : ''}" onclick="startChat('${friend.name}', '${
               friend.type
             }', '${friend.members || ''}')">
@@ -825,12 +827,12 @@
                     </div>
                     <div class="friend-actions">
                         <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                onclick="event.stopPropagation(); togglePin(${index})"
+                                onclick="event.stopPropagation(); togglePin(${friend.originalIndex})"
                                 title="${friend.pinned ? '取消置顶' : '置顶'}">
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                onclick="event.stopPropagation(); deleteFriend(${index})"
+                                onclick="event.stopPropagation(); deleteFriend(${friend.originalIndex})"
                                 title="删除">
                             🗑️
                         </button>
@@ -1026,47 +1028,121 @@
 
       // ==================== 好友管理功能 ====================
 
-      // 置顶/取消置顶好友
-      function togglePin(index) {
-        const currentChar = getCurrentCharacterInfo();
-        const storageKey = getFriendsStorageKey(currentChar.id);
-        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      // 显示提示消息
+      function showToast(message) {
+        // 创建提示元素
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 12px 20px;
+          border-radius: 6px;
+          font-size: 14px;
+          z-index: 10000;
+          animation: slideIn 0.3s ease-out;
+        `;
+        toast.textContent = message;
 
-        if (friends[index]) {
-          friends[index].pinned = !friends[index].pinned;
+        // 添加动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+          @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+          }
+        `;
+        document.head.appendChild(style);
 
-          // 重新排序：置顶的在前面
-          friends.sort((a, b) => {
-            if (a.pinned && !b.pinned) return -1;
-            if (!a.pinned && b.pinned) return 1;
-            return 0;
-          });
+        // 显示提示
+        document.body.appendChild(toast);
 
-          localStorage.setItem(storageKey, JSON.stringify(friends));
-          displayFriends(friends);
-
-          const action = friends.find(f => f.name === friends[index]?.name)?.pinned ? '置顶' : '取消置顶';
-          console.log(`${action}好友: ${friends[index]?.name}`);
-        }
+        // 3秒后自动消失
+        setTimeout(() => {
+          toast.style.animation = 'slideOut 0.3s ease-out';
+          setTimeout(() => {
+            if (toast.parentNode) {
+              document.body.removeChild(toast);
+            }
+            if (style.parentNode) {
+              document.head.removeChild(style);
+            }
+          }, 300);
+        }, 3000);
       }
 
-      // 删除好友
-      function deleteFriend(index) {
+      // 置顶/取消置顶好友
+      function togglePin(index) {
+        console.log('togglePin 被调用，索引:', index);
+
         const currentChar = getCurrentCharacterInfo();
         const storageKey = getFriendsStorageKey(currentChar.id);
         const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
         if (friends[index]) {
           const friendName = friends[index].name;
+          const wasPin = friends[index].pinned;
+          friends[index].pinned = !friends[index].pinned;
+
+          localStorage.setItem(storageKey, JSON.stringify(friends));
+          displayFriends(friends);
+
+          const action = friends[index].pinned ? '置顶' : '取消置顶';
+          console.log(`✅ ${action}好友: ${friendName}`);
+          showToast(`${friendName} 已${action}`);
+        } else {
+          console.error('❌ 置顶失败：找不到指定索引的好友', index);
+          showToast('操作失败：找不到指定的好友');
+        }
+      }
+
+      // 删除好友
+      function deleteFriend(index) {
+        console.log('deleteFriend 被调用，索引:', index);
+
+        const currentChar = getCurrentCharacterInfo();
+        const storageKey = getFriendsStorageKey(currentChar.id);
+        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+        console.log('当前好友列表:', friends);
+        console.log('要删除的索引:', index, '对应的好友:', friends[index]);
+
+        if (friends[index]) {
+          const friendName = friends[index].name;
           const friendType = friends[index].type === 'group' ? '群聊' : '好友';
 
+          console.log(`准备删除${friendType}: ${friendName}`);
+
           if (confirm(`确定要删除${friendType} "${friendName}" 吗？`)) {
+            console.log('用户确认删除');
+
+            // 删除指定索引的好友
             friends.splice(index, 1);
+
+            console.log('删除后的好友列表:', friends);
+
+            // 保存更新后的好友列表
             localStorage.setItem(storageKey, JSON.stringify(friends));
+
+            // 重新显示好友列表
             displayFriends(friends);
 
-            console.log(`已删除${friendType}: ${friendName}`);
+            console.log(`✅ 已删除${friendType}: ${friendName}`);
+
+            // 显示删除成功的提示
+            showToast(`${friendType} "${friendName}" 已删除`);
+          } else {
+            console.log('用户取消删除');
           }
+        } else {
+          console.error('❌ 删除失败：找不到指定索引的好友', index, '好友列表长度:', friends.length);
+          showToast('删除失败：找不到指定的好友');
         }
       }
 
