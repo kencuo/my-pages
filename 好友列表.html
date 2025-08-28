@@ -699,25 +699,47 @@
     <script>
       // ==================== 角色卡独立存储系统 ====================
 
-      // 获取当前角色信息
+      // 获取当前角色信息（改进版本）
       function getCurrentCharacterInfo() {
         try {
-          // 尝试从SillyTavern获取当前角色信息
+          // 方法1: 从SillyTavern的全局变量获取当前角色ID
+          if (typeof parent !== 'undefined' && parent.this_chid !== undefined) {
+            const charId = parent.this_chid;
+            let charName = '未知角色';
+
+            // 尝试获取角色名称
+            if (parent.characters && parent.characters[charId]) {
+              charName = parent.characters[charId].name || parent.characters[charId].data?.name || `角色${charId}`;
+            } else if (parent.name1) {
+              charName = parent.name1; // 当前聊天中的角色名
+            }
+
+            console.log('从SillyTavern获取角色信息:', { id: charId, name: charName });
+            return {
+              id: charId.toString(),
+              name: charName,
+              source: 'sillytavern_chid',
+            };
+          }
+
+          // 方法2: 从SillyTavern的context API获取
           if (typeof parent !== 'undefined' && parent.getContext) {
             const context = parent.getContext();
             if (context && context.characterId) {
+              console.log('从context API获取角色信息:', context);
               return {
-                id: context.characterId,
+                id: context.characterId.toString(),
                 name: context.name || context.characterId,
-                source: 'sillytavern',
+                source: 'sillytavern_context',
               };
             }
           }
 
-          // 尝试从URL参数获取角色信息
+          // 方法3: 从URL参数获取角色信息
           const urlParams = new URLSearchParams(window.location.search);
-          const charId = urlParams.get('character') || urlParams.get('char');
+          const charId = urlParams.get('character') || urlParams.get('char') || urlParams.get('id');
           if (charId) {
+            console.log('从URL参数获取角色信息:', charId);
             return {
               id: charId,
               name: charId,
@@ -725,19 +747,19 @@
             };
           }
 
-          // 尝试从父窗口的全局变量获取
-          if (typeof parent !== 'undefined') {
-            const charName = parent.this_chid || parent.characters?.[parent.this_chid]?.name;
-            if (charName) {
-              return {
-                id: parent.this_chid || charName,
-                name: charName,
-                source: 'parent',
-              };
-            }
+          // 方法4: 从localStorage获取最后使用的角色
+          const lastCharId = localStorage.getItem('lastUsedCharacter');
+          if (lastCharId) {
+            console.log('从localStorage获取最后使用的角色:', lastCharId);
+            return {
+              id: lastCharId,
+              name: `角色${lastCharId}`,
+              source: 'localStorage',
+            };
           }
 
           // 默认角色
+          console.log('使用默认角色');
           return {
             id: 'default',
             name: '默认角色',
@@ -756,7 +778,15 @@
       // 生成角色专用的存储键名
       function getFriendsStorageKey() {
         const charInfo = getCurrentCharacterInfo();
-        return `friendsList_${charInfo.id}`;
+        // 使用更具体的键名格式，确保不同角色完全隔离
+        return `tavern_friends_${charInfo.source}_${charInfo.id}`;
+      }
+
+      // 保存当前角色ID到localStorage，用于角色切换检测
+      function saveCurrentCharacterId() {
+        const charInfo = getCurrentCharacterInfo();
+        localStorage.setItem('lastUsedCharacter', charInfo.id);
+        console.log('保存当前角色ID:', charInfo.id);
       }
 
       // 从角色专用存储加载好友列表
@@ -1225,26 +1255,78 @@
         }
       }
 
-      // 角色切换检测
+      // 角色切换检测（改进版本）
       let currentCharacterId = null;
+      let lastCheckTime = 0;
 
       function checkCharacterChange() {
-        const charInfo = getCurrentCharacterInfo();
-        if (currentCharacterId !== charInfo.id) {
-          console.log(`角色切换检测: ${currentCharacterId} -> ${charInfo.id}`);
-          currentCharacterId = charInfo.id;
-          loadFriends(); // 重新加载好友列表
+        try {
+          const now = Date.now();
+          // 避免过于频繁的检查
+          if (now - lastCheckTime < 1000) return;
+          lastCheckTime = now;
+
+          const charInfo = getCurrentCharacterInfo();
+          const newCharId = charInfo.id;
+
+          if (currentCharacterId !== newCharId) {
+            console.log(`🔄 角色切换检测: "${currentCharacterId}" -> "${newCharId}"`);
+            console.log('新角色信息:', charInfo);
+
+            currentCharacterId = newCharId;
+            saveCurrentCharacterId(); // 保存新的角色ID
+
+            // 重新加载好友列表
+            setTimeout(() => {
+              loadFriends();
+            }, 100);
+          }
+        } catch (error) {
+          console.error('角色切换检测失败:', error);
         }
       }
 
-      // 定期检查角色是否切换（每2秒检查一次）
-      setInterval(checkCharacterChange, 2000);
+      // 定期检查角色是否切换（每1.5秒检查一次）
+      setInterval(checkCharacterChange, 1500);
 
-      // 监听SillyTavern的角色切换事件（如果可用）
-      if (typeof parent !== 'undefined' && parent.eventSource) {
-        parent.eventSource.on('character_selected', () => {
-          setTimeout(loadFriends, 100); // 延迟100ms确保角色信息已更新
-        });
+      // 监听SillyTavern的各种角色切换事件
+      if (typeof parent !== 'undefined') {
+        // 方法1: 监听eventSource事件
+        if (parent.eventSource && typeof parent.eventSource.on === 'function') {
+          parent.eventSource.on('character_selected', () => {
+            console.log('📡 收到character_selected事件');
+            setTimeout(() => {
+              checkCharacterChange();
+              loadFriends();
+            }, 200);
+          });
+        }
+
+        // 方法2: 监听DOM变化（角色名称变化）
+        if (parent.document) {
+          const observer = new MutationObserver(() => {
+            checkCharacterChange();
+          });
+
+          // 观察可能包含角色信息的元素
+          const targetSelectors = ['#character_name', '.character-name', '#name1'];
+          targetSelectors.forEach(selector => {
+            const element = parent.document.querySelector(selector);
+            if (element) {
+              observer.observe(element, { childList: true, subtree: true, characterData: true });
+            }
+          });
+        }
+
+        // 方法3: 监听this_chid变化
+        let lastThisChid = parent.this_chid;
+        setInterval(() => {
+          if (parent.this_chid !== lastThisChid) {
+            console.log('📡 检测到this_chid变化:', lastThisChid, '->', parent.this_chid);
+            lastThisChid = parent.this_chid;
+            checkCharacterChange();
+          }
+        }, 500);
       }
 
       // 显示调试信息
@@ -1265,6 +1347,16 @@
 
         const oldFriends = JSON.parse(localStorage.getItem('friendsList') || '[]');
 
+        // 获取SillyTavern的详细信息
+        let sillyTavernInfo = '未连接到SillyTavern';
+        if (typeof parent !== 'undefined') {
+          sillyTavernInfo = `
+• this_chid: ${parent.this_chid}
+• name1: ${parent.name1 || '未设置'}
+• characters数量: ${parent.characters ? Object.keys(parent.characters).length : 0}
+• extension_settings可用: ${parent.extension_settings ? '是' : '否'}`;
+        }
+
         const debugInfo = `
 === 好友列表调试信息 ===
 
@@ -1273,15 +1365,22 @@
 • 名称: ${charInfo.name}
 • 来源: ${charInfo.source}
 
+SillyTavern连接状态:
+${sillyTavernInfo}
+
 存储信息:
 • 存储键: ${storageKey}
 • 存储位置: ${storageSource}
 • 当前好友数量: ${friends.length}
 
+角色切换监控:
+• 当前监控的角色ID: ${currentCharacterId}
+• 最后检查时间: ${new Date(lastCheckTime).toLocaleTimeString()}
+
 旧版本数据:
 • 全局好友列表: ${oldFriends.length} 个好友
 
-角色好友列表:
+当前角色好友列表:
 ${
   friends.length > 0
     ? friends.map((f, i) => `${i + 1}. ${f.name} (${f.type === 'group' ? '群聊' : '好友'})`).join('\n')
@@ -1295,6 +1394,11 @@ ${
         .join('\n')}`
     : ''
 }
+
+存储键名示例:
+• 当前角色: ${storageKey}
+• 其他角色: tavern_friends_sillytavern_chid_123
+• 默认角色: tavern_friends_default_default
         `.trim();
 
         alert(debugInfo);
@@ -1579,10 +1683,32 @@ ${
         }
       }
 
-      // 页面加载时加载好友列表
+      // 页面加载时初始化
       window.addEventListener('load', () => {
-        loadFriends();
-        currentCharacterId = getCurrentCharacterInfo().id;
+        console.log('🚀 好友列表页面加载完成，开始初始化...');
+
+        // 等待一小段时间确保SillyTavern完全加载
+        setTimeout(() => {
+          const charInfo = getCurrentCharacterInfo();
+          console.log('📋 初始化角色信息:', charInfo);
+
+          currentCharacterId = charInfo.id;
+          saveCurrentCharacterId();
+
+          // 加载好友列表
+          loadFriends();
+
+          // 开始角色切换监控
+          console.log('🔍 开始角色切换监控...');
+        }, 500);
+      });
+
+      // 页面可见性变化时重新检查角色
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          console.log('📱 页面重新可见，检查角色是否切换...');
+          setTimeout(checkCharacterChange, 100);
+        }
       });
     </script>
   </body>
