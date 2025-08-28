@@ -449,6 +449,99 @@
         margin-bottom: 15px;
         display: block;
       }
+
+      /* ==================== 增强的动画效果 ==================== */
+
+      /* 置顶动画效果 */
+      @keyframes pinGlow {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+        }
+        50% {
+          transform: scale(1.02);
+          box-shadow: 0 4px 20px rgba(255, 193, 7, 0.4);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+        }
+      }
+
+      .friend-item.pinned {
+        animation: pinGlow 0.5s ease-out;
+      }
+
+      /* 置顶徽章动画 */
+      @keyframes bounce {
+        0%,
+        20%,
+        50%,
+        80%,
+        100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(-3px);
+        }
+        60% {
+          transform: translateY(-2px);
+        }
+      }
+
+      .pinned-badge {
+        animation: bounce 0.5s ease-out;
+      }
+
+      /* Toast 提示动画 */
+      @keyframes fadeInOut {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.8);
+        }
+        20% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        80% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.8);
+        }
+      }
+
+      /* 按钮悬停效果增强 */
+      .action-btn:hover {
+        transform: scale(1.1);
+        transition: all 0.2s ease;
+      }
+
+      .pin-btn.pinned {
+        background: #ffc107;
+        color: white;
+        box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+      }
+
+      .delete-btn:hover {
+        background: #ff7675;
+        color: white;
+        transform: scale(1.1);
+      }
+
+      /* 好友项悬停效果 */
+      .friend-item:hover .friend-actions {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .friend-actions {
+        opacity: 0.7;
+        transform: translateX(5px);
+        transition: all 0.2s ease;
+      }
     </style>
   </head>
   <body>
@@ -703,16 +796,22 @@
           return;
         }
 
-        // 按置顶状态排序，置顶的在前面
-        const sortedFriends = friends.sort((a, b) => {
+        // 先排序：置顶的在前面，然后按添加时间排序
+        const sortedFriends = [...friends].sort((a, b) => {
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
-          return 0;
+          if (a.pinned && b.pinned) {
+            return new Date(b.pinnedTime || b.addTime) - new Date(a.pinnedTime || a.addTime);
+          }
+          return new Date(b.addTime) - new Date(a.addTime);
         });
 
         friendsList.innerHTML = sortedFriends
-          .map(
-            (friend, index) => `
+          .map((friend, displayIndex) => {
+            // 找到原始数组中的索引，用于删除和置顶操作
+            const originalIndex = friends.findIndex(f => f.name === friend.name && f.addTime === friend.addTime);
+
+            return `
                 <div class="friend-item ${friend.pinned ? 'pinned' : ''}" onclick="startChat('${friend.name}', '${
               friend.type
             }', '${friend.members || ''}')">
@@ -731,19 +830,19 @@
                     </div>
                     <div class="friend-actions">
                         <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                onclick="event.stopPropagation(); togglePin(${index})"
+                                onclick="event.stopPropagation(); togglePin(${originalIndex})"
                                 title="${friend.pinned ? '取消置顶' : '置顶'}">
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                onclick="event.stopPropagation(); deleteFriend(${index})"
+                                onclick="event.stopPropagation(); deleteFriend(${originalIndex})"
                                 title="删除">
                             🗑️
                         </button>
                     </div>
                 </div>
-            `,
-          )
+            `;
+          })
           .join('');
       }
 
@@ -1113,6 +1212,77 @@
         loadFriends(); // 重新加载以移除推荐区域
 
         alert(`为 ${currentCharacterInfo?.name || '当前角色'} 添加推荐好友 "${name}" 成功！`);
+      }
+
+      // ==================== 好友管理功能 ====================
+
+      // 删除好友
+      function deleteFriend(index) {
+        if (confirm('确定要删除这个好友吗？')) {
+          const storageKey = getCharacterFriendsKey(currentCharacterInfo);
+          const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+          if (index >= 0 && index < friends.length) {
+            const deletedFriend = friends[index];
+            friends.splice(index, 1);
+            saveFriends(friends);
+            displayFriends(friends);
+
+            console.log(`删除好友: ${deletedFriend.name}`);
+            alert(`已删除好友 "${deletedFriend.name}"`);
+          }
+        }
+      }
+
+      // 置顶/取消置顶好友
+      function togglePin(index) {
+        const storageKey = getCharacterFriendsKey(currentCharacterInfo);
+        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+        if (index >= 0 && index < friends.length) {
+          const friend = friends[index];
+          const wasPin = friend.pinned;
+
+          friend.pinned = !friend.pinned;
+          friend.pinnedTime = friend.pinned ? new Date().toISOString() : null;
+
+          saveFriends(friends);
+          displayFriends(friends);
+
+          const action = friend.pinned ? '置顶' : '取消置顶';
+          console.log(`${action}好友: ${friend.name}`);
+
+          // 显示操作提示
+          const message = friend.pinned ? `"${friend.name}" 已置顶` : `"${friend.name}" 已取消置顶`;
+          showToast(message);
+        }
+      }
+
+      // 显示提示消息
+      function showToast(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 12px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          z-index: 10000;
+          animation: fadeInOut 2s ease-in-out;
+        `;
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+          if (toast.parentNode) {
+            document.body.removeChild(toast);
+          }
+        }, 2000);
       }
 
       // 页面加载时初始化
