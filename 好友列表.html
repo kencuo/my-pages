@@ -584,8 +584,8 @@
         <div class="header">
           <h1>好友列表</h1>
           <div class="header-actions">
-            <button class="settings-btn" id="settingsBtn" title="设置">⚙️</button>
-            <button class="add-btn" id="addBtn">+</button>
+            <button class="settings-btn" onclick="showSettingsMenu()" title="设置">⚙️</button>
+            <button class="add-btn" onclick="openAddModal()">+</button>
           </div>
         </div>
 
@@ -615,21 +615,21 @@
             <span id="friendsCount">0</span>
           </div>
           <hr />
-          <div class="setting-item clickable" data-action="export">
+          <div class="setting-item clickable" onclick="exportFriends()">
             <span>📤 导出好友列表</span>
           </div>
-          <div class="setting-item clickable" data-action="import">
+          <div class="setting-item clickable" onclick="document.getElementById('importFile').click()">
             <span>📥 导入好友列表</span>
           </div>
-          <input type="file" id="importFile" accept=".json" style="display: none" />
+          <input type="file" id="importFile" accept=".json" style="display: none" onchange="importFriends(event)" />
           <hr />
-          <div class="setting-item clickable" data-action="debug">
+          <div class="setting-item clickable" onclick="debugShowAllFriendsData()">
             <span style="color: #2196f3">🔍 查看调试信息</span>
           </div>
-          <div class="setting-item clickable" data-action="test">
-            <span style="color: #4caf50">🧪 测试点击功能</span>
+          <div class="setting-item clickable" onclick="alert('测试按钮点击成功！onclick功能正常')">
+            <span style="color: #4caf50">🧪 测试onclick功能</span>
           </div>
-          <div class="setting-item clickable" data-action="clear">
+          <div class="setting-item clickable" onclick="clearAllFriends()">
             <span style="color: #ff4757">🗑️ 清空好友列表</span>
           </div>
         </div>
@@ -926,12 +926,14 @@
                     </div>
                     <div class="friend-actions">
                         <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                data-action="pin" data-index="${friend.originalIndex}"
+                                onclick="event.stopPropagation(); togglePin(${friend.originalIndex})"
                                 title="${friend.pinned ? '取消置顶' : '置顶'}">
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                data-action="delete" data-name="${friend.name}" data-type="${friend.type}"
+                                onclick="deleteFriendSimple('${friend.name}', '${
+              friend.type
+            }'); event.stopPropagation();"
                                 title="删除">
                             🗑️
                         </button>
@@ -1466,172 +1468,38 @@
         }
       }
 
-      // ==================== 移动端兼容事件绑定 ====================
+      // ==================== 简单事件绑定 ====================
 
-      // 初始化所有事件绑定
-      function initMobileCompatibleEvents() {
-        console.log('🔧 初始化移动端兼容事件绑定...');
-
-        // 1. 设置按钮
-        const settingsBtn = document.getElementById('settingsBtn');
-        if (settingsBtn) {
-          settingsBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('设置按钮被点击');
-            showSettingsMenu();
-          });
-          settingsBtn.addEventListener('touchend', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('设置按钮被触摸');
-            showSettingsMenu();
-          });
+      // 点击模态框外部关闭
+      document.getElementById('addModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+          closeAddModal();
         }
-
-        // 2. 添加按钮
-        const addBtn = document.getElementById('addBtn');
-        if (addBtn) {
-          addBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('添加按钮被点击');
-            openAddModal();
-          });
-          addBtn.addEventListener('touchend', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('添加按钮被触摸');
-            openAddModal();
-          });
-        }
-
-        // 3. 好友列表事件委托（支持动态内容）
-        const friendsList = document.getElementById('friendsList');
-        if (friendsList) {
-          friendsList.addEventListener('click', handleFriendsListClick);
-          friendsList.addEventListener('touchend', handleFriendsListClick);
-        }
-
-        // 4. 设置菜单事件委托
-        const settingsBody = document.querySelector('.settings-body');
-        if (settingsBody) {
-          settingsBody.addEventListener('click', handleSettingsClick);
-          settingsBody.addEventListener('touchend', handleSettingsClick);
-        }
-
-        // 5. 模态框外部点击关闭
-        const addModal = document.getElementById('addModal');
-        if (addModal) {
-          addModal.addEventListener('click', function (e) {
-            if (e.target === this) {
-              closeAddModal();
-            }
-          });
-        }
-
-        // 6. 设置菜单外部点击关闭
-        const settingsMenu = document.getElementById('settingsMenu');
-        if (settingsMenu) {
-          settingsMenu.addEventListener('click', function (e) {
-            if (e.target === this) {
-              hideSettingsMenu();
-            }
-          });
-        }
-
-        // 7. 文件导入
-        const importFile = document.getElementById('importFile');
-        if (importFile) {
-          importFile.addEventListener('change', importFriends);
-        }
-
-        // 8. 键盘事件
-        const friendNameInput = document.getElementById('friendName');
-        if (friendNameInput) {
-          friendNameInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-              addFriend();
-            }
-          });
-        }
-
-        const groupNameInput = document.getElementById('groupName');
-        if (groupNameInput) {
-          groupNameInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-              const groupMembersInput = document.getElementById('groupMembers');
-              if (groupMembersInput) {
-                groupMembersInput.focus();
-              }
-            }
-          });
-        }
-
-        console.log('✅ 移动端兼容事件绑定完成');
-      }
-
-      // 处理好友列表点击事件
-      function handleFriendsListClick(e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const target = e.target.closest('[data-action]');
-        if (!target) return;
-
-        const action = target.getAttribute('data-action');
-        console.log('好友列表事件:', action);
-
-        if (action === 'pin') {
-          const index = parseInt(target.getAttribute('data-index'));
-          console.log('置顶操作，索引:', index);
-          togglePin(index);
-        } else if (action === 'delete') {
-          const name = target.getAttribute('data-name');
-          const type = target.getAttribute('data-type');
-          console.log('删除操作，名称:', name, '类型:', type);
-          deleteFriendSimple(name, type);
-        }
-      }
-
-      // 处理设置菜单点击事件
-      function handleSettingsClick(e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const target = e.target.closest('[data-action]');
-        if (!target) return;
-
-        const action = target.getAttribute('data-action');
-        console.log('设置菜单事件:', action);
-
-        switch (action) {
-          case 'export':
-            exportFriends();
-            break;
-          case 'import':
-            document.getElementById('importFile').click();
-            break;
-          case 'debug':
-            debugShowAllFriendsData();
-            break;
-          case 'test':
-            alert('🎉 点击功能正常工作！\n事件绑定成功！');
-            break;
-          case 'clear':
-            clearAllFriends();
-            break;
-        }
-      }
-
-      // 页面加载时初始化
-      window.addEventListener('load', function () {
-        console.log('📱 页面加载完成，初始化移动端兼容功能...');
-        loadFriends();
-
-        // 延迟初始化事件，确保DOM完全加载
-        setTimeout(initMobileCompatibleEvents, 100);
       });
+
+      // 点击设置菜单外部关闭
+      document.getElementById('settingsMenu').addEventListener('click', function (e) {
+        if (e.target === this) {
+          hideSettingsMenu();
+        }
+      });
+
+      // 回车键添加好友
+      document.getElementById('friendName').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          addFriend();
+        }
+      });
+
+      // 回车键添加群聊（群聊名称输入框）
+      document.getElementById('groupName').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          document.getElementById('groupMembers').focus();
+        }
+      });
+
+      // 页面加载时加载好友列表
+      window.addEventListener('load', loadFriends);
 
       // 监听SillyTavern的角色切换事件（如果可用）
       if (typeof parent !== 'undefined') {
