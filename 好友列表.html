@@ -615,18 +615,18 @@
             <span id="friendsCount">0</span>
           </div>
           <hr />
-          <div class="setting-item clickable" onclick="exportFriends()">
+          <div class="setting-item clickable" data-action="export">
             <span>📤 导出好友列表</span>
           </div>
-          <div class="setting-item clickable" onclick="document.getElementById('importFile').click()">
+          <div class="setting-item clickable" data-action="import">
             <span>📥 导入好友列表</span>
           </div>
-          <input type="file" id="importFile" accept=".json" style="display: none" onchange="importFriends(event)" />
+          <input type="file" id="importFile" accept=".json" style="display: none" />
           <hr />
-          <div class="setting-item clickable" onclick="debugShowAllFriendsData()">
+          <div class="setting-item clickable" data-action="debug">
             <span style="color: #2196f3">🔍 查看调试信息</span>
           </div>
-          <div class="setting-item clickable" onclick="clearAllFriends()">
+          <div class="setting-item clickable" data-action="clear">
             <span style="color: #ff4757">🗑️ 清空好友列表</span>
           </div>
         </div>
@@ -838,12 +838,12 @@
                     </div>
                     <div class="friend-actions">
                         <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                onclick="event.stopPropagation(); togglePin(${friend.originalIndex})"
+                                data-action="pin" data-index="${friend.originalIndex}"
                                 title="${friend.pinned ? '取消置顶' : '置顶'}">
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                onclick="event.stopPropagation(); deleteFriend(${friend.originalIndex})"
+                                data-action="delete" data-index="${friend.originalIndex}"
                                 title="删除">
                             🗑️
                         </button>
@@ -1015,27 +1015,6 @@
           }
         }
       }
-
-      // 点击模态框外部关闭
-      document.getElementById('addModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-          closeAddModal();
-        }
-      });
-
-      // 回车键添加好友
-      document.getElementById('friendName').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-          addFriend();
-        }
-      });
-
-      // 回车键添加群聊（群聊名称输入框）
-      document.getElementById('groupName').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-          document.getElementById('groupMembers').focus();
-        }
-      });
 
       // ==================== 好友管理功能 ====================
 
@@ -1228,40 +1207,61 @@
 
       // 调试：查看所有存储的好友列表
       function debugShowAllFriendsData() {
-        console.log('=== 好友列表存储调试信息 ===');
+        try {
+          const currentChar = getCurrentCharacterInfo();
 
-        const currentChar = getCurrentCharacterInfo();
-        console.log('当前角色:', currentChar);
+          // 查找所有好友列表相关的键
+          const allKeys = Object.keys(localStorage);
+          const friendsKeys = allKeys.filter(key => key.startsWith('friendsList_'));
 
-        // 查找所有好友列表相关的键
-        const allKeys = Object.keys(localStorage);
-        const friendsKeys = allKeys.filter(key => key.startsWith('friendsList_'));
+          // 显示当前角色的存储键名
+          const currentStorageKey = getFriendsStorageKey(currentChar.id);
+          const currentFriends = JSON.parse(localStorage.getItem(currentStorageKey) || '[]');
 
-        console.log('所有好友列表键名:', friendsKeys);
+          // 创建调试信息显示
+          let debugInfo = `🔍 好友列表调试信息\n\n`;
+          debugInfo += `当前角色: ${currentChar.name}\n`;
+          debugInfo += `角色ID: ${currentChar.id}\n`;
+          debugInfo += `存储键名: ${currentStorageKey}\n`;
+          debugInfo += `当前好友数量: ${currentFriends.length}\n\n`;
 
-        friendsKeys.forEach(key => {
-          const data = localStorage.getItem(key);
-          const friends = JSON.parse(data || '[]');
-          console.log(`${key}:`, friends);
-        });
+          if (currentFriends.length > 0) {
+            debugInfo += `当前好友列表:\n`;
+            currentFriends.forEach((friend, index) => {
+              debugInfo += `${index + 1}. ${friend.name} (${friend.type === 'group' ? '群聊' : '好友'})${
+                friend.pinned ? ' 📌' : ''
+              }\n`;
+            });
+            debugInfo += `\n`;
+          }
 
-        // 显示当前角色的存储键名
-        const currentStorageKey = getFriendsStorageKey(currentChar.id);
-        console.log('当前角色存储键名:', currentStorageKey);
+          debugInfo += `所有角色的好友列表键名:\n`;
+          if (friendsKeys.length > 0) {
+            friendsKeys.forEach(key => {
+              const data = localStorage.getItem(key);
+              const friends = JSON.parse(data || '[]');
+              debugInfo += `${key}: ${friends.length}个好友\n`;
+            });
+          } else {
+            debugInfo += `(暂无好友列表数据)\n`;
+          }
 
-        const currentFriends = JSON.parse(localStorage.getItem(currentStorageKey) || '[]');
-        console.log('当前角色好友列表:', currentFriends);
+          debugInfo += `\n✅ 事件绑定状态: 已初始化`;
+          debugInfo += `\n📱 运行环境: ${typeof parent !== 'undefined' ? 'SillyTavern' : '独立页面'}`;
 
-        console.log('=== 调试信息结束 ===');
+          // 显示调试信息
+          alert(debugInfo);
 
-        // 在页面上也显示一些信息
-        alert(`调试信息：
-当前角色: ${currentChar.name} (ID: ${currentChar.id})
-存储键名: ${currentStorageKey}
-好友数量: ${currentFriends.length}
-所有好友列表键: ${friendsKeys.join(', ')}
-
-详细信息请查看浏览器控制台 (F12)`);
+          // 同时在控制台输出详细信息
+          console.log('=== 好友列表调试信息 ===');
+          console.log('当前角色:', currentChar);
+          console.log('所有好友列表键名:', friendsKeys);
+          console.log('当前角色好友列表:', currentFriends);
+          console.log('=== 调试信息结束 ===');
+        } catch (error) {
+          alert(`调试信息获取失败: ${error.message}`);
+          console.error('调试信息获取失败:', error);
+        }
       }
 
       // 在全局作用域添加调试函数，方便在控制台调用
@@ -1318,15 +1318,124 @@
         }
       }
 
-      // 点击设置菜单外部关闭
-      document.getElementById('settingsMenu').addEventListener('click', function (e) {
-        if (e.target === this) {
-          hideSettingsMenu();
-        }
-      });
+      // ==================== 事件绑定系统 ====================
 
-      // 页面加载时加载好友列表
-      window.addEventListener('load', loadFriends);
+      // 初始化所有事件绑定
+      function initializeEventBindings() {
+        console.log('初始化事件绑定...');
+
+        // 好友列表事件委托
+        const friendsList = document.getElementById('friendsList');
+        if (friendsList) {
+          friendsList.addEventListener('click', function (e) {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            e.stopPropagation();
+            const action = target.getAttribute('data-action');
+            const index = target.getAttribute('data-index');
+
+            console.log('好友列表事件:', action, index);
+
+            switch (action) {
+              case 'pin':
+                if (index !== null) {
+                  togglePin(parseInt(index));
+                }
+                break;
+              case 'delete':
+                if (index !== null) {
+                  deleteFriend(parseInt(index));
+                }
+                break;
+            }
+          });
+        }
+
+        // 设置菜单事件委托
+        const settingsBody = document.querySelector('.settings-body');
+        if (settingsBody) {
+          settingsBody.addEventListener('click', function (e) {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.getAttribute('data-action');
+            console.log('设置菜单事件:', action);
+
+            switch (action) {
+              case 'export':
+                exportFriends();
+                break;
+              case 'import':
+                document.getElementById('importFile').click();
+                break;
+              case 'debug':
+                debugShowAllFriendsData();
+                break;
+              case 'clear':
+                clearAllFriends();
+                break;
+            }
+          });
+        }
+
+        // 文件导入事件
+        const importFile = document.getElementById('importFile');
+        if (importFile) {
+          importFile.addEventListener('change', importFriends);
+        }
+
+        // 设置菜单外部点击关闭
+        const settingsMenu = document.getElementById('settingsMenu');
+        if (settingsMenu) {
+          settingsMenu.addEventListener('click', function (e) {
+            if (e.target === this) {
+              hideSettingsMenu();
+            }
+          });
+        }
+
+        // 添加模态框外部点击关闭
+        const addModal = document.getElementById('addModal');
+        if (addModal) {
+          addModal.addEventListener('click', function (e) {
+            if (e.target === this) {
+              closeAddModal();
+            }
+          });
+        }
+
+        // 键盘事件绑定
+        const friendNameInput = document.getElementById('friendName');
+        if (friendNameInput) {
+          friendNameInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+              addFriend();
+            }
+          });
+        }
+
+        const groupNameInput = document.getElementById('groupName');
+        if (groupNameInput) {
+          groupNameInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+              const groupMembersInput = document.getElementById('groupMembers');
+              if (groupMembersInput) {
+                groupMembersInput.focus();
+              }
+            }
+          });
+        }
+
+        console.log('✅ 事件绑定完成');
+      }
+
+      // 页面加载时初始化
+      window.addEventListener('load', function () {
+        console.log('页面加载完成，开始初始化...');
+        loadFriends();
+        initializeEventBindings();
+      });
 
       // 监听SillyTavern的角色切换事件（如果可用）
       if (typeof parent !== 'undefined') {
