@@ -246,7 +246,7 @@
         background-color: #d4ac6e;
         border: 2px solid #5a4a39;
         border-radius: 50%;
-        display: none; /* 默认隐藏 */
+        display: flex; /* 默认显示 */
         align-items: center;
         justify-content: center;
         cursor: pointer;
@@ -658,15 +658,16 @@
 
         const parsedMessages = lines
           .map((line, index) => {
+            console.log(`尝试解析第 ${index + 1} 行:`, line);
             for (const parser of messageParsers) {
               const match = line.match(parser.regex);
               if (match) {
                 const result = parser.handler(match);
-                console.log(`Line ${index + 1} parsed as:`, result.type, result.content);
+                console.log(`第 ${index + 1} 行解析成功:`, result.sender, result.content);
                 return result;
               }
             }
-            console.log(`Line ${index + 1} not matched:`, line);
+            console.log(`第 ${index + 1} 行解析失败:`, line);
             return null;
           })
           .filter(Boolean);
@@ -876,12 +877,22 @@
         const typingIndicator = dialogArea.querySelector('.typing-indicator');
         const lastMessage = state.messageHistory[state.messageHistory.length - 1];
 
+        console.log('更新AI按钮可见性:', {
+          hasBtn: !!btn,
+          hasTypingIndicator: !!typingIndicator,
+          lastMessage: lastMessage ? `${lastMessage.sender}: ${lastMessage.content.substring(0, 20)}...` : 'none',
+          userHasSentNewMessage: state.userHasSentNewMessage,
+        });
+
         // 显示按钮的条件：AI不在输入中，且最后一条消息不是AI刚发送的（或用户有新消息）
         const shouldShow =
           !typingIndicator && (!lastMessage || lastMessage.sender !== 'char' || state.userHasSentNewMessage);
 
         if (btn) {
           btn.style.display = shouldShow ? 'flex' : 'none';
+          console.log('AI按钮显示状态:', shouldShow ? '显示' : '隐藏');
+        } else {
+          console.error('找不到AI回复按钮元素');
         }
       }
 
@@ -1001,12 +1012,16 @@
           const currentId = getCurrentMessageId();
           const messageText = getChatMessages(currentId)[0]?.message || '';
 
+          console.log('当前消息ID:', currentId);
+          console.log('当前消息内容:', messageText);
+
           if (messageText) {
             state.messageHistory = parseChuanXunLog(messageText);
 
             // 重新渲染所有消息
             dialogArea.innerHTML = '';
-            state.messageHistory.forEach(message => {
+            state.messageHistory.forEach((message, index) => {
+              console.log(`渲染消息 ${index + 1}:`, message.sender, message.content);
               if (message.sender === 'user') {
                 addMessage(message.content, 'user', '{{user}}');
               } else if (message.sender === 'char') {
@@ -1014,10 +1029,10 @@
               }
             });
 
-            console.log('Loaded message history:', state.messageHistory.length, 'messages');
+            console.log('已加载消息历史:', state.messageHistory.length, '条消息');
           } else {
             state.messageHistory = [];
-            console.log('No message history found');
+            console.log('没有找到消息历史');
           }
         } catch (error) {
           console.error('加载历史消息失败:', error);
