@@ -615,18 +615,24 @@
             <span id="friendsCount">0</span>
           </div>
           <hr />
-          <div class="setting-item clickable" data-action="export">
+          <div class="setting-item clickable" onclick="window.exportFriends()">
             <span>📤 导出好友列表</span>
           </div>
-          <div class="setting-item clickable" data-action="import">
+          <div class="setting-item clickable" onclick="document.getElementById('importFile').click()">
             <span>📥 导入好友列表</span>
           </div>
-          <input type="file" id="importFile" accept=".json" style="display: none" />
+          <input
+            type="file"
+            id="importFile"
+            accept=".json"
+            style="display: none"
+            onchange="window.importFriends(event)"
+          />
           <hr />
-          <div class="setting-item clickable" data-action="debug">
+          <div class="setting-item clickable" onclick="window.debugShowAllFriendsData()">
             <span style="color: #2196f3">🔍 查看调试信息</span>
           </div>
-          <div class="setting-item clickable" data-action="clear">
+          <div class="setting-item clickable" onclick="window.clearAllFriends()">
             <span style="color: #ff4757">🗑️ 清空好友列表</span>
           </div>
         </div>
@@ -750,16 +756,101 @@
         }
       }
 
-      // 获取角色专属的好友存储键名
+      // ==================== 改进的存储系统 ====================
+
+      // 获取角色专属的好友存储键名（多种存储方式）
       function getFriendsStorageKey(characterId) {
         return `friendsList_${characterId}`;
+      }
+
+      // 尝试从SillyTavern的角色数据中获取好友列表
+      function getFriendsFromCharacterData(characterInfo) {
+        try {
+          // 方法1: 尝试从SillyTavern的角色扩展数据中获取
+          if (typeof parent !== 'undefined' && parent.characters && parent.this_chid !== undefined) {
+            const currentChar = parent.characters[parent.this_chid];
+            if (currentChar && currentChar.data && currentChar.data.extensions) {
+              // 检查是否有我们的好友列表扩展
+              if (currentChar.data.extensions.friendsList) {
+                console.log('从角色扩展数据获取好友列表');
+                return currentChar.data.extensions.friendsList;
+              }
+            }
+          }
+
+          // 方法2: 从localStorage获取（兜底方案）
+          const storageKey = getFriendsStorageKey(characterInfo.id);
+          const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          console.log('从localStorage获取好友列表:', storageKey);
+          return friends;
+        } catch (error) {
+          console.warn('获取好友列表失败:', error);
+          return [];
+        }
+      }
+
+      // 保存好友列表到角色数据（多重保存）
+      function saveFriendsToCharacterData(characterInfo, friends) {
+        try {
+          let saved = false;
+
+          // 方法1: 尝试保存到SillyTavern的角色扩展数据
+          if (typeof parent !== 'undefined' && parent.characters && parent.this_chid !== undefined) {
+            const currentChar = parent.characters[parent.this_chid];
+            if (currentChar && currentChar.data) {
+              // 确保extensions对象存在
+              if (!currentChar.data.extensions) {
+                currentChar.data.extensions = {};
+              }
+
+              // 保存好友列表到角色扩展数据
+              currentChar.data.extensions.friendsList = friends;
+
+              // 尝试触发SillyTavern的保存机制
+              if (typeof parent.saveCharacterDebounced === 'function') {
+                parent.saveCharacterDebounced();
+                console.log('✅ 好友列表已保存到角色扩展数据');
+                saved = true;
+              } else if (typeof parent.saveSettings === 'function') {
+                parent.saveSettings();
+                console.log('✅ 好友列表已保存到角色扩展数据（通过saveSettings）');
+                saved = true;
+              }
+            }
+          }
+
+          // 方法2: 同时保存到localStorage（双重保险）
+          const storageKey = getFriendsStorageKey(characterInfo.id);
+          localStorage.setItem(storageKey, JSON.stringify(friends));
+          console.log('✅ 好友列表已保存到localStorage:', storageKey);
+
+          // 方法3: 保存到角色专属的localStorage键名
+          const charSpecificKey = `char_${characterInfo.id}_friends`;
+          localStorage.setItem(
+            charSpecificKey,
+            JSON.stringify({
+              characterName: characterInfo.name,
+              characterId: characterInfo.id,
+              friends: friends,
+              lastUpdated: new Date().toISOString(),
+              version: '2.0',
+            }),
+          );
+          console.log('✅ 好友列表已保存到角色专属存储:', charSpecificKey);
+
+          return true;
+        } catch (error) {
+          console.error('保存好友列表失败:', error);
+          return false;
+        }
       }
 
       // 从本地存储加载好友列表（角色专属）
       function loadFriends() {
         const currentChar = getCurrentCharacterInfo();
-        const storageKey = getFriendsStorageKey(currentChar.id);
-        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+        // 使用新的存储系统获取好友列表
+        const friends = getFriendsFromCharacterData(currentChar);
 
         // 保存当前角色信息
         saveCurrentCharacterInfo(currentChar);
@@ -838,12 +929,12 @@
                     </div>
                     <div class="friend-actions">
                         <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                data-action="pin" data-index="${friend.originalIndex}"
+                                onclick="event.stopPropagation(); window.togglePin(${friend.originalIndex})"
                                 title="${friend.pinned ? '取消置顶' : '置顶'}">
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                data-action="delete" data-index="${friend.originalIndex}"
+                                onclick="event.stopPropagation(); window.deleteFriend(${friend.originalIndex})"
                                 title="删除">
                             🗑️
                         </button>
@@ -925,10 +1016,9 @@
 
         friends.push(newFriend);
 
-        // 保存到角色专属的存储空间
+        // 使用新的存储系统保存
         const currentChar = getCurrentCharacterInfo();
-        const storageKey = getFriendsStorageKey(currentChar.id);
-        localStorage.setItem(storageKey, JSON.stringify(friends));
+        saveFriendsToCharacterData(currentChar, friends);
 
         displayFriends(friends);
         closeAddModal();
@@ -968,10 +1058,9 @@
 
         friends.push(newGroup);
 
-        // 保存到角色专属的存储空间
+        // 使用新的存储系统保存
         const currentChar = getCurrentCharacterInfo();
-        const storageKey = getFriendsStorageKey(currentChar.id);
-        localStorage.setItem(storageKey, JSON.stringify(friends));
+        saveFriendsToCharacterData(currentChar, friends);
 
         displayFriends(friends);
         closeAddModal();
@@ -1067,72 +1156,61 @@
         }, 3000);
       }
 
-      // 置顶/取消置顶好友
+      // 置顶/取消置顶好友（简化版）
       function togglePin(index) {
-        console.log('togglePin 被调用，索引:', index);
+        try {
+          const currentChar = getCurrentCharacterInfo();
+          const friends = getFriendsFromCharacterData(currentChar);
 
-        const currentChar = getCurrentCharacterInfo();
-        const storageKey = getFriendsStorageKey(currentChar.id);
-        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          if (friends && friends[index]) {
+            const friendName = friends[index].name;
+            friends[index].pinned = !friends[index].pinned;
 
-        if (friends[index]) {
-          const friendName = friends[index].name;
-          const wasPin = friends[index].pinned;
-          friends[index].pinned = !friends[index].pinned;
+            // 保存
+            saveFriendsToCharacterData(currentChar, friends);
 
-          localStorage.setItem(storageKey, JSON.stringify(friends));
-          displayFriends(friends);
+            // 重新显示
+            displayFriends(friends);
 
-          const action = friends[index].pinned ? '置顶' : '取消置顶';
-          console.log(`✅ ${action}好友: ${friendName}`);
-          showToast(`${friendName} 已${action}`);
-        } else {
-          console.error('❌ 置顶失败：找不到指定索引的好友', index);
-          showToast('操作失败：找不到指定的好友');
+            const action = friends[index].pinned ? '置顶' : '取消置顶';
+            alert(`${friendName} 已${action}`);
+          }
+        } catch (error) {
+          alert('操作失败：' + error.message);
         }
       }
 
-      // 删除好友
+      // 删除好友（简化版，兼容SillyTavern）
       function deleteFriend(index) {
-        console.log('deleteFriend 被调用，索引:', index);
+        try {
+          const currentChar = getCurrentCharacterInfo();
+          const friends = getFriendsFromCharacterData(currentChar);
 
-        const currentChar = getCurrentCharacterInfo();
-        const storageKey = getFriendsStorageKey(currentChar.id);
-        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          if (friends && friends[index]) {
+            const friendName = friends[index].name;
+            const friendType = friends[index].type === 'group' ? '群聊' : '好友';
 
-        console.log('当前好友列表:', friends);
-        console.log('要删除的索引:', index, '对应的好友:', friends[index]);
+            // 简单的确认对话框
+            const confirmed = confirm(`确定要删除${friendType} "${friendName}" 吗？`);
 
-        if (friends[index]) {
-          const friendName = friends[index].name;
-          const friendType = friends[index].type === 'group' ? '群聊' : '好友';
+            if (confirmed) {
+              // 删除好友
+              friends.splice(index, 1);
 
-          console.log(`准备删除${friendType}: ${friendName}`);
+              // 保存
+              saveFriendsToCharacterData(currentChar, friends);
 
-          if (confirm(`确定要删除${friendType} "${friendName}" 吗？`)) {
-            console.log('用户确认删除');
+              // 重新显示
+              displayFriends(friends);
 
-            // 删除指定索引的好友
-            friends.splice(index, 1);
-
-            console.log('删除后的好友列表:', friends);
-
-            // 保存更新后的好友列表
-            localStorage.setItem(storageKey, JSON.stringify(friends));
-
-            // 重新显示好友列表
-            displayFriends(friends);
-
-            console.log(`✅ 已删除${friendType}: ${friendName}`);
-
-            // 显示删除成功的提示
-            showToast(`${friendType} "${friendName}" 已删除`);
+              // 简单提示
+              alert(`${friendType} "${friendName}" 已删除`);
+            }
           } else {
-            console.log('用户取消删除');
+            alert('删除失败：找不到指定的好友');
           }
-        } else {
-          console.error('❌ 删除失败：找不到指定索引的好友', index, '好友列表长度:', friends.length);
-          showToast('删除失败：找不到指定的好友');
+        } catch (error) {
+          alert('删除失败：' + error.message);
         }
       }
 
@@ -1214,16 +1292,31 @@
           const allKeys = Object.keys(localStorage);
           const friendsKeys = allKeys.filter(key => key.startsWith('friendsList_'));
 
-          // 显示当前角色的存储键名
+          // 显示当前角色的存储信息
           const currentStorageKey = getFriendsStorageKey(currentChar.id);
-          const currentFriends = JSON.parse(localStorage.getItem(currentStorageKey) || '[]');
+          const currentFriends = getFriendsFromCharacterData(currentChar);
+
+          // 检查是否存储在角色扩展数据中
+          let storedInCharacterData = false;
+          if (typeof parent !== 'undefined' && parent.characters && parent.this_chid !== undefined) {
+            const currentCharData = parent.characters[parent.this_chid];
+            if (
+              currentCharData &&
+              currentCharData.data &&
+              currentCharData.data.extensions &&
+              currentCharData.data.extensions.friendsList
+            ) {
+              storedInCharacterData = true;
+            }
+          }
 
           // 创建调试信息显示
-          let debugInfo = `🔍 好友列表调试信息\n\n`;
+          let debugInfo = `🔍 好友列表调试信息 (v2.0)\n\n`;
           debugInfo += `当前角色: ${currentChar.name}\n`;
           debugInfo += `角色ID: ${currentChar.id}\n`;
           debugInfo += `存储键名: ${currentStorageKey}\n`;
-          debugInfo += `当前好友数量: ${currentFriends.length}\n\n`;
+          debugInfo += `当前好友数量: ${currentFriends.length}\n`;
+          debugInfo += `存储位置: ${storedInCharacterData ? '角色扩展数据 + localStorage' : '仅localStorage'}\n\n`;
 
           if (currentFriends.length > 0) {
             debugInfo += `当前好友列表:\n`;
@@ -1264,8 +1357,13 @@
         }
       }
 
-      // 在全局作用域添加调试函数，方便在控制台调用
+      // 在全局作用域添加所有函数，确保在任何环境都能访问
       window.debugShowAllFriendsData = debugShowAllFriendsData;
+      window.togglePin = togglePin;
+      window.deleteFriend = deleteFriend;
+      window.clearAllFriends = clearAllFriends;
+      window.exportFriends = exportFriends;
+      window.importFriends = importFriends;
 
       // ==================== 设置菜单功能 ====================
 
@@ -1289,152 +1387,32 @@
         menu.style.display = 'none';
       }
 
-      // 清空当前角色的好友列表
+      // 清空当前角色的好友列表（简化版）
       function clearAllFriends() {
-        console.log('clearAllFriends 被调用');
+        try {
+          const currentChar = getCurrentCharacterInfo();
 
-        const currentChar = getCurrentCharacterInfo();
-        console.log('当前角色信息:', currentChar);
+          if (confirm(`确定要清空角色 "${currentChar.name}" 的所有好友吗？此操作不可撤销！`)) {
+            // 保存空列表
+            saveFriendsToCharacterData(currentChar, []);
 
-        const storageKey = getFriendsStorageKey(currentChar.id);
-        console.log('存储键名:', storageKey);
+            // 重新显示
+            displayFriends([]);
 
-        const currentFriends = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        console.log('当前好友列表:', currentFriends);
+            // 关闭设置菜单
+            hideSettingsMenu();
 
-        if (confirm(`确定要清空角色 "${currentChar.name}" 的所有好友吗？此操作不可撤销！`)) {
-          console.log('用户确认清空');
-
-          localStorage.removeItem(storageKey);
-          console.log('已从localStorage删除:', storageKey);
-
-          displayFriends([]);
-          hideSettingsMenu();
-
-          console.log(`✅ 已清空角色 "${currentChar.name}" 的好友列表`);
-          showToast(`角色 "${currentChar.name}" 的好友列表已清空`);
-        } else {
-          console.log('用户取消清空');
+            alert(`角色 "${currentChar.name}" 的好友列表已清空`);
+          }
+        } catch (error) {
+          alert('清空失败：' + error.message);
         }
-      }
-
-      // ==================== 事件绑定系统 ====================
-
-      // 初始化所有事件绑定
-      function initializeEventBindings() {
-        console.log('初始化事件绑定...');
-
-        // 好友列表事件委托
-        const friendsList = document.getElementById('friendsList');
-        if (friendsList) {
-          friendsList.addEventListener('click', function (e) {
-            const target = e.target.closest('[data-action]');
-            if (!target) return;
-
-            e.stopPropagation();
-            const action = target.getAttribute('data-action');
-            const index = target.getAttribute('data-index');
-
-            console.log('好友列表事件:', action, index);
-
-            switch (action) {
-              case 'pin':
-                if (index !== null) {
-                  togglePin(parseInt(index));
-                }
-                break;
-              case 'delete':
-                if (index !== null) {
-                  deleteFriend(parseInt(index));
-                }
-                break;
-            }
-          });
-        }
-
-        // 设置菜单事件委托
-        const settingsBody = document.querySelector('.settings-body');
-        if (settingsBody) {
-          settingsBody.addEventListener('click', function (e) {
-            const target = e.target.closest('[data-action]');
-            if (!target) return;
-
-            const action = target.getAttribute('data-action');
-            console.log('设置菜单事件:', action);
-
-            switch (action) {
-              case 'export':
-                exportFriends();
-                break;
-              case 'import':
-                document.getElementById('importFile').click();
-                break;
-              case 'debug':
-                debugShowAllFriendsData();
-                break;
-              case 'clear':
-                clearAllFriends();
-                break;
-            }
-          });
-        }
-
-        // 文件导入事件
-        const importFile = document.getElementById('importFile');
-        if (importFile) {
-          importFile.addEventListener('change', importFriends);
-        }
-
-        // 设置菜单外部点击关闭
-        const settingsMenu = document.getElementById('settingsMenu');
-        if (settingsMenu) {
-          settingsMenu.addEventListener('click', function (e) {
-            if (e.target === this) {
-              hideSettingsMenu();
-            }
-          });
-        }
-
-        // 添加模态框外部点击关闭
-        const addModal = document.getElementById('addModal');
-        if (addModal) {
-          addModal.addEventListener('click', function (e) {
-            if (e.target === this) {
-              closeAddModal();
-            }
-          });
-        }
-
-        // 键盘事件绑定
-        const friendNameInput = document.getElementById('friendName');
-        if (friendNameInput) {
-          friendNameInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-              addFriend();
-            }
-          });
-        }
-
-        const groupNameInput = document.getElementById('groupName');
-        if (groupNameInput) {
-          groupNameInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-              const groupMembersInput = document.getElementById('groupMembers');
-              if (groupMembersInput) {
-                groupMembersInput.focus();
-              }
-            }
-          });
-        }
-
-        console.log('✅ 事件绑定完成');
       }
 
       // 页面加载时初始化
       window.addEventListener('load', function () {
         console.log('页面加载完成，开始初始化...');
         loadFriends();
-        initializeEventBindings();
       });
 
       // 监听SillyTavern的角色切换事件（如果可用）
