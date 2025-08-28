@@ -25,19 +25,19 @@
 
       /* 外框包裹层 */
       .phone-shell {
-        padding: 18px; /* 壳厚度 */
+        padding: 8px; /* 壳厚度 - 减少边框厚度 */
         background: #e8d5a3; /* 米黄色外壳 */
-        border-radius: 48px;
+        border-radius: 28px; /* 减少圆角 */
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         display: inline-block;
       }
 
       .container {
-        width: 255px; /* 手机宽度 */
+        width: 255px; /* 手机宽度 - 调整为255px */
         height: 650px; /* 手机高度 */
         background: #ffffff; /* 机身本体纯白 */
-        border-radius: 38px;
-        box-shadow: inset 0 0 0 2px #d4c294; /* 内描边，呼应外壳 */
+        border-radius: 22px; /* 减少圆角 */
+        box-shadow: inset 0 0 0 1px #d4c294; /* 内描边，减少边框宽度 */
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -70,7 +70,7 @@
       .header {
         background: linear-gradient(135deg, #d4c294 0%, #c9b882 100%);
         color: #8b7355;
-        padding: 25px;
+        padding: 18px; /* 减少内边距 */
         position: relative;
         text-align: center;
         border-bottom: 1px solid rgba(139, 115, 85, 0.2);
@@ -144,7 +144,7 @@
       }
 
       .friends-list {
-        padding: 20px;
+        padding: 15px; /* 减少内边距 */
         background: #faf9f4;
         flex: 1;
         overflow-y: auto;
@@ -173,14 +173,14 @@
       .friend-item {
         display: flex;
         align-items: center;
-        padding: 18px;
-        margin-bottom: 12px;
-        border-radius: 15px;
+        padding: 12px; /* 减少内边距 */
+        margin-bottom: 8px; /* 减少间距 */
+        border-radius: 10px; /* 减少圆角 */
         cursor: pointer;
         transition: all 0.3s ease;
         background: #ffffff;
-        border: 1px solid rgba(212, 194, 148, 0.2);
-        box-shadow: 0 2px 8px rgba(212, 194, 148, 0.1);
+        border: 1px solid rgba(212, 194, 148, 0.15); /* 减少边框透明度 */
+        box-shadow: 0 1px 4px rgba(212, 194, 148, 0.08); /* 减少阴影 */
         position: relative;
         overflow: hidden;
       }
@@ -208,8 +208,8 @@
       }
 
       .friend-avatar {
-        width: 55px;
-        height: 55px;
+        width: 45px; /* 减少头像大小 */
+        height: 45px; /* 减少头像大小 */
         border-radius: 50%;
         background: linear-gradient(135deg, #d4c294 0%, #c9b882 100%);
         display: flex;
@@ -217,10 +217,10 @@
         justify-content: center;
         color: #8b7355;
         font-weight: bold;
-        margin-right: 18px;
-        font-size: 18px;
+        margin-right: 12px; /* 减少右边距 */
+        font-size: 16px; /* 减少字体大小 */
         text-shadow: 1px 1px 2px rgba(139, 115, 85, 0.2);
-        box-shadow: 0 4px 15px rgba(212, 194, 148, 0.3);
+        box-shadow: 0 2px 8px rgba(212, 194, 148, 0.2); /* 减少阴影 */
         transition: all 0.3s ease;
         position: relative;
         z-index: 1;
@@ -238,16 +238,16 @@
       }
 
       .friend-name {
-        font-size: 17px;
+        font-size: 15px; /* 减少字体大小 */
         font-weight: 500;
         color: #8b7355;
-        margin-bottom: 6px;
+        margin-bottom: 4px; /* 减少间距 */
         text-shadow: 1px 1px 2px rgba(139, 115, 85, 0.1);
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px; /* 减少字间距 */
       }
 
       .friend-type {
-        font-size: 13px;
+        font-size: 12px; /* 减少字体大小 */
         color: rgba(139, 115, 85, 0.7);
         font-weight: 300;
       }
@@ -301,15 +301,15 @@
       }
 
       .action-btn {
-        width: 28px;
-        height: 28px;
+        width: 24px; /* 减少按钮大小 */
+        height: 24px; /* 减少按钮大小 */
         border: none;
         border-radius: 50%;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
+        font-size: 11px; /* 减少字体大小 */
         transition: all 0.3s ease;
         backdrop-filter: blur(5px);
       }
@@ -359,10 +359,10 @@
         left: 50%;
         transform: translate(-50%, -50%);
         background: white;
-        padding: 30px;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 400px;
+        padding: 24px; /* 减少内边距 */
+        border-radius: 10px; /* 减少圆角 */
+        width: 85%; /* 减少宽度 */
+        max-width: 280px; /* 适应新的容器宽度 */
       }
 
       .modal h2 {
@@ -449,99 +449,6 @@
         margin-bottom: 15px;
         display: block;
       }
-
-      /* ==================== 增强的动画效果 ==================== */
-
-      /* 置顶动画效果 */
-      @keyframes pinGlow {
-        0% {
-          transform: scale(1);
-          box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
-        }
-        50% {
-          transform: scale(1.02);
-          box-shadow: 0 4px 20px rgba(255, 193, 7, 0.4);
-        }
-        100% {
-          transform: scale(1);
-          box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
-        }
-      }
-
-      .friend-item.pinned {
-        animation: pinGlow 0.5s ease-out;
-      }
-
-      /* 置顶徽章动画 */
-      @keyframes bounce {
-        0%,
-        20%,
-        50%,
-        80%,
-        100% {
-          transform: translateY(0);
-        }
-        40% {
-          transform: translateY(-3px);
-        }
-        60% {
-          transform: translateY(-2px);
-        }
-      }
-
-      .pinned-badge {
-        animation: bounce 0.5s ease-out;
-      }
-
-      /* Toast 提示动画 */
-      @keyframes fadeInOut {
-        0% {
-          opacity: 0;
-          transform: translate(-50%, -50%) scale(0.8);
-        }
-        20% {
-          opacity: 1;
-          transform: translate(-50%, -50%) scale(1);
-        }
-        80% {
-          opacity: 1;
-          transform: translate(-50%, -50%) scale(1);
-        }
-        100% {
-          opacity: 0;
-          transform: translate(-50%, -50%) scale(0.8);
-        }
-      }
-
-      /* 按钮悬停效果增强 */
-      .action-btn:hover {
-        transform: scale(1.1);
-        transition: all 0.2s ease;
-      }
-
-      .pin-btn.pinned {
-        background: #ffc107;
-        color: white;
-        box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
-      }
-
-      .delete-btn:hover {
-        background: #ff7675;
-        color: white;
-        transform: scale(1.1);
-      }
-
-      /* 好友项悬停效果 */
-      .friend-item:hover .friend-actions {
-        opacity: 1;
-        transform: translateX(0);
-      }
-
-      .friend-actions {
-        opacity: 0.7;
-        transform: translateX(5px);
-        transition: all 0.2s ease;
-      }
     </style>
   </head>
   <body>
@@ -616,162 +523,115 @@
     <script>
       // ==================== 角色专属好友列表系统 ====================
 
-      let currentCharacterInfo = null;
-      let isCharacterSystemReady = false;
-
-      // 获取当前角色信息
-      function getCurrentCharacterInfo() {
+      // 获取当前角色名称
+      function getCurrentCharacterName() {
         try {
-          // 尝试从SillyTavern获取当前角色
+          // 尝试从 SillyTavern 获取当前角色
           if (typeof parent !== 'undefined' && parent.characters && parent.this_chid !== undefined) {
             const currentChar = parent.characters[parent.this_chid];
-            if (currentChar) {
-              return {
-                id: parent.this_chid,
-                name: currentChar.name,
-                description: currentChar.description || '',
-                personality: currentChar.personality || '',
-                scenario: currentChar.scenario || '',
-                first_mes: currentChar.first_mes,
-                tags: currentChar.tags || [],
-                avatar: currentChar.avatar || '',
-                filename: currentChar.avatar, // 使用avatar作为唯一标识
-              };
-            }
+            return currentChar ? currentChar.name : 'default';
           }
 
-          // 回退方案：从localStorage获取
-          const savedChar = localStorage.getItem('currentCharacter');
-          if (savedChar) {
-            return JSON.parse(savedChar);
-          }
+          // 尝试从 URL 参数获取
+          const urlParams = new URLSearchParams(window.location.search);
+          const charName = urlParams.get('character') || urlParams.get('char');
+          if (charName) return charName;
 
-          return null;
+          // 尝试从 localStorage 获取最后使用的角色
+          const lastChar = localStorage.getItem('lastUsedCharacter');
+          if (lastChar) return lastChar;
+
+          // 默认角色
+          return 'default';
         } catch (error) {
-          console.error('获取角色信息失败:', error);
-          return null;
+          console.warn('获取角色名称失败，使用默认角色:', error);
+          return 'default';
         }
       }
 
       // 获取角色专属的存储键名
-      function getCharacterFriendsKey(characterInfo) {
-        if (!characterInfo) return 'friendsList'; // 默认键名
-
-        // 使用角色文件名作为唯一标识
-        const charId = characterInfo.filename || characterInfo.name || 'default';
-        return `friendsList_${charId}`;
+      function getFriendsStorageKey() {
+        const charName = getCurrentCharacterName();
+        return `friendsList_${charName}`;
       }
 
-      // 从本地存储加载角色专属好友列表
+      // 从本地存储加载当前角色的好友列表
       function loadFriends() {
-        currentCharacterInfo = getCurrentCharacterInfo();
-        const storageKey = getCharacterFriendsKey(currentCharacterInfo);
+        const storageKey = getFriendsStorageKey();
         const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
-        console.log('加载好友列表:', {
-          character: currentCharacterInfo?.name || '未知角色',
-          storageKey: storageKey,
-          friendsCount: friends.length,
-        });
+        // 显示当前角色信息
+        updateCharacterInfo();
 
         displayFriends(friends);
-        updateCharacterDisplay();
+        console.log(`已加载角色 "${getCurrentCharacterName()}" 的好友列表:`, friends.length, '个好友');
       }
 
-      // 保存角色专属好友列表
+      // 保存当前角色的好友列表
       function saveFriends(friends) {
-        const storageKey = getCharacterFriendsKey(currentCharacterInfo);
+        const storageKey = getFriendsStorageKey();
         localStorage.setItem(storageKey, JSON.stringify(friends));
 
-        console.log('保存好友列表:', {
-          character: currentCharacterInfo?.name || '未知角色',
-          storageKey: storageKey,
-          friendsCount: friends.length,
-        });
+        // 同时保存到 SillyTavern extension_settings（如果可用）
+        try {
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            if (!parent.extension_settings.character_friends) {
+              parent.extension_settings.character_friends = {};
+            }
+            parent.extension_settings.character_friends[getCurrentCharacterName()] = friends;
+
+            // 触发 SillyTavern 的设置保存
+            if (typeof parent.saveSettingsDebounced === 'function') {
+              parent.saveSettingsDebounced();
+            }
+          }
+        } catch (error) {
+          console.warn('保存到 SillyTavern 失败:', error);
+        }
+
+        console.log(`已保存角色 "${getCurrentCharacterName()}" 的好友列表:`, friends.length, '个好友');
       }
 
-      // 更新角色显示信息
-      function updateCharacterDisplay() {
+      // 更新角色信息显示
+      function updateCharacterInfo() {
+        const charName = getCurrentCharacterName();
         const headerTitle = document.querySelector('.header h1');
-        if (currentCharacterInfo && headerTitle) {
+
+        if (headerTitle) {
           headerTitle.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span>${currentCharacterInfo.name}</span>
-              <span style="font-size: 14px; opacity: 0.7;">的好友</span>
-            </div>
+            <span style="color: #666; font-size: 0.8em;">当前角色:</span>
+            <span style="color: #333;">${charName}</span>
+            <span style="color: #666; font-size: 0.8em;">的好友列表</span>
+          `;
+        }
+
+        // 在页面顶部添加角色切换提示
+        let charInfo = document.getElementById('characterInfo');
+        if (!charInfo) {
+          charInfo = document.createElement('div');
+          charInfo.id = 'characterInfo';
+          charInfo.style.cssText = `
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            margin: 10px 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
           `;
 
-          // 添加角色信息卡片
-          addCharacterInfoCard();
-        } else if (headerTitle) {
-          headerTitle.textContent = '好友列表';
-        }
-      }
-
-      // 添加角色信息卡片
-      function addCharacterInfoCard() {
-        const friendsList = document.getElementById('friendsList');
-        const existingCard = friendsList.querySelector('.character-info-card');
-
-        if (existingCard) {
-          existingCard.remove();
+          const container = document.querySelector('.container');
+          container.insertBefore(charInfo, container.firstChild);
         }
 
-        if (!currentCharacterInfo) return;
-
-        const cardHtml = `
-          <div class="character-info-card" style="
-            margin: 0 0 20px 0;
-            padding: 15px;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border-radius: 12px;
-            color: white;
-            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
-          ">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              ${
-                currentCharacterInfo.avatar
-                  ? `
-                <img src="${currentCharacterInfo.avatar}" style="
-                  width: 40px;
-                  height: 40px;
-                  border-radius: 50%;
-                  object-fit: cover;
-                  border: 2px solid rgba(255,255,255,0.3);
-                " alt="${currentCharacterInfo.name}">
-              `
-                  : `
-                <div style="
-                  width: 40px;
-                  height: 40px;
-                  border-radius: 50%;
-                  background: rgba(255,255,255,0.2);
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  font-size: 18px;
-                ">👤</div>
-              `
-              }
-              <div style="flex: 1;">
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">
-                  ${currentCharacterInfo.name}
-                </div>
-                <div style="font-size: 12px; opacity: 0.9; line-height: 1.3;">
-                  ${
-                    currentCharacterInfo.description
-                      ? currentCharacterInfo.description.length > 60
-                        ? currentCharacterInfo.description.substring(0, 60) + '...'
-                        : currentCharacterInfo.description
-                      : '这个角色还没有描述'
-                  }
-                </div>
-              </div>
-            </div>
+        charInfo.innerHTML = `
+          <div style="font-weight: 500; margin-bottom: 4px;">🎭 角色专属好友列表</div>
+          <div style="font-size: 12px; opacity: 0.9;">
+            当前角色: <strong>${charName}</strong> |
+            切换角色卡后好友列表会自动切换
           </div>
         `;
-
-        friendsList.insertAdjacentHTML('afterbegin', cardHtml);
       }
 
       // 显示好友列表
@@ -782,36 +642,22 @@
           friendsList.innerHTML = `
                     <div class="empty-state">
                         <i>👥</i>
-                        <p>${currentCharacterInfo ? `${currentCharacterInfo.name} 还没有好友` : '暂无好友'}</p>
-                        <p style="font-size: 14px; opacity: 0.7; margin-top: 8px;">点击右上角添加好友或群聊</p>
+                        <p>暂无好友，点击右上角添加好友或群聊</p>
                     </div>
                 `;
-
-          // 即使没有好友也显示推荐
-          setTimeout(() => {
-            if (currentCharacterInfo) {
-              showRecommendations();
-            }
-          }, 100);
           return;
         }
 
-        // 先排序：置顶的在前面，然后按添加时间排序
-        const sortedFriends = [...friends].sort((a, b) => {
+        // 按置顶状态排序，置顶的在前面
+        const sortedFriends = friends.sort((a, b) => {
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
-          if (a.pinned && b.pinned) {
-            return new Date(b.pinnedTime || b.addTime) - new Date(a.pinnedTime || a.addTime);
-          }
-          return new Date(b.addTime) - new Date(a.addTime);
+          return 0;
         });
 
         friendsList.innerHTML = sortedFriends
-          .map((friend, displayIndex) => {
-            // 找到原始数组中的索引，用于删除和置顶操作
-            const originalIndex = friends.findIndex(f => f.name === friend.name && f.addTime === friend.addTime);
-
-            return `
+          .map(
+            (friend, index) => `
                 <div class="friend-item ${friend.pinned ? 'pinned' : ''}" onclick="startChat('${friend.name}', '${
               friend.type
             }', '${friend.members || ''}')">
@@ -830,19 +676,19 @@
                     </div>
                     <div class="friend-actions">
                         <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                onclick="event.stopPropagation(); togglePin(${originalIndex})"
+                                onclick="event.stopPropagation(); togglePin(${index})"
                                 title="${friend.pinned ? '取消置顶' : '置顶'}">
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                onclick="event.stopPropagation(); deleteFriend(${originalIndex})"
+                                onclick="event.stopPropagation(); deleteFriend(${index})"
                                 title="删除">
                             🗑️
                         </button>
                     </div>
                 </div>
-            `;
-          })
+            `,
+          )
           .join('');
       }
 
@@ -900,12 +746,12 @@
           return;
         }
 
-        const storageKey = getCharacterFriendsKey(currentCharacterInfo);
+        const storageKey = getFriendsStorageKey();
         const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
         // 检查是否已存在
         if (friends.some(friend => friend.name === name)) {
-          alert('该好友已存在');
+          alert(`该好友在角色 "${getCurrentCharacterName()}" 的列表中已存在`);
           return;
         }
 
@@ -914,8 +760,7 @@
           type: 'friend',
           members: null,
           addTime: new Date().toISOString(),
-          characterId: currentCharacterInfo?.filename || 'default', // 记录所属角色
-          characterName: currentCharacterInfo?.name || '未知角色', // 记录角色名称
+          character: getCurrentCharacterName(), // 记录添加时的角色
         };
 
         friends.push(newFriend);
@@ -924,8 +769,7 @@
         displayFriends(friends);
         closeAddModal();
 
-        alert(`为 ${currentCharacterInfo?.name || '当前角色'} 添加好友 "${name}" 成功！`);
-        console.log(`为角色 ${currentCharacterInfo?.name || '未知'} 添加好友: ${name}`);
+        alert(`好友 "${name}" 添加成功！`);
       }
 
       // 添加群聊
@@ -943,12 +787,12 @@
           return;
         }
 
-        const storageKey = getCharacterFriendsKey(currentCharacterInfo);
+        const storageKey = getFriendsStorageKey();
         const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
         // 检查是否已存在
         if (friends.some(friend => friend.name === name)) {
-          alert('该群聊已存在');
+          alert(`该群聊在角色 "${getCurrentCharacterName()}" 的列表中已存在`);
           return;
         }
 
@@ -957,8 +801,7 @@
           type: 'group',
           members: members,
           addTime: new Date().toISOString(),
-          characterId: currentCharacterInfo?.filename || 'default', // 记录所属角色
-          characterName: currentCharacterInfo?.name || '未知角色', // 记录角色名称
+          character: getCurrentCharacterName(), // 记录添加时的角色
         };
 
         friends.push(newGroup);
@@ -1007,6 +850,207 @@
         }
       }
 
+      // 切换置顶状态
+      function togglePin(index) {
+        const storageKey = getFriendsStorageKey();
+        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+        if (index >= 0 && index < friends.length) {
+          friends[index].pinned = !friends[index].pinned;
+          saveFriends(friends);
+          displayFriends(friends);
+
+          const action = friends[index].pinned ? '置顶' : '取消置顶';
+          console.log(`已${action}好友: ${friends[index].name}`);
+        }
+      }
+
+      // 删除好友
+      function deleteFriend(index) {
+        const storageKey = getFriendsStorageKey();
+        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+        if (index >= 0 && index < friends.length) {
+          const friendName = friends[index].name;
+          const charName = getCurrentCharacterName();
+
+          if (confirm(`确定要从角色 "${charName}" 的好友列表中删除 "${friendName}" 吗？`)) {
+            friends.splice(index, 1);
+            saveFriends(friends);
+            displayFriends(friends);
+            console.log(`已从角色 "${charName}" 的列表中删除好友: ${friendName}`);
+          }
+        }
+      }
+
+      // 角色切换监听器（如果在 SillyTavern 环境中）
+      function setupCharacterChangeListener() {
+        try {
+          if (typeof parent !== 'undefined' && parent.eventSource) {
+            parent.eventSource.on('character_selected', () => {
+              console.log('检测到角色切换，重新加载好友列表');
+              setTimeout(() => {
+                loadFriends();
+              }, 100);
+            });
+          }
+        } catch (error) {
+          console.warn('无法设置角色切换监听器:', error);
+        }
+      }
+
+      // 手动刷新好友列表（用于角色切换后）
+      function refreshFriendsList() {
+        loadFriends();
+
+        // 显示刷新提示
+        const refreshMsg = document.createElement('div');
+        refreshMsg.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #4CAF50;
+          color: white;
+          padding: 10px 15px;
+          border-radius: 6px;
+          font-size: 14px;
+          z-index: 1000;
+          animation: fadeInOut 2s ease-in-out;
+        `;
+        refreshMsg.textContent = '好友列表已刷新 ✓';
+        document.body.appendChild(refreshMsg);
+
+        setTimeout(() => {
+          if (refreshMsg.parentNode) {
+            refreshMsg.remove();
+          }
+        }, 2000);
+      }
+
+      // 添加刷新按钮到页面
+      function addRefreshButton() {
+        const header = document.querySelector('.header');
+        if (header && !document.getElementById('refreshBtn')) {
+          const refreshBtn = document.createElement('button');
+          refreshBtn.id = 'refreshBtn';
+          refreshBtn.innerHTML = '🔄';
+          refreshBtn.title = '刷新好友列表（角色切换后使用）';
+          refreshBtn.style.cssText = `
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+          `;
+
+          refreshBtn.addEventListener('click', refreshFriendsList);
+          refreshBtn.addEventListener('mouseenter', () => {
+            refreshBtn.style.transform = 'translateY(-50%) scale(1.1)';
+            refreshBtn.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+          });
+          refreshBtn.addEventListener('mouseleave', () => {
+            refreshBtn.style.transform = 'translateY(-50%) scale(1)';
+            refreshBtn.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+          });
+
+          header.appendChild(refreshBtn);
+        }
+      }
+
+      // 数据迁移：将旧的全局好友列表迁移到角色专属列表
+      function migrateOldFriendsData() {
+        const oldFriends = localStorage.getItem('friendsList');
+        if (oldFriends && !localStorage.getItem('friendsList_migrated')) {
+          try {
+            const friends = JSON.parse(oldFriends);
+            if (friends.length > 0) {
+              const currentChar = getCurrentCharacterName();
+              const newStorageKey = getFriendsStorageKey();
+
+              // 如果当前角色还没有好友列表，则迁移旧数据
+              if (!localStorage.getItem(newStorageKey)) {
+                localStorage.setItem(newStorageKey, oldFriends);
+                console.log(`已将 ${friends.length} 个好友迁移到角色 "${currentChar}" 的列表中`);
+
+                // 显示迁移提示
+                setTimeout(() => {
+                  const migrateMsg = document.createElement('div');
+                  migrateMsg.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 20px 30px;
+                    border-radius: 12px;
+                    font-size: 16px;
+                    z-index: 10000;
+                    text-align: center;
+                    max-width: 400px;
+                    line-height: 1.5;
+                  `;
+                  migrateMsg.innerHTML = `
+                    <div style="font-size: 24px; margin-bottom: 12px;">🎭</div>
+                    <div style="font-weight: 500; margin-bottom: 8px;">数据迁移完成</div>
+                    <div style="font-size: 14px; opacity: 0.9;">
+                      已将 ${friends.length} 个好友迁移到角色 "${currentChar}" 的专属列表中<br>
+                      现在每个角色都有独立的好友列表了！
+                    </div>
+                  `;
+                  document.body.appendChild(migrateMsg);
+
+                  setTimeout(() => {
+                    if (migrateMsg.parentNode) {
+                      migrateMsg.remove();
+                    }
+                  }, 4000);
+                }, 1000);
+              }
+            }
+
+            // 标记已迁移
+            localStorage.setItem('friendsList_migrated', 'true');
+          } catch (error) {
+            console.warn('迁移旧好友数据失败:', error);
+          }
+        }
+      }
+
+      // 获取所有角色的好友统计
+      function getAllCharactersFriendsStats() {
+        const stats = {};
+        const keys = Object.keys(localStorage);
+
+        keys.forEach(key => {
+          if (key.startsWith('friendsList_') && key !== 'friendsList_migrated') {
+            const charName = key.replace('friendsList_', '');
+            try {
+              const friends = JSON.parse(localStorage.getItem(key) || '[]');
+              stats[charName] = {
+                total: friends.length,
+                friends: friends.filter(f => f.type === 'friend').length,
+                groups: friends.filter(f => f.type === 'group').length,
+                pinned: friends.filter(f => f.pinned).length,
+              };
+            } catch (error) {
+              console.warn(`解析角色 ${charName} 的好友数据失败:`, error);
+            }
+          }
+        });
+
+        return stats;
+      }
+
       // 点击模态框外部关闭
       document.getElementById('addModal').addEventListener('click', function (e) {
         if (e.target === this) {
@@ -1028,274 +1072,37 @@
         }
       });
 
-      // ==================== 角色切换监听和智能推荐 ====================
-
-      // 监听SillyTavern的角色切换事件
-      function setupCharacterChangeListener() {
-        try {
-          if (typeof parent !== 'undefined' && parent.eventSource) {
-            // 监听聊天变更事件（包含角色切换）
-            parent.eventSource.on('CHAT_CHANGED', () => {
-              console.log('检测到角色切换，重新加载好友列表');
-              setTimeout(() => {
-                loadFriends();
-              }, 100);
-            });
-
-            // 监听角色选择事件
-            parent.eventSource.on('CHARACTER_SELECTED', () => {
-              console.log('检测到角色选择，重新加载好友列表');
-              setTimeout(() => {
-                loadFriends();
-              }, 100);
-            });
-
-            console.log('✅ 角色切换监听器设置成功');
-            isCharacterSystemReady = true;
-          } else {
-            console.warn('⚠️ 无法访问SillyTavern事件系统，使用轮询模式');
-            setupPollingMode();
-          }
-        } catch (error) {
-          console.error('设置角色切换监听器失败:', error);
-          setupPollingMode();
-        }
-      }
-
-      // 轮询模式：定期检查角色变化
-      function setupPollingMode() {
-        let lastCharacterId = null;
-
-        setInterval(() => {
-          const currentChar = getCurrentCharacterInfo();
-          const currentId = currentChar?.filename || currentChar?.name;
-
-          if (currentId && currentId !== lastCharacterId) {
-            console.log('轮询检测到角色变化:', lastCharacterId, '->', currentId);
-            lastCharacterId = currentId;
-            loadFriends();
-          }
-        }, 2000); // 每2秒检查一次
-      }
-
-      // 智能推荐好友功能
-      function getRecommendedFriends(characterInfo) {
-        if (!characterInfo) return [];
-
-        const recommendations = [];
-        const charName = characterInfo.name.toLowerCase();
-        const description = (characterInfo.description || '').toLowerCase();
-        const personality = (characterInfo.personality || '').toLowerCase();
-        const scenario = (characterInfo.scenario || '').toLowerCase();
-        const tags = characterInfo.tags || [];
-
-        // 基于角色名称的推荐
-        if (charName.includes('哈利') || charName.includes('harry')) {
-          recommendations.push(
-            { name: '赫敏·格兰杰', reason: '霍格沃茨同学' },
-            { name: '罗恩·韦斯莱', reason: '最好的朋友' },
-            { name: '邓布利多', reason: '校长' },
-          );
-        } else if (charName.includes('钢铁侠') || charName.includes('托尼') || charName.includes('stark')) {
-          recommendations.push(
-            { name: '美国队长', reason: '复仇者联盟' },
-            { name: '黑寡妇', reason: '复仇者联盟' },
-            { name: '小辣椒', reason: '恋人' },
-          );
-        } else if (charName.includes('小红帽')) {
-          recommendations.push(
-            { name: '大灰狼', reason: '故事角色' },
-            { name: '奶奶', reason: '亲人' },
-            { name: '猎人', reason: '救命恩人' },
-          );
-        }
-
-        // 基于标签的推荐
-        if (tags.includes('学生') || tags.includes('student')) {
-          recommendations.push({ name: '同班同学', reason: '学校关系' }, { name: '老师', reason: '师生关系' });
-        }
-
-        if (tags.includes('魔法') || tags.includes('magic')) {
-          recommendations.push({ name: '魔法导师', reason: '魔法指导' }, { name: '魔法商人', reason: '道具购买' });
-        }
-
-        // 基于性格的推荐
-        if (personality.includes('开朗') || personality.includes('活泼')) {
-          recommendations.push({ name: '运动伙伴', reason: '性格匹配' }, { name: '聚会朋友', reason: '社交需求' });
-        }
-
-        if (personality.includes('内向') || personality.includes('安静')) {
-          recommendations.push({ name: '图书管理员', reason: '安静环境' }, { name: '知心朋友', reason: '深度交流' });
-        }
-
-        return recommendations.slice(0, 5); // 最多返回5个推荐
-      }
-
-      // 显示推荐好友
-      function showRecommendations() {
-        if (!currentCharacterInfo) return;
-
-        const recommendations = getRecommendedFriends(currentCharacterInfo);
-        if (recommendations.length === 0) return;
-
-        const friendsList = document.getElementById('friendsList');
-        const existingRecommendations = friendsList.querySelector('.recommendations-section');
-
-        if (existingRecommendations) {
-          existingRecommendations.remove();
-        }
-
-        const recommendationsHtml = `
-          <div class="recommendations-section" style="
-            margin: 20px 0;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            color: white;
-          ">
-            <h3 style="margin: 0 0 12px 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
-              ✨ 为 ${currentCharacterInfo.name} 推荐的好友
-            </h3>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              ${recommendations
-                .map(
-                  rec => `
-                <div style="
-                  background: rgba(255,255,255,0.1);
-                  padding: 8px 12px;
-                  border-radius: 8px;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  cursor: pointer;
-                  transition: background 0.2s;
-                " onclick="quickAddFriend('${rec.name}')">
-                  <div>
-                    <div style="font-weight: 500;">${rec.name}</div>
-                    <div style="font-size: 12px; opacity: 0.8;">${rec.reason}</div>
-                  </div>
-                  <div style="font-size: 20px;">+</div>
-                </div>
-              `,
-                )
-                .join('')}
-            </div>
-          </div>
-        `;
-
-        friendsList.insertAdjacentHTML('afterbegin', recommendationsHtml);
-      }
-
-      // 快速添加推荐好友
-      function quickAddFriend(name) {
-        const storageKey = getCharacterFriendsKey(currentCharacterInfo);
-        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
-
-        // 检查是否已存在
-        if (friends.some(friend => friend.name === name)) {
-          alert('该好友已存在');
-          return;
-        }
-
-        const newFriend = {
-          name: name,
-          type: 'friend',
-          members: null,
-          addTime: new Date().toISOString(),
-          characterId: currentCharacterInfo?.filename || 'default',
-          characterName: currentCharacterInfo?.name || '未知角色',
-          isRecommended: true, // 标记为推荐添加
-        };
-
-        friends.push(newFriend);
-        saveFriends(friends);
-        loadFriends(); // 重新加载以移除推荐区域
-
-        alert(`为 ${currentCharacterInfo?.name || '当前角色'} 添加推荐好友 "${name}" 成功！`);
-      }
-
-      // ==================== 好友管理功能 ====================
-
-      // 删除好友
-      function deleteFriend(index) {
-        if (confirm('确定要删除这个好友吗？')) {
-          const storageKey = getCharacterFriendsKey(currentCharacterInfo);
-          const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
-
-          if (index >= 0 && index < friends.length) {
-            const deletedFriend = friends[index];
-            friends.splice(index, 1);
-            saveFriends(friends);
-            displayFriends(friends);
-
-            console.log(`删除好友: ${deletedFriend.name}`);
-            alert(`已删除好友 "${deletedFriend.name}"`);
-          }
-        }
-      }
-
-      // 置顶/取消置顶好友
-      function togglePin(index) {
-        const storageKey = getCharacterFriendsKey(currentCharacterInfo);
-        const friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
-
-        if (index >= 0 && index < friends.length) {
-          const friend = friends[index];
-          const wasPin = friend.pinned;
-
-          friend.pinned = !friend.pinned;
-          friend.pinnedTime = friend.pinned ? new Date().toISOString() : null;
-
-          saveFriends(friends);
-          displayFriends(friends);
-
-          const action = friend.pinned ? '置顶' : '取消置顶';
-          console.log(`${action}好友: ${friend.name}`);
-
-          // 显示操作提示
-          const message = friend.pinned ? `"${friend.name}" 已置顶` : `"${friend.name}" 已取消置顶`;
-          showToast(message);
-        }
-      }
-
-      // 显示提示消息
-      function showToast(message) {
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: rgba(0, 0, 0, 0.8);
-          color: white;
-          padding: 12px 20px;
-          border-radius: 8px;
-          font-size: 14px;
-          z-index: 10000;
-          animation: fadeInOut 2s ease-in-out;
-        `;
-        toast.textContent = message;
-
-        document.body.appendChild(toast);
-
-        setTimeout(() => {
-          if (toast.parentNode) {
-            document.body.removeChild(toast);
-          }
-        }, 2000);
-      }
-
       // 页面加载时初始化
       window.addEventListener('load', () => {
+        // 先进行数据迁移
+        migrateOldFriendsData();
+
+        // 然后加载好友列表
         loadFriends();
+
+        // 设置角色切换监听器
         setupCharacterChangeListener();
 
-        // 延迟显示推荐，让好友列表先加载
-        setTimeout(() => {
-          if (currentCharacterInfo) {
-            showRecommendations();
+        // 添加刷新按钮
+        addRefreshButton();
+
+        // 添加淡入淡出动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+          @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(100%); }
+            20% { opacity: 1; transform: translateX(0); }
+            80% { opacity: 1; transform: translateX(0); }
+            100% { opacity: 0; transform: translateX(100%); }
           }
-        }, 500);
+        `;
+        document.head.appendChild(style);
+
+        // 在控制台输出统计信息
+        setTimeout(() => {
+          const stats = getAllCharactersFriendsStats();
+          console.log('📊 角色好友列表统计:', stats);
+        }, 1000);
       });
     </script>
   </body>
