@@ -626,6 +626,9 @@
           <div class="setting-item clickable" onclick="debugShowAllFriendsData()">
             <span style="color: #2196f3">🔍 查看调试信息</span>
           </div>
+          <div class="setting-item clickable" onclick="alert('测试按钮点击成功！onclick功能正常')">
+            <span style="color: #4caf50">🧪 测试onclick功能</span>
+          </div>
           <div class="setting-item clickable" onclick="clearAllFriends()">
             <span style="color: #ff4757">🗑️ 清空好友列表</span>
           </div>
@@ -928,7 +931,9 @@
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                onclick="event.stopPropagation(); deleteFriend(${friend.originalIndex})"
+                                onclick="deleteFriendSimple('${friend.name}', '${
+              friend.type
+            }'); event.stopPropagation();"
                                 title="删除">
                             🗑️
                         </button>
@@ -1174,7 +1179,44 @@
         }
       }
 
-      // 删除好友
+      // 超级简单的删除好友函数（按名称删除，避免索引问题）
+      function deleteFriendSimple(friendName, friendType) {
+        try {
+          alert(`删除功能被调用！\n好友名称: ${friendName}\n类型: ${friendType}`);
+
+          const currentChar = getCurrentCharacterInfo();
+          const friends = getFriendsFromCharacterData(currentChar);
+
+          alert(`当前角色: ${currentChar.name}\n好友数量: ${friends.length}`);
+
+          // 按名称查找要删除的好友
+          const friendIndex = friends.findIndex(f => f.name === friendName && f.type === friendType);
+
+          if (friendIndex === -1) {
+            alert(`错误：找不到好友 "${friendName}"`);
+            return;
+          }
+
+          const typeText = friendType === 'group' ? '群聊' : '好友';
+
+          if (confirm(`确定要删除${typeText} "${friendName}" 吗？`)) {
+            // 删除好友
+            friends.splice(friendIndex, 1);
+
+            // 保存更新后的列表
+            saveFriendsToCharacterData(currentChar, friends);
+
+            // 重新显示
+            displayFriends(friends);
+
+            alert(`✅ ${typeText} "${friendName}" 已删除！`);
+          }
+        } catch (error) {
+          alert(`删除失败: ${error.message}`);
+        }
+      }
+
+      // 保留原来的删除函数作为备用
       function deleteFriend(index) {
         console.log('deleteFriend 被调用，索引:', index);
 
@@ -1369,6 +1411,7 @@
       window.importFriends = importFriends;
       window.togglePin = togglePin;
       window.deleteFriend = deleteFriend;
+      window.deleteFriendSimple = deleteFriendSimple;
       window.openAddModal = openAddModal;
       window.closeAddModal = closeAddModal;
       window.addFriend = addFriend;
