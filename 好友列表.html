@@ -623,6 +623,9 @@
           </div>
           <input type="file" id="importFile" accept=".json" style="display: none" onchange="importFriends(event)" />
           <hr />
+          <div class="setting-item clickable" onclick="debugShowAllFriendsData()">
+            <span style="color: #2196f3">🔍 查看调试信息</span>
+          </div>
           <div class="setting-item clickable" onclick="clearAllFriends()">
             <span style="color: #ff4757">🗑️ 清空好友列表</span>
           </div>
@@ -684,22 +687,28 @@
       // 获取当前活跃角色信息
       function getCurrentCharacterInfo() {
         try {
-          // 尝试从SillyTavern获取当前角色信息
+          console.log('开始获取角色信息...');
+
+          // 方法1: 尝试从SillyTavern获取当前角色信息
           if (typeof parent !== 'undefined' && parent.characters && parent.this_chid !== undefined) {
             const currentChar = parent.characters[parent.this_chid];
+            console.log('从SillyTavern获取到角色:', currentChar);
             if (currentChar) {
-              return {
-                id: currentChar.avatar || currentChar.name,
-                name: currentChar.name,
+              const charInfo = {
+                id: currentChar.avatar || currentChar.name || `char_${parent.this_chid}`,
+                name: currentChar.name || `角色${parent.this_chid}`,
                 avatar: currentChar.avatar,
               };
+              console.log('SillyTavern角色信息:', charInfo);
+              return charInfo;
             }
           }
 
-          // 尝试从URL参数获取角色信息
+          // 方法2: 尝试从URL参数获取角色信息
           const urlParams = new URLSearchParams(window.location.search);
           const charName = urlParams.get('char') || urlParams.get('character');
           if (charName) {
+            console.log('从URL参数获取角色:', charName);
             return {
               id: charName,
               name: charName,
@@ -707,14 +716,16 @@
             };
           }
 
-          // 尝试从localStorage获取最后使用的角色
+          // 方法3: 尝试从localStorage获取最后使用的角色
           const lastChar = localStorage.getItem('lastActiveCharacter');
           if (lastChar) {
             const charInfo = JSON.parse(lastChar);
+            console.log('从localStorage获取角色:', charInfo);
             return charInfo;
           }
 
-          // 默认返回通用角色
+          // 方法4: 默认返回通用角色
+          console.log('使用默认角色');
           return {
             id: 'default',
             name: '默认角色',
@@ -1213,6 +1224,49 @@
         reader.readAsText(file);
       }
 
+      // ==================== 调试功能 ====================
+
+      // 调试：查看所有存储的好友列表
+      function debugShowAllFriendsData() {
+        console.log('=== 好友列表存储调试信息 ===');
+
+        const currentChar = getCurrentCharacterInfo();
+        console.log('当前角色:', currentChar);
+
+        // 查找所有好友列表相关的键
+        const allKeys = Object.keys(localStorage);
+        const friendsKeys = allKeys.filter(key => key.startsWith('friendsList_'));
+
+        console.log('所有好友列表键名:', friendsKeys);
+
+        friendsKeys.forEach(key => {
+          const data = localStorage.getItem(key);
+          const friends = JSON.parse(data || '[]');
+          console.log(`${key}:`, friends);
+        });
+
+        // 显示当前角色的存储键名
+        const currentStorageKey = getFriendsStorageKey(currentChar.id);
+        console.log('当前角色存储键名:', currentStorageKey);
+
+        const currentFriends = JSON.parse(localStorage.getItem(currentStorageKey) || '[]');
+        console.log('当前角色好友列表:', currentFriends);
+
+        console.log('=== 调试信息结束 ===');
+
+        // 在页面上也显示一些信息
+        alert(`调试信息：
+当前角色: ${currentChar.name} (ID: ${currentChar.id})
+存储键名: ${currentStorageKey}
+好友数量: ${currentFriends.length}
+所有好友列表键: ${friendsKeys.join(', ')}
+
+详细信息请查看浏览器控制台 (F12)`);
+      }
+
+      // 在全局作用域添加调试函数，方便在控制台调用
+      window.debugShowAllFriendsData = debugShowAllFriendsData;
+
       // ==================== 设置菜单功能 ====================
 
       // 显示设置菜单
@@ -1237,17 +1291,30 @@
 
       // 清空当前角色的好友列表
       function clearAllFriends() {
+        console.log('clearAllFriends 被调用');
+
         const currentChar = getCurrentCharacterInfo();
+        console.log('当前角色信息:', currentChar);
+
+        const storageKey = getFriendsStorageKey(currentChar.id);
+        console.log('存储键名:', storageKey);
+
+        const currentFriends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        console.log('当前好友列表:', currentFriends);
 
         if (confirm(`确定要清空角色 "${currentChar.name}" 的所有好友吗？此操作不可撤销！`)) {
-          const storageKey = getFriendsStorageKey(currentChar.id);
+          console.log('用户确认清空');
+
           localStorage.removeItem(storageKey);
+          console.log('已从localStorage删除:', storageKey);
 
           displayFriends([]);
           hideSettingsMenu();
 
-          console.log(`已清空角色 "${currentChar.name}" 的好友列表`);
-          alert('好友列表已清空！');
+          console.log(`✅ 已清空角色 "${currentChar.name}" 的好友列表`);
+          showToast(`角色 "${currentChar.name}" 的好友列表已清空`);
+        } else {
+          console.log('用户取消清空');
         }
       }
 
