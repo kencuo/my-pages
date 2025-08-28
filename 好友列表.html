@@ -615,24 +615,18 @@
             <span id="friendsCount">0</span>
           </div>
           <hr />
-          <div class="setting-item clickable" onclick="window.exportFriends()">
+          <div class="setting-item clickable" onclick="exportFriends()">
             <span>📤 导出好友列表</span>
           </div>
           <div class="setting-item clickable" onclick="document.getElementById('importFile').click()">
             <span>📥 导入好友列表</span>
           </div>
-          <input
-            type="file"
-            id="importFile"
-            accept=".json"
-            style="display: none"
-            onchange="window.importFriends(event)"
-          />
+          <input type="file" id="importFile" accept=".json" style="display: none" onchange="importFriends(event)" />
           <hr />
-          <div class="setting-item clickable" onclick="window.debugShowAllFriendsData()">
+          <div class="setting-item clickable" onclick="debugShowAllFriendsData()">
             <span style="color: #2196f3">🔍 查看调试信息</span>
           </div>
-          <div class="setting-item clickable" onclick="window.clearAllFriends()">
+          <div class="setting-item clickable" onclick="clearAllFriends()">
             <span style="color: #ff4757">🗑️ 清空好友列表</span>
           </div>
         </div>
@@ -929,12 +923,12 @@
                     </div>
                     <div class="friend-actions">
                         <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                onclick="event.stopPropagation(); window.togglePin(${friend.originalIndex})"
+                                onclick="event.stopPropagation(); togglePin(${friend.originalIndex})"
                                 title="${friend.pinned ? '取消置顶' : '置顶'}">
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                onclick="event.stopPropagation(); window.deleteFriend(${friend.originalIndex})"
+                                onclick="event.stopPropagation(); deleteFriend(${friend.originalIndex})"
                                 title="删除">
                             🗑️
                         </button>
@@ -1156,61 +1150,70 @@
         }, 3000);
       }
 
-      // 置顶/取消置顶好友（简化版）
+      // 置顶/取消置顶好友
       function togglePin(index) {
-        try {
-          const currentChar = getCurrentCharacterInfo();
-          const friends = getFriendsFromCharacterData(currentChar);
+        console.log('togglePin 被调用，索引:', index);
 
-          if (friends && friends[index]) {
-            const friendName = friends[index].name;
-            friends[index].pinned = !friends[index].pinned;
+        const currentChar = getCurrentCharacterInfo();
+        const friends = getFriendsFromCharacterData(currentChar);
 
-            // 保存
-            saveFriendsToCharacterData(currentChar, friends);
+        if (friends[index]) {
+          const friendName = friends[index].name;
+          friends[index].pinned = !friends[index].pinned;
 
-            // 重新显示
-            displayFriends(friends);
+          // 使用新的存储系统保存
+          saveFriendsToCharacterData(currentChar, friends);
+          displayFriends(friends);
 
-            const action = friends[index].pinned ? '置顶' : '取消置顶';
-            alert(`${friendName} 已${action}`);
-          }
-        } catch (error) {
-          alert('操作失败：' + error.message);
+          const action = friends[index].pinned ? '置顶' : '取消置顶';
+          console.log(`✅ ${action}好友: ${friendName}`);
+          showToast(`${friendName} 已${action}`);
+        } else {
+          console.error('❌ 置顶失败：找不到指定索引的好友', index);
+          showToast('操作失败：找不到指定的好友');
         }
       }
 
-      // 删除好友（简化版，兼容SillyTavern）
+      // 删除好友
       function deleteFriend(index) {
-        try {
-          const currentChar = getCurrentCharacterInfo();
-          const friends = getFriendsFromCharacterData(currentChar);
+        console.log('deleteFriend 被调用，索引:', index);
 
-          if (friends && friends[index]) {
-            const friendName = friends[index].name;
-            const friendType = friends[index].type === 'group' ? '群聊' : '好友';
+        const currentChar = getCurrentCharacterInfo();
+        const friends = getFriendsFromCharacterData(currentChar);
 
-            // 简单的确认对话框
-            const confirmed = confirm(`确定要删除${friendType} "${friendName}" 吗？`);
+        console.log('当前好友列表:', friends);
+        console.log('要删除的索引:', index, '对应的好友:', friends[index]);
 
-            if (confirmed) {
-              // 删除好友
-              friends.splice(index, 1);
+        if (friends[index]) {
+          const friendName = friends[index].name;
+          const friendType = friends[index].type === 'group' ? '群聊' : '好友';
 
-              // 保存
-              saveFriendsToCharacterData(currentChar, friends);
+          console.log(`准备删除${friendType}: ${friendName}`);
 
-              // 重新显示
-              displayFriends(friends);
+          if (confirm(`确定要删除${friendType} "${friendName}" 吗？`)) {
+            console.log('用户确认删除');
 
-              // 简单提示
-              alert(`${friendType} "${friendName}" 已删除`);
-            }
+            // 删除指定索引的好友
+            friends.splice(index, 1);
+
+            console.log('删除后的好友列表:', friends);
+
+            // 使用新的存储系统保存
+            saveFriendsToCharacterData(currentChar, friends);
+
+            // 重新显示好友列表
+            displayFriends(friends);
+
+            console.log(`✅ 已删除${friendType}: ${friendName}`);
+
+            // 显示删除成功的提示
+            showToast(`${friendType} "${friendName}" 已删除`);
           } else {
-            alert('删除失败：找不到指定的好友');
+            console.log('用户取消删除');
           }
-        } catch (error) {
-          alert('删除失败：' + error.message);
+        } else {
+          console.error('❌ 删除失败：找不到指定索引的好友', index, '好友列表长度:', friends.length);
+          showToast('删除失败：找不到指定的好友');
         }
       }
 
@@ -1357,13 +1360,22 @@
         }
       }
 
-      // 在全局作用域添加所有函数，确保在任何环境都能访问
+      // 确保所有函数都在全局作用域中，以便onclick可以访问
       window.debugShowAllFriendsData = debugShowAllFriendsData;
-      window.togglePin = togglePin;
-      window.deleteFriend = deleteFriend;
+      window.showSettingsMenu = showSettingsMenu;
+      window.hideSettingsMenu = hideSettingsMenu;
       window.clearAllFriends = clearAllFriends;
       window.exportFriends = exportFriends;
       window.importFriends = importFriends;
+      window.togglePin = togglePin;
+      window.deleteFriend = deleteFriend;
+      window.openAddModal = openAddModal;
+      window.closeAddModal = closeAddModal;
+      window.addFriend = addFriend;
+      window.addGroup = addGroup;
+      window.selectType = selectType;
+      window.backToTypeSelection = backToTypeSelection;
+      window.startChat = startChat;
 
       // ==================== 设置菜单功能 ====================
 
@@ -1387,33 +1399,64 @@
         menu.style.display = 'none';
       }
 
-      // 清空当前角色的好友列表（简化版）
+      // 清空当前角色的好友列表
       function clearAllFriends() {
-        try {
-          const currentChar = getCurrentCharacterInfo();
+        console.log('clearAllFriends 被调用');
 
-          if (confirm(`确定要清空角色 "${currentChar.name}" 的所有好友吗？此操作不可撤销！`)) {
-            // 保存空列表
-            saveFriendsToCharacterData(currentChar, []);
+        const currentChar = getCurrentCharacterInfo();
+        console.log('当前角色信息:', currentChar);
 
-            // 重新显示
-            displayFriends([]);
+        const currentFriends = getFriendsFromCharacterData(currentChar);
+        console.log('当前好友列表:', currentFriends);
 
-            // 关闭设置菜单
-            hideSettingsMenu();
+        if (confirm(`确定要清空角色 "${currentChar.name}" 的所有好友吗？此操作不可撤销！`)) {
+          console.log('用户确认清空');
 
-            alert(`角色 "${currentChar.name}" 的好友列表已清空`);
-          }
-        } catch (error) {
-          alert('清空失败：' + error.message);
+          // 使用新的存储系统保存空列表
+          saveFriendsToCharacterData(currentChar, []);
+
+          displayFriends([]);
+          hideSettingsMenu();
+
+          console.log(`✅ 已清空角色 "${currentChar.name}" 的好友列表`);
+          showToast(`角色 "${currentChar.name}" 的好友列表已清空`);
+        } else {
+          console.log('用户取消清空');
         }
       }
 
-      // 页面加载时初始化
-      window.addEventListener('load', function () {
-        console.log('页面加载完成，开始初始化...');
-        loadFriends();
+      // ==================== 简单事件绑定 ====================
+
+      // 点击模态框外部关闭
+      document.getElementById('addModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+          closeAddModal();
+        }
       });
+
+      // 点击设置菜单外部关闭
+      document.getElementById('settingsMenu').addEventListener('click', function (e) {
+        if (e.target === this) {
+          hideSettingsMenu();
+        }
+      });
+
+      // 回车键添加好友
+      document.getElementById('friendName').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          addFriend();
+        }
+      });
+
+      // 回车键添加群聊（群聊名称输入框）
+      document.getElementById('groupName').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          document.getElementById('groupMembers').focus();
+        }
+      });
+
+      // 页面加载时加载好友列表
+      window.addEventListener('load', loadFriends);
 
       // 监听SillyTavern的角色切换事件（如果可用）
       if (typeof parent !== 'undefined') {
