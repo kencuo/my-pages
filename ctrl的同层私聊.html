@@ -7102,6 +7102,22 @@
             };
           },
         },
+        // 支持对方直接发送图片URL的格式：[角色昵称|图片|url|时间]
+        {
+          regex: /^\[(.+?)\|图片\|(https?:\/\/[^\s|]+|data:image\/[^|]+)\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, imageUrl, time]) => {
+            return {
+              sender: 'char',
+              type: 'image',
+              charName,
+              avatar: '', // 没有头像信息时使用空字符串
+              imageDescription: '图片',
+              imageData: imageUrl, // 直接使用URL
+              fileName: '图片',
+              time,
+            };
+          },
+        },
         // 消息撤回
         {
           regex: /^\[我方消息\|撤回\|(\d{2}:\d{2})\]$/,
@@ -7401,6 +7417,16 @@
       // ==================== IMAGE INFO PARSING HELPER ====================
 
       function parseImageInfo(description) {
+        // 检查是否是直接的URL格式
+        if (description.match(/^https?:\/\/[^\s|]+/) || description.match(/^data:image\/[^|]+/)) {
+          // 直接的URL格式
+          return {
+            description: '图片',
+            url: description,
+            fileName: '图片'
+          };
+        }
+
         // 解析格式：描述|IMGDATA:URL|FILENAME:文件名
         const parts = description.split('|');
         let desc = parts[0] || '图片';
