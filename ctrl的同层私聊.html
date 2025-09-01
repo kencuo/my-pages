@@ -10914,83 +10914,147 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      // 上传图片到SillyTavern本地服务器
-      async function uploadImageToSillyTavern(file) {
+      // 上传角色头像到SillyTavern
+      async function uploadCharacterAvatarToSillyTavern(file, charName, dataUrl) {
         try {
-          // 将文件转换为base64
-          const base64Data = await convertFileToBase64(file);
-          const base64Content = base64Data.split(',')[1]; // 移除data:image/...;base64,前缀
+          // 方法1: 尝试使用SillyTavern的头像上传API
+          const formData = new FormData();
+          formData.append('avatar', file);
+          formData.append('overwrite_name', `${charName}.png`);
 
-          // 获取文件扩展名
-          const extension = file.name.split('.').pop().toLowerCase();
-          const timestamp = Date.now();
-          const filename = `image_${timestamp}.${extension}`;
-
-          // 使用SillyTavern的图片上传API
-          const response = await fetch('/api/images/upload', {
+          const response = await fetch('/api/avatars/upload', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              image: base64Data, // 图片API需要完整的data URL
-              format: extension,
-              filename: filename.replace(/\./g, '_') // 移除文件名中的点
-            })
+            body: formData
           });
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+          if (response.ok) {
+            const result = await response.text();
+            console.log('✅ 头像已上传到SillyTavern:', result);
+
+            // 更新角色头像URL
+            const avatarUrl = `/characters/${charName}.png`;
+            setCharacterAvatarUrl(charName, avatarUrl);
+
+            // 更新本地设置
+            settingsState.charAvatars[charName] = avatarUrl;
+            updateCharAvatars();
+
+            alert(`角色 "${charName}" 的头像已成功保存到SillyTavern！`);
+            return;
+          }
+        } catch (error) {
+          console.warn('SillyTavern头像上传失败，使用本地保存:', error);
+        }
+
+        // 方法2: 降级为本地保存
+        try {
+          // 使用saveBase64AsFile保存头像
+          const saveBase64AsFile = window.saveBase64AsFile ||
+                                  window.parent?.saveBase64AsFile ||
+                                  window.top?.saveBase64AsFile;
+
+          if (saveBase64AsFile) {
+            const extension = file.name.split('.').pop().toLowerCase();
+            const timestamp = Date.now();
+            const avatarUrl = await saveBase64AsFile(dataUrl, `avatar_${charName}`, `avatar_${charName}_${timestamp}`, extension);
+
+            console.log('✅ 头像已通过saveBase64AsFile保存:', avatarUrl);
+
+            // 保存到角色配置
+            setCharacterAvatarUrl(charName, avatarUrl);
+            settingsState.charAvatars[charName] = avatarUrl;
+            updateCharAvatars();
+
+            alert(`角色 "${charName}" 的头像已保存！`);
+            return;
+          }
+        } catch (error) {
+          console.warn('saveBase64AsFile保存失败，使用本地base64:', error);
+        }
+
+        // 方法3: 最后降级为本地base64保存
+        setCharacterAvatarUrl(charName, dataUrl);
+        settingsState.charAvatars[charName] = dataUrl;
+
+        // 更新消息历史中的角色头像
+        state.messageHistory.forEach(msg => {
+          if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
+            msg.customAvatarUrl = dataUrl;
+            msg.charName = charName;
+          }
+        });
+
+        updateCharAvatars();
+        saveSettings();
+
+        console.log(`角色 ${charName} 的头像已保存到本地配置`);
+        alert(`角色 "${charName}" 的头像已保存到本地配置！`);
+      }
+
+      // 使用SillyTavern官方的saveBase64AsFile函数上传图片
+      async function uploadImageToSillyTavern(file) {
+        try {
+          // 检查是否有SillyTavern的saveBase64AsFile函数
+          const saveBase64AsFile = window.saveBase64AsFile ||
+                                  window.parent?.saveBase64AsFile ||
+                                  window.top?.saveBase64AsFile;
+
+          if (!saveBase64AsFile) {
+            throw new Error('SillyTavern的saveBase64AsFile函数不可用');
           }
 
-          const result = await response.json();
-          console.log('✅ 图片已上传到SillyTavern本地服务器:', result.path);
+          // 将文件转换为base64
+          const base64Data = await convertFileToBase64(file);
 
-          // 返回本地URL路径
-          return result.path;
+          // 获取文件信息
+          const extension = file.name.split('.').pop().toLowerCase();
+          const timestamp = Date.now();
+          const name2 = `image_${timestamp}`;
+          const fileNamePrefix = `image_${timestamp}`;
+
+          // 使用SillyTavern官方的saveBase64AsFile函数（与官方chats.js相同）
+          const imageUrl = await saveBase64AsFile(base64Data, name2, fileNamePrefix, extension);
+
+          console.log('✅ 图片已通过saveBase64AsFile保存:', imageUrl);
+
+          // 返回短URL路径
+          return imageUrl;
         } catch (error) {
-          console.error('❌ SillyTavern图片本地上传失败:', error);
+          console.error('❌ SillyTavern saveBase64AsFile失败:', error);
           throw error;
         }
       }
 
-      // 上传视频到SillyTavern本地服务器
+      // 使用SillyTavern官方的saveBase64AsFile函数上传视频
       async function uploadVideoToSillyTavern(file) {
         try {
-          // 将文件转换为base64
-          const base64Data = await convertFileToBase64(file);
-          const base64Content = base64Data.split(',')[1]; // 移除data:video/mp4;base64,前缀
+          // 检查是否有SillyTavern的saveBase64AsFile函数
+          const saveBase64AsFile = window.saveBase64AsFile ||
+                                  window.parent?.saveBase64AsFile ||
+                                  window.top?.saveBase64AsFile;
 
-          // 获取文件扩展名
-          const extension = file.name.split('.').pop().toLowerCase();
-          const timestamp = Date.now();
-          const filename = `video_${timestamp}.${extension}`;
-
-          // 使用SillyTavern的文件上传API
-          const response = await fetch('/api/files/upload', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              name: filename,
-              data: base64Content
-            })
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+          if (!saveBase64AsFile) {
+            throw new Error('SillyTavern的saveBase64AsFile函数不可用');
           }
 
-          const result = await response.json();
-          console.log('✅ 视频已上传到SillyTavern本地服务器:', result.path);
+          // 将文件转换为base64
+          const base64Data = await convertFileToBase64(file);
 
-          // 返回本地URL路径
-          return result.path;
+          // 获取文件信息
+          const extension = file.name.split('.').pop().toLowerCase();
+          const timestamp = Date.now();
+          const name2 = `video_${timestamp}`;
+          const fileNamePrefix = `video_${timestamp}`;
+
+          // 使用SillyTavern官方的saveBase64AsFile函数（与官方chats.js相同）
+          const videoUrl = await saveBase64AsFile(base64Data, name2, fileNamePrefix, extension);
+
+          console.log('✅ 视频已通过saveBase64AsFile保存:', videoUrl);
+
+          // 返回短URL路径
+          return videoUrl;
         } catch (error) {
-          console.error('❌ SillyTavern本地上传失败:', error);
+          console.error('❌ SillyTavern saveBase64AsFile失败:', error);
           throw error;
         }
       }
@@ -11239,17 +11303,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               return;
             }
 
-            // 设置输入框内容为视频描述，这样sendMessage能正确处理
+            // 使用SillyTavern标准格式发送视频消息
             const chatInput = document.getElementById('chatInput');
             const originalValue = chatInput.value;
             chatInput.value = description || '发送了一个视频';
 
             sendMessage({
               type: 'video',
-              videoData: videoData,
+              extra: {
+                video: videoData  // 使用SillyTavern标准的extra.video格式
+              },
+              videoData: videoData,  // 保留同层私聊的格式
               fileName: fileName,
               videoDescription: description || '发送了一个视频',
-              needsVisionAnalysis: state.visionMode !== 'direct' // 只有非直接模式才需要AI分析
+              needsVisionAnalysis: state.visionMode !== 'direct'
             });
 
             // 恢复输入框
@@ -11264,11 +11331,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
             sendMessage({
               type: 'image',
-              imageData: imageData,
+              extra: {
+                image: imageData,  // 使用SillyTavern标准的extra.image格式
+                inline_image: true
+              },
+              imageData: imageData,  // 保留同层私聊的格式
               fileName: fileName,
               imageDescription: description || '发送了一张图片',
               time: getTimeStr(),
-              needsVisionAnalysis: state.visionMode !== 'direct' // 只有非直接模式才需要识图
+              needsVisionAnalysis: state.visionMode !== 'direct'
             });
           }
 
@@ -15466,23 +15537,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               return;
             }
 
-            // 保存到角色配置中（类似SillyTavern的角色数据保存）
-            setCharacterAvatarUrl(charName, dataUrl);
-
-            // 同时保存到设置状态中（向后兼容）
-            settingsState.charAvatars[charName] = dataUrl;
-
-            // 同时更新消息历史中的角色头像信息，确保持久化
-            state.messageHistory.forEach(msg => {
-              if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
-                msg.customAvatarUrl = dataUrl; // 添加自定义头像标记
-                msg.charName = charName; // 确保角色名一致
-              }
-            });
-
-            updateCharAvatars();
-            console.log(`角色 ${charName} 的头像已保存到角色配置中`);
-            alert(`角色 "${charName}" 的头像已成功保存！`);
+            // 尝试保存到SillyTavern的角色系统
+            uploadCharacterAvatarToSillyTavern(file, charName, dataUrl);
           }
 
           saveSettings(); // 统一保存所有设置
