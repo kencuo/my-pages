@@ -1332,6 +1332,53 @@
           opacity: 1;
         }
       }
+
+      /* Video Message Styles */
+      .video-message {
+        position: relative;
+      }
+
+      .video-description {
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 8px 12px;
+        font-size: 12px;
+        line-height: 1.4;
+        border-radius: 6px;
+        margin-top: 6px;
+        display: none;
+        word-wrap: break-word;
+        max-width: 300px;
+        position: relative;
+        transform-origin: center top;
+        transform: scaleY(0);
+        opacity: 0;
+        transition: all 0.3s ease;
+        z-index: 20;
+      }
+
+      .video-description.show {
+        display: block;
+        opacity: 1;
+        transform: scaleY(1);
+        animation: slideDownFromCenter 0.3s ease-out;
+      }
+
+      .video-container {
+        position: relative;
+        display: inline-block;
+        max-width: 300px;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .chat-video {
+        max-width: 100%;
+        max-height: 250px;
+        border-radius: 8px;
+        display: block;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
       .bubble .quote {
         display: block;
         font-size: 12px;
@@ -6915,6 +6962,11 @@
           return { type: 'voice', voiceText: voiceMatch[1], content };
         }
 
+        // Video (检查是否为视频描述)
+        if (content === '[视频]' || content.includes('发送了一个视频')) {
+          return { type: 'video', content };
+        }
+
         // Recall
         const recallMatch = content.match(/^撤回消息\|(.*)/);
         if (recallMatch) {
@@ -7098,6 +7150,35 @@
               imageDescription: imageData.description,
               imageData: imageData.url,
               fileName: imageData.fileName,
+              time,
+            };
+          },
+        },
+        // 视频消息
+        {
+          regex: /^\[我方消息\|视频\|(.*?)\|(\d{2}:\d{2})\]$/,
+          handler: ([, url, time]) => {
+            return {
+              sender: 'user',
+              type: 'video',
+              videoData: url,
+              videoDescription: '发送了一个视频',
+              fileName: '视频文件',
+              time,
+            };
+          },
+        },
+        {
+          regex: /^\[(.+?)\|(.+?)\|视频\|(.*?)\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, avatar, url, time]) => {
+            return {
+              sender: 'char',
+              type: 'video',
+              charName,
+              avatar,
+              videoData: url,
+              videoDescription: '发送了一个视频',
+              fileName: '视频文件',
               time,
             };
           },
@@ -7423,6 +7504,8 @@
         };
       }
 
+
+
       // ==================== REFACTORED SERIALIZATION LOGIC ====================
 
       function serializeShoujiLog(msgArr) {
@@ -7549,6 +7632,13 @@
             return m.sender === 'user'
               ? `[我方消息|图片|${imageInfo}|${m.time}]`
               : `[${currentCharName}|${m.avatar || ''}|图片|${imageInfo}|${m.time}]`;
+          } else if (m.type === 'video') {
+            // 视频消息处理 - 直接保存视频URL
+            const videoUrl = m.videoData || '';
+
+            return m.sender === 'user'
+              ? `[我方消息|视频|${videoUrl}|${m.time}]`
+              : `[${currentCharName}|${m.avatar || ''}|视频|${videoUrl}|${m.time}]`;
           }
 
           // 其他消息类型的通用逻辑
@@ -7908,6 +7998,150 @@
 
         imageContainer.appendChild(img);
         contentDiv.appendChild(imageContainer);
+        contentDiv.appendChild(description);
+      }
+
+      function renderVideoMessage(contentDiv, msg) {
+        contentDiv.classList.add('video-message');
+
+        // 创建视频容器
+        const videoContainer = document.createElement('div');
+        videoContainer.className = 'video-container';
+        videoContainer.style.cssText = `
+          position: relative;
+          display: inline-block;
+          max-width: 300px;
+          border-radius: 8px;
+          overflow: hidden;
+        `;
+
+        // 创建视频元素
+        const video = document.createElement('video');
+        video.className = 'chat-video';
+        video.controls = true;
+        video.style.cssText = `
+          max-width: 100%;
+          max-height: 250px;
+          border-radius: 8px;
+          display: block;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        `;
+
+        // 设置视频源
+        if (msg.videoData) {
+          // 如果有真实视频数据，显示真实视频
+          video.src = msg.videoData;
+          video.title = msg.fileName || '视频';
+        } else {
+          // 如果只有描述，显示占位内容
+          videoContainer.innerHTML = `
+            <div style="
+              width: 300px;
+              height: 200px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 8px;
+              color: white;
+              font-size: 48px;
+            ">🎬</div>
+          `;
+        }
+
+        // 创建描述区域
+        const description = document.createElement('div');
+        description.className = 'video-description';
+        description.style.cssText = `
+          background: rgba(0,0,0,0.7);
+          color: white;
+          padding: 8px 12px;
+          font-size: 12px;
+          line-height: 1.4;
+          border-radius: 6px;
+          margin-top: 6px;
+          display: none;
+          word-wrap: break-word;
+          transition: all 0.3s ease;
+          transform-origin: center top;
+          transform: scaleY(0);
+        `;
+        description.textContent = msg.videoDescription || '视频';
+
+        // 添加显示动画类
+        description.classList.add('video-description-animation');
+
+        // 如果需要AI分析，添加识图指示器
+        if (msg.needsVisionAnalysis) {
+          const indicator = document.createElement('div');
+          indicator.className = 'vision-indicator';
+          indicator.style.cssText = `
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255, 165, 0, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 10;
+            animation: pulse 2s infinite;
+          `;
+          indicator.textContent = '🤖 分析中...';
+          msg.visionIndicator = indicator;
+          videoContainer.appendChild(indicator);
+
+          // 更新AI请求按钮的可见性
+          updateAiRequestButtonVisibility();
+        }
+
+        // 点击视频显示/隐藏描述
+        if (msg.videoData) {
+          video.onclick = (e) => {
+            // 如果点击的是控制条，不处理
+            if (e.target !== video) return;
+
+            if (description.classList.contains('show')) {
+              // 隐藏描述
+              description.classList.remove('show');
+              setTimeout(() => {
+                description.style.display = 'none';
+              }, 300);
+            } else {
+              // 显示描述
+              description.style.display = 'block';
+              setTimeout(() => {
+                description.classList.add('show');
+              }, 10);
+            }
+          };
+
+          // 视频加载错误处理
+          video.onerror = () => {
+            videoContainer.innerHTML = `
+              <div style="
+                width: 300px;
+                height: 200px;
+                background: #f5f5f5;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                border-radius: 8px;
+                color: #999;
+                border: 2px dashed #ddd;
+              ">
+                <div style="font-size: 48px; margin-bottom: 10px;">❌</div>
+                <div style="font-size: 14px;">视频加载失败</div>
+              </div>
+            `;
+          };
+
+          videoContainer.appendChild(video);
+        }
+
+        contentDiv.appendChild(videoContainer);
         contentDiv.appendChild(description);
       }
 
@@ -8304,6 +8538,7 @@
         retracted: renderRecalledMessage,
         img: renderImageMessage,
         image: renderImageMessage,
+        video: renderVideoMessage,
         transfer: renderTransferMessage,
         receive: renderReceiveMessage,
         refund: renderRefundMessage,
@@ -9091,6 +9326,9 @@
             case 'image':
               text = extra.imageDescription || '[图片]';
               break;
+            case 'video':
+              text = extra.videoDescription || '[视频]';
+              break;
             case 'voice':
               text = `语音消息|${extra.voiceText}`;
               break;
@@ -9165,8 +9403,15 @@
         }
 
         const newIndex = state.messageHistory.length;
-        // The parser will add the correct `type` property
-        const parsedMsg = { ...parseInlineContentType(msg.content), ...msg };
+        // 如果已经有明确的type，保留原有数据，否则解析content
+        let parsedMsg;
+        if (msg.type && ['image', 'video', 'voice', 'transfer', 'redpacket', 'file'].includes(msg.type)) {
+          // 保留特殊消息类型的完整数据
+          parsedMsg = msg;
+        } else {
+          // 普通文本消息才需要解析
+          parsedMsg = { ...parseInlineContentType(msg.content), ...msg };
+        }
 
 
 
@@ -9677,8 +9922,8 @@
         }
       }
 
-      // 使用酒馆内置API进行识图
-      async function requestVisionAnalysisWithTavern(imageMsg, indicator) {
+      // 使用酒馆内置API进行识图/识视频
+      async function requestVisionAnalysisWithTavern(mediaMsg, indicator) {
         if (!AI_GENERATE) {
           if (indicator) {
             indicator.textContent = '❌ 酒馆AI不可用';
@@ -9687,13 +9932,18 @@
           return;
         }
 
+        const isVideo = mediaMsg.type === 'video';
+        const mediaType = isVideo ? '视频' : '图片';
+
         try {
           if (indicator) {
-            indicator.textContent = '🤖 酒馆识图中...';
+            indicator.textContent = `🤖 酒馆识${isVideo ? '视频' : '图'}中...`;
           }
 
-          // 构建识图请求
-          const visionPrompt = `请详细描述这张图片的内容，包括图片中的物体、人物、场景、文字、颜色、情感等所有可见的元素。请用客观、详细的语言描述，不要加入主观评价。`;
+          // 构建视觉分析请求
+          const visionPrompt = isVideo
+            ? `请详细描述这个视频的内容，包括视频中的场景、人物、动作、物体、文字、情感变化等所有可见的元素。请用客观、详细的语言描述，不要加入主观评价。`
+            : `请详细描述这张图片的内容，包括图片中的物体、人物、场景、文字、颜色、情感等所有可见的元素。请用客观、详细的语言描述，不要加入主观评价。`;
 
           let response;
 
@@ -9715,9 +9965,15 @@
               injects: [
                 { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
               ],
-              should_stream: false,
-              image: imageMsg.imageData
+              should_stream: false
             };
+
+            // 根据媒体类型设置不同的数据字段
+            if (isVideo) {
+              rawRequestData.video = mediaMsg.videoData;
+            } else {
+              rawRequestData.image = mediaMsg.imageData;
+            }
 
             response = await AI_GENERATE_RAW(rawRequestData);
           } else {
@@ -9726,18 +9982,28 @@
               injects: [
                 { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
               ],
-              should_stream: false,
-              image: imageMsg.imageData
+              should_stream: false
             };
+
+            // 根据媒体类型设置不同的数据字段
+            if (isVideo) {
+              requestData.video = mediaMsg.videoData;
+            } else {
+              requestData.image = mediaMsg.imageData;
+            }
 
             response = await AI_GENERATE(requestData);
           }
 
           if (response && typeof response === 'string' && response.trim()) {
-            console.log('🖼️ 酒馆识图完成:', response.trim());
+            const isVideo = mediaMsg.type === 'video';
+            const mediaType = isVideo ? '视频' : '图片';
+            const emoji = isVideo ? '🎬' : '🖼️';
+
+            console.log(`${emoji} 酒馆识${isVideo ? '视频' : '图'}完成:`, response.trim());
 
             if (indicator) {
-              indicator.textContent = '✅ 酒馆已识图';
+              indicator.textContent = `✅ 酒馆已识${isVideo ? '视频' : '图'}`;
               indicator.style.background = 'rgba(76, 175, 80, 0.9)';
 
               // 3秒后隐藏指示器
@@ -9755,10 +10021,18 @@
 
             // 构建发送给角色AI的消息内容
             let messageForAI = '';
-            if (imageMsg.imageDescription && imageMsg.imageDescription !== '发送了一张图片') {
-              messageForAI = `用户发送了一张图片并说："${imageMsg.imageDescription}"\n\n图片内容描述：${response.trim()}`;
+            if (isVideo) {
+              if (mediaMsg.videoDescription && mediaMsg.videoDescription !== '发送了一个视频') {
+                messageForAI = `用户发送了一个视频并说："${mediaMsg.videoDescription}"\n\n视频内容描述：${response.trim()}`;
+              } else {
+                messageForAI = `用户发送了一个视频。\n\n视频内容描述：${response.trim()}`;
+              }
             } else {
-              messageForAI = `用户发送了一张图片。\n\n图片内容描述：${response.trim()}`;
+              if (mediaMsg.imageDescription && mediaMsg.imageDescription !== '发送了一张图片') {
+                messageForAI = `用户发送了一张图片并说："${mediaMsg.imageDescription}"\n\n图片内容描述：${response.trim()}`;
+              } else {
+                messageForAI = `用户发送了一张图片。\n\n图片内容描述：${response.trim()}`;
+              }
             }
 
             // 标记用户发送了新消息，允许AI回复
@@ -9779,15 +10053,25 @@
         }
       }
 
-      // AI视觉分析功能
-      async function requestVisionAnalysis(imageMsg, indicator) {
+      // AI视觉分析功能（支持图片和视频）
+      async function requestVisionAnalysis(mediaMsg, indicator) {
+        const isVideo = mediaMsg.type === 'video';
+        const mediaType = isVideo ? '视频' : '图片';
+
         // 根据选择的识图方式进行处理
         if (state.visionMode === 'tavern') {
-          // 使用酒馆内置API进行识图
-          return await requestVisionAnalysisWithTavern(imageMsg, indicator);
+          // 使用酒馆内置API进行识图/识视频
+          return await requestVisionAnalysisWithTavern(mediaMsg, indicator);
         } else if (state.visionMode === 'kimi') {
-          // 使用Kimi API进行识图
-          return await requestVisionAnalysisWithKimi(imageMsg, indicator);
+          // 使用Kimi API进行识图（暂不支持视频）
+          if (isVideo) {
+            if (indicator) {
+              indicator.textContent = '❌ Kimi暂不支持视频';
+              indicator.style.background = 'rgba(255, 165, 0, 0.8)';
+            }
+            return;
+          }
+          return await requestVisionAnalysisWithKimi(mediaMsg, indicator);
         } else if (state.visionMode === 'custom' && state.visionApiUrl && state.visionApiKey && state.visionModel) {
           // 使用自定义识图API
           try {
@@ -10067,18 +10351,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         // 根据识图模式决定处理方式
         if (state.visionMode !== 'direct') {
-          // 非直接模式：先用识图API处理图片
+          // 非直接模式：先用识图API处理图片和视频
           const pendingVisionMessages = state.messageHistory.filter(msg =>
-            msg.type === 'image' && msg.needsVisionAnalysis && msg.visionIndicator
+            (msg.type === 'image' || msg.type === 'video') && msg.needsVisionAnalysis && msg.visionIndicator
           );
 
           if (pendingVisionMessages.length > 0) {
-            // 先处理所有需要识图的图片
-            for (const imageMsg of pendingVisionMessages) {
-              if (imageMsg.visionIndicator) {
-                await requestVisionAnalysis(imageMsg, imageMsg.visionIndicator);
-                // 标记该图片已处理
-                imageMsg.needsVisionAnalysis = false;
+            // 先处理所有需要识图/识视频的媒体
+            for (const mediaMsg of pendingVisionMessages) {
+              if (mediaMsg.visionIndicator) {
+                await requestVisionAnalysis(mediaMsg, mediaMsg.visionIndicator);
+                // 标记该媒体已处理
+                mediaMsg.needsVisionAnalysis = false;
               }
             }
 
@@ -10108,9 +10392,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const recentMessages = state.messageHistory.slice(-maxContext);
         let context = serializeShoujiLog(recentMessages);
 
-        // 查找最近的图片消息（最多查找最近10条消息）
-        const recentImageMsg = recentMessages.slice(-10).reverse().find(msg =>
-          msg.type === 'image' && msg.imageData && msg.sender === 'user'
+        // 查找最近的媒体消息（图片或视频，最多查找最近10条消息）
+        const recentMediaMsg = recentMessages.slice(-10).reverse().find(msg =>
+          ((msg.type === 'image' && msg.imageData) || (msg.type === 'video' && msg.videoData)) && msg.sender === 'user'
         );
 
         let stream;
@@ -10145,8 +10429,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               should_stream: true
             };
 
-            if (recentImageMsg) {
-              rawRequestData.image = recentImageMsg.imageData;
+            if (recentMediaMsg) {
+              if (recentMediaMsg.type === 'image') {
+                rawRequestData.image = recentMediaMsg.imageData;
+              } else if (recentMediaMsg.type === 'video') {
+                rawRequestData.video = recentMediaMsg.videoData;
+              }
             }
 
             stream = await Promise.race([
@@ -10164,8 +10452,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               should_stream: true
             };
 
-            if (recentImageMsg) {
-              requestData.image = recentImageMsg.imageData;
+            if (recentMediaMsg) {
+              if (recentMediaMsg.type === 'image') {
+                requestData.image = recentMediaMsg.imageData;
+              } else if (recentMediaMsg.type === 'video') {
+                requestData.video = recentMediaMsg.videoData;
+              }
             }
 
             stream = await Promise.race([
@@ -10461,19 +10753,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           `;
 
           modal.innerHTML = `
-            <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 240px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 280px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0; font-size: 18px; color: #333;">发送图片</h3>
+                <h3 style="margin: 0; font-size: 18px; color: #333;">发送媒体</h3>
                 <button id="closeImageModal" style="background: none; border: none; font-size: 24px; color: #666; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">×</button>
               </div>
 
               <div style="margin-bottom: 20px;">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                  <button id="uploadImageBtn" style="flex: 1; padding: 12px; border: 2px dashed #07c160; background: #f8f8f8; color: #07c160; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s;">
-                    📁 上传本地图片
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                  <button id="uploadImageBtn" style="padding: 10px; border: 2px dashed #07c160; background: #f8f8f8; color: #07c160; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.3s;">
+                    📁 上传图片
                   </button>
-                  <button id="describeImageBtn" style="flex: 1; padding: 12px; border: 2px solid #07c160; background: #07c160; color: white; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s;">
+                  <button id="uploadVideoBtn" style="padding: 10px; border: 2px dashed #ff6b35; background: #fff5f2; color: #ff6b35; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.3s;">
+                    🎬 上传视频
+                  </button>
+                  <button id="describeImageBtn" style="padding: 10px; border: 2px solid #07c160; background: #07c160; color: white; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.3s;">
                     ✏️ 描述图片
+                  </button>
+                  <button id="describeVideoBtn" style="padding: 10px; border: 2px solid #ff6b35; background: #ff6b35; color: white; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.3s;">
+                    📝 描述视频
                   </button>
                 </div>
 
@@ -10482,7 +10780,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                   <div style="margin-top: 8px; font-size: 12px; color: #666;" id="imageInfo"></div>
                 </div>
 
-                <textarea id="imageDescriptionInput" placeholder="请输入图片描述或备注（可选）" style="width: 100%; min-height: 60px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;"></textarea>
+                <div id="videoPreviewArea" style="display: none; margin-bottom: 15px;">
+                  <video id="videoPreview" controls style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
+                    您的浏览器不支持视频播放
+                  </video>
+                  <div style="margin-top: 8px; font-size: 12px; color: #666;" id="videoInfo"></div>
+                </div>
+
+                <textarea id="imageDescriptionInput" placeholder="请输入媒体描述或备注（可选）" style="width: 100%; min-height: 60px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;"></textarea>
               </div>
 
               <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -10491,6 +10796,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               </div>
             </div>
             <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+            <input type="file" id="videoFileInput" accept="video/*" style="display: none;">
           `;
 
           document.body.appendChild(modal);
@@ -10510,8 +10816,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const cancelBtn = modal.querySelector('#cancelImageSend');
         const confirmBtn = modal.querySelector('#confirmImageSend');
         const uploadBtn = modal.querySelector('#uploadImageBtn');
+        const uploadVideoBtn = modal.querySelector('#uploadVideoBtn');
         const describeBtn = modal.querySelector('#describeImageBtn');
+        const describeVideoBtn = modal.querySelector('#describeVideoBtn');
         const fileInput = modal.querySelector('#imageFileInput');
+        const videoInput = modal.querySelector('#videoFileInput');
 
         // 关闭模态框
         const closeModal = () => {
@@ -10532,19 +10841,44 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           fileInput.click();
         };
 
+        // 上传视频
+        uploadVideoBtn.onclick = () => {
+          videoInput.click();
+        };
+
         // 描述图片模式
         describeBtn.onclick = () => {
-          const previewArea = modal.querySelector('#imagePreviewArea');
+          const imagePreviewArea = modal.querySelector('#imagePreviewArea');
+          const videoPreviewArea = modal.querySelector('#videoPreviewArea');
           const descInput = modal.querySelector('#imageDescriptionInput');
-          previewArea.style.display = 'none';
+          imagePreviewArea.style.display = 'none';
+          videoPreviewArea.style.display = 'none';
           descInput.placeholder = '请描述图片内容';
           descInput.focus();
           // 清除已选择的文件
           fileInput.value = '';
+          videoInput.value = '';
           modal.dataset.mode = 'describe';
+          modal.dataset.mediaType = 'image';
         };
 
-        // 文件选择
+        // 描述视频模式
+        describeVideoBtn.onclick = () => {
+          const imagePreviewArea = modal.querySelector('#imagePreviewArea');
+          const videoPreviewArea = modal.querySelector('#videoPreviewArea');
+          const descInput = modal.querySelector('#imageDescriptionInput');
+          imagePreviewArea.style.display = 'none';
+          videoPreviewArea.style.display = 'none';
+          descInput.placeholder = '请描述视频内容';
+          descInput.focus();
+          // 清除已选择的文件
+          fileInput.value = '';
+          videoInput.value = '';
+          modal.dataset.mode = 'describe';
+          modal.dataset.mediaType = 'video';
+        };
+
+        // 图片文件选择
         fileInput.onchange = (e) => {
           const file = e.target.files[0];
           if (file) {
@@ -10552,9 +10886,17 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
         };
 
+        // 视频文件选择
+        videoInput.onchange = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            handleVideoFileSelect(file, modal);
+          }
+        };
+
         // 确认发送
         confirmBtn.onclick = () => {
-          handleImageSend(modal);
+          handleMediaSend(modal);
         };
       }
 
@@ -10570,6 +10912,79 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           };
           reader.readAsDataURL(file);
         });
+      }
+
+      // 保存角色头像到本地
+      async function uploadCharacterAvatarToSillyTavern(file, charName, dataUrl) {
+        console.log(`👤 保存角色头像到本地: ${charName}, 文件: ${file.name}`);
+
+        // 直接保存到本地配置，不再尝试上传到SillyTavern（避免配额问题）
+        console.log('💾 保存头像到本地配置...');
+
+        // 保存到角色配置
+        setCharacterAvatarUrl(charName, dataUrl);
+        settingsState.charAvatars[charName] = dataUrl;
+
+        // 更新消息历史中的角色头像
+        let updatedCount = 0;
+        state.messageHistory.forEach(msg => {
+          if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
+            msg.customAvatarUrl = dataUrl;
+            msg.charName = charName;
+            updatedCount++;
+          }
+        });
+
+        // 更新界面
+        updateCharAvatars();
+        saveSettings();
+
+        console.log(`✅ 角色 ${charName} 的头像已保存到本地，更新了 ${updatedCount} 条消息`);
+        console.log(`📏 头像数据大小: ${(dataUrl.length / 1024).toFixed(1)} KB`);
+
+        // 给用户明确的成功反馈
+        alert(`✅ 角色 "${charName}" 的头像已成功保存！\n\n📊 详情：\n• 保存位置：本地配置\n• 更新消息：${updatedCount} 条\n• 数据大小：${(dataUrl.length / 1024).toFixed(1)} KB`);
+
+        // 强制刷新聊天界面，确保头像立即显示
+        setTimeout(() => {
+          refreshChatDisplay();
+        }, 100);
+      }
+
+      // 保存图片到本地（避免SillyTavern配额问题）
+      async function uploadImageToSillyTavern(file) {
+        try {
+          console.log(`🖼️ 保存图片到本地: ${file.name}`);
+
+          // 直接转换为base64保存到本地，避免配额问题
+          const base64Data = await convertFileToBase64(file);
+
+          console.log(`✅ 图片已转换为本地格式，大小: ${(base64Data.length / 1024).toFixed(1)} KB`);
+
+          // 返回base64数据（本地保存）
+          return base64Data;
+        } catch (error) {
+          console.error('❌ 图片本地保存失败:', error);
+          throw error;
+        }
+      }
+
+      // 保存视频到本地（避免SillyTavern配额问题）
+      async function uploadVideoToSillyTavern(file) {
+        try {
+          console.log(`🎬 保存视频到本地: ${file.name}`);
+
+          // 直接转换为base64保存到本地，避免配额问题
+          const base64Data = await convertFileToBase64(file);
+
+          console.log(`✅ 视频已转换为本地格式，大小: ${(base64Data.length / 1024 / 1024).toFixed(2)} MB`);
+
+          // 返回base64数据（本地保存）
+          return base64Data;
+        } catch (error) {
+          console.error('❌ 视频本地保存失败:', error);
+          throw error;
+        }
       }
 
       // 处理图片文件选择
@@ -10598,23 +11013,57 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         try {
           let imageUrl;
 
-          // 首先尝试使用插件上传功能
-          if (typeof top.window.__uploadImageByPlugin === 'function') {
+          // 优先使用智能媒体助手插件（更稳定）
+          const uploadImagePlugin = window.__uploadImageByPlugin ||
+                                   window.parent.__uploadImageByPlugin ||
+                                   top.window.__uploadImageByPlugin;
+
+          if (typeof uploadImagePlugin === 'function') {
             try {
-              const result = await top.window.__uploadImageByPlugin(file);
+              info.textContent = '正在使用插件上传图片...';
+              const result = await uploadImagePlugin(file);
               imageUrl = result.url;
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 好了，来玩吧孩子`;
-            } catch (uploadError) {
-              console.warn('使用本地base64方案:', uploadError);
-              // 如果服务器上传失败，使用本地base64方案
-              imageUrl = await convertFileToBase64(file);
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 插件上传完成`;
+              console.log('✅ 插件上传图片成功:', result);
+            } catch (pluginError) {
+              console.warn('插件上传失败，尝试本地上传:', pluginError);
+
+              // 插件失败时，小文件尝试本地上传
+              if (file.size <= 5 * 1024 * 1024) { // 5MB以下才尝试本地上传
+                try {
+                  info.textContent = '插件失败，尝试本地上传...';
+                  imageUrl = await uploadImageToSillyTavern(file);
+                  info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到本地服务器`;
+                } catch (localError) {
+                  console.warn('本地上传也失败，使用base64方案:', localError);
+                  imageUrl = await convertFileToBase64(file);
+                  info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+                }
+              } else {
+                // 大图片直接base64，避免卡退
+                console.log('图片较大，直接使用base64方案');
+                imageUrl = await convertFileToBase64(file);
+                info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 图片较大，使用本地格式`;
+              }
             }
           } else {
-            // 如果没有上传插件，直接使用本地base64方案
-            console.log('未检测到插件，使用本地base64方案');
-            imageUrl = await convertFileToBase64(file);
-            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+            // 没有插件时，小文件尝试本地上传
+            if (file.size <= 3 * 1024 * 1024) { // 3MB以下尝试本地上传
+              try {
+                info.textContent = '正在上传到本地服务器...';
+                imageUrl = await uploadImageToSillyTavern(file);
+                info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到本地服务器`;
+              } catch (localError) {
+                console.warn('本地上传失败，使用base64方案:', localError);
+                imageUrl = await convertFileToBase64(file);
+                info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+              }
+            } else {
+              // 大文件直接base64
+              console.log('图片较大且无插件，直接使用base64方案');
+              imageUrl = await convertFileToBase64(file);
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 图片较大，使用本地格式`;
+            }
           }
 
           preview.src = imageUrl;
@@ -10631,61 +11080,227 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 重置图片模态框
+      // 处理视频文件选择
+      async function handleVideoFileSelect(file, modal) {
+        // 检查文件类型
+        if (!file.type.startsWith('video/')) {
+          alert('请选择视频文件！');
+          return;
+        }
+
+        // 检查文件大小 (50MB，避免卡退)
+        if (file.size > 50 * 1024 * 1024) {
+          alert('视频文件不能超过50MB！\n\n💡 建议：\n• 使用视频压缩工具减小文件大小\n• 降低视频分辨率或码率\n• 剪切视频长度\n• 或者使用"📝 描述视频"功能');
+          return;
+        }
+
+        // 大文件警告
+        if (file.size > 20 * 1024 * 1024) {
+          const proceed = confirm(`视频文件较大 (${(file.size / 1024 / 1024).toFixed(1)} MB)，可能需要较长时间处理。\n\n是否继续上传？\n\n💡 提示：可以选择"📝 描述视频"来避免上传大文件。`);
+          if (!proceed) {
+            return;
+          }
+        }
+
+        const imagePreviewArea = modal.querySelector('#imagePreviewArea');
+        const videoPreviewArea = modal.querySelector('#videoPreviewArea');
+        const videoPreview = modal.querySelector('#videoPreview');
+        const videoInfo = modal.querySelector('#videoInfo');
+        const descInput = modal.querySelector('#imageDescriptionInput');
+
+        // 隐藏图片预览，显示视频预览
+        imagePreviewArea.style.display = 'none';
+        videoPreviewArea.style.display = 'block';
+
+        // 显示上传中状态
+        videoInfo.textContent = '正在处理视频...';
+
+        try {
+          let videoUrl;
+
+          // 优先使用智能媒体助手插件（专门为大文件优化）
+          const processVideoPlugin = window.__processVideoByPlugin ||
+                                    window.parent.__processVideoByPlugin ||
+                                    top.window.__processVideoByPlugin;
+
+          if (typeof processVideoPlugin === 'function') {
+            try {
+              videoInfo.textContent = '正在使用插件处理视频...';
+              const result = await processVideoPlugin(file, {
+                enableAIVision: false
+              });
+              videoUrl = result.url;
+              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 插件处理完成`;
+              console.log('✅ 插件处理视频成功:', result);
+            } catch (pluginError) {
+              console.warn('插件处理失败，尝试本地上传:', pluginError);
+
+              // 插件失败时，只对小文件尝试本地上传
+              if (file.size <= 50 * 1024 * 1024) { // 50MB以下才尝试本地上传
+                try {
+                  videoInfo.textContent = '插件失败，尝试本地上传...';
+                  videoUrl = await uploadVideoToSillyTavern(file);
+                  videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到本地服务器`;
+                } catch (localError) {
+                  console.warn('本地上传也失败，使用base64方案:', localError);
+                  videoUrl = await convertFileToBase64(file);
+                  videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已转换为本地格式`;
+                }
+              } else {
+                // 大文件直接使用base64，避免卡退
+                console.log('文件过大，直接使用base64方案');
+                videoUrl = await convertFileToBase64(file);
+                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 文件较大，使用本地格式`;
+              }
+            }
+          } else {
+            // 没有插件时，小文件尝试本地上传，大文件直接base64
+            if (file.size <= 30 * 1024 * 1024) { // 30MB以下尝试本地上传
+              try {
+                videoInfo.textContent = '正在上传到本地服务器...';
+                videoUrl = await uploadVideoToSillyTavern(file);
+                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到本地服务器`;
+              } catch (localError) {
+                console.warn('本地上传失败，使用base64方案:', localError);
+                videoUrl = await convertFileToBase64(file);
+                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已转换为本地格式`;
+              }
+            } else {
+              // 大文件直接base64
+              console.log('文件较大且无插件，直接使用base64方案');
+              videoUrl = await convertFileToBase64(file);
+              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 文件较大，使用本地格式`;
+            }
+          }
+
+          videoPreview.src = videoUrl;
+          descInput.placeholder = '请输入视频备注（可选）';
+
+          modal.dataset.mode = 'upload';
+          modal.dataset.mediaType = 'video';
+          modal.dataset.videoData = videoUrl;
+          modal.dataset.fileName = file.name;
+        } catch (error) {
+          console.error('视频处理失败:', error);
+          videoInfo.textContent = '视频处理失败，请重试';
+          videoPreviewArea.style.display = 'none';
+          alert('视频处理失败，请重试！');
+        }
+      }
+
+      // 重置媒体模态框
       function resetImageModal() {
         const modal = document.getElementById('imageSendModal');
         if (!modal) return;
 
-        const previewArea = modal.querySelector('#imagePreviewArea');
+        const imagePreviewArea = modal.querySelector('#imagePreviewArea');
+        const videoPreviewArea = modal.querySelector('#videoPreviewArea');
         const descInput = modal.querySelector('#imageDescriptionInput');
         const fileInput = modal.querySelector('#imageFileInput');
+        const videoInput = modal.querySelector('#videoFileInput');
 
-        previewArea.style.display = 'none';
+        imagePreviewArea.style.display = 'none';
+        videoPreviewArea.style.display = 'none';
         descInput.value = '';
-        descInput.placeholder = '请输入图片描述或备注（可选）';
+        descInput.placeholder = '请输入媒体描述或备注（可选）';
         fileInput.value = '';
+        videoInput.value = '';
         delete modal.dataset.mode;
+        delete modal.dataset.mediaType;
         delete modal.dataset.imageData;
+        delete modal.dataset.videoData;
         delete modal.dataset.fileName;
       }
 
-      // 处理图片发送
-      function handleImageSend(modal) {
+      // 处理媒体发送（图片和视频）
+      function handleMediaSend(modal) {
         const mode = modal.dataset.mode;
+        const mediaType = modal.dataset.mediaType || 'image'; // 默认为图片
         const description = modal.querySelector('#imageDescriptionInput').value.trim();
 
         if (mode === 'upload') {
           // 上传模式
           const imageData = modal.dataset.imageData;
+          const videoData = modal.dataset.videoData;
           const fileName = modal.dataset.fileName;
 
-          if (!imageData) {
-            alert('请先选择图片！');
-            return;
-          }
+          if (mediaType === 'video') {
+            // 视频上传
+            if (!videoData) {
+              alert('请先选择视频！');
+              return;
+            }
 
-          sendMessage({
-            type: 'image',
-            imageData: imageData,
-            fileName: fileName,
-            imageDescription: description || '发送了一张图片',
-            time: getTimeStr(),
-            needsVisionAnalysis: state.visionMode !== 'direct' // 只有非直接模式才需要识图
-          });
+            // 使用SillyTavern标准格式发送视频消息
+            const chatInput = document.getElementById('chatInput');
+            const originalValue = chatInput.value;
+            chatInput.value = description || '发送了一个视频';
+
+            sendMessage({
+              type: 'video',
+              extra: {
+                video: videoData  // 使用SillyTavern标准的extra.video格式
+              },
+              videoData: videoData,  // 保留同层私聊的格式
+              fileName: fileName,
+              videoDescription: description || '发送了一个视频',
+              needsVisionAnalysis: state.visionMode !== 'direct'
+            });
+
+            // 恢复输入框
+            chatInput.value = originalValue;
+
+          } else {
+            // 图片上传
+            if (!imageData) {
+              alert('请先选择图片！');
+              return;
+            }
+
+            sendMessage({
+              type: 'image',
+              extra: {
+                image: imageData,  // 使用SillyTavern标准的extra.image格式
+                inline_image: true
+              },
+              imageData: imageData,  // 保留同层私聊的格式
+              fileName: fileName,
+              imageDescription: description || '发送了一张图片',
+              time: getTimeStr(),
+              needsVisionAnalysis: state.visionMode !== 'direct'
+            });
+          }
 
         } else if (mode === 'describe') {
           // 描述模式
           if (!description) {
-            alert('请输入图片描述！');
+            const mediaName = mediaType === 'video' ? '视频' : '图片';
+            alert(`请输入${mediaName}描述！`);
             return;
           }
 
-          sendMessage({
-            type: 'image',
-            imageDescription: description,
-            time: getTimeStr(),
-            needsVisionAnalysis: false // 不需要AI分析，只是文字描述
-          });
+          if (mediaType === 'video') {
+            // 设置输入框内容为视频描述
+            const chatInput = document.getElementById('chatInput');
+            const originalValue = chatInput.value;
+            chatInput.value = description;
+
+            sendMessage({
+              type: 'video',
+              videoDescription: description,
+              needsVisionAnalysis: false // 不需要AI分析，只是文字描述
+            });
+
+            // 恢复输入框
+            chatInput.value = originalValue;
+          } else {
+            sendMessage({
+              type: 'image',
+              imageDescription: description,
+              time: getTimeStr(),
+              needsVisionAnalysis: false // 不需要AI分析，只是文字描述
+            });
+          }
 
         } else {
           alert('请选择发送方式！');
@@ -10695,6 +11310,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 关闭模态框
         modal.style.display = 'none';
         resetImageModal();
+      }
+
+      // 保持向后兼容的handleImageSend函数
+      function handleImageSend(modal) {
+        return handleMediaSend(modal);
       }
 
       // 发送语音消息
@@ -14043,6 +14663,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               charName: message.charName,
               // 保存特殊消息的额外数据
               imageData: message.imageData,
+              videoData: message.videoData,
               stickerData: message.stickerData,
               voiceText: message.voiceText,
               amount: message.amount,
@@ -14137,6 +14758,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (msg.type === 'image') {
             messageTypeIcon = '🖼️';
             previewContent = msg.content || '图片消息';
+          } else if (msg.type === 'video') {
+            messageTypeIcon = '🎬';
+            previewContent = msg.content || '视频消息';
           } else if (msg.type === 'voice') {
             messageTypeIcon = '🎤';
             previewContent = msg.voiceText || '语音消息';
@@ -14239,6 +14863,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               <img src="${msg.imageData}" style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" alt="收藏的图片">
             </div>
             <div style="color: #666; font-size: 14px;">${msg.content || '图片消息'}</div>
+          `;
+        } else if (msg.type === 'video' && msg.videoData) {
+          detailContent = `
+            <div style="text-align: center; margin-bottom: 15px;">
+              <video src="${msg.videoData}" controls style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" alt="收藏的视频">
+                您的浏览器不支持视频播放
+              </video>
+            </div>
+            <div style="color: #666; font-size: 14px;">${msg.content || '视频消息'}</div>
           `;
         } else if (msg.type === 'sticker' && msg.stickerData) {
           detailContent = `
@@ -14757,9 +15390,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 更新角色头像
       function updateCharAvatars() {
+        console.log('🔄 开始更新角色头像...');
+
         // 更新所有角色头像
         const charAvatars = document.querySelectorAll('.avatar:not(.user_avatar)');
-        charAvatars.forEach(avatar => {
+        console.log(`🔄 找到 ${charAvatars.length} 个角色头像元素`);
+
+        let updatedCount = 0;
+        charAvatars.forEach((avatar, index) => {
           const messageElement = avatar.closest('.message');
           if (messageElement && messageElement.classList.contains('received')) {
             // 从消息索引获取对应的消息数据
@@ -14769,23 +15407,34 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               const charName = msg.charName || '对方'; // 获取角色名称
               const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
 
+              console.log(`🔄 处理头像 ${index}: 角色=${charName}, 配置头像=${!!characterAvatarUrl}`);
+
               // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
               if (characterAvatarUrl) {
                 // 最高优先级：使用角色配置中的头像（类似SillyTavern）
                 avatar.src = characterAvatarUrl;
+                updatedCount++;
+                console.log(`✅ 头像 ${index} 已更新为角色配置头像`);
               } else if (msg.customAvatarUrl) {
                 // 次高优先级：使用消息中保存的自定义头像
                 avatar.src = msg.customAvatarUrl;
+                updatedCount++;
+                console.log(`✅ 头像 ${index} 已更新为自定义头像`);
               } else if (settingsState.charAvatars[charName]) {
                 // 中等优先级：使用设置中的角色头像
                 avatar.src = settingsState.charAvatars[charName];
+                updatedCount++;
+                console.log(`✅ 头像 ${index} 已更新为设置头像`);
               } else if (msg.avatar) {
                 // 最低优先级：使用格式中的头像
                 avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+                console.log(`✅ 头像 ${index} 使用格式头像`);
               }
             }
           }
         });
+
+        console.log(`✅ 角色头像更新完成，共更新 ${updatedCount} 个头像`);
 
         // 更新预览
         updateCharAvatarPreview();
@@ -14793,34 +15442,64 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 更新角色头像预览
       function updateCharAvatarPreview() {
+        console.log('🔄 更新角色头像预览...');
+
         const preview = document.getElementById('charAvatarPreview');
         const nameInput = document.getElementById('charNameInput');
-        if (preview && nameInput) {
-          const charName = nameInput.value.trim();
-          if (charName && settingsState.charAvatars[charName]) {
-            preview.src = settingsState.charAvatars[charName];
-          } else {
-            preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
-          }
+
+        if (!preview) {
+          console.warn('❌ 找不到头像预览元素 #charAvatarPreview');
+          return;
+        }
+
+        if (!nameInput) {
+          console.warn('❌ 找不到角色名输入框 #charNameInput');
+          return;
+        }
+
+        const charName = nameInput.value.trim();
+        console.log(`🔄 预览角色: ${charName}`);
+
+        if (charName && settingsState.charAvatars[charName]) {
+          const avatarUrl = settingsState.charAvatars[charName];
+          preview.src = avatarUrl;
+          console.log(`✅ 预览已更新为角色头像: ${avatarUrl.substring(0, 50)}...`);
+        } else {
+          preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
+          console.log(`✅ 预览使用默认头像`);
         }
       }
 
 
 
       // 处理文件上传
-      function handleFileUpload(file, type) {
+      async function handleFileUpload(file, type) {
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const dataUrl = e.target.result;
+        console.log(`📁 处理文件上传: ${file.name}, 类型: ${type}`);
+
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              resolve(e.target.result);
+            };
+            reader.onerror = function(error) {
+              reject(error);
+            };
+            reader.readAsDataURL(file);
+          });
 
           if (type === 'avatar') {
+            console.log('👤 设置用户头像');
             settingsState.userAvatar = dataUrl;
             updateUserAvatars();
+            alert('用户头像已更新！');
           } else if (type === 'wallpaper') {
+            console.log('🖼️ 设置壁纸');
             settingsState.wallpaper = dataUrl;
             updateWallpaper();
+            alert('壁纸已更新！');
           } else if (type === 'charAvatar') {
             // 优先使用输入框中的角色名，如果没有则使用当前角色名
             const nameInput = document.getElementById('charNameInput');
@@ -14832,28 +15511,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               return;
             }
 
-            // 保存到角色配置中（类似SillyTavern的角色数据保存）
-            setCharacterAvatarUrl(charName, dataUrl);
-
-            // 同时保存到设置状态中（向后兼容）
-            settingsState.charAvatars[charName] = dataUrl;
-
-            // 同时更新消息历史中的角色头像信息，确保持久化
-            state.messageHistory.forEach(msg => {
-              if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
-                msg.customAvatarUrl = dataUrl; // 添加自定义头像标记
-                msg.charName = charName; // 确保角色名一致
-              }
-            });
-
-            updateCharAvatars();
-            console.log(`角色 ${charName} 的头像已保存到角色配置中`);
-            alert(`角色 "${charName}" 的头像已成功保存！`);
+            console.log(`👤 开始上传角色头像: ${charName}`);
+            // 尝试保存到SillyTavern的角色系统
+            await uploadCharacterAvatarToSillyTavern(file, charName, dataUrl);
           }
 
           saveSettings(); // 统一保存所有设置
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+          console.error('❌ 文件上传处理失败:', error);
+          throw error; // 重新抛出错误，让调用者处理
+        }
       }
 
       // 重置设置
@@ -15414,10 +16081,35 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         document.getElementById('charAvatarFileInput').click();
       });
 
-      document.getElementById('charAvatarFileInput').addEventListener('change', (e) => {
+      document.getElementById('charAvatarFileInput').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
-          handleFileUpload(file, 'charAvatar');
+          try {
+            // 显示上传中的提示
+            const uploadBtn = document.getElementById('charAvatarUploadBtn');
+            const originalText = uploadBtn.textContent;
+            uploadBtn.textContent = '上传中...';
+            uploadBtn.disabled = true;
+
+            console.log('🖼️ 开始上传角色头像:', file.name);
+
+            await handleFileUpload(file, 'charAvatar');
+
+            // 恢复按钮状态
+            uploadBtn.textContent = originalText;
+            uploadBtn.disabled = false;
+
+            console.log('✅ 角色头像上传完成');
+          } catch (error) {
+            console.error('❌ 角色头像上传失败:', error);
+
+            // 恢复按钮状态
+            const uploadBtn = document.getElementById('charAvatarUploadBtn');
+            uploadBtn.textContent = '上传角色头像';
+            uploadBtn.disabled = false;
+
+            alert(`头像上传失败: ${error.message}`);
+          }
         }
       });
 
