@@ -10916,8 +10916,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 上传角色头像到SillyTavern
       async function uploadCharacterAvatarToSillyTavern(file, charName, dataUrl) {
+        console.log(`👤 开始上传角色头像: ${charName}, 文件: ${file.name}`);
+
         try {
           // 方法1: 尝试使用SillyTavern的头像上传API
+          console.log('📤 尝试SillyTavern头像API...');
           const formData = new FormData();
           formData.append('avatar', file);
           formData.append('overwrite_name', `${charName}.png`);
@@ -10926,6 +10929,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             method: 'POST',
             body: formData
           });
+
+          console.log(`📤 头像API响应: ${response.status} ${response.statusText}`);
 
           if (response.ok) {
             const result = await response.text();
@@ -10939,16 +10944,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             settingsState.charAvatars[charName] = avatarUrl;
             updateCharAvatars();
 
+            console.log(`✅ 角色 ${charName} 头像界面已更新`);
             alert(`角色 "${charName}" 的头像已成功保存到SillyTavern！`);
             return;
+          } else {
+            const errorText = await response.text();
+            console.warn(`❌ 头像API失败: ${response.status} - ${errorText}`);
           }
         } catch (error) {
-          console.warn('SillyTavern头像上传失败，使用本地保存:', error);
+          console.warn('❌ SillyTavern头像上传异常:', error);
         }
 
-        // 方法2: 降级为本地保存
+        // 方法2: 降级为saveBase64AsFile保存
+        console.log('💾 尝试saveBase64AsFile保存头像...');
         try {
-          // 使用saveBase64AsFile保存头像
           const saveBase64AsFile = window.saveBase64AsFile ||
                                   window.parent?.saveBase64AsFile ||
                                   window.top?.saveBase64AsFile;
@@ -10956,39 +10965,49 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (saveBase64AsFile) {
             const extension = file.name.split('.').pop().toLowerCase();
             const timestamp = Date.now();
+            console.log(`💾 调用saveBase64AsFile: avatar_${charName}, extension: ${extension}`);
+
             const avatarUrl = await saveBase64AsFile(dataUrl, `avatar_${charName}`, `avatar_${charName}_${timestamp}`, extension);
 
             console.log('✅ 头像已通过saveBase64AsFile保存:', avatarUrl);
+            console.log(`📏 头像URL长度: ${avatarUrl.length} 字符`);
 
             // 保存到角色配置
             setCharacterAvatarUrl(charName, avatarUrl);
             settingsState.charAvatars[charName] = avatarUrl;
             updateCharAvatars();
 
-            alert(`角色 "${charName}" 的头像已保存！`);
+            console.log(`✅ 角色 ${charName} 头像界面已更新`);
+            alert(`角色 "${charName}" 的头像已保存！URL长度: ${avatarUrl.length} 字符`);
             return;
+          } else {
+            console.warn('❌ saveBase64AsFile函数不可用');
           }
         } catch (error) {
-          console.warn('saveBase64AsFile保存失败，使用本地base64:', error);
+          console.error('❌ saveBase64AsFile保存失败:', error);
         }
 
         // 方法3: 最后降级为本地base64保存
+        console.log('💾 使用本地base64保存头像...');
         setCharacterAvatarUrl(charName, dataUrl);
         settingsState.charAvatars[charName] = dataUrl;
 
         // 更新消息历史中的角色头像
+        let updatedCount = 0;
         state.messageHistory.forEach(msg => {
           if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
             msg.customAvatarUrl = dataUrl;
             msg.charName = charName;
+            updatedCount++;
           }
         });
 
         updateCharAvatars();
         saveSettings();
 
-        console.log(`角色 ${charName} 的头像已保存到本地配置`);
-        alert(`角色 "${charName}" 的头像已保存到本地配置！`);
+        console.log(`✅ 角色 ${charName} 的头像已保存到本地配置，更新了 ${updatedCount} 条消息`);
+        console.log(`📏 本地头像URL长度: ${dataUrl.length} 字符`);
+        alert(`角色 "${charName}" 的头像已保存到本地配置！\n更新了 ${updatedCount} 条历史消息`);
       }
 
       // 使用SillyTavern官方的saveBase64AsFile函数上传图片
@@ -15462,9 +15481,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 更新角色头像
       function updateCharAvatars() {
+        console.log('🔄 开始更新角色头像...');
+
         // 更新所有角色头像
         const charAvatars = document.querySelectorAll('.avatar:not(.user_avatar)');
-        charAvatars.forEach(avatar => {
+        console.log(`🔄 找到 ${charAvatars.length} 个角色头像元素`);
+
+        let updatedCount = 0;
+        charAvatars.forEach((avatar, index) => {
           const messageElement = avatar.closest('.message');
           if (messageElement && messageElement.classList.contains('received')) {
             // 从消息索引获取对应的消息数据
@@ -15474,23 +15498,34 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               const charName = msg.charName || '对方'; // 获取角色名称
               const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
 
+              console.log(`🔄 处理头像 ${index}: 角色=${charName}, 配置头像=${!!characterAvatarUrl}`);
+
               // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
               if (characterAvatarUrl) {
                 // 最高优先级：使用角色配置中的头像（类似SillyTavern）
                 avatar.src = characterAvatarUrl;
+                updatedCount++;
+                console.log(`✅ 头像 ${index} 已更新为角色配置头像`);
               } else if (msg.customAvatarUrl) {
                 // 次高优先级：使用消息中保存的自定义头像
                 avatar.src = msg.customAvatarUrl;
+                updatedCount++;
+                console.log(`✅ 头像 ${index} 已更新为自定义头像`);
               } else if (settingsState.charAvatars[charName]) {
                 // 中等优先级：使用设置中的角色头像
                 avatar.src = settingsState.charAvatars[charName];
+                updatedCount++;
+                console.log(`✅ 头像 ${index} 已更新为设置头像`);
               } else if (msg.avatar) {
                 // 最低优先级：使用格式中的头像
                 avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+                console.log(`✅ 头像 ${index} 使用格式头像`);
               }
             }
           }
         });
+
+        console.log(`✅ 角色头像更新完成，共更新 ${updatedCount} 个头像`);
 
         // 更新预览
         updateCharAvatarPreview();
@@ -15498,34 +15533,64 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 更新角色头像预览
       function updateCharAvatarPreview() {
+        console.log('🔄 更新角色头像预览...');
+
         const preview = document.getElementById('charAvatarPreview');
         const nameInput = document.getElementById('charNameInput');
-        if (preview && nameInput) {
-          const charName = nameInput.value.trim();
-          if (charName && settingsState.charAvatars[charName]) {
-            preview.src = settingsState.charAvatars[charName];
-          } else {
-            preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
-          }
+
+        if (!preview) {
+          console.warn('❌ 找不到头像预览元素 #charAvatarPreview');
+          return;
+        }
+
+        if (!nameInput) {
+          console.warn('❌ 找不到角色名输入框 #charNameInput');
+          return;
+        }
+
+        const charName = nameInput.value.trim();
+        console.log(`🔄 预览角色: ${charName}`);
+
+        if (charName && settingsState.charAvatars[charName]) {
+          const avatarUrl = settingsState.charAvatars[charName];
+          preview.src = avatarUrl;
+          console.log(`✅ 预览已更新为角色头像: ${avatarUrl.substring(0, 50)}...`);
+        } else {
+          preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
+          console.log(`✅ 预览使用默认头像`);
         }
       }
 
 
 
       // 处理文件上传
-      function handleFileUpload(file, type) {
+      async function handleFileUpload(file, type) {
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const dataUrl = e.target.result;
+        console.log(`📁 处理文件上传: ${file.name}, 类型: ${type}`);
+
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              resolve(e.target.result);
+            };
+            reader.onerror = function(error) {
+              reject(error);
+            };
+            reader.readAsDataURL(file);
+          });
 
           if (type === 'avatar') {
+            console.log('👤 设置用户头像');
             settingsState.userAvatar = dataUrl;
             updateUserAvatars();
+            alert('用户头像已更新！');
           } else if (type === 'wallpaper') {
+            console.log('🖼️ 设置壁纸');
             settingsState.wallpaper = dataUrl;
             updateWallpaper();
+            alert('壁纸已更新！');
           } else if (type === 'charAvatar') {
             // 优先使用输入框中的角色名，如果没有则使用当前角色名
             const nameInput = document.getElementById('charNameInput');
@@ -15537,13 +15602,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               return;
             }
 
+            console.log(`👤 开始上传角色头像: ${charName}`);
             // 尝试保存到SillyTavern的角色系统
-            uploadCharacterAvatarToSillyTavern(file, charName, dataUrl);
+            await uploadCharacterAvatarToSillyTavern(file, charName, dataUrl);
           }
 
           saveSettings(); // 统一保存所有设置
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+          console.error('❌ 文件上传处理失败:', error);
+          throw error; // 重新抛出错误，让调用者处理
+        }
       }
 
       // 重置设置
@@ -16104,10 +16172,35 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         document.getElementById('charAvatarFileInput').click();
       });
 
-      document.getElementById('charAvatarFileInput').addEventListener('change', (e) => {
+      document.getElementById('charAvatarFileInput').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
-          handleFileUpload(file, 'charAvatar');
+          try {
+            // 显示上传中的提示
+            const uploadBtn = document.getElementById('charAvatarUploadBtn');
+            const originalText = uploadBtn.textContent;
+            uploadBtn.textContent = '上传中...';
+            uploadBtn.disabled = true;
+
+            console.log('🖼️ 开始上传角色头像:', file.name);
+
+            await handleFileUpload(file, 'charAvatar');
+
+            // 恢复按钮状态
+            uploadBtn.textContent = originalText;
+            uploadBtn.disabled = false;
+
+            console.log('✅ 角色头像上传完成');
+          } catch (error) {
+            console.error('❌ 角色头像上传失败:', error);
+
+            // 恢复按钮状态
+            const uploadBtn = document.getElementById('charAvatarUploadBtn');
+            uploadBtn.textContent = '上传角色头像';
+            uploadBtn.disabled = false;
+
+            alert(`头像上传失败: ${error.message}`);
+          }
         }
       });
 
