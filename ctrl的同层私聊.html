@@ -9403,8 +9403,15 @@
         }
 
         const newIndex = state.messageHistory.length;
-        // The parser will add the correct `type` property
-        const parsedMsg = { ...parseInlineContentType(msg.content), ...msg };
+        // 如果已经有明确的type，保留原有数据，否则解析content
+        let parsedMsg;
+        if (msg.type && ['image', 'video', 'voice', 'transfer', 'redpacket', 'file'].includes(msg.type)) {
+          // 保留特殊消息类型的完整数据
+          parsedMsg = msg;
+        } else {
+          // 普通文本消息才需要解析
+          parsedMsg = { ...parseInlineContentType(msg.content), ...msg };
+        }
 
 
 
@@ -11015,12 +11022,17 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           let imageUrl;
 
           // 优先使用智能媒体助手插件（更稳定）
-          if (typeof top.window.__uploadImageByPlugin === 'function') {
+          const uploadImagePlugin = window.__uploadImageByPlugin ||
+                                   window.parent.__uploadImageByPlugin ||
+                                   top.window.__uploadImageByPlugin;
+
+          if (typeof uploadImagePlugin === 'function') {
             try {
               info.textContent = '正在使用插件上传图片...';
-              const result = await top.window.__uploadImageByPlugin(file);
+              const result = await uploadImagePlugin(file);
               imageUrl = result.url;
               info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 插件上传完成`;
+              console.log('✅ 插件上传图片成功:', result);
             } catch (pluginError) {
               console.warn('插件上传失败，尝试本地上传:', pluginError);
 
@@ -11115,14 +11127,19 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           let videoUrl;
 
           // 优先使用智能媒体助手插件（专门为大文件优化）
-          if (typeof top.window.__processVideoByPlugin === 'function') {
+          const processVideoPlugin = window.__processVideoByPlugin ||
+                                    window.parent.__processVideoByPlugin ||
+                                    top.window.__processVideoByPlugin;
+
+          if (typeof processVideoPlugin === 'function') {
             try {
               videoInfo.textContent = '正在使用插件处理视频...';
-              const result = await top.window.__processVideoByPlugin(file, {
+              const result = await processVideoPlugin(file, {
                 enableAIVision: false
               });
               videoUrl = result.url;
               videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 插件处理完成`;
+              console.log('✅ 插件处理视频成功:', result);
             } catch (pluginError) {
               console.warn('插件处理失败，尝试本地上传:', pluginError);
 
