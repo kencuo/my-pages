@@ -11014,30 +11014,51 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         try {
           let imageUrl;
 
-          // 首先尝试上传到SillyTavern本地服务器
-          try {
-            imageUrl = await uploadImageToSillyTavern(file);
-            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到本地服务器`;
-          } catch (uploadError) {
-            console.warn('SillyTavern本地上传失败，尝试使用插件:', uploadError);
+          // 优先使用智能媒体助手插件（更稳定）
+          if (typeof top.window.__uploadImageByPlugin === 'function') {
+            try {
+              info.textContent = '正在使用插件上传图片...';
+              const result = await top.window.__uploadImageByPlugin(file);
+              imageUrl = result.url;
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 插件上传完成`;
+            } catch (pluginError) {
+              console.warn('插件上传失败，尝试本地上传:', pluginError);
 
-            // 如果本地上传失败，尝试使用插件
-            if (typeof top.window.__uploadImageByPlugin === 'function') {
+              // 插件失败时，小文件尝试本地上传
+              if (file.size <= 5 * 1024 * 1024) { // 5MB以下才尝试本地上传
+                try {
+                  info.textContent = '插件失败，尝试本地上传...';
+                  imageUrl = await uploadImageToSillyTavern(file);
+                  info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到本地服务器`;
+                } catch (localError) {
+                  console.warn('本地上传也失败，使用base64方案:', localError);
+                  imageUrl = await convertFileToBase64(file);
+                  info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+                }
+              } else {
+                // 大图片直接base64，避免卡退
+                console.log('图片较大，直接使用base64方案');
+                imageUrl = await convertFileToBase64(file);
+                info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 图片较大，使用本地格式`;
+              }
+            }
+          } else {
+            // 没有插件时，小文件尝试本地上传
+            if (file.size <= 3 * 1024 * 1024) { // 3MB以下尝试本地上传
               try {
-                const result = await top.window.__uploadImageByPlugin(file);
-                imageUrl = result.url;
-                info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到插件服务器`;
-              } catch (pluginError) {
-                console.warn('插件上传也失败，使用本地base64方案:', pluginError);
-                // 最后降级为本地base64方案
+                info.textContent = '正在上传到本地服务器...';
+                imageUrl = await uploadImageToSillyTavern(file);
+                info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已上传到本地服务器`;
+              } catch (localError) {
+                console.warn('本地上传失败，使用base64方案:', localError);
                 imageUrl = await convertFileToBase64(file);
                 info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
               }
             } else {
-              // 如果没有插件，直接使用本地base64方案
-              console.log('未检测到插件，使用本地base64方案');
+              // 大文件直接base64
+              console.log('图片较大且无插件，直接使用base64方案');
               imageUrl = await convertFileToBase64(file);
-              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 已转换为本地格式`;
+              info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - 图片较大，使用本地格式`;
             }
           }
 
@@ -11063,10 +11084,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
-        // 检查文件大小 (100MB)
-        if (file.size > 100 * 1024 * 1024) {
-          alert('视频文件不能超过100MB！');
+        // 检查文件大小 (50MB，避免卡退)
+        if (file.size > 50 * 1024 * 1024) {
+          alert('视频文件不能超过50MB！\n\n💡 建议：\n• 使用视频压缩工具减小文件大小\n• 降低视频分辨率或码率\n• 剪切视频长度\n• 或者使用"📝 描述视频"功能');
           return;
+        }
+
+        // 大文件警告
+        if (file.size > 20 * 1024 * 1024) {
+          const proceed = confirm(`视频文件较大 (${(file.size / 1024 / 1024).toFixed(1)} MB)，可能需要较长时间处理。\n\n是否继续上传？\n\n💡 提示：可以选择"📝 描述视频"来避免上传大文件。`);
+          if (!proceed) {
+            return;
+          }
         }
 
         const imagePreviewArea = modal.querySelector('#imagePreviewArea');
@@ -11085,32 +11114,53 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         try {
           let videoUrl;
 
-          // 首先尝试上传到SillyTavern本地服务器
-          try {
-            videoUrl = await uploadVideoToSillyTavern(file);
-            videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到本地服务器`;
-          } catch (uploadError) {
-            console.warn('SillyTavern本地上传失败，尝试使用插件:', uploadError);
+          // 优先使用智能媒体助手插件（专门为大文件优化）
+          if (typeof top.window.__processVideoByPlugin === 'function') {
+            try {
+              videoInfo.textContent = '正在使用插件处理视频...';
+              const result = await top.window.__processVideoByPlugin(file, {
+                enableAIVision: false
+              });
+              videoUrl = result.url;
+              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 插件处理完成`;
+            } catch (pluginError) {
+              console.warn('插件处理失败，尝试本地上传:', pluginError);
 
-            // 如果本地上传失败，尝试使用插件
-            if (typeof top.window.__processVideoByPlugin === 'function') {
+              // 插件失败时，只对小文件尝试本地上传
+              if (file.size <= 50 * 1024 * 1024) { // 50MB以下才尝试本地上传
+                try {
+                  videoInfo.textContent = '插件失败，尝试本地上传...';
+                  videoUrl = await uploadVideoToSillyTavern(file);
+                  videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到本地服务器`;
+                } catch (localError) {
+                  console.warn('本地上传也失败，使用base64方案:', localError);
+                  videoUrl = await convertFileToBase64(file);
+                  videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已转换为本地格式`;
+                }
+              } else {
+                // 大文件直接使用base64，避免卡退
+                console.log('文件过大，直接使用base64方案');
+                videoUrl = await convertFileToBase64(file);
+                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 文件较大，使用本地格式`;
+              }
+            }
+          } else {
+            // 没有插件时，小文件尝试本地上传，大文件直接base64
+            if (file.size <= 30 * 1024 * 1024) { // 30MB以下尝试本地上传
               try {
-                const result = await top.window.__processVideoByPlugin(file, {
-                  enableAIVision: false
-                });
-                videoUrl = result.url;
-                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到插件服务器`;
-              } catch (pluginError) {
-                console.warn('插件上传也失败，使用本地base64方案:', pluginError);
-                // 最后降级为本地base64方案
+                videoInfo.textContent = '正在上传到本地服务器...';
+                videoUrl = await uploadVideoToSillyTavern(file);
+                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到本地服务器`;
+              } catch (localError) {
+                console.warn('本地上传失败，使用base64方案:', localError);
                 videoUrl = await convertFileToBase64(file);
                 videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已转换为本地格式`;
               }
             } else {
-              // 如果没有插件，直接使用本地base64方案
-              console.log('未检测到视频插件，使用本地base64方案');
+              // 大文件直接base64
+              console.log('文件较大且无插件，直接使用base64方案');
               videoUrl = await convertFileToBase64(file);
-              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已转换为本地格式`;
+              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 文件较大，使用本地格式`;
             }
           }
 
