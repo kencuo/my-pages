@@ -1031,13 +1031,13 @@
         box-shadow: 0 2px 8px var(--shadow-light);
         display: inline-block;
         transition: all 0.3s ease;
-        /* 固定尺寸容器 - 增加长度 */
-        width: 321px; /* 305 + 8*2 */
+        /* 固定尺寸容器 - 调整为255px */
+        width: 271px; /* 255 + 8*2 */
         height: 716px; /* 700 + 8*2 */
         box-sizing: border-box;
       }
       .cute-phone {
-        width: 305px; /* 固定宽度 - 增加50px */
+        width: 255px; /* 固定宽度 - 调整为255px */
         height: 700px; /* 固定高度 - 增加100px */
         background: var(--bg-secondary);
         border-radius: 24px;
@@ -11221,6 +11221,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           modal.dataset.mediaType = 'video';
           modal.dataset.videoData = videoUrl;
           modal.dataset.fileName = file.name;
+
+          // 保存原始文件引用，供视频识别插件使用
+          modal._originalVideoFile = file;
         } catch (error) {
           console.error('视频处理失败:', error);
           videoInfo.textContent = '视频处理失败，请重试';
@@ -11263,7 +11266,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }
 
       // 处理媒体发送（图片和视频）
-      function handleMediaSend(modal) {
+      async function handleMediaSend(modal) {
         const mode = modal.dataset.mode;
         const mediaType = modal.dataset.mediaType || 'image'; // 默认为图片
         const description = modal.querySelector('#imageDescriptionInput').value.trim();
@@ -11281,21 +11284,79 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               return;
             }
 
-            // 使用SillyTavern标准格式发送视频消息
+            // 使用视频识别插件处理视频
             const chatInput = document.getElementById('chatInput');
             const originalValue = chatInput.value;
             chatInput.value = description || '发送了一个视频';
 
-            sendMessage({
-              type: 'video',
-              extra: {
-                video: videoData  // 使用SillyTavern标准的extra.video格式
-              },
-              videoData: videoData,  // 保留同层私聊的格式
-              fileName: fileName,
-              videoDescription: description || '发送了一个视频',
-              needsVisionAnalysis: state.visionMode !== 'direct'
-            });
+            // 尝试使用视频识别插件
+            const processVideoPlugin = window.__processVideoByPlugin ||
+                                      window.parent?.__processVideoByPlugin ||
+                                      window.top?.__processVideoByPlugin;
+
+            if (typeof processVideoPlugin === 'function') {
+              try {
+                console.log('🎬 使用视频识别插件处理视频');
+
+                // 从modal获取原始文件
+                const originalFile = modal._originalVideoFile;
+                if (originalFile) {
+                  const pluginOptions = {
+                    enableAI: state.visionMode !== 'direct',
+                    prompt: description ? `分析这个视频：${description}` : null
+                  };
+
+                  const pluginResult = await processVideoPlugin(originalFile, pluginOptions);
+
+                  if (pluginResult.success) {
+                    console.log('✅ 视频插件处理成功:', pluginResult);
+
+                    sendMessage({
+                      type: 'video',
+                      extra: {
+                        video: pluginResult.url  // 使用插件返回的短URL
+                      },
+                      videoData: pluginResult.url,
+                      fileName: fileName,
+                      videoDescription: description || '发送了一个视频',
+                      needsVisionAnalysis: false,  // 插件已处理AI识别
+                      pluginResult: pluginResult,
+                      aiDescription: pluginResult.aiRecognition?.description
+                    });
+                  } else {
+                    throw new Error(pluginResult.error || '插件处理失败');
+                  }
+                } else {
+                  throw new Error('无法获取原始视频文件');
+                }
+              } catch (pluginError) {
+                console.warn('视频插件处理失败，使用原有方案:', pluginError);
+
+                // 降级为原有方案
+                sendMessage({
+                  type: 'video',
+                  extra: {
+                    video: videoData
+                  },
+                  videoData: videoData,
+                  fileName: fileName,
+                  videoDescription: description || '发送了一个视频',
+                  needsVisionAnalysis: state.visionMode !== 'direct'
+                });
+              }
+            } else {
+              // 没有插件，使用原有方案
+              sendMessage({
+                type: 'video',
+                extra: {
+                  video: videoData
+                },
+                videoData: videoData,
+                fileName: fileName,
+                videoDescription: description || '发送了一个视频',
+                needsVisionAnalysis: state.visionMode !== 'direct'
+              });
+            }
 
             // 恢复输入框
             chatInput.value = originalValue;
