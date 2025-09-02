@@ -11289,14 +11289,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const originalValue = chatInput.value;
             chatInput.value = description || '发送了一个视频';
 
-            // 尝试使用视频识别插件
-            const processVideoPlugin = window.__processVideoByPlugin ||
-                                      window.parent?.__processVideoByPlugin ||
-                                      window.top?.__processVideoByPlugin;
+            // 尝试使用简化视频识别插件
+            const processVideoPlugin = window.__processVideoComplete ||
+                                      window.parent?.__processVideoComplete ||
+                                      window.top?.__processVideoComplete;
 
             if (typeof processVideoPlugin === 'function') {
               try {
-                console.log('🎬 使用视频识别插件处理视频');
+                console.log('🎬 使用简化视频识别插件处理视频');
 
                 // 从modal获取原始文件
                 const originalFile = modal._originalVideoFile;
@@ -11311,6 +11311,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                   if (pluginResult.success) {
                     console.log('✅ 视频插件处理成功:', pluginResult);
 
+                    // 构建消息内容，包含AI识别结果
+                    let messageContent = description || '发送了一个视频';
+                    if (pluginResult.aiRecognition?.success && pluginResult.aiRecognition.description) {
+                      messageContent += `\n\nAI识别结果：${pluginResult.aiRecognition.description}`;
+                    }
+
                     sendMessage({
                       type: 'video',
                       extra: {
@@ -11318,7 +11324,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                       },
                       videoData: pluginResult.url,
                       fileName: fileName,
-                      videoDescription: description || '发送了一个视频',
+                      videoDescription: messageContent,
                       needsVisionAnalysis: false,  // 插件已处理AI识别
                       pluginResult: pluginResult,
                       aiDescription: pluginResult.aiRecognition?.description
@@ -11346,6 +11352,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               }
             } else {
               // 没有插件，使用原有方案
+              console.log('🎬 没有视频识别插件，使用原有方案');
               sendMessage({
                 type: 'video',
                 extra: {
