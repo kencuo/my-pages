@@ -10987,23 +10987,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 保存视频到本地（避免SillyTavern配额问题）
-      async function uploadVideoToSillyTavern(file) {
-        try {
-          console.log(`🎬 保存视频到本地: ${file.name}`);
-
-          // 直接转换为base64保存到本地，避免配额问题
-          const base64Data = await convertFileToBase64(file);
-
-          console.log(`✅ 视频已转换为本地格式，大小: ${(base64Data.length / 1024 / 1024).toFixed(2)} MB`);
-
-          // 返回base64数据（本地保存）
-          return base64Data;
-        } catch (error) {
-          console.error('❌ 视频本地保存失败:', error);
-          throw error;
-        }
-      }
+      // 旧的视频本地保存功能已移除
+      // 现在只支持通过视频识别插件上传到SillyTavern服务器获取短URL
 
       // 处理多图片文件选择
       async function handleMultipleImageFileSelect(files, modal) {
@@ -11159,59 +11144,27 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         try {
           let videoUrl;
 
-          // 优先使用智能媒体助手插件（专门为大文件优化）
-          const processVideoPlugin = window.__processVideoByPlugin ||
-                                    window.parent.__processVideoByPlugin ||
-                                    top.window.__processVideoByPlugin;
+          // 必须使用视频识别插件获取短URL
+          const processVideoPlugin = window.__processVideoComplete ||
+                                    window.parent?.__processVideoComplete ||
+                                    window.top?.__processVideoComplete;
 
           if (typeof processVideoPlugin === 'function') {
-            try {
-              videoInfo.textContent = '正在使用插件处理视频...';
-              const result = await processVideoPlugin(file, {
-                enableAIVision: false
-              });
-              videoUrl = result.url;
-              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 插件处理完成`;
-              console.log('✅ 插件处理视频成功:', result);
-            } catch (pluginError) {
-              console.warn('插件处理失败，尝试本地上传:', pluginError);
+            videoInfo.textContent = '正在使用插件上传视频到SillyTavern...';
+            const result = await processVideoPlugin(file, {
+              enableAI: false  // 在预览阶段不启用AI识别
+            });
 
-              // 插件失败时，只对小文件尝试本地上传
-              if (file.size <= 50 * 1024 * 1024) { // 50MB以下才尝试本地上传
-                try {
-                  videoInfo.textContent = '插件失败，尝试本地上传...';
-                  videoUrl = await uploadVideoToSillyTavern(file);
-                  videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到本地服务器`;
-                } catch (localError) {
-                  console.warn('本地上传也失败，使用base64方案:', localError);
-                  videoUrl = await convertFileToBase64(file);
-                  videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已转换为本地格式`;
-                }
-              } else {
-                // 大文件直接使用base64，避免卡退
-                console.log('文件过大，直接使用base64方案');
-                videoUrl = await convertFileToBase64(file);
-                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 文件较大，使用本地格式`;
-              }
+            if (result.success) {
+              videoUrl = result.url;
+              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到SillyTavern服务器`;
+              console.log('✅ 视频识别插件处理成功:', result);
+              console.log('📏 获得短URL:', result.url, '长度:', result.url.length);
+            } else {
+              throw new Error(result.error || '插件处理失败');
             }
           } else {
-            // 没有插件时，小文件尝试本地上传，大文件直接base64
-            if (file.size <= 30 * 1024 * 1024) { // 30MB以下尝试本地上传
-              try {
-                videoInfo.textContent = '正在上传到本地服务器...';
-                videoUrl = await uploadVideoToSillyTavern(file);
-                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到本地服务器`;
-              } catch (localError) {
-                console.warn('本地上传失败，使用base64方案:', localError);
-                videoUrl = await convertFileToBase64(file);
-                videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已转换为本地格式`;
-              }
-            } else {
-              // 大文件直接base64
-              console.log('文件较大且无插件，直接使用base64方案');
-              videoUrl = await convertFileToBase64(file);
-              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 文件较大，使用本地格式`;
-            }
+            throw new Error('视频识别插件未加载，无法上传视频');
           }
 
           videoPreview.src = videoUrl;
@@ -11226,7 +11179,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           modal._originalVideoFile = file;
         } catch (error) {
           console.error('视频处理失败:', error);
-          videoInfo.textContent = '视频处理失败，请重试';
+          videoInfo.textContent = error.message.includes('插件未加载') ?
+            '❌ 需要安装视频识别插件才能上传视频' :
+            '❌ 视频处理失败，请检查插件状态';
+          videoInfo.style.color = '#dc3545';
           videoPreviewArea.style.display = 'none';
           alert('视频处理失败，请重试！');
         }
