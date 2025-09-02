@@ -11395,22 +11395,21 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const file = files[0];
             let imageData;
 
-            // 尝试使用插件处理
+            // 必须使用智能媒体助手插件获取短URL
             const uploadImagePlugin = window.__uploadImageByPlugin ||
                                      window.parent?.__uploadImageByPlugin ||
                                      window.top?.__uploadImageByPlugin;
 
             if (typeof uploadImagePlugin === 'function') {
-              try {
-                console.log('📸 使用插件处理单图片');
-                const result = await uploadImagePlugin(file);
+              console.log('📸 使用插件处理单图片');
+              const result = await uploadImagePlugin(file);
+              if (result.success) {
                 imageData = result.url;
-              } catch (pluginError) {
-                console.warn('插件处理失败，使用本地方案:', pluginError);
-                imageData = await convertFileToBase64(file);
+              } else {
+                throw new Error(result.error || '图片插件处理失败');
               }
             } else {
-              imageData = await convertFileToBase64(file);
+              throw new Error('智能媒体助手插件未加载，无法上传图片');
             }
 
             chatInput.value = description || '发送了一张图片';
@@ -11481,14 +11480,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 }
 
               } catch (pluginError) {
-                console.warn('插件批量处理失败，使用逐个处理:', pluginError);
-                // 降级为逐个处理
-                await sendImagesOneByOne(files, description, chatInput);
+                console.error('插件批量处理失败:', pluginError);
+                throw new Error(`插件批量处理失败: ${pluginError.message}`);
               }
             } else {
-              // 没有批量插件，逐个处理
-              console.log('📸 没有批量插件，逐个处理图片');
-              await sendImagesOneByOne(files, description, chatInput);
+              throw new Error('智能媒体助手插件未加载，无法批量上传图片');
             }
 
             chatInput.value = originalValue;
@@ -11513,15 +11509,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                                    window.top?.__uploadImageByPlugin;
 
           if (typeof uploadImagePlugin === 'function') {
-            try {
-              const result = await uploadImagePlugin(file);
+            const result = await uploadImagePlugin(file);
+            if (result.success) {
               imageData = result.url;
-            } catch (pluginError) {
-              console.warn(`第 ${i + 1} 张图片插件处理失败，使用本地方案:`, pluginError);
-              imageData = await convertFileToBase64(file);
+            } else {
+              throw new Error(`第 ${i + 1} 张图片插件处理失败: ${result.error}`);
             }
           } else {
-            imageData = await convertFileToBase64(file);
+            throw new Error(`智能媒体助手插件未加载，无法上传第 ${i + 1} 张图片`);
           }
 
           // 为每张图片生成描述
