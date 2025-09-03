@@ -148,9 +148,10 @@
         background: #faf9f4;
         flex: 1;
         overflow-y: auto;
-        max-height: calc(650px - 30px - 95px); /* 减去状态栏和header高度 */
+        max-height: calc(650px - 36px - 95px); /* 减去状态栏和header高度 */
       }
 
+      /* 自定义滚动条样式 */
       .friends-list::-webkit-scrollbar {
         width: 6px;
       }
@@ -169,12 +170,13 @@
         background: rgba(212, 194, 148, 0.6);
       }
 
+      /* --- 修改部分：列表项样式 --- */
       .friend-item {
         display: flex;
         align-items: center;
-        padding: 12px;
-        margin-bottom: 8px;
-        border-radius: 12px;
+        padding: 12px; /* 减小内边距 */
+        margin-bottom: 8px; /* 减小外边距 */
+        border-radius: 12px; /* 减小圆角 */
         cursor: pointer;
         transition: all 0.3s ease;
         background: #ffffff;
@@ -207,8 +209,8 @@
       }
 
       .friend-avatar {
-        width: 45px;
-        height: 45px;
+        width: 45px; /* 减小头像宽度 */
+        height: 45px; /* 减小头像高度 */
         border-radius: 50%;
         background: linear-gradient(135deg, #d4c294 0%, #c9b882 100%);
         display: flex;
@@ -216,14 +218,14 @@
         justify-content: center;
         color: #8b7355;
         font-weight: bold;
-        margin-right: 12px;
-        font-size: 16px;
+        margin-right: 12px; /* 减小右边距 */
+        font-size: 16px; /* 减小头像内字体大小 */
         text-shadow: 1px 1px 2px rgba(139, 115, 85, 0.2);
         box-shadow: 0 4px 15px rgba(212, 194, 148, 0.3);
         transition: all 0.3s ease;
         position: relative;
         z-index: 1;
-        flex-shrink: 0;
+        flex-shrink: 0; /* 防止头像被压缩 */
       }
 
       .friend-item:hover .friend-avatar {
@@ -235,29 +237,30 @@
         flex: 1;
         position: relative;
         z-index: 1;
-        overflow: hidden;
+        overflow: hidden; /* 防止文字溢出 */
       }
 
       .friend-name {
-        font-size: 15px;
+        font-size: 15px; /* 减小名字体大小 */
         font-weight: 500;
         color: #8b7355;
-        margin-bottom: 4px;
+        margin-bottom: 4px; /* 减小间距 */
         text-shadow: 1px 1px 2px rgba(139, 115, 85, 0.1);
         letter-spacing: 0.5px;
-        white-space: nowrap;
-        text-overflow: ellipsis;
+        white-space: nowrap; /* 不换行 */
+        text-overflow: ellipsis; /* 溢出显示省略号 */
         overflow: hidden;
       }
 
       .friend-type {
-        font-size: 12px;
+        font-size: 12px; /* 减小类型字体大小 */
         color: rgba(139, 115, 85, 0.7);
         font-weight: 300;
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;
       }
+      /* --- 修改结束 --- */
 
       .group-badge {
         background: rgba(212, 194, 148, 0.8);
@@ -354,6 +357,7 @@
         box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
       }
 
+      /* --- 优化部分：统一弹窗样式 --- */
       .modal {
         display: none;
         position: fixed;
@@ -434,6 +438,7 @@
         padding-right: 10px;
         margin-right: -10px;
       }
+      /* --- 优化结束 --- */
 
       .form-group {
         margin-bottom: 15px;
@@ -493,6 +498,7 @@
         background: #dee2e6;
       }
 
+      /* 导入/导出区域样式 */
       .import-export-section {
         margin-bottom: 15px;
         padding: 15px;
@@ -516,6 +522,7 @@
         margin: 20px 0;
       }
 
+      /* 按钮样式 */
       .submit-btn {
         width: 100%;
         padding: 12px;
@@ -544,6 +551,7 @@
         box-shadow: none;
       }
 
+      /* 文件选择 */
       #selectedFileName {
         min-height: 16px;
         font-style: italic;
@@ -553,6 +561,7 @@
         color: #999;
       }
 
+      /* JSON预览 */
       #jsonPreview {
         resize: vertical;
         min-height: 100px;
@@ -601,7 +610,7 @@
         <div class="friends-list" id="friendsList">
           <div class="empty-state">
             <i>👥</i>
-            <p>正在连接SillyTavern...</p>
+            <p>暂无好友，点击右上角添加好友或群聊</p>
           </div>
         </div>
       </div>
@@ -733,159 +742,241 @@
     </div>
 
     <script>
-      // ==================== 角色卡独立存储系统 (V4 - 健壮模式最终版) ====================
-      
-      let isConnectedToTavern = false;
-      let currentCharacterInfo = { id: 'default', name: '离线模式', source: 'standalone' };
-      let selectedImportFile = null;
-      
-      /**
-       * @description 尝试连接到SillyTavern父窗口。
-       * @returns {boolean} - 是否成功连接。
-       */
-      function attemptToConnect() {
-        try {
-          // 这是一个简单的探测，如果父窗口是跨域的，访问它的 location 就会立即抛出错误。
-          if (parent.location.href) {}
-          
-          // 如果代码能执行到这里而没报错，说明我们至少是同源的。
-          // 再检查一下SillyTavern的核心变量是否存在，以确认连接。
-          if (typeof parent.this_chid !== 'undefined') {
-            isConnectedToTavern = true;
-            console.log('✅ 成功连接到SillyTavern!');
-            return true;
-          }
-        } catch (e) {
-          // 这就是预期的跨域错误。
-          console.warn('❌ 无法连接到SillyTavern (跨域安全限制)。将以"离线模式"运行。');
-          isConnectedToTavern = false;
-          return false;
-        }
-        // 如果同源但核心变量不存在，也视为未连接。
-        console.warn('🤔 已连接到父窗口，但似乎不是SillyTavern环境。将以"离线模式"运行。');
-        isConnectedToTavern = false;
-        return false;
-      }
+      // ==================== 角色卡独立存储系统 ====================
 
-      /**
-       * @description 获取当前角色信息。会根据连接状态返回不同的结果。
-       */
+      // 获取当前角色信息（改进版本）
       function getCurrentCharacterInfo() {
-        if (!isConnectedToTavern) {
-            return { id: 'default', name: '离线模式', source: 'standalone' };
-        }
         try {
-          const charId = parent.this_chid;
-          let charName = '未知角色';
+          // 方法1: 从SillyTavern的全局变量获取当前角色ID
+          if (typeof parent !== 'undefined' && parent.this_chid !== undefined) {
+            const charId = parent.this_chid;
+            let charName = '未知角色';
 
-          if (parent.characters && parent.characters[charId]) {
-            charName = parent.characters[charId].data?.name || parent.characters[charId].name || `角色 ${charId}`;
-          } else if (parent.name2) {
-            charName = parent.name2;
+            // 尝试获取角色名称
+            if (parent.characters && parent.characters[charId]) {
+              charName = parent.characters[charId].name || parent.characters[charId].data?.name || `角色${charId}`;
+            } else if (parent.name1) {
+              charName = parent.name1; // 当前聊天中的角色名
+            }
+
+            console.log('从SillyTavern获取角色信息:', { id: charId, name: charName });
+            return {
+              id: charId.toString(),
+              name: charName,
+              source: 'sillytavern_chid',
+            };
           }
 
+          // 方法2: 从SillyTavern的context API获取
+          if (typeof parent !== 'undefined' && parent.getContext) {
+            const context = parent.getContext();
+            if (context && context.characterId) {
+              console.log('从context API获取角色信息:', context);
+              return {
+                id: context.characterId.toString(),
+                name: context.name || context.characterId,
+                source: 'sillytavern_context',
+              };
+            }
+          }
+
+          // 方法3: 从URL参数获取角色信息
+          const urlParams = new URLSearchParams(window.location.search);
+          const charId = urlParams.get('character') || urlParams.get('char') || urlParams.get('id');
+          if (charId) {
+            console.log('从URL参数获取角色信息:', charId);
+            return {
+              id: charId,
+              name: charId,
+              source: 'url',
+            };
+          }
+
+          // 方法4: 从localStorage获取最后使用的角色
+          const lastCharId = localStorage.getItem('lastUsedCharacter');
+          if (lastCharId) {
+            console.log('从localStorage获取最后使用的角色:', lastCharId);
+            return {
+              id: lastCharId,
+              name: `角色${lastCharId}`,
+              source: 'localStorage',
+            };
+          }
+
+          // 默认角色
+          console.log('使用默认角色');
           return {
-            id: charId.toString(),
-            name: charName,
-            source: 'polling'
+            id: 'default',
+            name: '默认角色',
+            source: 'default',
           };
         } catch (error) {
-          console.error('获取角色信息时发生内部错误:', error);
-          return { id: 'default', name: '错误', source: 'error' };
-        }
-      }
-      
-      /**
-       * @description 检查角色是否发生变化，如果变化则刷新好友列表。
-       */
-      function checkCharacterChange() {
-        if (!isConnectedToTavern) return; // 如果未连接，则不执行检查
-
-        const newCharInfo = getCurrentCharacterInfo();
-        
-        if (newCharInfo.id !== currentCharacterInfo.id) {
-          console.log(`🔄 角色切换检测: "${currentCharacterInfo.name}" -> "${newCharInfo.name}"`);
-          currentCharacterInfo = newCharInfo;
-          loadFriends();
+          console.warn('获取角色信息失败，使用默认角色:', error);
+          return {
+            id: 'default',
+            name: '默认角色',
+            source: 'default',
+          };
         }
       }
 
+      // 生成角色专用的存储键名
       function getFriendsStorageKey() {
-        const charId = currentCharacterInfo.id || 'default';
-        return `tavern_friends_list_${charId}`;
+        const charInfo = getCurrentCharacterInfo();
+        // 使用更具体的键名格式，确保不同角色完全隔离
+        return `tavern_friends_${charInfo.source}_${charInfo.id}`;
       }
 
-      function getFriends() {
-        const storageKey = getFriendsStorageKey();
-        let friends = [];
-        try {
-            if (isConnectedToTavern && parent.extension_settings && parent.extension_settings[storageKey]) {
-                friends = parent.extension_settings[storageKey];
-            } else {
-                friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            }
-        } catch (e) {
-            console.error("解析好友列表失败:", e);
-            friends = [];
-        }
-        return Array.isArray(friends) ? friends : [];
-      }
-      
-      function saveFriends(friends) {
-        try {
-          const storageKey = getFriendsStorageKey();
-          const friendsData = JSON.parse(JSON.stringify(friends));
-          
-          if (isConnectedToTavern && parent.extension_settings) {
-            parent.extension_settings[storageKey] = friendsData;
-            if (typeof parent.saveSettingsDebounced === 'function') {
-              parent.saveSettingsDebounced();
-            }
-          }
-          localStorage.setItem(storageKey, JSON.stringify(friendsData));
-        } catch (error) {
-          console.error('保存好友列表失败:', error);
-        }
+      // 保存当前角色ID到localStorage，用于角色切换检测
+      function saveCurrentCharacterId() {
+        const charInfo = getCurrentCharacterInfo();
+        localStorage.setItem('lastUsedCharacter', charInfo.id);
+        console.log('保存当前角色ID:', charInfo.id);
       }
 
+      // 从角色专用存储加载好友列表
       function loadFriends() {
         try {
-          console.log(`为角色 "${currentCharacterInfo.name}" 加载好友列表`);
-          const friends = getFriends();
+          const storageKey = getFriendsStorageKey();
+          const charInfo = getCurrentCharacterInfo();
+
+          console.log(`为角色 "${charInfo.name}" 加载好友列表，存储键: ${storageKey}`);
+
+          // 优先从SillyTavern extension_settings读取
+          let friends = [];
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            friends = parent.extension_settings[storageKey] || [];
+          } else {
+            // 回退到localStorage
+            friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          }
+
+          // 如果当前角色没有好友数据，检查是否需要迁移旧数据
+          if (friends.length === 0) {
+            const migrated = migrateOldFriendsData();
+            if (migrated) {
+              // 重新加载迁移后的数据
+              if (typeof parent !== 'undefined' && parent.extension_settings) {
+                friends = parent.extension_settings[storageKey] || [];
+              } else {
+                friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+              }
+            }
+          }
+
           displayFriends(friends);
-          updateHeaderWithCharacter(currentCharacterInfo);
+
+          // 在标题中显示当前角色
+          updateHeaderWithCharacter(charInfo);
         } catch (error) {
           console.error('加载好友列表失败:', error);
           displayFriends([]);
         }
       }
 
+      // 保存好友列表到角色专用存储
+      function saveFriends(friends) {
+        try {
+          const storageKey = getFriendsStorageKey();
+          const charInfo = getCurrentCharacterInfo();
+
+          console.log(`为角色 "${charInfo.name}" 保存好友列表，存储键: ${storageKey}，好友数量: ${friends.length}`);
+
+          // 优先保存到SillyTavern extension_settings
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            parent.extension_settings[storageKey] = JSON.parse(JSON.stringify(friends));
+            // 触发SillyTavern的设置保存
+            if (typeof parent.saveSettingsDebounced === 'function') {
+              parent.saveSettingsDebounced();
+            }
+          }
+
+          // 同时保存到localStorage作为备份
+          localStorage.setItem(storageKey, JSON.stringify(friends));
+        } catch (error) {
+          console.error('保存好友列表失败:', error);
+        }
+      }
+
+      // 更新标题显示当前角色
       function updateHeaderWithCharacter(charInfo) {
         const header = document.querySelector('.header h1');
         if (header) {
           header.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center;">
-              <div style="font-size: 18px;">好友列表</div>
-              <div style="font-size: 12px; color: #8b7355; margin-top: 2px;">
-                ${charInfo.name}
-              </div>
-            </div>`;
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div style="font-size: 18px;">好友列表</div>
+                    <div style="font-size: 12px; color: #8b7355; margin-top: 2px;">
+                      ${charInfo.name}
+                    </div>
+                  </div>
+                `;
         }
       }
-      
+
+      // 数据迁移：将旧的全局好友列表迁移到当前角色
+      function migrateOldFriendsData() {
+        try {
+          const oldFriends = JSON.parse(localStorage.getItem('friendsList') || '[]');
+          if (oldFriends.length > 0) {
+            const charInfo = getCurrentCharacterInfo();
+            const storageKey = getFriendsStorageKey();
+
+            // 检查当前角色是否已有好友数据
+            let currentFriends = [];
+            if (typeof parent !== 'undefined' && parent.extension_settings) {
+              currentFriends = parent.extension_settings[storageKey] || [];
+            } else {
+              currentFriends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            }
+
+            // 如果当前角色没有好友数据，询问是否迁移
+            if (currentFriends.length === 0) {
+              const shouldMigrate = confirm(
+                `检测到旧版本的好友列表数据（${oldFriends.length}个好友）。\n` +
+                  `是否要将这些好友迁移到当前角色 "${charInfo.name}" 的好友列表中？\n\n` +
+                  `点击"确定"迁移，点击"取消"保持当前状态。`,
+              );
+
+              if (shouldMigrate) {
+                saveFriends(oldFriends);
+                console.log(`已将 ${oldFriends.length} 个好友迁移到角色 "${charInfo.name}"`);
+
+                // 询问是否清除旧数据
+                const shouldClearOld = confirm(
+                  `好友数据迁移完成！\n\n` + `是否要清除旧版本的全局好友列表数据？\n` + `（建议清除，避免数据混乱）`,
+                );
+
+                if (shouldClearOld) {
+                  localStorage.removeItem('friendsList');
+                  console.log('已清除旧版本的全局好友列表数据');
+                }
+
+                return true; // 表示进行了迁移
+              }
+            }
+          }
+        } catch (error) {
+          console.error('数据迁移失败:', error);
+        }
+        return false; // 表示没有进行迁移
+      }
+
+      // 显示好友列表
       function displayFriends(friends) {
         const friendsList = document.getElementById('friendsList');
 
-        if (!Array.isArray(friends) || friends.length === 0) {
+        if (friends.length === 0) {
           friendsList.innerHTML = `
-            <div class="empty-state">
-                <i>👥</i>
-                <p>暂无好友，点击右上角添加</p>
-            </div>`;
+                        <div class="empty-state">
+                            <i>👥</i>
+                            <p>暂无好友，点击右上角添加好友或群聊</p>
+                        </div>
+                    `;
           return;
         }
 
-        const sortedFriends = [...friends].sort((a, b) => {
+        // 按置顶状态排序，置顶的在前面
+        const sortedFriends = friends.sort((a, b) => {
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
           return 0;
@@ -893,14 +984,12 @@
 
         friendsList.innerHTML = sortedFriends
           .map(
-            (friend) => {
-              const originalIndex = friends.findIndex(f => f.name === friend.name && f.type === friend.type);
-              const safeMembers = (friend.members || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
-              return `
-                <div class="friend-item ${friend.pinned ? 'pinned' : ''}" onclick="startChat('${friend.name}', '${friend.type}', '${safeMembers}')">
+            (friend, index) => `
+                <div class="friend-item ${friend.pinned ? 'pinned' : ''}" onclick="startChat('${friend.name}', '${
+              friend.type
+            }', '${friend.members || ''}')">
                     <div class="friend-avatar">
-                        ${friend.type === 'group' ? '👥' : (friend.name.charAt(0) || ' ')}
+                        ${friend.type === 'group' ? '👥' : friend.name.charAt(0)}
                     </div>
                     <div class="friend-info">
                         <div class="friend-name">
@@ -909,123 +998,746 @@
                             ${friend.pinned ? '<span class="pinned-badge">📌</span>' : ''}
                         </div>
                         <div class="friend-type">
-                            ${friend.type === 'group' ? `成员: ${friend.members || ''}` : '好友'}
+                            ${friend.type === 'group' ? `成员: ${friend.members}` : '好友'}
                         </div>
                     </div>
                     <div class="friend-actions">
                         <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                onclick="handlePinClick(event, ${originalIndex})"
+                                onclick="handlePinClick(event, ${index})"
                                 title="${friend.pinned ? '取消置顶' : '置顶'}">
                             ${friend.pinned ? '📌' : '📍'}
                         </button>
                         <button class="action-btn delete-btn"
-                                onclick="handleDeleteClick(event, ${originalIndex})"
+                                onclick="handleDeleteClick(event, ${index})"
                                 title="删除好友">
                             🗑️
                         </button>
                     </div>
-                </div>`
-            })
+                </div>
+              `,
+          )
           .join('');
       }
 
-      // --- UI & Action Functions ---
-      function openAddModal() { document.getElementById('addModal').style.display = 'flex'; showTypeSelection(); }
-      function closeAddModal() { document.getElementById('addModal').style.display = 'none'; resetForms(); }
-      function showTypeSelection() { document.getElementById('typeSelection').style.display = 'block'; document.getElementById('friendForm').style.display = 'none'; document.getElementById('groupForm').style.display = 'none'; }
-      function selectType(type) { document.getElementById('typeSelection').style.display = 'none'; if (type === 'friend') { document.getElementById('friendForm').style.display = 'block'; document.getElementById('friendName').focus(); } else if (type === 'group') { document.getElementById('groupForm').style.display = 'block'; document.getElementById('groupName').focus(); } }
-      function backToTypeSelection() { resetForms(); showTypeSelection(); }
-      function resetForms() { document.getElementById('friendName').value = ''; document.getElementById('groupName').value = ''; document.getElementById('groupMembers').value = ''; }
-
-      function addFriend() {
-        const name = document.getElementById('friendName').value.trim();
-        if (!name) return alert('请输入好友姓名');
-        let friends = getFriends();
-        if (friends.some(f => f.name === name && f.type === 'friend')) return alert('该好友已存在');
-        friends.push({ name, type: 'friend', members: null, addTime: new Date().toISOString(), pinned: false });
-        saveFriends(friends);
-        displayFriends(friends);
-        closeAddModal();
+      // 打开添加模态框
+      function openAddModal() {
+        document.getElementById('addModal').style.display = 'flex';
+        showTypeSelection();
       }
 
+      // 关闭添加模态框
+      function closeAddModal() {
+        document.getElementById('addModal').style.display = 'none';
+        resetForms();
+      }
+
+      // 显示类型选择界面
+      function showTypeSelection() {
+        document.getElementById('typeSelection').style.display = 'block';
+        document.getElementById('friendForm').style.display = 'none';
+        document.getElementById('groupForm').style.display = 'none';
+      }
+
+      // 选择类型（好友或群聊）
+      function selectType(type) {
+        document.getElementById('typeSelection').style.display = 'none';
+
+        if (type === 'friend') {
+          document.getElementById('friendForm').style.display = 'block';
+          document.getElementById('friendName').focus();
+        } else if (type === 'group') {
+          document.getElementById('groupForm').style.display = 'block';
+          document.getElementById('groupName').focus();
+        }
+      }
+
+      // 返回类型选择
+      function backToTypeSelection() {
+        resetForms();
+        showTypeSelection();
+      }
+
+      // 重置表单
+      function resetForms() {
+        document.getElementById('friendName').value = '';
+        document.getElementById('groupName').value = '';
+        document.getElementById('groupMembers').value = '';
+      }
+
+      // 添加好友
+      function addFriend() {
+        const name = document.getElementById('friendName').value.trim();
+
+        if (!name) {
+          alert('请输入好友姓名');
+          return;
+        }
+
+        // 使用角色专用存储加载好友列表
+        const storageKey = getFriendsStorageKey();
+        let friends = [];
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          friends = parent.extension_settings[storageKey] || [];
+        } else {
+          friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        }
+
+        // 检查是否已存在
+        if (friends.some(friend => friend.name === name)) {
+          alert('该好友已存在');
+          return;
+        }
+
+        const newFriend = {
+          name: name,
+          type: 'friend',
+          members: null,
+          addTime: new Date().toISOString(),
+        };
+
+        friends.push(newFriend);
+        saveFriends(friends); // 使用新的保存函数
+
+        displayFriends(friends);
+        closeAddModal();
+
+        const charInfo = getCurrentCharacterInfo();
+        // alert(`好友 "${name}" 已添加到 "${charInfo.name}" 的好友列表！`);
+      }
+
+      // 添加群聊
       function addGroup() {
         const name = document.getElementById('groupName').value.trim();
         const members = document.getElementById('groupMembers').value.trim();
-        if (!name) return alert('请输入群聊名称');
-        if (!members) return alert('请输入群成员');
-        let friends = getFriends();
-        if (friends.some(f => f.name === name && f.type === 'group')) return alert('该群聊已存在');
-        friends.push({ name, type: 'group', members, addTime: new Date().toISOString(), pinned: false });
-        saveFriends(friends);
+
+        if (!name) {
+          alert('请输入群聊名称');
+          return;
+        }
+
+        if (!members) {
+          alert('请输入群成员');
+          return;
+        }
+
+        // 使用角色专用存储加载好友列表
+        const storageKey = getFriendsStorageKey();
+        let friends = [];
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          friends = parent.extension_settings[storageKey] || [];
+        } else {
+          friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        }
+
+        // 检查是否已存在
+        if (friends.some(friend => friend.name === name)) {
+          alert('该群聊已存在');
+          return;
+        }
+
+        const newGroup = {
+          name: name,
+          type: 'group',
+          members: members,
+          addTime: new Date().toISOString(),
+        };
+
+        friends.push(newGroup);
+        saveFriends(friends); // 使用新的保存函数
+
         displayFriends(friends);
         closeAddModal();
+
+        const charInfo = getCurrentCharacterInfo();
+        // alert(`群聊 "${name}" 已添加到 "${charInfo.name}" 的好友列表！`);
       }
 
+      // 开始聊天
       function startChat(name, type, members) {
-        if (isConnectedToTavern && typeof parent.triggerSlash === 'function') {
-          const safeMembers = (members || '').replace(/\n/g, ' ');
-          const message = type === 'group' 
-            ? `/send <群成员：${safeMembers}>\n【和${name}的聊天】\n<qunliao>\n</qunliao>`
-            : `/send 【和${name}的聊天】\n<shouji>\n</shouji>`;
-          parent.triggerSlash(message);
-        } else {
-          alert(`无法连接到SillyTavern的发送功能。请在SillyTavern中手动输入以下内容：\n\n【和${name}的聊天】`);
-        }
-      }
-
-      function handlePinClick(event, index) {
-        event.stopPropagation();
-        let friends = getFriends();
-        if(friends[index]) {
-            friends[index].pinned = !friends[index].pinned;
-            saveFriends(friends);
-            displayFriends(friends);
-        }
-      }
-
-      function handleDeleteClick(event, index) {
-        event.stopPropagation();
-        let friends = getFriends();
-        const friendToDelete = friends[index];
-        if (friendToDelete && confirm(`确定要删除 "${friendToDelete.name}" 吗？`)) {
-          friends.splice(index, 1);
-          saveFriends(friends);
-          displayFriends(friends);
-        }
-      }
-      
-      function showImportExportModal() { /* ... Import/Export logic ... */ document.getElementById('importExportModal').style.display = 'flex'; }
-      function closeImportExportModal() { /* ... Import/Export logic ... */ document.getElementById('importExportModal').style.display = 'none'; }
-      function exportFriends() { /* ... Import/Export logic ... */ }
-      function importFriends() { /* ... Import/Export logic ... */ }
-      function handleFileSelect(event) { /* ... Import/Export logic ... */ }
-      function showDebugInfo() {
-        const friends = getFriends();
-        alert(`-- 调试信息 (健壮模式) --\n连接状态: ${isConnectedToTavern ? '已连接' : '离线模式'}\n当前角色: ${currentCharacterInfo.name} (ID: ${currentCharacterInfo.id})\n来源: ${currentCharacterInfo.source}\n好友数量: ${friends.length}`);
-      }
-
-      document.getElementById('addModal').addEventListener('click', (e) => { if(e.target.id === 'addModal') closeAddModal(); });
-      document.getElementById('importExportModal').addEventListener('click', (e) => { if(e.target.id === 'importExportModal') closeImportExportModal(); });
-      document.getElementById('friendName').addEventListener('keypress', (e) => e.key === 'Enter' && addFriend());
-      document.getElementById('groupName').addEventListener('keypress', (e) => e.key === 'Enter' && document.getElementById('groupMembers').focus());
-      
-      // --- Initialization ---
-      window.addEventListener('load', () => {
-        console.log('🚀 好友列表页面加载完成 (健壮模式)，开始初始化...');
-        
-        setTimeout(() => {
-          if (attemptToConnect()) {
-            // 如果连接成功，立即获取一次角色信息并开始轮询
-            checkCharacterChange(); 
-            setInterval(checkCharacterChange, 1500);
-            console.log('🔍 已启动角色切换轮询监控...');
+        if (typeof parent.triggerSlash === 'function') {
+          if (type === 'group') {
+            const message = `/send <群成员：${members}>\n【和${name}的聊天】\n<qunliao>\n</qunliao>`;
+            parent.triggerSlash(message);
           } else {
-            // 如果连接失败，直接加载离线模式的数据并停止
-            loadFriends();
+            const message = `/send 【和${name}的聊天】\n<shouji>\n</shouji>`;
+            parent.triggerSlash(message);
+          }
+        } else {
+          // 如果triggerSlash不可用，显示消息内容
+          if (type === 'group') {
+            console.log(`<群成员：${members}>\n【和${name}的聊天】\n<qunliao>\n</qunliao>`);
+            alert(`群聊消息：<群成员：${members}>\n【和${name}的聊天】\n<qunliao>\n</qunliao>`);
+          } else {
+            console.log(`【和${name}的聊天】\n<shouji>\n</shouji>`);
+            alert(`好友消息：【和${name}的聊天】\n<shouji>\n</shouji>`);
+          }
+        }
+      }
+
+      // 点击模态框外部关闭
+      document.getElementById('addModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+          closeAddModal();
+        }
+      });
+      document.getElementById('importExportModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+          closeImportExportModal();
+        }
+      });
+
+      // 回车键添加好友
+      document.getElementById('friendName').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          addFriend();
+        }
+      });
+
+      // 回车键添加群聊（群聊名称输入框）
+      document.getElementById('groupName').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          document.getElementById('groupMembers').focus();
+        }
+      });
+
+      // 切换置顶状态
+      function togglePin(index) {
+        // 使用角色专用存储加载好友列表
+        const storageKey = getFriendsStorageKey();
+        let friends = [];
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          friends = parent.extension_settings[storageKey] || [];
+        } else {
+          friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        }
+
+        friends[index].pinned = !friends[index].pinned;
+        saveFriends(friends); // 使用新的保存函数
+        displayFriends(friends);
+      }
+
+      // 处理置顶按钮点击
+      function handlePinClick(event, index) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+
+        console.log('置顶按钮被点击，索引:', index);
+        togglePin(index);
+      }
+
+      // 处理删除按钮点击
+      function handleDeleteClick(event, index) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+
+        console.log('删除按钮被点击，索引:', index);
+        deleteFriend(index);
+      }
+
+      // 删除好友（改进版本）
+      function deleteFriend(index) {
+        try {
+          // 获取当前好友列表
+          const storageKey = getFriendsStorageKey();
+          let friends = [];
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            friends = parent.extension_settings[storageKey] || [];
+          } else {
+            friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          }
+
+          // 检查索引是否有效
+          if (index < 0 || index >= friends.length) {
+            console.error('删除失败：无效的索引', index);
+            alert('删除失败：好友不存在');
+            return;
+          }
+
+          const friendToDelete = friends[index];
+          const charInfo = getCurrentCharacterInfo();
+
+          // 确认删除
+          const confirmMessage = `确定要删除${friendToDelete.type === 'group' ? '群聊' : '好友'} "${
+            friendToDelete.name
+          }" 吗？\n\n这将从 "${charInfo.name}" 的好友列表中永久移除。`;
+
+          if (confirm(confirmMessage)) {
+            console.log(`删除${friendToDelete.type === 'group' ? '群聊' : '好友'}:`, friendToDelete.name);
+
+            // 从数组中删除
+            friends.splice(index, 1);
+
+            // 保存更新后的列表
+            saveFriends(friends);
+
+            // 重新显示列表
+            displayFriends(friends);
+
+            console.log('删除成功，剩余好友数量:', friends.length);
+          }
+        } catch (error) {
+          console.error('删除好友时发生错误:', error);
+          alert('删除失败，请重试');
+        }
+      }
+
+      // 角色切换检测（改进版本）
+      let currentCharacterId = null;
+      let lastCheckTime = 0;
+
+      function checkCharacterChange() {
+        try {
+          const now = Date.now();
+          // 避免过于频繁的检查
+          if (now - lastCheckTime < 1000) return;
+          lastCheckTime = now;
+
+          const charInfo = getCurrentCharacterInfo();
+          const newCharId = charInfo.id;
+
+          if (currentCharacterId !== newCharId) {
+            console.log(`🔄 角色切换检测: "${currentCharacterId}" -> "${newCharId}"`);
+            console.log('新角色信息:', charInfo);
+
+            currentCharacterId = newCharId;
+            saveCurrentCharacterId(); // 保存新的角色ID
+
+            // 重新加载好友列表
+            setTimeout(() => {
+              loadFriends();
+            }, 100);
+          }
+        } catch (error) {
+          console.error('角色切换检测失败:', error);
+        }
+      }
+
+      // 定期检查角色是否切换（每1.5秒检查一次）
+      setInterval(checkCharacterChange, 1500);
+
+      // 监听SillyTavern的各种角色切换事件
+      if (typeof parent !== 'undefined') {
+        // 方法1: 监听eventSource事件
+        if (parent.eventSource && typeof parent.eventSource.on === 'function') {
+          parent.eventSource.on('character_selected', () => {
+            console.log('📡 收到character_selected事件');
+            setTimeout(() => {
+              checkCharacterChange();
+              loadFriends();
+            }, 200);
+          });
+        }
+
+        // 方法2: 监听DOM变化（角色名称变化）
+        if (parent.document) {
+          const observer = new MutationObserver(() => {
+            checkCharacterChange();
+          });
+
+          // 观察可能包含角色信息的元素
+          const targetSelectors = ['#character_name', '.character-name', '#name1'];
+          targetSelectors.forEach(selector => {
+            const element = parent.document.querySelector(selector);
+            if (element) {
+              observer.observe(element, { childList: true, subtree: true, characterData: true });
+            }
+          });
+        }
+
+        // 方法3: 监听this_chid变化
+        let lastThisChid = parent.this_chid;
+        setInterval(() => {
+          if (parent.this_chid !== lastThisChid) {
+            console.log('📡 检测到this_chid变化:', lastThisChid, '->', parent.this_chid);
+            lastThisChid = parent.this_chid;
+            checkCharacterChange();
           }
         }, 500);
+      }
+
+      // 显示调试信息
+      function showDebugInfo() {
+        const charInfo = getCurrentCharacterInfo();
+        const storageKey = getFriendsStorageKey();
+
+        let friends = [];
+        let storageSource = '';
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          friends = parent.extension_settings[storageKey] || [];
+          storageSource = 'SillyTavern extension_settings';
+        } else {
+          friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          storageSource = 'localStorage';
+        }
+
+        const oldFriends = JSON.parse(localStorage.getItem('friendsList') || '[]');
+
+        // 获取SillyTavern的详细信息
+        let sillyTavernInfo = '未连接到SillyTavern';
+        if (typeof parent !== 'undefined') {
+          sillyTavernInfo = `
+• this_chid: ${parent.this_chid}
+• name1: ${parent.name1 || '未设置'}
+• characters数量: ${parent.characters ? Object.keys(parent.characters).length : 0}
+• extension_settings可用: ${parent.extension_settings ? '是' : '否'}`;
+        }
+
+        const debugInfo = `
+=== 好友列表调试信息 ===
+
+当前角色信息:
+• ID: ${charInfo.id}
+• 名称: ${charInfo.name}
+• 来源: ${charInfo.source}
+
+SillyTavern连接状态:
+${sillyTavernInfo}
+
+存储信息:
+• 存储键: ${storageKey}
+• 存储位置: ${storageSource}
+• 当前好友数量: ${friends.length}
+
+角色切换监控:
+• 当前监控的角色ID: ${currentCharacterId}
+• 最后检查时间: ${new Date(lastCheckTime).toLocaleTimeString()}
+
+旧版本数据:
+• 全局好友列表: ${oldFriends.length} 个好友
+
+当前角色好友列表:
+${
+  friends.length > 0
+    ? friends.map((f, i) => `${i + 1}. ${f.name} (${f.type === 'group' ? '群聊' : '好友'})`).join('\n')
+    : '(无好友)'
+}
+
+${
+  oldFriends.length > 0
+    ? `\n旧版本好友列表:\n${oldFriends
+        .map((f, i) => `${i + 1}. ${f.name} (${f.type === 'group' ? '群聊' : '好友'})`)
+        .join('\n')}`
+    : ''
+}
+
+存储键名示例:
+• 当前角色: ${storageKey}
+• 其他角色: tavern_friends_sillytavern_chid_123
+• 默认角色: tavern_friends_default_default
+            `.trim();
+
+        alert(debugInfo);
+      }
+
+      // ==================== 导入/导出功能 ====================
+
+      let selectedImportFile = null;
+
+      // 显示导入/导出模态框
+      function showImportExportModal() {
+        document.getElementById('importExportModal').style.display = 'flex';
+
+        // 重置状态
+        selectedImportFile = null;
+        document.getElementById('selectedFileName').textContent = '';
+        document.getElementById('importBtn').disabled = true;
+        document.getElementById('jsonPreviewSection').style.display = 'none';
+
+        // 重置单选按钮
+        document.querySelector('input[name="importMode"][value="replace"]').checked = true;
+      }
+
+      // 关闭导入/导出模态框
+      function closeImportExportModal() {
+        document.getElementById('importExportModal').style.display = 'none';
+      }
+
+      // 导出好友列表
+      function exportFriends() {
+        try {
+          const charInfo = getCurrentCharacterInfo();
+          const storageKey = getFriendsStorageKey();
+
+          // 获取当前好友列表
+          let friends = [];
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            friends = parent.extension_settings[storageKey] || [];
+          } else {
+            friends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          }
+
+          // 创建导出数据
+          const exportData = {
+            version: '1.0',
+            exportTime: new Date().toISOString(),
+            character: {
+              id: charInfo.id,
+              name: charInfo.name,
+              source: charInfo.source,
+            },
+            friendsCount: friends.length,
+            friends: friends,
+          };
+
+          // 创建JSON字符串
+          const jsonString = JSON.stringify(exportData, null, 2);
+
+          // 创建下载链接
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+
+          // 生成文件名
+          const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+          const fileName = `好友列表_${charInfo.name}_${timestamp}.json`;
+
+          // 下载文件
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          alert(`✅ 导出成功！\n\n文件名: ${fileName}\n好友数量: ${friends.length}\n角色: ${charInfo.name}`);
+
+          console.log('导出好友列表成功:', {
+            fileName,
+            friendsCount: friends.length,
+            character: charInfo.name,
+          });
+        } catch (error) {
+          console.error('导出好友列表失败:', error);
+          alert('❌ 导出失败: ' + error.message);
+        }
+      }
+
+      // 处理文件选择
+      function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) {
+          selectedImportFile = null;
+          document.getElementById('selectedFileName').textContent = '';
+          document.getElementById('importBtn').disabled = true;
+          document.getElementById('jsonPreviewSection').style.display = 'none';
+          return;
+        }
+
+        if (!file.name.toLowerCase().endsWith('.json')) {
+          alert('请选择JSON格式的文件');
+          event.target.value = '';
+          return;
+        }
+
+        selectedImportFile = file;
+        document.getElementById('selectedFileName').textContent = file.name;
+        document.getElementById('importBtn').disabled = false;
+
+        // 读取并预览文件内容
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const jsonData = JSON.parse(e.target.result);
+            document.getElementById('jsonPreview').value = JSON.stringify(jsonData, null, 2);
+            document.getElementById('jsonPreviewSection').style.display = 'block';
+          } catch (error) {
+            console.error('JSON解析失败:', error);
+            document.getElementById('jsonPreview').value = '文件格式错误，无法预览';
+            document.getElementById('jsonPreviewSection').style.display = 'block';
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      // 导入好友列表
+      function importFriends() {
+        if (!selectedImportFile) {
+          alert('请先选择要导入的JSON文件');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            // 解析JSON数据
+            const importData = JSON.parse(e.target.result);
+
+            // 验证数据格式
+            if (!validateImportData(importData)) {
+              return;
+            }
+
+            const importFriends = importData.friends || [];
+            if (importFriends.length === 0) {
+              alert('❌ 导入失败: 文件中没有好友数据');
+              return;
+            }
+
+            // 获取导入模式
+            const importMode = document.querySelector('input[name="importMode"]:checked').value;
+            const charInfo = getCurrentCharacterInfo();
+
+            // 获取当前好友列表
+            const storageKey = getFriendsStorageKey();
+            let currentFriends = [];
+            if (typeof parent !== 'undefined' && parent.extension_settings) {
+              currentFriends = parent.extension_settings[storageKey] || [];
+            } else {
+              currentFriends = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            }
+
+            let finalFriends = [];
+            let importedCount = 0;
+            let skippedCount = 0;
+
+            if (importMode === 'replace') {
+              // 替换模式：直接使用导入的好友列表
+              finalFriends = importFriends.map(friend => ({
+                ...friend,
+                addTime: friend.addTime || new Date().toISOString(),
+              }));
+              importedCount = finalFriends.length;
+            } else if (importMode === 'merge') {
+              // 合并模式：合并到现有列表，跳过重复
+              finalFriends = [...currentFriends];
+
+              for (const importFriend of importFriends) {
+                // 检查是否已存在（按名称和类型）
+                const exists = finalFriends.some(
+                  existing => existing.name === importFriend.name && existing.type === importFriend.type,
+                );
+
+                if (!exists) {
+                  finalFriends.push({
+                    ...importFriend,
+                    addTime: importFriend.addTime || new Date().toISOString(),
+                  });
+                  importedCount++;
+                } else {
+                  skippedCount++;
+                }
+              }
+            }
+
+            // 保存更新后的好友列表
+            saveFriends(finalFriends);
+
+            // 刷新显示
+            displayFriends(finalFriends);
+
+            // 关闭模态框
+            closeImportExportModal();
+
+            // 显示导入结果
+            let resultMessage = `✅ 导入完成！\n\n`;
+            resultMessage += `角色: ${charInfo.name}\n`;
+            resultMessage += `导入模式: ${importMode === 'replace' ? '替换' : '合并'}\n`;
+            resultMessage += `成功导入: ${importedCount} 个条目\n`;
+            if (skippedCount > 0) {
+              resultMessage += `跳过重复: ${skippedCount} 个条目\n`;
+            }
+            resultMessage += `当前总数: ${finalFriends.length} 个条目`;
+
+            alert(resultMessage);
+
+            console.log('导入好友列表成功:', {
+              importMode,
+              importedCount,
+              skippedCount,
+              totalCount: finalFriends.length,
+              character: charInfo.name,
+            });
+          } catch (error) {
+            console.error('导入好友列表失败:', error);
+            alert('❌ 导入失败: ' + error.message);
+          }
+        };
+
+        reader.readAsText(selectedImportFile);
+      }
+
+      // 验证导入数据格式
+      function validateImportData(data) {
+        try {
+          // 检查基本结构
+          if (!data || typeof data !== 'object') {
+            alert('❌ 导入失败: 文件格式不正确');
+            return false;
+          }
+
+          // 检查是否有friends数组
+          if (!Array.isArray(data.friends)) {
+            alert('❌ 导入失败: 文件中缺少好友数据');
+            return false;
+          }
+
+          // 验证每个好友的数据格式
+          for (let i = 0; i < data.friends.length; i++) {
+            const friend = data.friends[i];
+
+            if (!friend.name || typeof friend.name !== 'string') {
+              alert(`❌ 导入失败: 第${i + 1}个好友缺少有效的名称`);
+              return false;
+            }
+
+            if (!friend.type || !['friend', 'group'].includes(friend.type)) {
+              alert(`❌ 导入失败: 第${i + 1}个好友的类型无效`);
+              return false;
+            }
+          }
+
+          // 显示导入预览信息
+          const friendCount = data.friends.filter(f => f.type === 'friend').length;
+          const groupCount = data.friends.filter(f => f.type === 'group').length;
+
+          const previewMessage =
+            `📋 导入预览\n\n` +
+            `文件版本: ${data.version || '未知'}\n` +
+            `导出时间: ${data.exportTime ? new Date(data.exportTime).toLocaleString('zh-CN') : '未知'}\n` +
+            `原角色: ${data.character?.name || '未知'}\n` +
+            `好友数量: ${friendCount} 个\n` +
+            `群聊数量: ${groupCount} 个\n` +
+            `总计: ${data.friends.length} 个\n\n` +
+            `确定要导入这些数据吗？`;
+
+          return confirm(previewMessage);
+        } catch (error) {
+          console.error('验证导入数据失败:', error);
+          alert('❌ 导入失败: 数据验证出错');
+          return false;
+        }
+      }
+
+      // 页面加载时初始化
+      window.addEventListener('load', () => {
+        console.log('🚀 好友列表页面加载完成，开始初始化...');
+
+        // 等待一小段时间确保SillyTavern完全加载
+        setTimeout(() => {
+          const charInfo = getCurrentCharacterInfo();
+          console.log('📋 初始化角色信息:', charInfo);
+
+          currentCharacterId = charInfo.id;
+          saveCurrentCharacterId();
+
+          // 加载好友列表
+          loadFriends();
+
+          // 开始角色切换监控
+          console.log('🔍 开始角色切换监控...');
+        }, 500);
+      });
+
+      // 页面可见性变化时重新检查角色
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          console.log('📱 页面重新可见，检查角色是否切换...');
+          setTimeout(checkCharacterChange, 100);
+        }
       });
     </script>
   </body>
 </html>
-
