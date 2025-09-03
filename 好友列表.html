@@ -33,7 +33,7 @@
       }
 
       .container {
-        width: 240px; /* 宽度变小 */
+        width: 220px; /* 宽度再次变小 */
         height: 650px; /* 手机高度 */
         background: #ffffff;
         border-radius: 30px; /* 圆角微调 */
@@ -235,21 +235,28 @@
         flex: 1;
         position: relative;
         z-index: 1;
+        min-width: 0; /* 防止文字过长时撑开容器 */
       }
 
       .friend-name {
-        font-size: 16px; /* 字体大小调整 */
+        font-size: 15px; /* 字体大小调整 */
         font-weight: 500;
         color: #333333; /* 颜色调整 */
         margin-bottom: 4px; /* 边距调整 */
         text-shadow: none;
         letter-spacing: 0.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .friend-type {
         font-size: 12px; /* 字体大小调整 */
         color: #777777; /* 颜色调整 */
         font-weight: 300;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .group-badge {
