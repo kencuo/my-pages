@@ -743,83 +743,51 @@
 
     <script>
       // ==================== 角色卡独立存储系统 ====================
-
-      // 获取当前角色信息（改进版本）
+      // 替换这个函数 -> 获取当前角色信息（修正版）
       function getCurrentCharacterInfo() {
         try {
-          // 方法1: 从SillyTavern的全局变量获取当前角色ID
-          if (typeof parent !== 'undefined' && parent.this_chid !== undefined) {
-            const charId = parent.this_chid;
-            let charName = '未知角色';
-
-            // 尝试获取角色名称
-            if (parent.characters && parent.characters[charId]) {
-              charName = parent.characters[charId].name || parent.characters[charId].data?.name || `角色${charId}`;
-            } else if (parent.name1) {
-              charName = parent.name1; // 当前聊天中的角色名
+          // 检查是否能连接到SillyTavern的主程序环境，以及角色是否已加载
+          if (typeof parent === 'undefined' || parent.this_chid === undefined) {
+            console.warn('无法连接到SillyTavern主程序或角色未加载，将使用默认角色。');
+            
+            // 如果连接失败，尝试从URL参数等其他地方获取信息作为备用方案
+            const urlParams = new URLSearchParams(window.location.search);
+            const charIdFromUrl = urlParams.get('character') || urlParams.get('char');
+            if (charIdFromUrl) {
+              return { id: charIdFromUrl, name: `角色 ${charIdFromUrl}`, source: 'url' };
             }
-
-            console.log('从SillyTavern获取角色信息:', { id: charId, name: charName });
-            return {
-              id: charId.toString(),
-              name: charName,
-              source: 'sillytavern_chid',
-            };
+            // 如果都失败，才使用默认角色
+            return { id: 'default', name: '默认角色', source: 'default' };
           }
 
-          // 方法2: 从SillyTavern的context API获取
-          if (typeof parent !== 'undefined' && parent.getContext) {
-            const context = parent.getContext();
-            if (context && context.characterId) {
-              console.log('从context API获取角色信息:', context);
-              return {
-                id: context.characterId.toString(),
-                name: context.name || context.characterId,
-                source: 'sillytavern_context',
-              };
-            }
+          // --- 主要获取逻辑 ---
+          // 直接从SillyTavern的全局变量获取数据
+          const charId = parent.this_chid;
+          let charName = '未知角色';
+
+          // 最佳方式: 通过角色ID从角色列表中获取名字
+          if (parent.characters && parent.characters[charId]) {
+            // .name 适用于角色书条目, .data.name 适用于角色卡
+            charName = parent.characters[charId].name || parent.characters[charId].data?.name || `角色 ${charId}`;
+          }
+          // 后备方式: 从当前聊天上下文获取名字 (name2 是角色的名字)
+          else if (parent.name2) {
+            charName = parent.name2;
           }
 
-          // 方法3: 从URL参数获取角色信息
-          const urlParams = new URLSearchParams(window.location.search);
-          const charId = urlParams.get('character') || urlParams.get('char') || urlParams.get('id');
-          if (charId) {
-            console.log('从URL参数获取角色信息:', charId);
-            return {
-              id: charId,
-              name: charId,
-              source: 'url',
-            };
-          }
-
-          // 方法4: 从localStorage获取最后使用的角色
-          const lastCharId = localStorage.getItem('lastUsedCharacter');
-          if (lastCharId) {
-            console.log('从localStorage获取最后使用的角色:', lastCharId);
-            return {
-              id: lastCharId,
-              name: `角色${lastCharId}`,
-              source: 'localStorage',
-            };
-          }
-
-          // 默认角色
-          console.log('使用默认角色');
+          console.log('成功从SillyTavern获取角色信息:', { id: charId, name: charName });
           return {
-            id: 'default',
-            name: '默认角色',
-            source: 'default',
+            id: charId.toString(),
+            name: charName,
+            source: 'sillytavern_globals', // 来源标记为ST全局变量
           };
+
         } catch (error) {
-          console.warn('获取角色信息失败，使用默认角色:', error);
-          return {
-            id: 'default',
-            name: '默认角色',
-            source: 'default',
-          };
+          console.error('获取角色信息时发生错误，将使用默认角色:', error);
+          return { id: 'default', name: '默认角色', source: 'default' };
         }
       }
-
+      
       // 生成角色专用的存储键名
       function getFriendsStorageKey() {
         const charInfo = getCurrentCharacterInfo();
