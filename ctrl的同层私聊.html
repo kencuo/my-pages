@@ -11157,7 +11157,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
             if (result.success) {
               videoUrl = result.url;
-              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到SillyTavern服务器`;
+              const method = result.uploadMethod === 'images' ? '原生(images)' : result.uploadMethod === 'files' ? '回退(files)' : '未知';
+              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传（${method}）`;
               console.log('✅ 视频识别插件处理成功:', result);
               console.log('📏 获得短URL:', result.url, '长度:', result.url.length);
             } else {
