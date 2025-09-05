@@ -834,6 +834,48 @@
         left: 20px;
         right: 20px;
       }
+
+      /* 登录通知动画 */
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      /* Cookie权限提示样式 */
+      .cookie-permission-hint {
+        position: absolute;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 161, 214, 0.9);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+        z-index: 999;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        animation: fadeInOut 4s ease-in-out;
+      }
+
+      @keyframes fadeInOut {
+        0%,
+        100% {
+          opacity: 0;
+          transform: translateX(-50%) translateY(-10px);
+        }
+        20%,
+        80% {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
     </style>
   </head>
   <body>
@@ -957,6 +999,7 @@
           <!-- 迷你控制栏 -->
           <div class="bilibili-mini-controls">
             <button class="mini-btn back-mini-btn" onclick="backToMain()" title="返回">←</button>
+            <button class="mini-btn" onclick="openBilibiliLogin()" title="外部登录">🔑</button>
             <button
               class="mini-btn fullscreen-mini-btn"
               onclick="toggleFullscreen()"
@@ -974,10 +1017,11 @@
               id="bilibiliFrame"
               src="https://www.bilibili.com"
               style="width: 100%; height: 100%; border: none; background: white"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
               loading="lazy"
               allowfullscreen
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; storage-access"
+              referrerpolicy="no-referrer-when-downgrade"
             >
             </iframe>
           </div>
@@ -2122,10 +2166,61 @@ ${
         document.getElementById('mainScreen').style.display = 'block';
       }
 
+      // 监听iframe消息
+      function setupIframeMessageListener() {
+        window.addEventListener('message', function (event) {
+          // 确保消息来自bilibili域名
+          if (!event.origin.includes('bilibili.com')) {
+            return;
+          }
+
+          console.log('📨 收到bilibili iframe消息:', event.data);
+
+          // 处理登录状态变化
+          if (event.data.type === 'login_status_changed') {
+            console.log('🔐 登录状态变化:', event.data.isLoggedIn);
+            if (event.data.isLoggedIn) {
+              // 显示登录成功提示
+              showLoginSuccessNotification();
+            }
+          }
+        });
+      }
+
+      // 显示登录成功通知
+      function showLoginSuccessNotification() {
+        // 创建临时通知元素
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #00a1d6;
+          color: white;
+          padding: 15px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          z-index: 10000;
+          font-size: 14px;
+          animation: slideIn 0.3s ease-out;
+        `;
+        notification.innerHTML = '✅ Bilibili登录成功！';
+
+        document.body.appendChild(notification);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+          notification.remove();
+        }, 3000);
+      }
+
       // 打开B站
       function openBilibili() {
         document.getElementById('mainScreen').style.display = 'none';
         document.getElementById('bilibiliScreen').style.display = 'block';
+
+        // 设置消息监听器
+        setupIframeMessageListener();
 
         // 优化bilibili加载
         const iframe = document.getElementById('bilibiliFrame');
@@ -2139,6 +2234,18 @@ ${
             iframe.src = preferredUrl;
             console.log('🎬 加载bilibili:', preferredUrl);
           }
+
+          // 添加iframe加载完成监听
+          iframe.onload = function () {
+            console.log('📺 Bilibili iframe加载完成');
+            // 尝试请求存储访问权限
+            setTimeout(async () => {
+              const hasAccess = await requestStorageAccess();
+              if (hasAccess) {
+                console.log('🍪 自动获取Cookie权限成功');
+              }
+            }, 2000);
+          };
         }
       }
 
@@ -2165,6 +2272,94 @@ ${
       // 打开设置
       function openSettings() {
         alert('设置功能开发中...\n\n这里可以配置各种选项！');
+      }
+
+      // 请求存储访问权限
+      async function requestStorageAccess() {
+        try {
+          // 检查是否支持Storage Access API
+          if (!document.hasStorageAccess || !document.requestStorageAccess) {
+            console.log('❌ 浏览器不支持Storage Access API');
+            return false;
+          }
+
+          // 检查当前是否已有存储访问权限
+          const hasAccess = await document.hasStorageAccess();
+          if (hasAccess) {
+            console.log('✅ 已有存储访问权限');
+            return true;
+          }
+
+          // 请求存储访问权限
+          console.log('🔑 请求存储访问权限...');
+          await document.requestStorageAccess();
+          console.log('✅ 存储访问权限获取成功');
+          return true;
+        } catch (error) {
+          console.log('❌ 存储访问权限请求失败:', error);
+          return false;
+        }
+      }
+
+      // 外部登录bilibili
+      function openBilibiliLogin() {
+        const loginOptions = [
+          {
+            name: '🔐 请求Cookie权限',
+            action: async () => {
+              const success = await requestStorageAccess();
+              if (success) {
+                alert('✅ Cookie权限获取成功！现在可以尝试在iframe内登录了。');
+                refreshBilibili();
+              } else {
+                alert('❌ Cookie权限获取失败，建议使用外部登录方式。');
+              }
+            },
+          },
+          {
+            name: '🌐 在新标签页登录',
+            action: () => {
+              window.open('https://passport.bilibili.com/login', '_blank');
+              setTimeout(() => {
+                if (confirm('登录完成后，点击"确定"刷新bilibili页面')) {
+                  refreshBilibili();
+                }
+              }, 3000);
+            },
+          },
+          {
+            name: '📱 移动端登录',
+            action: () => {
+              window.open('https://m.bilibili.com', '_blank');
+              setTimeout(() => {
+                if (confirm('登录完成后，点击"确定"切换到移动版')) {
+                  const iframe = document.getElementById('bilibiliFrame');
+                  if (iframe) {
+                    iframe.src = 'https://m.bilibili.com';
+                  }
+                }
+              }, 3000);
+            },
+          },
+          {
+            name: '🔄 直接刷新',
+            action: () => refreshBilibili(),
+          },
+        ];
+
+        const choice = prompt(
+          '🔑 Bilibili登录选项：\n\n' +
+            '1 - 请求Cookie权限（新功能）\n' +
+            '2 - 在新标签页登录（推荐）\n' +
+            '3 - 移动端登录\n' +
+            '4 - 直接刷新\n\n' +
+            '请输入选项数字 (1-4):',
+        );
+
+        const optionIndex = parseInt(choice) - 1;
+        if (optionIndex >= 0 && optionIndex < loginOptions.length) {
+          loginOptions[optionIndex].action();
+        }
       }
 
       // 刷新B站
