@@ -834,48 +834,6 @@
         left: 20px;
         right: 20px;
       }
-
-      /* 登录通知动画 */
-      @keyframes slideIn {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-
-      /* Cookie权限提示样式 */
-      .cookie-permission-hint {
-        position: absolute;
-        top: 60px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 161, 214, 0.9);
-        color: white;
-        padding: 10px 15px;
-        border-radius: 20px;
-        font-size: 12px;
-        z-index: 999;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        animation: fadeInOut 4s ease-in-out;
-      }
-
-      @keyframes fadeInOut {
-        0%,
-        100% {
-          opacity: 0;
-          transform: translateX(-50%) translateY(-10px);
-        }
-        20%,
-        80% {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
-      }
     </style>
   </head>
   <body>
@@ -2166,61 +2124,10 @@ ${
         document.getElementById('mainScreen').style.display = 'block';
       }
 
-      // 监听iframe消息
-      function setupIframeMessageListener() {
-        window.addEventListener('message', function (event) {
-          // 确保消息来自bilibili域名
-          if (!event.origin.includes('bilibili.com')) {
-            return;
-          }
-
-          console.log('📨 收到bilibili iframe消息:', event.data);
-
-          // 处理登录状态变化
-          if (event.data.type === 'login_status_changed') {
-            console.log('🔐 登录状态变化:', event.data.isLoggedIn);
-            if (event.data.isLoggedIn) {
-              // 显示登录成功提示
-              showLoginSuccessNotification();
-            }
-          }
-        });
-      }
-
-      // 显示登录成功通知
-      function showLoginSuccessNotification() {
-        // 创建临时通知元素
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: #00a1d6;
-          color: white;
-          padding: 15px 20px;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          z-index: 10000;
-          font-size: 14px;
-          animation: slideIn 0.3s ease-out;
-        `;
-        notification.innerHTML = '✅ Bilibili登录成功！';
-
-        document.body.appendChild(notification);
-
-        // 3秒后自动移除
-        setTimeout(() => {
-          notification.remove();
-        }, 3000);
-      }
-
       // 打开B站
       function openBilibili() {
         document.getElementById('mainScreen').style.display = 'none';
         document.getElementById('bilibiliScreen').style.display = 'block';
-
-        // 设置消息监听器
-        setupIframeMessageListener();
 
         // 优化bilibili加载
         const iframe = document.getElementById('bilibiliFrame');
@@ -2234,18 +2141,6 @@ ${
             iframe.src = preferredUrl;
             console.log('🎬 加载bilibili:', preferredUrl);
           }
-
-          // 添加iframe加载完成监听
-          iframe.onload = function () {
-            console.log('📺 Bilibili iframe加载完成');
-            // 尝试请求存储访问权限
-            setTimeout(async () => {
-              const hasAccess = await requestStorageAccess();
-              if (hasAccess) {
-                console.log('🍪 自动获取Cookie权限成功');
-              }
-            }, 2000);
-          };
         }
       }
 
@@ -2274,30 +2169,49 @@ ${
         alert('设置功能开发中...\n\n这里可以配置各种选项！');
       }
 
-      // 请求存储访问权限
-      async function requestStorageAccess() {
-        try {
-          // 检查是否支持Storage Access API
-          if (!document.hasStorageAccess || !document.requestStorageAccess) {
-            console.log('❌ 浏览器不支持Storage Access API');
-            return false;
-          }
+      // Cookie同步和代理方案
+      let proxyServerRunning = false;
+      let cookieSyncInterval = null;
 
-          // 检查当前是否已有存储访问权限
-          const hasAccess = await document.hasStorageAccess();
-          if (hasAccess) {
-            console.log('✅ 已有存储访问权限');
+      // 启动本地代理服务器（如果可用）
+      async function startProxyServer() {
+        try {
+          // 检查是否有本地代理服务器
+          const response = await fetch('http://localhost:8888/proxy/status', {
+            method: 'GET',
+            mode: 'cors',
+          });
+
+          if (response.ok) {
+            proxyServerRunning = true;
+            console.log('🚀 本地代理服务器已启动');
             return true;
           }
-
-          // 请求存储访问权限
-          console.log('🔑 请求存储访问权限...');
-          await document.requestStorageAccess();
-          console.log('✅ 存储访问权限获取成功');
-          return true;
         } catch (error) {
-          console.log('❌ 存储访问权限请求失败:', error);
-          return false;
+          console.log('⚠️ 本地代理服务器未运行，使用备用方案');
+        }
+        return false;
+      }
+
+      // Cookie同步机制
+      function syncCookiesFromMainWindow() {
+        try {
+          // 尝试从主窗口获取bilibili cookies
+          if (window.parent && window.parent !== window) {
+            const parentCookies = window.parent.document.cookie;
+            const bilibiliCookies = parentCookies
+              .split(';')
+              .filter(cookie => cookie.includes('bilibili') || cookie.includes('SESSDATA'))
+              .join(';');
+
+            if (bilibiliCookies) {
+              console.log('🍪 同步到bilibili cookies');
+              // 设置到当前域
+              document.cookie = bilibiliCookies + '; SameSite=None; Secure';
+            }
+          }
+        } catch (error) {
+          console.log('Cookie同步失败:', error);
         }
       }
 
@@ -2305,15 +2219,34 @@ ${
       function openBilibiliLogin() {
         const loginOptions = [
           {
-            name: '🔐 请求Cookie权限',
+            name: '🔧 启用代理模式',
             action: async () => {
-              const success = await requestStorageAccess();
-              if (success) {
-                alert('✅ Cookie权限获取成功！现在可以尝试在iframe内登录了。');
-                refreshBilibili();
+              const proxyAvailable = await startProxyServer();
+              if (proxyAvailable) {
+                const iframe = document.getElementById('bilibiliFrame');
+                if (iframe) {
+                  iframe.src = 'http://localhost:8888/proxy/bilibili';
+                  alert('✅ 代理模式已启用！现在应该可以正常登录和观看视频了。');
+                }
               } else {
-                alert('❌ Cookie权限获取失败，建议使用外部登录方式。');
+                alert('❌ 代理服务器未运行。请先启动本地代理服务器。');
+                showProxySetupInstructions();
               }
+            },
+          },
+          {
+            name: '🍪 Cookie同步登录',
+            action: () => {
+              window.open('https://passport.bilibili.com/login', '_blank');
+              setTimeout(() => {
+                if (confirm('登录完成后，点击"确定"同步Cookie')) {
+                  syncCookiesFromMainWindow();
+                  refreshBilibili();
+                  // 启动定期同步
+                  if (cookieSyncInterval) clearInterval(cookieSyncInterval);
+                  cookieSyncInterval = setInterval(syncCookiesFromMainWindow, 30000);
+                }
+              }, 3000);
             },
           },
           {
@@ -2349,11 +2282,12 @@ ${
 
         const choice = prompt(
           '🔑 Bilibili登录选项：\n\n' +
-            '1 - 请求Cookie权限（新功能）\n' +
-            '2 - 在新标签页登录（推荐）\n' +
-            '3 - 移动端登录\n' +
-            '4 - 直接刷新\n\n' +
-            '请输入选项数字 (1-4):',
+            '1 - 启用代理模式（推荐，需要本地代理）\n' +
+            '2 - Cookie同步登录（实验性）\n' +
+            '3 - 在新标签页登录\n' +
+            '4 - 移动端登录\n' +
+            '5 - 直接刷新\n\n' +
+            '请输入选项数字 (1-5):',
         );
 
         const optionIndex = parseInt(choice) - 1;
@@ -2362,13 +2296,105 @@ ${
         }
       }
 
+      // 显示代理服务器设置说明
+      function showProxySetupInstructions() {
+        const instructions = `
+🔧 本地代理服务器设置说明
+
+为了完美解决SameSite Cookie问题，您需要启动一个本地代理服务器：
+
+方法1: 使用Node.js (推荐)
+1. 安装Node.js
+2. 创建proxy-server.js文件
+3. 运行: node proxy-server.js
+
+方法2: 使用Python
+1. 安装Python
+2. 运行: python -m http.server 8888
+
+方法3: 使用浏览器扩展
+- 安装CORS解除扩展
+- 启用"Access-Control-Allow-Origin: *"
+
+代理服务器代码示例已复制到控制台，请查看！
+        `;
+
+        alert(instructions);
+
+        // 输出代理服务器代码到控制台
+        console.log(`
+// proxy-server.js - Node.js代理服务器
+const express = require('express');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+
+// Bilibili代理
+app.use('/proxy/bilibili', createProxyMiddleware({
+  target: 'https://www.bilibili.com',
+  changeOrigin: true,
+  pathRewrite: {
+    '^/proxy/bilibili': ''
+  },
+  onProxyReq: (proxyReq, req, res) => {
+    // 修改请求头以绕过限制
+    proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    proxyReq.setHeader('Referer', 'https://www.bilibili.com');
+  },
+  onProxyRes: (proxyRes, req, res) => {
+    // 修改响应头
+    proxyRes.headers['X-Frame-Options'] = 'ALLOWALL';
+    proxyRes.headers['Content-Security-Policy'] = '';
+    delete proxyRes.headers['x-frame-options'];
+  }
+}));
+
+app.get('/proxy/status', (req, res) => {
+  res.json({ status: 'running', message: 'Proxy server is active' });
+});
+
+app.listen(8888, () => {
+  console.log('🚀 代理服务器运行在 http://localhost:8888');
+});
+        `);
+      }
+
+      // 高级Cookie管理
+      function advancedCookieManagement() {
+        try {
+          // 设置SameSite=None的cookies
+          const cookiesToSet = ['SESSDATA', 'bili_jct', 'DedeUserID', 'DedeUserID__ckMd5', 'sid'];
+
+          cookiesToSet.forEach(cookieName => {
+            const cookieValue = getCookieValue(cookieName);
+            if (cookieValue) {
+              document.cookie = `${cookieName}=${cookieValue}; SameSite=None; Secure; Domain=.bilibili.com; Path=/`;
+            }
+          });
+
+          console.log('🍪 高级Cookie管理完成');
+        } catch (error) {
+          console.error('Cookie管理失败:', error);
+        }
+      }
+
+      // 获取Cookie值
+      function getCookieValue(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+      }
+
       // 刷新B站
       function refreshBilibili() {
         const iframe = document.getElementById('bilibiliFrame');
         if (iframe) {
           // 尝试不同的bilibili链接以提高兼容性
           const bilibiliUrls = [
-            'https://www.bilibili.com',
+            proxyServerRunning ? 'http://localhost:8888/proxy/bilibili' : 'https://www.bilibili.com',
             'https://m.bilibili.com', // 移动端版本，通常限制较少
             'https://www.bilibili.com/video/', // 视频页面
             'https://space.bilibili.com', // 个人空间
@@ -2379,7 +2405,9 @@ ${
           let nextUrlIndex = 0;
 
           for (let i = 0; i < bilibiliUrls.length; i++) {
-            if (currentSrc.includes(bilibiliUrls[i].replace('https://', ''))) {
+            if (
+              currentSrc.includes(bilibiliUrls[i].replace('https://', '').replace('http://localhost:8888/proxy/', ''))
+            ) {
               nextUrlIndex = (i + 1) % bilibiliUrls.length;
               break;
             }
@@ -2387,6 +2415,9 @@ ${
 
           iframe.src = bilibiliUrls[nextUrlIndex];
           console.log('🔄 切换到bilibili链接:', bilibiliUrls[nextUrlIndex]);
+
+          // 应用高级Cookie管理
+          setTimeout(advancedCookieManagement, 2000);
         }
       }
 
