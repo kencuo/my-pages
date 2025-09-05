@@ -974,9 +974,10 @@
               id="bilibiliFrame"
               src="https://www.bilibili.com"
               style="width: 100%; height: 100%; border: none; background: white"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation"
               loading="lazy"
               allowfullscreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             >
             </iframe>
           </div>
@@ -2125,6 +2126,20 @@ ${
       function openBilibili() {
         document.getElementById('mainScreen').style.display = 'none';
         document.getElementById('bilibiliScreen').style.display = 'block';
+
+        // 优化bilibili加载
+        const iframe = document.getElementById('bilibiliFrame');
+        if (iframe) {
+          // 检测用户设备类型，移动设备使用移动版
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          const preferredUrl = isMobile ? 'https://m.bilibili.com' : 'https://www.bilibili.com';
+
+          // 如果当前URL不是首选URL，则切换
+          if (!iframe.src.includes(preferredUrl.replace('https://', ''))) {
+            iframe.src = preferredUrl;
+            console.log('🎬 加载bilibili:', preferredUrl);
+          }
+        }
       }
 
       // 打开应用商店
@@ -2156,7 +2171,27 @@ ${
       function refreshBilibili() {
         const iframe = document.getElementById('bilibiliFrame');
         if (iframe) {
-          iframe.src = iframe.src; // 重新加载iframe
+          // 尝试不同的bilibili链接以提高兼容性
+          const bilibiliUrls = [
+            'https://www.bilibili.com',
+            'https://m.bilibili.com', // 移动端版本，通常限制较少
+            'https://www.bilibili.com/video/', // 视频页面
+            'https://space.bilibili.com', // 个人空间
+          ];
+
+          // 获取当前URL并切换到下一个
+          const currentSrc = iframe.src;
+          let nextUrlIndex = 0;
+
+          for (let i = 0; i < bilibiliUrls.length; i++) {
+            if (currentSrc.includes(bilibiliUrls[i].replace('https://', ''))) {
+              nextUrlIndex = (i + 1) % bilibiliUrls.length;
+              break;
+            }
+          }
+
+          iframe.src = bilibiliUrls[nextUrlIndex];
+          console.log('🔄 切换到bilibili链接:', bilibiliUrls[nextUrlIndex]);
         }
       }
 
