@@ -3312,6 +3312,188 @@
         color: #c62828;
       }
 
+      /* 搜索结果样式 */
+      .music-search-results {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .search-result-item {
+        padding: 8px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .search-result-item:hover {
+        background: #f8f8f8;
+      }
+
+      .search-result-item:last-child {
+        border-bottom: none;
+      }
+
+      .search-result-info {
+        flex: 1;
+        cursor: pointer;
+      }
+
+      .search-result-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #333;
+        margin-bottom: 2px;
+      }
+
+      .search-result-artist {
+        font-size: 11px;
+        color: #666;
+      }
+
+      .search-result-actions {
+        display: flex;
+        gap: 4px;
+        margin-left: 8px;
+      }
+
+      .search-action-btn {
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #fff;
+        color: #666;
+        font-size: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+
+      .search-action-btn:hover {
+        background: #f0f0f0;
+        border-color: #ccc;
+      }
+
+      .search-action-btn.primary {
+        background: #007AFF;
+        color: white;
+        border-color: #007AFF;
+      }
+
+      .search-action-btn.primary:hover {
+        background: #0056CC;
+        border-color: #0056CC;
+      }
+
+      .search-action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* 下载通知动画 */
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+
+      /* 搜索歌曲按钮特殊样式 */
+      #musicSearchBtn {
+        background: linear-gradient(135deg, #FF6B6B, #4ECDC4, #45B7D1) !important;
+        color: white !important;
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4), 0 0 20px rgba(78, 205, 196, 0.3) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        font-weight: 700 !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+        animation: searchButtonPulse 2s ease-in-out infinite !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        background-size: 200% 200% !important;
+        background-position: 0% 50% !important;
+      }
+
+      #musicSearchBtn:hover {
+        background: linear-gradient(135deg, #FF5252, #26C6DA, #3498DB) !important;
+        box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6), 0 0 30px rgba(78, 205, 196, 0.5) !important;
+        transform: translateY(-3px) scale(1.02) !important;
+        animation: searchButtonGlow 1s ease-in-out infinite !important;
+        background-position: 100% 50% !important;
+        border-color: rgba(255, 255, 255, 0.5) !important;
+      }
+
+      #musicSearchBtn:active {
+        transform: translateY(-1px) scale(0.98) !important;
+      }
+
+      /* 搜索按钮脉冲动画 */
+      @keyframes searchButtonPulse {
+        0%, 100% {
+          box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4), 0 0 20px rgba(78, 205, 196, 0.3);
+        }
+        50% {
+          box-shadow: 0 4px 25px rgba(255, 107, 107, 0.7), 0 0 30px rgba(78, 205, 196, 0.5);
+        }
+      }
+
+      /* 悬停时的发光动画 */
+      @keyframes searchButtonGlow {
+        0%, 100% {
+          box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6), 0 0 30px rgba(78, 205, 196, 0.5);
+        }
+        50% {
+          box-shadow: 0 6px 35px rgba(255, 107, 107, 0.8), 0 0 40px rgba(78, 205, 196, 0.7);
+        }
+      }
+
+      /* 音符图标动画 */
+      @keyframes musicNote {
+        0%, 100% {
+          transform: scale(1) rotate(0deg);
+        }
+        25% {
+          transform: scale(1.1) rotate(-5deg);
+        }
+        75% {
+          transform: scale(1.1) rotate(5deg);
+        }
+      }
+
+      .search-loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+        font-size: 12px;
+      }
+
+      .search-empty {
+        text-align: center;
+        padding: 20px;
+        color: #999;
+        font-size: 12px;
+      }
+
       /* 表情包面板样式 */
       .sticker-panel {
         display: none;
@@ -5811,6 +5993,11 @@
           <button class="music-btn" id="musicAddBtn">添加到播放列表</button>
         </div>
 
+        <!-- 特殊突出的搜索按钮 -->
+        <div class="music-controls" style="margin-top: 8px;">
+          <button class="music-btn" id="musicSearchBtn" style="width: 100%; font-size: 14px; padding: 10px;">🎵 搜索歌曲</button>
+        </div>
+
         <div class="music-controls">
           <button class="music-btn" id="musicAddLocalBtn">本地文件</button>
           <button class="music-btn" id="musicAddUrlBtn">网络链接</button>
@@ -5819,6 +6006,27 @@
         </div>
 
         <div class="music-info" id="musicInfo">请粘贴网易云/QQ音乐链接或iframe代码，点击解析按钮</div>
+
+        <!-- 搜索面板 -->
+        <div class="music-search-panel" id="musicSearchPanel" style="display: none; margin-top: 12px;">
+          <div class="music-input-group">
+            <label class="music-input-label">搜索歌曲</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="music-url-input" id="musicSearchInput" placeholder="输入歌曲名、歌手名..." style="flex: 1; min-height: auto; height: 36px;">
+              <select class="music-btn" id="musicSourceSelect" style="width: 80px; padding: 8px; font-size: 12px;">
+                <option value="netease">网易云</option>
+                <option value="tencent">QQ音乐</option>
+                <option value="kuwo">酷我</option>
+                <option value="kugou">酷狗</option>
+              </select>
+            </div>
+          </div>
+          <div class="music-controls">
+            <button class="music-btn" id="musicDoSearchBtn">🔍 搜索</button>
+            <button class="music-btn" id="musicSearchBackBtn">返回</button>
+          </div>
+          <div class="music-search-results" id="musicSearchResults" style="max-height: 200px; overflow-y: auto; margin-top: 8px;"></div>
+        </div>
 
         <!-- 歌曲信息显示区域 -->
         <div class="song-info-display" id="songInfoDisplay" style="display: none; margin-top: 8px;"></div>
@@ -11157,7 +11365,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
             if (result.success) {
               videoUrl = result.url;
-              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传到SillyTavern服务器`;
+              const method = result.uploadMethod === 'images' ? '原生(images)' : result.uploadMethod === 'files' ? '回退(files)' : '未知';
+              videoInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB) - 已上传（${method}）`;
               console.log('✅ 视频识别插件处理成功:', result);
               console.log('📏 获得短URL:', result.url, '长度:', result.url.length);
             } else {
@@ -12162,6 +12371,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       const musicUrlInput = document.getElementById('musicUrlInput');
       const musicParseBtn = document.getElementById('musicParseBtn');
       const musicAddBtn = document.getElementById('musicAddBtn');
+      const musicSearchBtn = document.getElementById('musicSearchBtn');
       const musicAddLocalBtn = document.getElementById('musicAddLocalBtn');
       const musicAddUrlBtn = document.getElementById('musicAddUrlBtn');
       const musicClearBtn = document.getElementById('musicClearBtn');
@@ -12171,6 +12381,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       const playlistContainer = document.getElementById('playlistContainer');
       const localFileInput = document.getElementById('localFileInput');
       const audioElement = document.getElementById('audioElement');
+
+      // 搜索相关元素
+      const musicSearchPanel = document.getElementById('musicSearchPanel');
+      const musicSearchInput = document.getElementById('musicSearchInput');
+      const musicSourceSelect = document.getElementById('musicSourceSelect');
+      const musicDoSearchBtn = document.getElementById('musicDoSearchBtn');
+      const musicSearchBackBtn = document.getElementById('musicSearchBackBtn');
+      const musicSearchResults = document.getElementById('musicSearchResults');
 
       // 播放控制元素
       const currentSongTitle = document.getElementById('currentSongTitle');
@@ -12206,6 +12424,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 本地存储键名
       const MUSIC_STORAGE_KEY = 'phone_music_playlist';
       const MUSIC_SETTINGS_KEY = 'phone_music_settings';
+
+      // 音乐搜索API
+      const MUSIC_API_BASE = 'https://music-api.gdstudio.xyz/api.php';
 
       // 打开音乐面板
       async function openMusicPanel() {
@@ -12375,6 +12596,213 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         localPlayerSection.classList.add('active');
       }
 
+      // 搜索歌曲功能
+      async function searchMusic() {
+        const keyword = musicSearchInput.value.trim();
+        const source = musicSourceSelect.value;
+
+        if (!keyword) {
+          musicSearchResults.innerHTML = '<div class="search-empty">请输入搜索关键词</div>';
+          return;
+        }
+
+        musicSearchResults.innerHTML = '<div class="search-loading">🔍 正在搜索...</div>';
+
+        try {
+          const response = await fetch(`${MUSIC_API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=20`);
+          const data = await response.json();
+
+          if (data && data.length > 0) {
+            displaySearchResults(data);
+          } else {
+            musicSearchResults.innerHTML = '<div class="search-empty">未找到相关歌曲，请尝试其他关键词</div>';
+          }
+        } catch (error) {
+          console.error('搜索失败:', error);
+          musicSearchResults.innerHTML = '<div class="search-empty">搜索失败，请检查网络连接</div>';
+        }
+      }
+
+      // 显示搜索结果
+      function displaySearchResults(songs) {
+        musicSearchResults.innerHTML = '';
+
+        songs.forEach((song, index) => {
+          const item = document.createElement('div');
+          item.className = 'search-result-item';
+
+          item.innerHTML = `
+            <div class="search-result-info" onclick="selectSearchResult(${JSON.stringify(song).replace(/"/g, '&quot;')})">
+              <div class="search-result-title">${song.name}</div>
+              <div class="search-result-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist} · ${song.album || '未知专辑'}</div>
+            </div>
+            <div class="search-result-actions">
+              <button class="search-action-btn primary" onclick="selectSearchResult(${JSON.stringify(song).replace(/"/g, '&quot;')})">添加</button>
+              <button class="search-action-btn" onclick="downloadSongFromSearch(${JSON.stringify(song).replace(/"/g, '&quot;')})">下载</button>
+            </div>
+          `;
+
+          musicSearchResults.appendChild(item);
+        });
+      }
+
+      // 选择搜索结果
+      async function selectSearchResult(song) {
+        try {
+          // 获取音乐播放链接
+          const quality = '320'; // 默认高品质
+          const urlResponse = await fetch(`${MUSIC_API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`);
+          const urlData = await urlResponse.json();
+
+          if (urlData && urlData.url) {
+            const title = song.name;
+            const artist = Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist;
+
+            // 添加到播放列表
+            await addToPlaylist(title, artist, urlData.url, 'search');
+
+            // 显示成功信息
+            musicInfo.innerHTML = `✅ 已添加到播放列表<br/>${title} - ${artist}`;
+            musicInfo.classList.add('success');
+
+            // 切换回主面板
+            showMainPanel();
+
+            // 显示播放器
+            musicPlayerContainer.classList.add('active');
+            switchToLocalPlayer();
+
+          } else {
+            alert('无法获取该歌曲的播放链接，请尝试其他歌曲');
+          }
+        } catch (error) {
+          console.error('添加歌曲失败:', error);
+          alert('添加歌曲失败，请稍后重试');
+        }
+      }
+
+      // 显示搜索面板
+      function showSearchPanel() {
+        musicSearchPanel.style.display = 'block';
+        musicInfo.style.display = 'none';
+        musicSearchInput.focus();
+      }
+
+      // 显示主面板
+      function showMainPanel() {
+        musicSearchPanel.style.display = 'none';
+        musicInfo.style.display = 'block';
+        musicSearchResults.innerHTML = '';
+        musicSearchInput.value = '';
+      }
+
+      // 从搜索结果下载歌曲
+      async function downloadSongFromSearch(song) {
+        try {
+          // 显示下载状态
+          const downloadBtn = event.target;
+          const originalText = downloadBtn.textContent;
+          downloadBtn.textContent = '下载中...';
+          downloadBtn.disabled = true;
+
+          // 获取音乐播放链接
+          const quality = '320'; // 高品质
+          const urlResponse = await fetch(`${MUSIC_API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`);
+          const urlData = await urlResponse.json();
+
+          if (urlData && urlData.url) {
+            // 创建下载链接
+            const link = document.createElement('a');
+            link.href = urlData.url;
+
+            // 生成文件名
+            const artist = Array.isArray(song.artist) ? song.artist.join(', ') : song.artist;
+            const fileName = `${song.name} - ${artist}.mp3`;
+            link.download = fileName;
+            link.target = '_blank';
+
+            // 触发下载
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // 显示成功状态
+            downloadBtn.textContent = '已下载';
+            downloadBtn.style.background = '#28a745';
+            downloadBtn.style.borderColor = '#28a745';
+
+            // 显示成功提示
+            showDownloadNotification(`✅ 开始下载: ${song.name}`, 'success');
+
+            // 3秒后恢复按钮状态
+            setTimeout(() => {
+              downloadBtn.textContent = originalText;
+              downloadBtn.disabled = false;
+              downloadBtn.style.background = '';
+              downloadBtn.style.borderColor = '';
+            }, 3000);
+
+          } else {
+            throw new Error('无法获取下载链接');
+          }
+        } catch (error) {
+          console.error('下载失败:', error);
+
+          // 恢复按钮状态
+          const downloadBtn = event.target;
+          downloadBtn.textContent = '下载失败';
+          downloadBtn.disabled = false;
+          downloadBtn.style.background = '#dc3545';
+          downloadBtn.style.borderColor = '#dc3545';
+
+          // 显示错误提示
+          showDownloadNotification(`❌ 下载失败: ${error.message}`, 'error');
+
+          // 3秒后恢复按钮状态
+          setTimeout(() => {
+            downloadBtn.textContent = '下载';
+            downloadBtn.style.background = '';
+            downloadBtn.style.borderColor = '';
+          }, 3000);
+        }
+      }
+
+      // 显示下载通知
+      function showDownloadNotification(message, type = 'info') {
+        // 创建通知元素
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007AFF'};
+          color: white;
+          padding: 12px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          z-index: 10000;
+          font-size: 14px;
+          max-width: 300px;
+          word-wrap: break-word;
+          animation: slideInRight 0.3s ease;
+        `;
+
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => {
+              if (notification.parentNode) {
+                document.body.removeChild(notification);
+              }
+            }, 300);
+          }
+        }, 3000);
+      }
+
       // 添加歌曲到播放列表
       async function addToPlaylist(title, artist, src, type = 'url', originalFile = null) {
         const song = {
@@ -12467,6 +12895,89 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         musicState.currentIndex = index;
         await loadCurrentSong();
         updatePlaylistDisplay();
+      }
+
+      // 从播放列表删除歌曲
+      async function removeFromPlaylist(index) {
+        if (index < 0 || index >= musicState.playlist.length) {
+          return;
+        }
+
+        const song = musicState.playlist[index];
+        const confirmMessage = `确定要删除歌曲 "${song.title}" 吗？`;
+
+        if (!confirm(confirmMessage)) {
+          return;
+        }
+
+        // 删除歌曲
+        musicState.playlist.splice(index, 1);
+
+        // 调整当前播放索引
+        if (musicState.currentIndex === index) {
+          // 如果删除的是当前播放的歌曲
+          if (musicState.playlist.length === 0) {
+            // 播放列表为空
+            musicState.currentIndex = -1;
+            audioElement.pause();
+            audioElement.src = '';
+            currentSongTitle.textContent = '暂无歌曲';
+            currentSongArtist.textContent = '请添加歌曲到播放列表';
+          } else if (index >= musicState.playlist.length) {
+            // 删除的是最后一首歌，播放前一首
+            musicState.currentIndex = musicState.playlist.length - 1;
+            await loadCurrentSong();
+          } else {
+            // 播放下一首（索引不变，因为数组已经缩短）
+            await loadCurrentSong();
+          }
+        } else if (musicState.currentIndex > index) {
+          // 如果删除的歌曲在当前播放歌曲之前，调整索引
+          musicState.currentIndex--;
+        }
+
+        // 更新显示和保存设置
+        updatePlaylistDisplay();
+        saveMusicSettings();
+
+        // 显示删除成功提示
+        showMusicNotification(`✅ 已删除歌曲: ${song.title}`, 'success');
+      }
+
+      // 显示音乐相关通知
+      function showMusicNotification(message, type = 'info') {
+        // 创建通知元素
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007AFF'};
+          color: white;
+          padding: 12px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          z-index: 10000;
+          font-size: 14px;
+          max-width: 300px;
+          word-wrap: break-word;
+          animation: slideInRight 0.3s ease;
+        `;
+
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => {
+              if (notification.parentNode) {
+                document.body.removeChild(notification);
+              }
+            }, 300);
+          }
+        }, 3000);
       }
 
       // 加载当前歌曲
@@ -12765,6 +13276,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 音乐播放器事件监听
       musicCloseBtn.addEventListener('click', closeMusicPanel);
+
+      // 搜索相关事件监听
+      musicSearchBtn.addEventListener('click', showSearchPanel);
+      musicSearchBackBtn.addEventListener('click', showMainPanel);
+      musicDoSearchBtn.addEventListener('click', searchMusic);
+
+      // 搜索输入框回车事件
+      musicSearchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          searchMusic();
+        }
+      });
 
       // 解析按钮
       musicParseBtn.addEventListener('click', async () => {
