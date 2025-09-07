@@ -14620,182 +14620,56 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // ==================== 查看对方状态功能 ====================
 
       // 查看对方状态
-      async function checkCharacterStatus() {
-        console.log(' 查看对方状态');
+      function checkCharacterStatus() {
+        console.log('查看对方状态');
 
         // 获取当前角色名称
         const charNameElement = document.getElementById('chatPersonName');
         const charName = charNameElement ? charNameElement.textContent.trim() : '对方';
 
-        // 检查是否在SillyTavern环境中
-        const isSillyTavernEnv = checkSillyTavernEnvironment();
+        // 尝试获取SillyTavern的输入框
+        const sillyTavernInput = document.getElementById('send_textarea');
+        // 获取当前页面的输入框
+        const localInput = document.getElementById('chatInput');
 
-        if (isSillyTavernEnv.detected) {
-          // 在SillyTavern中使用slash命令发送消息
-          try {
-            console.log('检测到SillyTavern环境，使用slash命令发送消息');
-            console.log('可用的SillyTavern函数:', isSillyTavernEnv.availableFunctions);
+        const statusText = '查看对方状态';
 
-            let success = false;
+        // 优先使用SillyTavern的输入框
+        if (sillyTavernInput) {
+          sillyTavernInput.value = statusText;
+          sillyTavernInput.focus();
 
-            // 尝试使用可用的SillyTavern函数
-            for (const funcInfo of isSillyTavernEnv.availableFunctions) {
-              try {
-                console.log(`尝试使用 ${funcInfo.name} 发送消息`);
-                await funcInfo.func('/send 查看对方的状态');
-                console.log(`${funcInfo.name} 执行成功`);
-                success = true;
-                break;
-              } catch (funcError) {
-                console.warn(`${funcInfo.name} 执行失败:`, funcError);
-                continue;
-              }
-            }
+          // 触发input事件，确保SillyTavern能检测到输入变化
+          const inputEvent = new Event('input', { bubbles: true });
+          sillyTavernInput.dispatchEvent(inputEvent);
 
-            if (!success) {
-              console.log('所有SillyTavern函数都执行失败，尝试模拟用户输入');
-              success = await trySimulateUserInput();
-            }
+          // 触发change事件
+          const changeEvent = new Event('change', { bubbles: true });
+          sillyTavernInput.dispatchEvent(changeEvent);
 
-            if (!success) {
-              console.log('所有SillyTavern方法都失败，使用本地消息');
-              fallbackToLocalMessage();
-            }
-
-          } catch (error) {
-            console.error('SillyTavern消息发送失败:', error);
-            fallbackToLocalMessage();
-          }
-        } else {
-          // 不在SillyTavern环境中，使用本地消息系统
-          console.log('未检测到SillyTavern环境，使用本地消息系统');
-          fallbackToLocalMessage();
+          showToast(`已在输入框填入"${statusText}"`);
+          console.log('已在SillyTavern输入框填入文字:', statusText);
         }
+        // 如果没有找到SillyTavern输入框，使用本地输入框
+        else if (localInput) {
+          localInput.value = statusText;
+          localInput.focus();
 
-        // 检测SillyTavern环境的函数
-        function checkSillyTavernEnvironment() {
-          const availableFunctions = [];
+          // 触发input事件
+          const inputEvent = new Event('input', { bubbles: true });
+          localInput.dispatchEvent(inputEvent);
 
-          // 检查各种可能的SillyTavern函数
-          const functionsToCheck = [
-            { name: 'window.executeSlashCommandsOnChatInput', func: window.executeSlashCommandsOnChatInput },
-            { name: 'executeSlashCommandsOnChatInput', func: typeof executeSlashCommandsOnChatInput !== 'undefined' ? executeSlashCommandsOnChatInput : null },
-            { name: 'window.executeSlashCommands', func: window.executeSlashCommands },
-            { name: 'executeSlashCommands', func: typeof executeSlashCommands !== 'undefined' ? executeSlashCommands : null },
-            { name: 'window.SillyTavern?.executeSlashCommandsOnChatInput', func: window.SillyTavern?.executeSlashCommandsOnChatInput },
-            { name: 'window.SillyTavern?.executeSlashCommands', func: window.SillyTavern?.executeSlashCommands },
-          ];
-
-          // 检查SillyTavern全局对象
-          const hasSillyTavernGlobal = typeof window.SillyTavern === 'object' && window.SillyTavern !== null;
-
-          // 检查可用的函数
-          functionsToCheck.forEach(item => {
-            if (typeof item.func === 'function') {
-              availableFunctions.push({ name: item.name, func: item.func });
-            }
-          });
-
-          const detected = availableFunctions.length > 0 || hasSillyTavernGlobal;
-
-          return {
-            detected,
-            availableFunctions,
-            hasSillyTavernGlobal,
-            debugInfo: {
-              windowKeys: Object.keys(window).filter(key => key.toLowerCase().includes('slash') || key.toLowerCase().includes('silly')),
-              globalSillyTavern: hasSillyTavernGlobal ? Object.keys(window.SillyTavern) : []
-            }
-          };
+          showToast(`已在输入框填入"${statusText}"`);
+          console.log('已在本地输入框填入文字:', statusText);
         }
+        // 如果都没找到，回退到原来的自动发送方式
+        else {
+          console.log('未找到输入框，使用原来的自动发送方式');
 
-        // 尝试通过模拟用户输入来触发SillyTavern的slash命令
-        async function trySimulateUserInput() {
-          try {
-            // 查找SillyTavern的输入框
-            const inputSelectors = [
-              '#send_textarea',
-              '#chat_input',
-              'textarea[placeholder*="message"]',
-              'textarea[placeholder*="Message"]',
-              '.chat-input textarea',
-              '#user-input'
-            ];
-
-            let inputElement = null;
-            for (const selector of inputSelectors) {
-              inputElement = document.querySelector(selector);
-              if (inputElement) {
-                console.log(`找到输入框: ${selector}`);
-                break;
-              }
-            }
-
-            if (!inputElement) {
-              console.log('未找到SillyTavern输入框');
-              return false;
-            }
-
-            // 保存原始值
-            const originalValue = inputElement.value;
-
-            // 设置slash命令
-            inputElement.value = '/send 查看对方的状态';
-
-            // 触发input事件
-            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-
-            // 查找并点击发送按钮
-            const sendSelectors = [
-              '#send_but',
-              '#send_button',
-              '.send-button',
-              'button[title*="Send"]',
-              'button[title*="send"]',
-              '.fa-paper-plane',
-              '.send_but'
-            ];
-
-            let sendButton = null;
-            for (const selector of sendSelectors) {
-              sendButton = document.querySelector(selector);
-              if (sendButton) {
-                console.log(`找到发送按钮: ${selector}`);
-                break;
-              }
-            }
-
-            if (sendButton) {
-              // 模拟点击发送按钮
-              sendButton.click();
-              console.log('模拟点击发送按钮成功');
-              return true;
-            } else {
-              // 尝试触发Enter键事件
-              const enterEvent = new KeyboardEvent('keydown', {
-                key: 'Enter',
-                code: 'Enter',
-                keyCode: 13,
-                which: 13,
-                bubbles: true
-              });
-              inputElement.dispatchEvent(enterEvent);
-              console.log('模拟Enter键事件');
-              return true;
-            }
-
-          } catch (error) {
-            console.error('模拟用户输入失败:', error);
-            return false;
-          }
-        }
-
-        // 本地消息发送的回退方法
-        function fallbackToLocalMessage() {
           // 先发送用户消息
           const userMessage = {
             sender: 'user',
-            content: '查看对方的状态',
+            content: statusText,
             time: getTimeStr(),
             timestamp: Date.now()
           };
@@ -14811,10 +14685,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           setTimeout(() => {
             requestAiReply();
           }, 500);
-        }
 
-        // 提示用户
-        showToast(`正在查看${charName}的状态...`);
+          // 提示用户
+          showToast(`正在查看${charName}的状态...`);
+        }
       }
 
       // 兼容 SillyTavern 渲染
