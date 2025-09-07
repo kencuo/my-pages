@@ -1426,6 +1426,10 @@
         border: 1px solid var(--border-primary);
         resize: none;
         transition: all 0.3s ease;
+        /* 确保输入框不会无限扩展 */
+        min-width: 0;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
 
       /* 米黄色主题的输入框文字颜色特殊处理 */
@@ -5774,6 +5778,62 @@
 
         .context-menu div[data-action] span {
           font-size: 20px;
+        }
+
+        /* 输入框区域移动端优化 */
+        .chat-input-area {
+          padding: 8px 12px;
+          gap: 6px;
+        }
+
+        .chat-input {
+          /* 限制输入框最大宽度，确保按钮可见 */
+          max-width: calc(100% - 120px);
+          min-width: 0;
+          flex: 1 1 auto;
+        }
+
+        /* 确保按钮不会被挤压 */
+        .action-btn {
+          flex-shrink: 0;
+          width: 36px;
+          height: 36px;
+          min-width: 36px;
+          min-height: 36px;
+        }
+
+        .send-btn {
+          flex-shrink: 0;
+          min-width: 60px;
+          min-height: 36px;
+          padding: 0 12px;
+        }
+      }
+
+      /* 更小屏幕的额外优化 */
+      @media (max-width: 320px) {
+        .chat-input-area {
+          padding: 6px 8px;
+          gap: 4px;
+        }
+
+        .chat-input {
+          /* 在更小屏幕上进一步限制输入框宽度 */
+          max-width: calc(100% - 100px);
+          font-size: 14px;
+        }
+
+        .action-btn {
+          width: 32px;
+          height: 32px;
+          min-width: 32px;
+          min-height: 32px;
+        }
+
+        .send-btn {
+          min-width: 50px;
+          font-size: 14px;
+          padding: 0 10px;
         }
       }
 
