@@ -2166,7 +2166,415 @@ ${
 
       // 打开设置
       function openSettings() {
-        alert('设置功能开发中...\n\n这里可以配置各种选项！');
+        const settingsOptions = ['1 - 连接同层手机世界书', '2 - 清理缓存数据', '3 - 导出设置', '4 - 关于'];
+
+        const choice = prompt('⚙️ 设置选项：\n\n' + settingsOptions.join('\n') + '\n\n' + '请输入选项数字 (1-4):');
+
+        const optionIndex = parseInt(choice) - 1;
+
+        switch (optionIndex) {
+          case 0:
+            connectToWorldbook();
+            break;
+          case 1:
+            clearCacheData();
+            break;
+          case 2:
+            exportSettings();
+            break;
+          case 3:
+            showAbout();
+            break;
+          default:
+            // 取消或无效选择
+            break;
+        }
+      }
+
+      // 连接同层手机世界书
+      async function connectToWorldbook() {
+        const confirmConnect = confirm(
+          '🌍 连接同层手机世界书\n\n' +
+            '这将从GitHub下载最新的同层手机世界书条目，\n' +
+            '并自动添加到当前角色的主世界书中。\n\n' +
+            '⚠️ 注意：这将修改角色的世界书设置。\n\n' +
+            '是否继续？',
+        );
+
+        if (!confirmConnect) return;
+
+        try {
+          // 显示加载提示
+          const loadingMessage = '正在下载世界书数据...';
+          console.log('🌍', loadingMessage);
+
+          // 从GitHub下载世界书数据
+          const githubUrl = 'https://raw.githubusercontent.com/kencuo/my-pages/main/%E4%B8%96%E7%95%8C%E4%B9%A6.json';
+
+          const response = await fetch(githubUrl, {
+            method: 'GET',
+            headers: {
+              Accept: 'application/json',
+              'Cache-Control': 'no-cache',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const worldbookData = await response.json();
+          console.log('📖 世界书数据下载成功:', worldbookData);
+
+          // 验证和标准化数据格式
+          if (!worldbookData.entries) {
+            throw new Error('世界书数据格式不正确：缺少entries字段');
+          }
+
+          // 处理不同的entries格式
+          let entriesArray = [];
+          if (Array.isArray(worldbookData.entries)) {
+            // Entire格式：entries是数组
+            entriesArray = worldbookData.entries;
+            console.log('📋 检测到Entire格式（数组）');
+          } else if (typeof worldbookData.entries === 'object') {
+            // 标准格式：entries是对象
+            entriesArray = Object.values(worldbookData.entries);
+            console.log('📋 检测到标准格式（对象）');
+          } else {
+            throw new Error('世界书数据格式不正确：entries字段格式无效');
+          }
+
+          if (entriesArray.length === 0) {
+            throw new Error('世界书中没有有效的条目');
+          }
+
+          console.log(`📊 发现 ${entriesArray.length} 个世界书条目`);
+
+          // 转换为标准对象格式供后续处理
+          const normalizedEntries = {};
+          entriesArray.forEach((entry, index) => {
+            const entryId = entry.uid !== undefined ? entry.uid.toString() : index.toString();
+            normalizedEntries[entryId] = entry;
+          });
+
+          // 获取当前角色信息
+          const charInfo = getCurrentCharacterInfo();
+
+          // 调用SillyTavern的世界书API来添加条目
+          const result = await addWorldbookEntriesToCharacter(normalizedEntries, charInfo);
+
+          if (result.success) {
+            const entriesCount = entriesArray.length;
+            alert(
+              `✅ 世界书条目添加成功！\n\n` +
+                `角色：${charInfo.name}\n` +
+                `源文件条目数：${entriesCount}\n` +
+                `成功添加：${result.addedCount} 个条目\n` +
+                `跳过重复：${result.skippedCount} 个条目\n` +
+                `世界书总条目数：${result.totalEntries}\n\n` +
+                `添加的条目包括：\n` +
+                `• 同层私聊格式\n` +
+                `• 表情包库\n` +
+                `• 群聊格式\n` +
+                `• 微博格式（可选）`,
+            );
+          } else {
+            throw new Error(result.error || '添加世界书条目到角色失败');
+          }
+        } catch (error) {
+          console.error('❌ 连接世界书失败:', error);
+          alert(
+            `❌ 连接世界书失败\n\n` +
+              `错误信息：${error.message}\n\n` +
+              `请检查：\n` +
+              `• 网络连接是否正常\n` +
+              `• GitHub链接是否可访问\n` +
+              `• 是否在SillyTavern环境中运行`,
+          );
+        }
+      }
+
+      // 添加世界书条目到角色的主世界书
+      async function addWorldbookEntriesToCharacter(entries, charInfo) {
+        try {
+          // 检查是否在SillyTavern环境中
+          if (typeof parent === 'undefined' || !parent.characters) {
+            throw new Error('未检测到SillyTavern环境');
+          }
+
+          // 获取当前角色ID
+          const currentCharId = parent.this_chid;
+          if (currentCharId === undefined || currentCharId === null) {
+            throw new Error('未选择角色');
+          }
+
+          // 获取当前角色数据
+          const currentChar = parent.characters[currentCharId];
+          if (!currentChar) {
+            throw new Error('无法获取当前角色数据');
+          }
+
+          // 确保角色有世界书扩展字段
+          if (!currentChar.data) {
+            currentChar.data = {};
+          }
+          if (!currentChar.data.extensions) {
+            currentChar.data.extensions = {};
+          }
+
+          // 检查角色是否已连接主世界书
+          let worldbookName = currentChar.data.extensions.world;
+          if (!worldbookName) {
+            throw new Error(
+              `角色 "${charInfo.name}" 未连接任何主世界书。\n\n请先在SillyTavern中为该角色连接一个主世界书，然后再使用此功能。`,
+            );
+          }
+
+          console.log(`📖 角色 "${charInfo.name}" 的主世界书: ${worldbookName}`);
+
+          // 获取现有的主世界书数据
+          let worldbook = null;
+
+          // 方法1: 通过SillyTavern的世界书API获取
+          if (typeof parent.loadWorldInfo === 'function') {
+            worldbook = await parent.loadWorldInfo(worldbookName);
+            console.log('📚 通过API加载世界书:', worldbookName);
+          }
+
+          // 方法2: 从全局世界书列表获取
+          if (!worldbook && parent.world_info && parent.world_info.globalSelect) {
+            const existingWorldbook = parent.world_info.globalSelect.find(wb => wb.name === worldbookName);
+            if (existingWorldbook) {
+              worldbook = existingWorldbook;
+              console.log('📚 从全局列表加载世界书:', worldbookName);
+            }
+          }
+
+          // 方法3: 从world_info对象直接获取
+          if (!worldbook && parent.world_info && parent.world_info[worldbookName]) {
+            worldbook = parent.world_info[worldbookName];
+            console.log('📚 从world_info对象加载世界书:', worldbookName);
+          }
+
+          if (!worldbook) {
+            throw new Error(
+              `无法加载主世界书 "${worldbookName}"。\n\n请确认：\n• 世界书文件存在\n• 世界书名称正确\n• SillyTavern已正确加载世界书`,
+            );
+          }
+
+          // 确保世界书有entries字段
+          if (!worldbook.entries) {
+            worldbook.entries = {};
+          }
+
+          console.log(`📋 当前世界书条目数量: ${Object.keys(worldbook.entries).length}`);
+
+          // 添加下载的条目到现有世界书
+          let addedCount = 0;
+          let updatedCount = 0;
+          let skippedCount = 0;
+
+          // 获取现有条目的最大UID，用于新条目的ID生成
+          const existingUids = Object.keys(worldbook.entries)
+            .map(key => parseInt(key))
+            .filter(uid => !isNaN(uid));
+          let maxUid = existingUids.length > 0 ? Math.max(...existingUids) : -1;
+
+          Object.keys(entries).forEach(entryKey => {
+            const entry = entries[entryKey];
+
+            // 检查是否已存在相同的条目（通过comment或key匹配）
+            const isDuplicate = Object.values(worldbook.entries).some(existingEntry => {
+              return (
+                existingEntry.comment === entry.comment ||
+                (existingEntry.key && entry.key && JSON.stringify(existingEntry.key) === JSON.stringify(entry.key))
+              );
+            });
+
+            if (isDuplicate) {
+              skippedCount++;
+              console.log(`⏭️ 跳过重复条目: ${entry.comment || entry.key}`);
+              return;
+            }
+
+            // 生成新的条目ID
+            maxUid++;
+            const newEntryId = maxUid.toString();
+
+            // 创建新条目（确保UID正确）
+            const newEntry = {
+              ...entry,
+              uid: maxUid,
+              // 添加标识，表明这是从同层手机世界书导入的
+              importedFrom: 'tongceng_mobile_worldbook',
+              importedAt: new Date().toISOString(),
+            };
+
+            // 添加到世界书
+            worldbook.entries[newEntryId] = newEntry;
+            addedCount++;
+            console.log(`➕ 添加新世界书条目 [${newEntryId}]: ${entry.comment || entry.key}`);
+          });
+
+          // 保存更新后的世界书
+          let saveSuccess = false;
+
+          // 方法1: 使用SillyTavern的保存API
+          if (typeof parent.saveWorldInfo === 'function') {
+            try {
+              await parent.saveWorldInfo(worldbookName, worldbook);
+              saveSuccess = true;
+              console.log(`💾 通过API保存世界书: ${worldbookName}`);
+            } catch (saveError) {
+              console.warn('API保存失败，尝试备用方法:', saveError);
+            }
+          }
+
+          // 方法2: 直接更新world_info对象
+          if (!saveSuccess && typeof parent.world_info !== 'undefined') {
+            parent.world_info[worldbookName] = worldbook;
+            if (typeof parent.saveSettingsDebounced === 'function') {
+              parent.saveSettingsDebounced();
+            }
+            saveSuccess = true;
+            console.log(`💾 通过直接更新保存世界书: ${worldbookName}`);
+          }
+
+          if (!saveSuccess) {
+            throw new Error('无法保存世界书更改');
+          }
+
+          // 刷新世界书相关UI
+          if (typeof parent.updateWorldInfoList === 'function') {
+            parent.updateWorldInfoList();
+          }
+          if (typeof parent.reloadEditor === 'function') {
+            parent.reloadEditor();
+          }
+
+          console.log(`✅ 世界书条目添加完成: 新增${addedCount}个，跳过${skippedCount}个重复项`);
+
+          // 返回详细结果
+          return {
+            success: true,
+            addedCount,
+            updatedCount,
+            skippedCount,
+            totalEntries: Object.keys(worldbook.entries).length,
+          };
+        } catch (error) {
+          console.error('❌ 添加世界书条目失败:', error);
+          return { success: false, error: error.message };
+        }
+      }
+
+      // 清理缓存数据
+      function clearCacheData() {
+        const confirmClear = confirm(
+          '🗑️ 清理缓存数据\n\n' +
+            '这将清理以下数据：\n' +
+            '• 好友列表缓存\n' +
+            '• 临时设置数据\n' +
+            '• 浏览器缓存\n\n' +
+            '⚠️ 注意：这不会删除角色的好友列表。\n\n' +
+            '是否继续？',
+        );
+
+        if (!confirmClear) return;
+
+        try {
+          // 清理localStorage中的临时数据
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes('temp_') || key.includes('cache_'))) {
+              keysToRemove.push(key);
+            }
+          }
+
+          keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+          });
+
+          console.log(`🗑️ 已清理 ${keysToRemove.length} 个缓存项`);
+          alert(`✅ 缓存清理完成！\n\n已清理 ${keysToRemove.length} 个缓存项。`);
+        } catch (error) {
+          console.error('❌ 清理缓存失败:', error);
+          alert(`❌ 清理缓存失败：${error.message}`);
+        }
+      }
+
+      // 导出设置
+      function exportSettings() {
+        try {
+          const charInfo = getCurrentCharacterInfo();
+
+          const settings = {
+            version: '1.0',
+            exportTime: new Date().toISOString(),
+            character: charInfo,
+            settings: {
+              // 可以在这里添加其他设置
+              lastConnectedWorldbook: localStorage.getItem('lastConnectedWorldbook'),
+              preferences: {
+                autoConnect: localStorage.getItem('autoConnectWorldbook') === 'true',
+              },
+            },
+          };
+
+          const jsonString = JSON.stringify(settings, null, 2);
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+
+          const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+          const fileName = `好友列表设置_${charInfo.name}_${timestamp}.json`;
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          alert(`✅ 设置导出成功！\n\n文件名: ${fileName}`);
+        } catch (error) {
+          console.error('❌ 导出设置失败:', error);
+          alert(`❌ 导出设置失败：${error.message}`);
+        }
+      }
+
+      // 关于信息
+      function showAbout() {
+        const aboutInfo = `
+📱 好友列表 v2.0
+
+✨ 功能特性：
+• 角色独立的好友列表管理
+• 支持好友和群聊
+• 一键连接同层手机世界书
+• 数据导入/导出功能
+• 实时角色切换检测
+
+🌍 世界书连接：
+• 自动从GitHub获取最新数据
+• 支持同层私聊、群聊、表情包
+• 无需手动复制粘贴
+• 与SillyTavern完美集成
+
+🔧 技术支持：
+• 基于SillyTavern Extension API
+• 支持角色独立存储
+• 自动数据同步和备份
+
+📞 联系方式：
+如有问题或建议，请在GitHub提交Issue
+
+© 2024 TavernHelper Team
+        `.trim();
+
+        alert(aboutInfo);
       }
 
       // Cookie同步和代理方案
