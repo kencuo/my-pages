@@ -1127,15 +1127,21 @@
       function getCurrentCharacterInfo() {
         try {
           // 方法1: 从SillyTavern的全局变量获取当前角色ID
-          if (typeof parent !== 'undefined' && parent.this_chid !== undefined) {
+          if (typeof parent !== 'undefined' && parent.this_chid !== undefined && parent.this_chid !== null) {
             const charId = parent.this_chid;
             let charName = '未知角色';
 
             // 尝试获取角色名称
-            if (parent.characters && parent.characters[charId]) {
-              charName = parent.characters[charId].name || parent.characters[charId].data?.name || `角色${charId}`;
-            } else if (parent.name1) {
-              charName = parent.name1; // 当前聊天中的角色名
+            try {
+              if (parent.characters && parent.characters[charId]) {
+                const charData = parent.characters[charId];
+                charName = charData.name || (charData.data && charData.data.name) || `角色${charId}`;
+              } else if (parent.name1) {
+                charName = parent.name1; // 当前聊天中的角色名
+              }
+            } catch (nameError) {
+              console.warn('获取角色名称时出错:', nameError);
+              charName = `角色${charId}`;
             }
 
             console.log('从SillyTavern获取角色信息:', { id: charId, name: charName });
@@ -2169,12 +2175,13 @@ ${
         const settingsOptions = [
           '1 - 连接同层手机世界书',
           '2 - 手动导入世界书JSON',
-          '3 - 清理缓存数据',
-          '4 - 导出设置',
-          '5 - 关于',
+          '3 - 测试SillyTavern环境',
+          '4 - 清理缓存数据',
+          '5 - 导出设置',
+          '6 - 关于',
         ];
 
-        const choice = prompt('⚙️ 设置选项：\n\n' + settingsOptions.join('\n') + '\n\n' + '请输入选项数字 (1-5):');
+        const choice = prompt('⚙️ 设置选项：\n\n' + settingsOptions.join('\n') + '\n\n' + '请输入选项数字 (1-6):');
 
         const optionIndex = parseInt(choice) - 1;
 
@@ -2186,12 +2193,15 @@ ${
             manualImportWorldbook();
             break;
           case 2:
-            clearCacheData();
+            testSillyTavernEnvironment();
             break;
           case 3:
-            exportSettings();
+            clearCacheData();
             break;
           case 4:
+            exportSettings();
+            break;
+          case 5:
             showAbout();
             break;
           default:
@@ -2202,6 +2212,41 @@ ${
 
       // 连接同层手机世界书
       async function connectToWorldbook() {
+        // 预先检查SillyTavern环境
+        try {
+          console.log('🔍 预检查SillyTavern环境...');
+
+          if (typeof parent === 'undefined') {
+            throw new TypeError('未在SillyTavern环境中运行：parent对象未定义');
+          }
+
+          if (!parent.characters) {
+            throw new TypeError('SillyTavern环境不完整：parent.characters未定义');
+          }
+
+          if (parent.this_chid === undefined || parent.this_chid === null) {
+            throw new TypeError('未选择角色：parent.this_chid为空');
+          }
+
+          if (!parent.characters[parent.this_chid]) {
+            throw new TypeError(`角色数据不存在：角色ID ${parent.this_chid} 对应的数据为空`);
+          }
+
+          console.log('✅ SillyTavern环境检查通过');
+        } catch (preCheckError) {
+          console.error('❌ SillyTavern环境预检查失败:', preCheckError);
+          alert(
+            `❌ 环境检查失败\n\n` +
+              `错误：${preCheckError.message}\n\n` +
+              `🔧 解决方案：\n` +
+              `1. 确保在SillyTavern中运行此功能\n` +
+              `2. 选择一个角色后再试\n` +
+              `3. 刷新SillyTavern页面\n` +
+              `4. 检查SillyTavern版本是否兼容`,
+          );
+          return;
+        }
+
         const confirmConnect = confirm(
           '🌍 连接同层手机世界书\n\n' +
             '这将从GitHub下载最新的同层手机世界书条目，\n' +
@@ -2328,17 +2373,38 @@ ${
             message: error.message,
             stack: error.stack,
             name: error.name,
+            toString: error.toString(),
+            errorObject: error,
           });
+
+          // 特别处理TypeError
+          if (error.name === 'TypeError') {
+            console.error('🔍 TypeError详细分析:');
+            console.error('- 可能的原因: 访问了undefined/null的属性或方法');
+            console.error('- 错误位置:', error.stack);
+            console.error('- SillyTavern环境检查:', typeof parent !== 'undefined');
+            console.error('- 当前角色ID:', typeof parent !== 'undefined' ? parent.this_chid : 'parent未定义');
+            console.error(
+              '- characters对象:',
+              typeof parent !== 'undefined' ? typeof parent.characters : 'parent未定义',
+            );
+          }
 
           // 更详细的错误诊断
           let diagnosticInfo = '';
-          if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          if (error.name === 'TypeError') {
+            diagnosticInfo =
+              '\n🔧 TypeError问题：\n• 可能未在SillyTavern环境中运行\n• 角色数据不完整\n• SillyTavern版本不兼容\n• 检查是否选择了角色';
+          } else if (
+            (error.message && error.message.includes('Failed to fetch')) ||
+            (error.message && error.message.includes('NetworkError'))
+          ) {
             diagnosticInfo = '\n🌐 网络问题：\n• 检查网络连接\n• 尝试直接访问GitHub链接\n• 可能被防火墙阻止';
-          } else if (error.message.includes('CORS')) {
+          } else if (error.message && error.message.includes('CORS')) {
             diagnosticInfo = '\n🔒 跨域问题：\n• GitHub API限制\n• 需要使用代理或镜像链接';
-          } else if (error.message.includes('JSON')) {
+          } else if (error.message && error.message.includes('JSON')) {
             diagnosticInfo = '\n📄 文件格式问题：\n• 世界书文件格式错误\n• JSON语法错误';
-          } else if (error.message.includes('SillyTavern')) {
+          } else if (error.message && error.message.includes('SillyTavern')) {
             diagnosticInfo = '\n🎭 SillyTavern环境问题：\n• 请在SillyTavern中运行此功能\n• 检查是否选择了角色';
           }
 
@@ -2465,6 +2531,111 @@ ${
               `4. 查看控制台获取详细错误信息`,
           );
         }
+      }
+
+      // 测试SillyTavern环境
+      function testSillyTavernEnvironment() {
+        console.log('🔍 开始SillyTavern环境诊断...');
+
+        let diagnosticResults = [];
+        let overallStatus = '✅ 正常';
+
+        // 测试1: parent对象
+        if (typeof parent === 'undefined') {
+          diagnosticResults.push('❌ parent对象: 未定义 (不在SillyTavern环境中)');
+          overallStatus = '❌ 异常';
+        } else {
+          diagnosticResults.push('✅ parent对象: 已定义');
+        }
+
+        // 测试2: characters对象
+        if (typeof parent !== 'undefined') {
+          if (!parent.characters) {
+            diagnosticResults.push('❌ parent.characters: 未定义');
+            overallStatus = '❌ 异常';
+          } else {
+            const charCount = Object.keys(parent.characters).length;
+            diagnosticResults.push(`✅ parent.characters: 已定义 (${charCount}个角色)`);
+          }
+
+          // 测试3: 当前角色ID
+          if (parent.this_chid === undefined || parent.this_chid === null) {
+            diagnosticResults.push('❌ parent.this_chid: 未选择角色');
+            overallStatus = '⚠️ 警告';
+          } else {
+            diagnosticResults.push(`✅ parent.this_chid: ${parent.this_chid}`);
+
+            // 测试4: 当前角色数据
+            if (parent.characters && parent.characters[parent.this_chid]) {
+              const char = parent.characters[parent.this_chid];
+              diagnosticResults.push(`✅ 当前角色数据: ${char.name || '未命名'}`);
+
+              // 测试5: 角色世界书连接
+              if (char.data && char.data.extensions && char.data.extensions.world) {
+                diagnosticResults.push(`✅ 角色世界书: ${char.data.extensions.world}`);
+              } else {
+                diagnosticResults.push('⚠️ 角色世界书: 未连接主世界书');
+                if (overallStatus === '✅ 正常') overallStatus = '⚠️ 警告';
+              }
+            } else {
+              diagnosticResults.push('❌ 当前角色数据: 无法访问');
+              overallStatus = '❌ 异常';
+            }
+          }
+
+          // 测试6: 世界书相关API
+          const worldInfoAPIs = [
+            'loadWorldInfo',
+            'saveWorldInfo',
+            'updateWorldInfoList',
+            'reloadEditor',
+            'saveSettingsDebounced',
+          ];
+
+          let availableAPIs = [];
+          let missingAPIs = [];
+
+          worldInfoAPIs.forEach(api => {
+            if (typeof parent[api] === 'function') {
+              availableAPIs.push(api);
+            } else {
+              missingAPIs.push(api);
+            }
+          });
+
+          diagnosticResults.push(
+            `✅ 可用API: ${availableAPIs.length}/${worldInfoAPIs.length} (${availableAPIs.join(', ')})`,
+          );
+          if (missingAPIs.length > 0) {
+            diagnosticResults.push(`⚠️ 缺失API: ${missingAPIs.join(', ')}`);
+            if (overallStatus === '✅ 正常') overallStatus = '⚠️ 警告';
+          }
+
+          // 测试7: world_info对象
+          if (parent.world_info) {
+            diagnosticResults.push('✅ parent.world_info: 已定义');
+          } else {
+            diagnosticResults.push('⚠️ parent.world_info: 未定义');
+            if (overallStatus === '✅ 正常') overallStatus = '⚠️ 警告';
+          }
+        }
+
+        // 输出诊断结果
+        console.log('📋 SillyTavern环境诊断结果:');
+        diagnosticResults.forEach(result => console.log(result));
+
+        // 显示结果
+        alert(
+          `🔍 SillyTavern环境诊断\n\n` +
+            `总体状态: ${overallStatus}\n\n` +
+            `详细结果:\n${diagnosticResults.join('\n')}\n\n` +
+            `📝 建议:\n` +
+            (overallStatus === '❌ 异常'
+              ? '• 请在SillyTavern中运行此功能\n• 确保SillyTavern已完全加载'
+              : overallStatus === '⚠️ 警告'
+              ? '• 选择一个角色\n• 为角色连接主世界书\n• 功能可能部分受限'
+              : '• 环境正常，可以使用所有功能'),
+        );
       }
 
       // 添加世界书条目到角色的主世界书
