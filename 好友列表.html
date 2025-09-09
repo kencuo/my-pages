@@ -2166,9 +2166,15 @@ ${
 
       // 打开设置
       function openSettings() {
-        const settingsOptions = ['1 - 连接同层手机世界书', '2 - 清理缓存数据', '3 - 导出设置', '4 - 关于'];
+        const settingsOptions = [
+          '1 - 连接同层手机世界书',
+          '2 - 手动导入世界书JSON',
+          '3 - 清理缓存数据',
+          '4 - 导出设置',
+          '5 - 关于',
+        ];
 
-        const choice = prompt('⚙️ 设置选项：\n\n' + settingsOptions.join('\n') + '\n\n' + '请输入选项数字 (1-4):');
+        const choice = prompt('⚙️ 设置选项：\n\n' + settingsOptions.join('\n') + '\n\n' + '请输入选项数字 (1-5):');
 
         const optionIndex = parseInt(choice) - 1;
 
@@ -2177,12 +2183,15 @@ ${
             connectToWorldbook();
             break;
           case 1:
-            clearCacheData();
+            manualImportWorldbook();
             break;
           case 2:
-            exportSettings();
+            clearCacheData();
             break;
           case 3:
+            exportSettings();
+            break;
+          case 4:
             showAbout();
             break;
           default:
@@ -2208,19 +2217,50 @@ ${
           const loadingMessage = '正在下载世界书数据...';
           console.log('🌍', loadingMessage);
 
-          // 从GitHub下载世界书数据
-          const githubUrl = 'https://raw.githubusercontent.com/kencuo/my-pages/main/%E4%B8%96%E7%95%8C%E4%B9%A6.json';
+          // 尝试多个GitHub链接（原始链接 + 备用链接）
+          const githubUrls = [
+            'https://raw.githubusercontent.com/kencuo/my-pages/main/%E4%B8%96%E7%95%8C%E4%B9%A6.json',
+            'https://raw.githubusercontent.com/kencuo/my-pages/main/世界书.json',
+            'https://github.com/kencuo/my-pages/raw/main/%E4%B8%96%E7%95%8C%E4%B9%A6.json',
+            'https://github.com/kencuo/my-pages/raw/main/世界书.json',
+          ];
 
-          const response = await fetch(githubUrl, {
-            method: 'GET',
-            headers: {
-              Accept: 'application/json',
-              'Cache-Control': 'no-cache',
-            },
-          });
+          let response = null;
+          let lastError = null;
 
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          console.log('🔄 尝试连接GitHub，测试多个链接...');
+
+          for (let i = 0; i < githubUrls.length; i++) {
+            const url = githubUrls[i];
+            try {
+              console.log(`📡 尝试链接 ${i + 1}/${githubUrls.length}: ${url}`);
+
+              response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                  Accept: 'application/json',
+                  'Cache-Control': 'no-cache',
+                  'User-Agent': 'SillyTavern-WorldBook-Connector',
+                },
+                mode: 'cors',
+              });
+
+              if (response.ok) {
+                console.log(`✅ 成功连接: ${url}`);
+                break;
+              } else {
+                console.warn(`❌ 链接失败 ${response.status}: ${url}`);
+                lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+            } catch (fetchError) {
+              console.warn(`❌ 连接错误: ${url}`, fetchError);
+              lastError = fetchError;
+              continue;
+            }
+          }
+
+          if (!response || !response.ok) {
+            throw lastError || new Error('所有GitHub链接都无法访问');
           }
 
           const worldbookData = await response.json();
@@ -2284,13 +2324,145 @@ ${
           }
         } catch (error) {
           console.error('❌ 连接世界书失败:', error);
+          console.error('错误详情:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          });
+
+          // 更详细的错误诊断
+          let diagnosticInfo = '';
+          if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            diagnosticInfo = '\n🌐 网络问题：\n• 检查网络连接\n• 尝试直接访问GitHub链接\n• 可能被防火墙阻止';
+          } else if (error.message.includes('CORS')) {
+            diagnosticInfo = '\n🔒 跨域问题：\n• GitHub API限制\n• 需要使用代理或镜像链接';
+          } else if (error.message.includes('JSON')) {
+            diagnosticInfo = '\n📄 文件格式问题：\n• 世界书文件格式错误\n• JSON语法错误';
+          } else if (error.message.includes('SillyTavern')) {
+            diagnosticInfo = '\n🎭 SillyTavern环境问题：\n• 请在SillyTavern中运行此功能\n• 检查是否选择了角色';
+          }
+
           alert(
             `❌ 连接世界书失败\n\n` +
+              `错误类型：${error.name || 'Unknown'}\n` +
+              `错误信息：${error.message}\n` +
+              diagnosticInfo +
+              `\n\n` +
+              `🔧 故障排除：\n` +
+              `1. 检查控制台(F12)查看详细错误\n` +
+              `2. 尝试直接访问GitHub链接\n` +
+              `3. 确认在SillyTavern中运行\n` +
+              `4. 检查角色是否已连接世界书\n` +
+              `5. 使用"手动导入世界书"备用方案`,
+          );
+        }
+      }
+
+      // 手动导入世界书JSON
+      async function manualImportWorldbook() {
+        const confirmImport = confirm(
+          '📋 手动导入世界书JSON\n\n' +
+            '这是GitHub连接失败时的备用方案。\n' +
+            '你需要：\n' +
+            '1. 手动复制世界书JSON内容\n' +
+            '2. 粘贴到输入框中\n' +
+            '3. 自动添加到角色的主世界书\n\n' +
+            '是否继续？',
+        );
+
+        if (!confirmImport) return;
+
+        try {
+          // 获取JSON内容
+          const jsonInput = prompt(
+            '📝 请粘贴你的世界书JSON内容：\n\n' +
+              '提示：\n' +
+              '• 从GitHub页面复制完整的JSON内容\n' +
+              '• 确保格式正确（包含"entries"字段）\n' +
+              '• 可以从本地文件复制内容\n\n' +
+              '请在下方输入框粘贴JSON：',
+          );
+
+          if (!jsonInput || jsonInput.trim() === '') {
+            alert('❌ 未输入任何内容，操作取消。');
+            return;
+          }
+
+          console.log('📋 收到手动输入的JSON内容，长度:', jsonInput.length);
+
+          // 解析JSON
+          let worldbookData;
+          try {
+            worldbookData = JSON.parse(jsonInput.trim());
+          } catch (parseError) {
+            throw new Error(
+              `JSON格式错误：${parseError.message}\n\n请检查：\n• 是否复制了完整内容\n• 是否有多余的字符\n• JSON语法是否正确`,
+            );
+          }
+
+          console.log('📖 JSON解析成功:', worldbookData);
+
+          // 验证和标准化数据格式（复用现有逻辑）
+          if (!worldbookData.entries) {
+            throw new Error('世界书数据格式不正确：缺少entries字段');
+          }
+
+          // 处理不同的entries格式
+          let entriesArray = [];
+          if (Array.isArray(worldbookData.entries)) {
+            // Entire格式：entries是数组
+            entriesArray = worldbookData.entries;
+            console.log('📋 检测到Entire格式（数组）');
+          } else if (typeof worldbookData.entries === 'object') {
+            // 标准格式：entries是对象
+            entriesArray = Object.values(worldbookData.entries);
+            console.log('📋 检测到标准格式（对象）');
+          } else {
+            throw new Error('世界书数据格式不正确：entries字段格式无效');
+          }
+
+          if (entriesArray.length === 0) {
+            throw new Error('世界书中没有有效的条目');
+          }
+
+          console.log(`📊 发现 ${entriesArray.length} 个世界书条目`);
+
+          // 转换为标准对象格式供后续处理
+          const normalizedEntries = {};
+          entriesArray.forEach((entry, index) => {
+            const entryId = entry.uid !== undefined ? entry.uid.toString() : index.toString();
+            normalizedEntries[entryId] = entry;
+          });
+
+          // 获取当前角色信息
+          const charInfo = getCurrentCharacterInfo();
+
+          // 调用添加函数
+          const result = await addWorldbookEntriesToCharacter(normalizedEntries, charInfo);
+
+          if (result.success) {
+            alert(
+              `✅ 手动导入成功！\n\n` +
+                `角色：${charInfo.name}\n` +
+                `源条目数：${entriesArray.length}\n` +
+                `成功添加：${result.addedCount} 个条目\n` +
+                `跳过重复：${result.skippedCount} 个条目\n` +
+                `世界书总条目数：${result.totalEntries}\n\n` +
+                `🎉 世界书条目已成功添加到角色！`,
+            );
+          } else {
+            throw new Error(result.error || '添加世界书条目失败');
+          }
+        } catch (error) {
+          console.error('❌ 手动导入失败:', error);
+          alert(
+            `❌ 手动导入失败\n\n` +
               `错误信息：${error.message}\n\n` +
-              `请检查：\n` +
-              `• 网络连接是否正常\n` +
-              `• GitHub链接是否可访问\n` +
-              `• 是否在SillyTavern环境中运行`,
+              `🔧 解决方案：\n` +
+              `1. 检查JSON格式是否正确\n` +
+              `2. 确保复制了完整内容\n` +
+              `3. 检查角色是否已连接世界书\n` +
+              `4. 查看控制台获取详细错误信息`,
           );
         }
       }
