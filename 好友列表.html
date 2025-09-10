@@ -1064,6 +1064,10 @@
                 🌐 导入远程世界书
               </button>
               <div style="font-size: 12px; color: #666; text-align: center">链接已隐藏（仅本地保存，可随时更改）。</div>
+              <div
+                id="worldbookDetectInfo"
+                style="font-size: 12px; color: #666; text-align: center; margin-top: 6px"
+              ></div>
             </div>
 
             <!-- 自动更新设置 -->
@@ -2211,7 +2215,14 @@ ${
             ? allWorldbooks.map(n => (typeof n === 'string' ? n.trim() : n)).filter(Boolean)
             : [];
 
-          console.log('🔍 所有世界书列表:', allWorldbooks);
+          // 在界面显示检测到的世界书名称（最多展示5个）
+          try {
+            const infoEl = document.getElementById('worldbookDetectInfo');
+            if (infoEl) {
+              const list = (allWorldbooks || []).slice(0, 5).join('、') || '（无）';
+              infoEl.textContent = `检测到世界书（前5个）：${list}`;
+            }
+          } catch (e) {}
 
           // 首先尝试精确匹配
           const exactCandidates = ['同层手机喵喵', '同层手机世界书', '同层手机喵喵世界书'];
@@ -2220,15 +2231,18 @@ ${
           // 若无精确匹配，再用模糊匹配
           if (!existingPhoneWorldbook) {
             const phoneWorldbookPattern = /同层手机喵喵|同层手机世界书|手机喵喵|手机世界书/i;
-            console.log('🔍 查找模式:', phoneWorldbookPattern);
-            existingPhoneWorldbook = allWorldbooks.find(name => {
-              const matched = phoneWorldbookPattern.test(String(name));
-              console.log(`🔍 测试世界书名称 "${name}":`, matched);
-              return matched;
-            });
+            existingPhoneWorldbook = allWorldbooks.find(name => phoneWorldbookPattern.test(String(name)));
           }
 
-          console.log('🔍 查找结果:', existingPhoneWorldbook);
+          // 在界面显示匹配结果
+          try {
+            const infoEl = document.getElementById('worldbookDetectInfo');
+            if (infoEl) {
+              infoEl.textContent += existingPhoneWorldbook
+                ? `；匹配到：${existingPhoneWorldbook}`
+                : '；未匹配到相关世界书';
+            }
+          } catch (e) {}
 
           if (existingPhoneWorldbook) {
             // 找到现有的手机世界书，直接使用
