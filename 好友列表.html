@@ -1054,6 +1054,30 @@
 
           <div class="divider"></div>
 
+          <!-- 远程世界书导入区域 -->
+          <div class="import-export-section">
+            <h3>🌐 远程世界书导入</h3>
+            <p>使用预设地址导入世界书到当前角色主世界书</p>
+
+            <div style="margin: 15px 0">
+              <button class="btn submit-btn" onclick="importRemoteWorldbook()" style="width: 100%; margin-bottom: 10px">
+                🌐 导入远程世界书
+              </button>
+              <div style="font-size: 12px; color: #666; text-align: center">链接已隐藏（仅本地保存，可随时更改）。</div>
+            </div>
+
+            <!-- 自动更新设置 -->
+            <div style="margin: 15px 0">
+              <label style="display: flex; align-items: center; margin-bottom: 10px">
+                <input type="checkbox" id="autoUpdateWorldbook" style="margin-right: 8px" />
+                <span>启用自动更新（每24小时检查一次）</span>
+              </label>
+              <div style="font-size: 12px; color: #666">启用后会定期检查远程世界书更新并自动合并到主世界书</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
           <!-- 导入区域 -->
           <div class="import-export-section">
             <h3>📥 导入好友列表</h3>
@@ -1831,6 +1855,7 @@ ${
       // ==================== 导入/导出功能 ====================
 
       let selectedImportFile = null;
+      let autoUpdateInterval = null;
 
       // 显示导入/导出模态框
       function showImportExportModal() {
@@ -1844,6 +1869,9 @@ ${
 
         // 重置单选按钮
         document.querySelector('input[name="importMode"][value="replace"]').checked = true;
+
+        // 加载自动更新设置
+        loadAutoUpdateSetting();
       }
 
       // 关闭导入/导出模态框
@@ -2104,6 +2132,249 @@ ${
           console.error('验证导入数据失败:', error);
           alert('❌ 导入失败: 数据验证出错');
           return false;
+        }
+      }
+
+      // ==================== 远程世界书导入功能 ====================
+
+      // 远程世界书导入
+      async function importRemoteWorldbook() {
+        const url = getDefaultRemoteWorldbookUrl();
+        if (!url) {
+          alert('未配置远程世界书地址');
+          return;
+        }
+
+        try {
+          console.log('开始导入远程世界书:', url);
+
+          // 获取远程JSON内容
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const worldbookData = await response.json();
+          console.log('远程世界书数据:', worldbookData);
+
+          // 验证数据格式
+          if (!worldbookData.entries || typeof worldbookData.entries !== 'object') {
+            throw new Error('无效的世界书格式：缺少entries字段');
+          }
+
+          await processWorldbookImport(worldbookData, url);
+        } catch (error) {
+          console.error('远程世界书导入失败:', error);
+          alert(`❌ 导入失败: ${error.message}`);
+        }
+      }
+
+      // 处理世界书导入
+      async function processWorldbookImport(worldbookData, sourceUrl) {
+        try {
+          const TH = parent?.TavernHelper;
+          const ST = parent?.SillyTavern?.getContext?.();
+
+          if (!TH || !ST) {
+            throw new Error('未检测到 TavernHelper 或 SillyTavern 上下文（需要JS-Slash-Runner扩展）');
+          }
+
+          // 临时世界书名称
+          const tempWbName = `远程世界书_${Date.now()}`;
+          const worldbookJson = JSON.stringify(worldbookData);
+
+          // 1. 导入为临时世界书
+          if (typeof importRawWorldbook === 'function') {
+            await importRawWorldbook(`${tempWbName}.json`, worldbookJson);
+          } else {
+            throw new Error('未检测到 importRawWorldbook 函数（需要JS-Slash-Runner扩展）');
+          }
+
+          // 2. 获取当前角色主世界书
+          const charWb = TH.getCharWorldbookNames('current');
+          let primaryName = charWb.primary;
+
+          if (!primaryName) {
+            primaryName = await TH.getOrCreateChatWorldbook('current');
+          }
+
+          if (!primaryName) {
+            throw new Error('无法获取或创建主世界书');
+          }
+
+          // 3. 读取临时世界书条目并追加到主世界书
+          const toAppend = await TH.getWorldbook(tempWbName);
+          if (toAppend && toAppend.length > 0) {
+            await TH.createWorldbookEntries(primaryName, toAppend, { render: 'debounced' });
+            console.log(`已追加 ${toAppend.length} 个世界书条目到主世界书: ${primaryName}`);
+          }
+
+          // 4. 清理临时世界书
+          await TH.deleteWorldbook(tempWbName);
+
+          // 5. 保存导入记录
+          saveRemoteWorldbookInfo(sourceUrl, worldbookData);
+
+          const entryCount = toAppend ? toAppend.length : 0;
+          const versionInfo = worldbookData.version ? ` (版本: ${worldbookData.version})` : '';
+
+          alert(
+            `✅ 远程世界书导入成功！\n\n` +
+              `来源: ${worldbookData.name || '未知'}${versionInfo}\n` +
+              `导入条目: ${entryCount} 个\n` +
+              `目标世界书: ${primaryName}\n` +
+              `URL: ${sourceUrl}`,
+          );
+        } catch (error) {
+          console.error('世界书处理失败:', error);
+          throw error;
+        }
+      }
+
+      // 保存远程世界书信息
+      function saveRemoteWorldbookInfo(url, data) {
+        const charInfo = getCurrentCharacterInfo();
+        const key = getFriendsStorageKey() + '_remote_worldbook';
+
+        const info = {
+          url: url,
+          lastUpdated: new Date().toISOString(),
+          version: data.version || '1.0.0',
+          name: data.name || '远程世界书',
+          author: data.author || '未知',
+          entryCount: Object.keys(data.entries || {}).length,
+        };
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          parent.extension_settings[key] = info;
+          if (typeof parent.saveSettingsDebounced === 'function') {
+            parent.saveSettingsDebounced();
+          }
+        }
+        localStorage.setItem(key, JSON.stringify(info));
+      }
+
+      // 默认远程世界书URL（隐藏）
+      function getDefaultRemoteWorldbookUrl() {
+        const key = getFriendsStorageKey() + '_remote_worldbook';
+        let info = null;
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          info = parent.extension_settings[key] || null;
+        } else {
+          info = JSON.parse(localStorage.getItem(key) || 'null');
+        }
+        // 优先用已保存的URL，否则使用内置默认
+        return info?.url || 'https://raw.githubusercontent.com/kencuo/lorebook/main/同层手机世界书.json';
+      }
+
+      // 获取远程世界书信息
+      function getRemoteWorldbookInfo() {
+        const key = getFriendsStorageKey() + '_remote_worldbook';
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          return parent.extension_settings[key] || null;
+        }
+        return JSON.parse(localStorage.getItem(key) || 'null');
+      }
+
+      // 检查远程世界书更新
+      async function checkRemoteWorldbookUpdate() {
+        const info = getRemoteWorldbookInfo();
+        if (!info || !info.url) return;
+
+        try {
+          console.log('检查远程世界书更新:', info.url);
+
+          const response = await fetch(info.url);
+          if (!response.ok) return;
+
+          const remoteData = await response.json();
+          const remoteVersion = remoteData.version || '1.0.0';
+          const localVersion = info.version || '1.0.0';
+
+          // 简单版本比较（数字版本号）
+          if (compareVersions(remoteVersion, localVersion) > 0) {
+            const shouldUpdate = confirm(
+              `🔄 发现远程世界书更新\n\n` +
+                `远程版本: ${remoteVersion}\n` +
+                `本地版本: ${localVersion}\n` +
+                `更新时间: ${remoteData.lastUpdated || '未知'}\n\n` +
+                `是否立即更新？`,
+            );
+
+            if (shouldUpdate) {
+              await processWorldbookImport(remoteData, info.url);
+            }
+          } else {
+            console.log('远程世界书已是最新版本');
+          }
+        } catch (error) {
+          console.error('检查更新失败:', error);
+        }
+      }
+
+      // 版本比较函数
+      function compareVersions(version1, version2) {
+        const v1parts = version1.split('.').map(Number);
+        const v2parts = version2.split('.').map(Number);
+
+        for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
+          const v1 = v1parts[i] || 0;
+          const v2 = v2parts[i] || 0;
+
+          if (v1 > v2) return 1;
+          if (v1 < v2) return -1;
+        }
+        return 0;
+      }
+
+      // 启动/停止自动更新
+      function toggleAutoUpdate() {
+        const isEnabled = document.getElementById('autoUpdateWorldbook').checked;
+
+        if (isEnabled) {
+          // 启动自动更新（每24小时）
+          autoUpdateInterval = setInterval(checkRemoteWorldbookUpdate, 24 * 60 * 60 * 1000);
+          console.log('已启动远程世界书自动更新检查');
+
+          // 立即检查一次
+          setTimeout(checkRemoteWorldbookUpdate, 5000);
+        } else {
+          // 停止自动更新
+          if (autoUpdateInterval) {
+            clearInterval(autoUpdateInterval);
+            autoUpdateInterval = null;
+            console.log('已停止远程世界书自动更新检查');
+          }
+        }
+
+        // 保存设置
+        const key = getFriendsStorageKey() + '_auto_update';
+        const setting = { enabled: isEnabled };
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          parent.extension_settings[key] = setting;
+          if (typeof parent.saveSettingsDebounced === 'function') {
+            parent.saveSettingsDebounced();
+          }
+        }
+        localStorage.setItem(key, JSON.stringify(setting));
+      }
+
+      // 加载自动更新设置
+      function loadAutoUpdateSetting() {
+        const key = getFriendsStorageKey() + '_auto_update';
+        let setting = null;
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          setting = parent.extension_settings[key];
+        } else {
+          setting = JSON.parse(localStorage.getItem(key) || 'null');
+        }
+
+        if (setting && setting.enabled) {
+          document.getElementById('autoUpdateWorldbook').checked = true;
+          toggleAutoUpdate();
         }
       }
 
@@ -2513,6 +2784,9 @@ app.listen(8888, () => {
 
           // 开始角色切换监控
           console.log('🔍 开始角色切换监控...');
+
+          // 绑定自动更新复选框事件
+          document.getElementById('autoUpdateWorldbook')?.addEventListener('change', toggleAutoUpdate);
         }, 500);
       });
 
