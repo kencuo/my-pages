@@ -2195,11 +2195,13 @@ ${
           let primaryName = charWb.primary;
 
           if (!primaryName) {
-            primaryName = await TH.getOrCreateChatWorldbook('current');
-          }
-
-          if (!primaryName) {
-            throw new Error('无法获取或创建主世界书');
+            // 若角色没有绑定主世界书，则创建一个并绑定到当前聊天/角色
+            const fallbackName = `聊天知识书_${Date.now()}`;
+            await TH.createWorldbook(fallbackName);
+            // 绑定到当前聊天作为主世界书
+            await TH.rebindChatWorldbook('current', fallbackName);
+            primaryName = fallbackName;
+            console.log('已创建并绑定主世界书:', primaryName);
           }
 
           // 3. 读取临时世界书条目并追加到主世界书
