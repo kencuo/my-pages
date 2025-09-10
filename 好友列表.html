@@ -2180,7 +2180,7 @@ ${
           }
 
           // 临时世界书名称
-          const tempWbName = `远程世界书_${Date.now()}`;
+          const tempWbName = `同层手机喵喵喵世界书_临时导入_${Date.now()}`;
           const worldbookJson = JSON.stringify(worldbookData);
 
           // 1. 导入为临时世界书
@@ -2190,18 +2190,23 @@ ${
             throw new Error('未检测到 importRawWorldbook 函数（需要JS-Slash-Runner扩展）');
           }
 
-          // 2. 获取当前角色主世界书
-          const charWb = TH.getCharWorldbookNames('current');
-          let primaryName = charWb.primary;
+          // 2. 获取或准备当前聊天绑定的世界书（聊天知识书）
+          let primaryName = TH.getChatWorldbookName('current');
+
+          // 生成建议名称：优先使用远程世界书的name，其次使用角色名
+          const charName = ST?.characters?.[ST?.characterId]?.name || '当前聊天';
+          const suggestedName = worldbookData.name || `${charName}的聊天知识书`;
 
           if (!primaryName) {
-            // 若角色没有绑定主世界书，则创建一个并绑定到当前聊天/角色
-            const fallbackName = `聊天知识书_${Date.now()}`;
-            await TH.createWorldbook(fallbackName);
-            // 绑定到当前聊天作为主世界书
-            await TH.rebindChatWorldbook('current', fallbackName);
-            primaryName = fallbackName;
-            console.log('已创建并绑定主世界书:', primaryName);
+            // 如果没有绑定聊天世界书，则创建（若不存在）并绑定
+            if (!TH.getWorldbookNames().includes(suggestedName)) {
+              await TH.createWorldbook(suggestedName);
+            }
+            await TH.rebindChatWorldbook('current', suggestedName);
+            primaryName = suggestedName;
+            console.log('已创建并绑定聊天世界书:', primaryName);
+          } else {
+            console.log('检测到已有聊天世界书:', primaryName);
           }
 
           // 3. 读取临时世界书条目并追加到主世界书
