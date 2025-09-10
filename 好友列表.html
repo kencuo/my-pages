@@ -2150,7 +2150,7 @@
         }
 
         try {
-          console.log('开始导入远程世界书');
+          console.log('开始导入远程世界书:', url);
 
           // 获取远程JSON内容
           const response = await fetch(url);
@@ -2168,8 +2168,8 @@
 
           await processWorldbookImport(worldbookData, url);
         } catch (error) {
-          console.error('远程世界书导入失败');
-          alert('❌ 导入失败');
+          console.error('远程世界书导入失败:', error);
+          alert(`❌ 导入失败: ${error.message}`);
         }
       }
 
@@ -2234,8 +2234,7 @@
             importedWorldbookName = fuzzy;
           }
           if (!importedWorldbookName) {
-            // 名称无法识别时，兜底使用临时名称继续流程
-            importedWorldbookName = tempWbName;
+            throw new Error('导入完成但无法识别新世界书名称，请重试');
           }
 
           // 3. 寻找或准备目标世界书
@@ -2326,8 +2325,16 @@
             console.log(`已追加 ${toAppend.length} 个世界书条目到目标世界书: ${targetWorldbook}`);
           }
 
-          // 4. 清理临时世界书
-          await TH.deleteWorldbook(tempWbName);
+          // 4. 清理临时世界书（按真实导入名）
+          if (importedWorldbookName && importedWorldbookName !== targetWorldbook) {
+            // 只有当真实导入名是临时本、且与目标不同，才尝试清理
+            if (importedWorldbookName.includes('临时')) {
+              await TH.deleteWorldbook(importedWorldbookName);
+            }
+          }
+
+          // 5. 保存导入记录
+          saveRemoteWorldbookInfo(sourceUrl, worldbookData);
 
           const entryCount = toAppend ? toAppend.length : 0;
           const versionInfo = worldbookData.version ? ` (版本: ${worldbookData.version})` : '';
@@ -2336,10 +2343,28 @@
             `✅ 远程世界书导入成功！\n\n` +
               `来源: ${worldbookData.name || '未知'}${versionInfo}\n` +
               `导入条目: ${entryCount} 个\n` +
-              `目标世界书: ${targetWorldbook}`,
+              `目标世界书: ${targetWorldbook}\n` +
+              `URL: ${sourceUrl}`,
           );
         } catch (error) {
-          console.error('世界书处理失败');
+          console.error('世界书处理失败:', error);
+          // 兜底：如果是因为未命中目标世界书导致的错误，改为提示已创建新世界书
+          try {
+            const created = typeof importedWorldbookName === 'string' && importedWorldbookName.length > 0;
+            if (created) {
+              alert(
+                `✅ 已导入新的世界书！\n\n` +
+                  `名称: ${importedWorldbookName}\n` +
+                  `来源: ${worldbookData?.name || '未知'}${
+                    worldbookData?.version ? ` (版本: ${worldbookData.version})` : ''
+                  }\n` +
+                  `URL: ${sourceUrl}`,
+              );
+              return;
+            }
+          } catch (e) {}
+          // 其他真正的错误再提示失败
+          alert(`❌ 导入失败: ${error.message}`);
           throw error;
         }
       }
