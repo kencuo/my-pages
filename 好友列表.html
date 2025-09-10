@@ -2150,7 +2150,7 @@
         }
 
         try {
-          console.log('开始导入远程世界书:', url);
+          console.log('开始导入远程世界书');
 
           // 获取远程JSON内容
           const response = await fetch(url);
@@ -2168,8 +2168,8 @@
 
           await processWorldbookImport(worldbookData, url);
         } catch (error) {
-          console.error('远程世界书导入失败:', error);
-          alert(`❌ 导入失败: ${error.message}`);
+          console.error('远程世界书导入失败');
+          alert('❌ 导入失败');
         }
       }
 
@@ -2336,11 +2336,10 @@
             `✅ 远程世界书导入成功！\n\n` +
               `来源: ${worldbookData.name || '未知'}${versionInfo}\n` +
               `导入条目: ${entryCount} 个\n` +
-              `目标世界书: ${targetWorldbook}\n` +
-              `URL: ${sourceUrl}`,
+              `目标世界书: ${targetWorldbook}`,
           );
         } catch (error) {
-          console.error('世界书处理失败:', error);
+          console.error('世界书处理失败');
           throw error;
         }
       }
