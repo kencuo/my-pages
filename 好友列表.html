@@ -1310,13 +1310,13 @@
         const header = document.querySelector('.header h1');
         if (header) {
           header.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center;">
-              <div style="font-size: 18px;">好友列表</div>
-              <div style="font-size: 12px; color: #555555; margin-top: 2px;">
-                ${charInfo.name}
-              </div>
-            </div>
-          `;
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div style="font-size: 18px;">好友列表</div>
+                    <div style="font-size: 12px; color: #555555; margin-top: 2px;">
+                      ${charInfo.name}
+                    </div>
+                  </div>
+                `;
         }
       }
 
@@ -1374,11 +1374,11 @@
 
         if (friends.length === 0) {
           friendsList.innerHTML = `
-                    <div class="empty-state">
-                        <i>👥</i>
-                        <p>暂无好友，点击右上角添加好友或群聊</p>
-                    </div>
-                `;
+                          <div class="empty-state">
+                              <i>👥</i>
+                              <p>暂无好友，点击右上角添加好友或群聊</p>
+                          </div>
+                      `;
           return;
         }
 
@@ -1392,36 +1392,36 @@
         friendsList.innerHTML = sortedFriends
           .map(
             (friend, index) => `
-                <div class="friend-item ${friend.pinned ? 'pinned' : ''}" onclick="startChat('${friend.name}', '${
+                      <div class="friend-item ${friend.pinned ? 'pinned' : ''}" onclick="startChat('${friend.name}', '${
               friend.type
             }', '${friend.members || ''}')">
-                    <div class="friend-avatar">
-                        ${friend.type === 'group' ? '👥' : friend.name.charAt(0)}
-                    </div>
-                    <div class="friend-info">
-                        <div class="friend-name">
-                            ${friend.name}
-                            ${friend.type === 'group' ? '<span class="group-badge">群聊</span>' : ''}
-                            ${friend.pinned ? '<span class="pinned-badge">📌</span>' : ''}
-                        </div>
-                        <div class="friend-type">
-                            ${friend.type === 'group' ? `成员: ${friend.members}` : '好友'}
-                        </div>
-                    </div>
-                    <div class="friend-actions">
-                        <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
-                                onclick="handlePinClick(event, ${index})"
-                                title="${friend.pinned ? '取消置顶' : '置顶'}">
-                            ${friend.pinned ? '📌' : '📍'}
-                        </button>
-                        <button class="action-btn delete-btn"
-                                onclick="handleDeleteClick(event, ${index})"
-                                title="删除好友">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            `,
+                          <div class="friend-avatar">
+                              ${friend.type === 'group' ? '👥' : friend.name.charAt(0)}
+                          </div>
+                          <div class="friend-info">
+                              <div class="friend-name">
+                                  ${friend.name}
+                                  ${friend.type === 'group' ? '<span class="group-badge">群聊</span>' : ''}
+                                  ${friend.pinned ? '<span class="pinned-badge">📌</span>' : ''}
+                              </div>
+                              <div class="friend-type">
+                                  ${friend.type === 'group' ? `成员: ${friend.members}` : '好友'}
+                              </div>
+                          </div>
+                          <div class="friend-actions">
+                              <button class="action-btn pin-btn ${friend.pinned ? 'pinned' : ''}"
+                                      onclick="handlePinClick(event, ${index})"
+                                      title="${friend.pinned ? '取消置顶' : '置顶'}">
+                                  ${friend.pinned ? '📌' : '📍'}
+                              </button>
+                              <button class="action-btn delete-btn"
+                                      onclick="handleDeleteClick(event, ${index})"
+                                      title="删除好友">
+                                  🗑️
+                              </button>
+                          </div>
+                      </div>
+                  `,
           )
           .join('');
       }
@@ -1564,34 +1564,34 @@
         if (typeof triggerSlash === 'function') {
           if (type === 'group') {
             const message = `/send <群成员：${members}>
-【和${name}的聊天】
-<qunliao>
-</qunliao>`;
+      【和${name}的聊天】
+      <qunliao>
+      </qunliao>`;
             triggerSlash(message);
           } else {
             const message = `/send 【和${name}的聊天】
-<shouji>
-</shouji>`;
+      <shouji>
+      </shouji>`;
             triggerSlash(message);
           }
         } else {
           // 如果triggerSlash不可用，显示消息内容
           if (type === 'group') {
             console.log(`<群成员：${members}>
-【和${name}的聊天】
-<qunliao>
-</qunliao>`);
+      【和${name}的聊天】
+      <qunliao>
+      </qunliao>`);
             alert(`群聊消息：<群成员：${members}>
-【和${name}的聊天】
-<qunliao>
-</qunliao>`);
+      【和${name}的聊天】
+      <qunliao>
+      </qunliao>`);
           } else {
             console.log(`【和${name}的聊天】
-<shouji>
-</shouji>`);
+      <shouji>
+      </shouji>`);
             alert(`好友消息：【和${name}的聊天】
-<shouji>
-</shouji>`);
+      <shouji>
+      </shouji>`);
           }
         }
       }
@@ -1803,55 +1803,55 @@
         let sillyTavernInfo = '未连接到SillyTavern';
         if (typeof parent !== 'undefined') {
           sillyTavernInfo = `
-• this_chid: ${parent.this_chid}
-• name1: ${parent.name1 || '未设置'}
-• characters数量: ${parent.characters ? Object.keys(parent.characters).length : 0}
-• extension_settings可用: ${parent.extension_settings ? '是' : '否'}`;
+      • this_chid: ${parent.this_chid}
+      • name1: ${parent.name1 || '未设置'}
+      • characters数量: ${parent.characters ? Object.keys(parent.characters).length : 0}
+      • extension_settings可用: ${parent.extension_settings ? '是' : '否'}`;
         }
 
         const debugInfo = `
-=== 好友列表调试信息 ===
+      === 好友列表调试信息 ===
 
-当前角色信息:
-• ID: ${charInfo.id}
-• 名称: ${charInfo.name}
-• 来源: ${charInfo.source}
+      当前角色信息:
+      • ID: ${charInfo.id}
+      • 名称: ${charInfo.name}
+      • 来源: ${charInfo.source}
 
-SillyTavern连接状态:
-${sillyTavernInfo}
+      SillyTavern连接状态:
+      ${sillyTavernInfo}
 
-存储信息:
-• 存储键: ${storageKey}
-• 存储位置: ${storageSource}
-• 当前好友数量: ${friends.length}
+      存储信息:
+      • 存储键: ${storageKey}
+      • 存储位置: ${storageSource}
+      • 当前好友数量: ${friends.length}
 
-角色切换监控:
-• 当前监控的角色ID: ${currentCharacterId}
-• 最后检查时间: ${new Date(lastCheckTime).toLocaleTimeString()}
+      角色切换监控:
+      • 当前监控的角色ID: ${currentCharacterId}
+      • 最后检查时间: ${new Date(lastCheckTime).toLocaleTimeString()}
 
-旧版本数据:
-• 全局好友列表: ${oldFriends.length} 个好友
+      旧版本数据:
+      • 全局好友列表: ${oldFriends.length} 个好友
 
-当前角色好友列表:
-${
-  friends.length > 0
-    ? friends.map((f, i) => `${i + 1}. ${f.name} (${f.type === 'group' ? '群聊' : '好友'})`).join('\n')
-    : '(无好友)'
-}
+      当前角色好友列表:
+      ${
+        friends.length > 0
+          ? friends.map((f, i) => `${i + 1}. ${f.name} (${f.type === 'group' ? '群聊' : '好友'})`).join('\n')
+          : '(无好友)'
+      }
 
-${
-  oldFriends.length > 0
-    ? `\n旧版本好友列表:\n${oldFriends
-        .map((f, i) => `${i + 1}. ${f.name} (${f.type === 'group' ? '群聊' : '好友'})`)
-        .join('\n')}`
-    : ''
-}
+      ${
+        oldFriends.length > 0
+          ? `\n旧版本好友列表:\n${oldFriends
+              .map((f, i) => `${i + 1}. ${f.name} (${f.type === 'group' ? '群聊' : '好友'})`)
+              .join('\n')}`
+          : ''
+      }
 
-存储键名示例:
-• 当前角色: ${storageKey}
-• 其他角色: tavern_friends_sillytavern_chid_123
-• 默认角色: tavern_friends_default_default
-        `.trim();
+      存储键名示例:
+      • 当前角色: ${storageKey}
+      • 其他角色: tavern_friends_sillytavern_chid_123
+      • 默认角色: tavern_friends_default_default
+              `.trim();
 
         alert(debugInfo);
       }
@@ -2187,14 +2187,57 @@ ${
           const tempWbName = `同层手机喵喵喵世界书_临时导入_${Date.now()}`;
           const worldbookJson = JSON.stringify(worldbookData);
 
+          // 记录导入前的世界书列表
+          let beforeImportNames = [];
+          try {
+            beforeImportNames =
+              TH?.getWorldbookNames?.() ||
+              (typeof getWorldbookNames === 'function' ? getWorldbookNames() : []) ||
+              (typeof parent?.getWorldbookNames === 'function' ? parent.getWorldbookNames() : []) ||
+              parent?.TavernHelper?.getWorldbookNames?.() ||
+              [];
+          } catch {}
+
           // 1. 导入为临时世界书
           if (typeof importRawWorldbook === 'function') {
             await importRawWorldbook(`${tempWbName}.json`, worldbookJson);
           } else {
             throw new Error('未检测到 importRawWorldbook 函数（需要JS-Slash-Runner扩展）');
           }
+          // 等待酒馆索引刷新
+          await new Promise(r => setTimeout(r, 300));
 
-          // 2. 寻找或准备目标世界书
+          // 2. 确认实际导入的世界书名称
+          let afterImportNames = [];
+          try {
+            afterImportNames =
+              TH?.getWorldbookNames?.() ||
+              (typeof getWorldbookNames === 'function' ? getWorldbookNames() : []) ||
+              (typeof parent?.getWorldbookNames === 'function' ? parent.getWorldbookNames() : []) ||
+              parent?.TavernHelper?.getWorldbookNames?.() ||
+              [];
+          } catch {}
+          afterImportNames = Array.isArray(afterImportNames) ? afterImportNames.map(s => String(s).trim()) : [];
+          beforeImportNames = Array.isArray(beforeImportNames) ? beforeImportNames.map(s => String(s).trim()) : [];
+
+          const diffAdded = afterImportNames.filter(n => !beforeImportNames.includes(n));
+          let importedWorldbookName = null;
+          // 规则优先级：JSON中的 name -> 差集唯一新增 -> 我们给的临时名 -> 模糊匹配文件名
+          if (worldbookData?.name && afterImportNames.includes(worldbookData.name)) {
+            importedWorldbookName = worldbookData.name;
+          } else if (diffAdded.length === 1) {
+            importedWorldbookName = diffAdded[0];
+          } else if (afterImportNames.includes(tempWbName)) {
+            importedWorldbookName = tempWbName;
+          } else {
+            const fuzzy = afterImportNames.find(n => n.includes('临时导入')) || null;
+            importedWorldbookName = fuzzy;
+          }
+          if (!importedWorldbookName) {
+            throw new Error('导入完成但无法识别新世界书名称，请重试');
+          }
+
+          // 3. 寻找或准备目标世界书
           let targetWorldbook = null;
           let allWorldbooks = [];
 
@@ -2276,7 +2319,7 @@ ${
           }
 
           // 3. 读取临时世界书条目并追加到目标世界书
-          const toAppend = await TH.getWorldbook(tempWbName);
+          const toAppend = await TH.getWorldbook(importedWorldbookName);
           if (toAppend && toAppend.length > 0) {
             await TH.createWorldbookEntries(targetWorldbook, toAppend, { render: 'debounced' });
             console.log(`已追加 ${toAppend.length} 个世界书条目到目标世界书: ${targetWorldbook}`);
@@ -2497,14 +2540,14 @@ ${
       function openwb() {
         if (typeof triggerSlash === 'function') {
           const message = `<wb>
-</wb>`;
+      </wb>`;
           triggerSlash(message);
         } else {
           // 如果triggerSlash不可用，显示消息内容
           console.log(`<wb>
-</wb>`);
+      </wb>`);
           alert(`微博消息：<wb>
-</wb>`);
+      </wb>`);
         }
       }
 
@@ -2643,66 +2686,66 @@ ${
       // 显示代理服务器设置说明
       function showProxySetupInstructions() {
         const instructions = `
-🔧 本地代理服务器设置说明
+      🔧 本地代理服务器设置说明
 
-为了完美解决SameSite Cookie问题，您需要启动一个本地代理服务器：
+      为了完美解决SameSite Cookie问题，您需要启动一个本地代理服务器：
 
-方法1: 使用Node.js (推荐)
-1. 安装Node.js
-2. 创建proxy-server.js文件
-3. 运行: node proxy-server.js
+      方法1: 使用Node.js (推荐)
+      1. 安装Node.js
+      2. 创建proxy-server.js文件
+      3. 运行: node proxy-server.js
 
-方法2: 使用Python
-1. 安装Python
-2. 运行: python -m http.server 8888
+      方法2: 使用Python
+      1. 安装Python
+      2. 运行: python -m http.server 8888
 
-方法3: 使用浏览器扩展
-- 安装CORS解除扩展
-- 启用"Access-Control-Allow-Origin: *"
+      方法3: 使用浏览器扩展
+      - 安装CORS解除扩展
+      - 启用"Access-Control-Allow-Origin: *"
 
-代理服务器代码示例已复制到控制台，请查看！
-        `;
+      代理服务器代码示例已复制到控制台，请查看！
+              `;
 
         alert(instructions);
 
         // 输出代理服务器代码到控制台
         console.log(`
-// proxy-server.js - Node.js代理服务器
-const express = require('express');
-const { createProxyMiddleware } = require('http-proxy-middleware');
-const cors = require('cors');
+      // proxy-server.js - Node.js代理服务器
+      const express = require('express');
+      const { createProxyMiddleware } = require('http-proxy-middleware');
+      const cors = require('cors');
 
-const app = express();
-app.use(cors());
+      const app = express();
+      app.use(cors());
 
-// Bilibili代理
-app.use('/proxy/bilibili', createProxyMiddleware({
-  target: 'https://www.bilibili.com',
-  changeOrigin: true,
-  pathRewrite: {
-    '^/proxy/bilibili': ''
-  },
-  onProxyReq: (proxyReq, req, res) => {
-    // 修改请求头以绕过限制
-    proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-    proxyReq.setHeader('Referer', 'https://www.bilibili.com');
-  },
-  onProxyRes: (proxyRes, req, res) => {
-    // 修改响应头
-    proxyRes.headers['X-Frame-Options'] = 'ALLOWALL';
-    proxyRes.headers['Content-Security-Policy'] = '';
-    delete proxyRes.headers['x-frame-options'];
-  }
-}));
+      // Bilibili代理
+      app.use('/proxy/bilibili', createProxyMiddleware({
+        target: 'https://www.bilibili.com',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/proxy/bilibili': ''
+        },
+        onProxyReq: (proxyReq, req, res) => {
+          // 修改请求头以绕过限制
+          proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+          proxyReq.setHeader('Referer', 'https://www.bilibili.com');
+        },
+        onProxyRes: (proxyRes, req, res) => {
+          // 修改响应头
+          proxyRes.headers['X-Frame-Options'] = 'ALLOWALL';
+          proxyRes.headers['Content-Security-Policy'] = '';
+          delete proxyRes.headers['x-frame-options'];
+        }
+      }));
 
-app.get('/proxy/status', (req, res) => {
-  res.json({ status: 'running', message: 'Proxy server is active' });
-});
+      app.get('/proxy/status', (req, res) => {
+        res.json({ status: 'running', message: 'Proxy server is active' });
+      });
 
-app.listen(8888, () => {
-  console.log('🚀 代理服务器运行在 http://localhost:8888');
-});
-        `);
+      app.listen(8888, () => {
+        console.log('🚀 代理服务器运行在 http://localhost:8888');
+      });
+              `);
       }
 
       // 高级Cookie管理
