@@ -2241,9 +2241,22 @@
             }
           }
 
-          // 绑定到当前聊天
+          // 绑定到当前聊天并验证；必要时使用兜底API
           await TH.rebindChatWorldbook('current', TARGET_NAME);
-          targetWorldbook = TARGET_NAME;
+          // 等待索引/状态刷新
+          await new Promise(r => setTimeout(r, 200));
+          let bound = TH.getChatWorldbookName('current');
+          if (bound !== TARGET_NAME) {
+            // 兜底：确保聊天世界书存在并返回名称
+            if (typeof TH.getOrCreateChatWorldbook === 'function') {
+              const ensured = await TH.getOrCreateChatWorldbook('current', TARGET_NAME);
+              // 再次尝试绑定
+              await TH.rebindChatWorldbook('current', ensured || TARGET_NAME);
+              await new Promise(r => setTimeout(r, 200));
+              bound = TH.getChatWorldbookName('current');
+            }
+          }
+          targetWorldbook = bound || TARGET_NAME;
 
           // 4. 直接将远程世界书条目添加到目标世界书（使用新API，无需临时世界书）
           const remoteEntries = worldbookData?.entries || {};
