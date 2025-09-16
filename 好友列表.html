@@ -1564,34 +1564,34 @@
         if (typeof triggerSlash === 'function') {
           if (type === 'group') {
             const message = `/send <群成员：${members}>
-【和${name}的聊天】
-<qunliao>
-</qunliao>`;
+      【和${name}的聊天】
+      <qunliao>
+      </qunliao>`;
             triggerSlash(message);
           } else {
             const message = `/send 【和${name}的聊天】
-<shouji>
-</shouji>`;
+      <shouji>
+      </shouji>`;
             triggerSlash(message);
           }
         } else {
           // 如果triggerSlash不可用，显示消息内容
           if (type === 'group') {
             console.log(`<群成员：${members}>
-【和${name}的聊天】
-<qunliao>
-</qunliao>`);
+      【和${name}的聊天】
+      <qunliao>
+      </qunliao>`);
             alert(`群聊消息：<群成员：${members}>
-【和${name}的聊天】
-<qunliao>
-</qunliao>`);
+      【和${name}的聊天】
+      <qunliao>
+      </qunliao>`);
           } else {
             console.log(`【和${name}的聊天】
-<shouji>
-</shouji>`);
+      <shouji>
+      </shouji>`);
             alert(`好友消息：【和${name}的聊天】
-<shouji>
-</shouji>`);
+      <shouji>
+      </shouji>`);
           }
         }
       }
@@ -2183,66 +2183,8 @@
             throw new Error('未检测到 TavernHelper 或 SillyTavern 上下文（需要JS-Slash-Runner扩展）');
           }
 
-          // 临时世界书名称
-          const tempWbName = `同层手机喵喵喵世界书_临时导入_${Date.now()}`;
-          const worldbookJson = JSON.stringify(worldbookData);
-
-          // 记录导入前的世界书列表
-          let beforeImportNames = [];
-          try {
-            beforeImportNames =
-              TH?.getWorldbookNames?.() ||
-              (typeof getWorldbookNames === 'function' ? getWorldbookNames() : []) ||
-              (typeof parent?.getWorldbookNames === 'function' ? parent.getWorldbookNames() : []) ||
-              parent?.TavernHelper?.getWorldbookNames?.() ||
-              [];
-          } catch {}
-
-          // 1. 导入为临时世界书
-          if (typeof importRawWorldbook === 'function') {
-            await importRawWorldbook(`${tempWbName}.json`, worldbookJson);
-          } else {
-            throw new Error('未检测到 importRawWorldbook 函数（需要JS-Slash-Runner扩展）');
-          }
-          // 等待酒馆索引刷新
-          await new Promise(r => setTimeout(r, 300));
-
-          // 2. 确认实际导入的世界书名称
-          let afterImportNames = [];
-          try {
-            afterImportNames =
-              TH?.getWorldbookNames?.() ||
-              (typeof getWorldbookNames === 'function' ? getWorldbookNames() : []) ||
-              (typeof parent?.getWorldbookNames === 'function' ? parent.getWorldbookNames() : []) ||
-              parent?.TavernHelper?.getWorldbookNames?.() ||
-              [];
-          } catch {}
-          afterImportNames = Array.isArray(afterImportNames) ? afterImportNames.map(s => String(s).trim()) : [];
-          beforeImportNames = Array.isArray(beforeImportNames) ? beforeImportNames.map(s => String(s).trim()) : [];
-
-          const diffAdded = afterImportNames.filter(n => !beforeImportNames.includes(n));
-          let importedWorldbookName = null;
-          // 规则优先级：JSON中的 name -> 差集唯一新增 -> 我们给的临时名 -> 模糊匹配文件名
-          if (worldbookData?.name && afterImportNames.includes(worldbookData.name)) {
-            importedWorldbookName = worldbookData.name;
-          } else if (diffAdded.length === 1) {
-            importedWorldbookName = diffAdded[0];
-          } else if (afterImportNames.includes(tempWbName)) {
-            importedWorldbookName = tempWbName;
-          } else {
-            const fuzzy = afterImportNames.find(n => n.includes('临时导入')) || null;
-            importedWorldbookName = fuzzy;
-          }
-          if (!importedWorldbookName) {
-            // 名称无法识别时，兜底使用临时名称继续流程
-            importedWorldbookName = tempWbName;
-          }
-
-          // 3. 寻找或准备目标世界书
-          let targetWorldbook = null;
+          // 1. 获取现有世界书列表
           let allWorldbooks = [];
-
-          // 兼容多种暴露方式：优先 TH，其次全局函数
           try {
             const fromTH = TH?.getWorldbookNames?.() || [];
             const fromGlobal = typeof getWorldbookNames === 'function' ? getWorldbookNames() : [];
@@ -2250,14 +2192,12 @@
             const fromParentTH = parent?.TavernHelper?.getWorldbookNames?.() || [];
             allWorldbooks = [...fromTH, ...fromGlobal, ...fromParentGlobal, ...fromParentTH];
           } catch (e) {
-            console.warn('获取世界书列表失败，回退为空列表:', e);
+            console.warn('获取世界书列表失败，回退为空列表');
             allWorldbooks = [];
           }
 
-          // 规范化名称（去除首尾空白）
-          allWorldbooks = Array.isArray(allWorldbooks)
-            ? allWorldbooks.map(n => (typeof n === 'string' ? n.trim() : n)).filter(Boolean)
-            : [];
+          // 规范化名称（去重并去除首尾空白）
+          allWorldbooks = [...new Set(allWorldbooks)].map(n => (typeof n === 'string' ? n.trim() : n)).filter(Boolean);
 
           // 在界面显示检测到的世界书名称（最多展示5个）
           try {
@@ -2268,7 +2208,7 @@
             }
           } catch (e) {}
 
-          // 首先尝试精确匹配
+          // 2. 查找现有的"手机"相关世界书
           const exactCandidates = ['同层手机喵喵', '同层手机世界书', '同层手机喵喵世界书'];
           let existingPhoneWorldbook = allWorldbooks.find(name => exactCandidates.includes(name));
 
@@ -2288,48 +2228,40 @@
             }
           } catch (e) {}
 
-          if (existingPhoneWorldbook) {
-            // 找到现有的手机世界书，直接使用
-            targetWorldbook = existingPhoneWorldbook;
-            console.log('✅ 找到现有手机世界书:', targetWorldbook);
+          // 3. 确定目标世界书（固定为“同层手机喵喵”并绑定到当前聊天）
+          let targetWorldbook = null;
+          const TARGET_NAME = '同层手机喵喵';
 
-            // 如果当前聊天还没绑定世界书，则绑定这个
-            const currentChatWorldbook = TH.getChatWorldbookName('current');
-            if (!currentChatWorldbook) {
-              await TH.rebindChatWorldbook('current', targetWorldbook);
-              console.log('✅ 已将现有手机世界书绑定到当前聊天:', targetWorldbook);
-            }
-          } else {
-            // 没找到现有的，按原逻辑处理
-            let primaryName = TH.getChatWorldbookName('current');
-            const charName = ST?.characters?.[ST?.characterId]?.name || '当前聊天';
-            const suggestedName = worldbookData.name || `${charName}的聊天知识书`;
-
-            if (!primaryName) {
-              // 如果没有绑定聊天世界书，则创建并绑定
-              if (!allWorldbooks.includes(suggestedName)) {
-                await TH.createWorldbook(suggestedName);
-              }
-              await TH.rebindChatWorldbook('current', suggestedName);
-              primaryName = suggestedName;
-              console.log('已创建并绑定新的聊天世界书:', primaryName);
+          if (!allWorldbooks.includes(TARGET_NAME)) {
+            // 不存在则创建（若已存在同名，API会返回false，不影响流程）
+            if (typeof TH.createOrReplaceWorldbook === 'function') {
+              await TH.createOrReplaceWorldbook(TARGET_NAME, [], { render: 'debounced' });
             } else {
-              console.log('检测到已有聊天世界书:', primaryName);
+              await TH.createWorldbook(TARGET_NAME);
             }
-            targetWorldbook = primaryName;
           }
 
-          // 3. 读取临时世界书条目并追加到目标世界书
-          const toAppend = await TH.getWorldbook(importedWorldbookName);
-          if (toAppend && toAppend.length > 0) {
-            await TH.createWorldbookEntries(targetWorldbook, toAppend, { render: 'debounced' });
-            console.log(`已追加 ${toAppend.length} 个世界书条目到目标世界书: ${targetWorldbook}`);
+          // 绑定到当前聊天
+          await TH.rebindChatWorldbook('current', TARGET_NAME);
+          targetWorldbook = TARGET_NAME;
+
+          // 4. 直接将远程世界书条目添加到目标世界书（使用新API，无需临时世界书）
+          const remoteEntries = worldbookData?.entries || {};
+          const entriesArray = Object.values(remoteEntries);
+          const entryCount = entriesArray.length;
+
+          if (entryCount > 0) {
+            // 使用新API优先替换整个世界书，若不可用则回退为追加
+            if (typeof TH.createOrReplaceWorldbook === 'function') {
+              await TH.createOrReplaceWorldbook(targetWorldbook, entriesArray, { render: 'debounced' });
+            } else if (typeof TH.replaceWorldbook === 'function') {
+              await TH.replaceWorldbook(targetWorldbook, entriesArray, { render: 'debounced' });
+            } else {
+              await TH.createWorldbookEntries(targetWorldbook, entriesArray, { render: 'debounced' });
+            }
+            console.log(`已更新 ${entryCount} 个世界书条目到: ${targetWorldbook}`);
           }
 
-          // 4. 清理临时世界书
-          await TH.deleteWorldbook(tempWbName);
-
-          const entryCount = toAppend ? toAppend.length : 0;
           const versionInfo = worldbookData.version ? ` (版本: ${worldbookData.version})` : '';
 
           alert(
@@ -2392,20 +2324,22 @@
 
       // 检查远程世界书更新
       async function checkRemoteWorldbookUpdate() {
-        const info = getRemoteWorldbookInfo();
-        if (!info || !info.url) return;
+        // 使用内置隐藏默认URL，且不在日志中暴露
+        const url = getDefaultRemoteWorldbookUrl();
+        if (!url) return;
 
         try {
-          console.log('检查远程世界书更新:', info.url);
-
-          const response = await fetch(info.url);
+          const response = await fetch(url);
           if (!response.ok) return;
 
           const remoteData = await response.json();
           const remoteVersion = remoteData.version || '1.0.0';
-          const localVersion = info.version || '1.0.0';
 
-          // 简单版本比较（数字版本号）
+          // 读取上次导入的版本号（不保存URL）
+          const versionKey = getFriendsStorageKey() + '_remote_worldbook_version';
+          const stored = JSON.parse(localStorage.getItem(versionKey) || 'null');
+          const localVersion = stored?.version || '0.0.0';
+
           if (compareVersions(remoteVersion, localVersion) > 0) {
             const shouldUpdate = confirm(
               `🔄 发现远程世界书更新\n\n` +
@@ -2416,14 +2350,12 @@
             );
 
             if (shouldUpdate) {
-              await processWorldbookImport(remoteData, info.url);
+              await processWorldbookImport(remoteData, url);
+              // 保存最新版本号（不保存URL）
+              localStorage.setItem(versionKey, JSON.stringify({ version: remoteVersion, updatedAt: Date.now() }));
             }
-          } else {
-            console.log('远程世界书已是最新版本');
           }
-        } catch (error) {
-          console.error('检查更新失败:', error);
-        }
+        } catch {}
       }
 
       // 版本比较函数
