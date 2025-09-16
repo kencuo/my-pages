@@ -2258,60 +2258,54 @@
           }
           targetWorldbook = bound || TARGET_NAME;
 
-          // 4. 使用 importRawWorldbook 规范化远程JSON，再替换到目标世界书
-          const tempWbName = `同层手机喵喵_临时导入_${Date.now()}`;
-          const jsonText = JSON.stringify(worldbookData);
+          // 4. 直接从远程JSON映射到新版世界书结构，确保 name 与 strategy.keys/keys_secondary
+          const rawEntries = worldbookData?.entries || {};
+          const entriesList = Array.isArray(rawEntries)
+            ? rawEntries
+            : Object.keys(rawEntries)
+                .sort((a, b) => (Number(a) || 0) - (Number(b) || 0))
+                .map(k => rawEntries[k]);
 
-          // 首选全局 importRawWorldbook，其次 TH.importRawWorldbook
-          if (typeof importRawWorldbook === 'function') {
-            await importRawWorldbook(`${tempWbName}.json`, jsonText);
-          } else if (typeof TH.importRawWorldbook === 'function') {
-            await TH.importRawWorldbook(`${tempWbName}.json`, jsonText);
-          } else {
-            throw new Error('未检测到 importRawWorldbook 函数（需要JS-Slash-Runner扩展）');
-          }
-          // 等待索引/状态刷新
-          await new Promise(r => setTimeout(r, 300));
+          const normalized = (entriesList || []).map((src, idx) => {
+            const e = src || {};
+            const primaryKeys = Array.isArray(e.keys) ? e.keys : Array.isArray(e.key) ? e.key : [];
+            const secondaryKeys = Array.isArray(e.secondary_keys)
+              ? e.secondary_keys
+              : Array.isArray(e.keysecondary)
+              ? e.keysecondary
+              : [];
 
-          // 识别导入后的实际世界书名：优先使用JSON name命中，其次使用临时名
-          let importedName = null;
-          try {
-            const names = (TH?.getWorldbookNames?.() || []).map(s => String(s).trim());
-            if (worldbookData?.name && names.includes(worldbookData.name)) {
-              importedName = worldbookData.name;
-            } else if (names.includes(tempWbName)) {
-              importedName = tempWbName;
-            }
-          } catch {}
-          importedName = importedName || tempWbName;
+            const nameByComment =
+              typeof e.comment === 'string' && e.comment.trim() ? e.comment.trim().slice(0, 80) : '';
+            const name =
+              typeof e.name === 'string' && e.name.trim() ? e.name.trim() : nameByComment || `条目${e.uid ?? idx}`;
 
-          // 读取并规范化条目结构，保证 name/keys 不丢失
-          let normalized = [];
-          try {
-            const raw = await TH.getWorldbook(importedName);
-            normalized = (Array.isArray(raw) ? raw : []).map((e, idx) => {
-              const entry = { ...(e || {}) };
-              // name 兜底
-              const fallbackName =
-                typeof entry.comment === 'string' && entry.comment.trim()
-                  ? entry.comment.trim().slice(0, 50)
-                  : `条目${entry.uid ?? idx}`;
-              if (typeof entry.name !== 'string' || !entry.name.trim()) {
-                entry.name = fallbackName;
-              }
-              // keys 兜底
-              if (!Array.isArray(entry.keys) || entry.keys.length === 0) {
-                if (Array.isArray(entry.key)) entry.keys = entry.key;
-                else entry.keys = [];
-              }
-              // secondary_keys 兜底
-              if (!Array.isArray(entry.secondary_keys) || entry.secondary_keys.length === 0) {
-                if (Array.isArray(entry.keysecondary)) entry.secondary_keys = entry.keysecondary;
-              }
-              return entry;
-            });
-          } catch {}
-          const entryCount = Array.isArray(normalized) ? normalized.length : 0;
+            const hasAnyKeys = (primaryKeys && primaryKeys.length > 0) || (secondaryKeys && secondaryKeys.length > 0);
+            const strategy = hasAnyKeys
+              ? {
+                  type: 'selective',
+                  keys: primaryKeys,
+                  keys_secondary: { logic: 'and_any', keys: secondaryKeys },
+                  scan_depth: 'same_as_global',
+                }
+              : {
+                  type: 'constant',
+                  keys: [],
+                  keys_secondary: { logic: 'and_any', keys: [] },
+                  scan_depth: 'same_as_global',
+                };
+
+            return {
+              uid: typeof e.uid === 'number' ? e.uid : idx,
+              name,
+              enabled: e.disable === true ? false : e.enabled !== false,
+              strategy,
+              content: typeof e.content === 'string' ? e.content : '',
+              probability: typeof e.probability === 'number' ? e.probability : 100,
+            };
+          });
+
+          const entryCount = normalized.length;
 
           if (entryCount > 0) {
             // 优先整体替换，回退为追加
@@ -2323,11 +2317,6 @@
               await TH.createWorldbookEntries(targetWorldbook, normalized, { render: 'debounced' });
             }
           }
-
-          // 清理临时世界书
-          try {
-            await TH.deleteWorldbook(tempWbName);
-          } catch {}
 
           const versionInfo = worldbookData.version ? ` (版本: ${worldbookData.version})` : '';
 
