@@ -2258,22 +2258,76 @@
           }
           targetWorldbook = bound || TARGET_NAME;
 
-          // 4. 直接将远程世界书条目添加到目标世界书（使用新API，无需临时世界书）
-          const remoteEntries = worldbookData?.entries || {};
-          const entriesArray = Object.values(remoteEntries);
-          const entryCount = entriesArray.length;
+          // 4. 使用 importRawWorldbook 规范化远程JSON，再替换到目标世界书
+          const tempWbName = `同层手机喵喵_临时导入_${Date.now()}`;
+          const jsonText = JSON.stringify(worldbookData);
+
+          // 首选全局 importRawWorldbook，其次 TH.importRawWorldbook
+          if (typeof importRawWorldbook === 'function') {
+            await importRawWorldbook(`${tempWbName}.json`, jsonText);
+          } else if (typeof TH.importRawWorldbook === 'function') {
+            await TH.importRawWorldbook(`${tempWbName}.json`, jsonText);
+          } else {
+            throw new Error('未检测到 importRawWorldbook 函数（需要JS-Slash-Runner扩展）');
+          }
+          // 等待索引/状态刷新
+          await new Promise(r => setTimeout(r, 300));
+
+          // 识别导入后的实际世界书名：优先使用JSON name命中，其次使用临时名
+          let importedName = null;
+          try {
+            const names = (TH?.getWorldbookNames?.() || []).map(s => String(s).trim());
+            if (worldbookData?.name && names.includes(worldbookData.name)) {
+              importedName = worldbookData.name;
+            } else if (names.includes(tempWbName)) {
+              importedName = tempWbName;
+            }
+          } catch {}
+          importedName = importedName || tempWbName;
+
+          // 读取并规范化条目结构，保证 name/keys 不丢失
+          let normalized = [];
+          try {
+            const raw = await TH.getWorldbook(importedName);
+            normalized = (Array.isArray(raw) ? raw : []).map((e, idx) => {
+              const entry = { ...(e || {}) };
+              // name 兜底
+              const fallbackName =
+                typeof entry.comment === 'string' && entry.comment.trim()
+                  ? entry.comment.trim().slice(0, 50)
+                  : `条目${entry.uid ?? idx}`;
+              if (typeof entry.name !== 'string' || !entry.name.trim()) {
+                entry.name = fallbackName;
+              }
+              // keys 兜底
+              if (!Array.isArray(entry.keys) || entry.keys.length === 0) {
+                if (Array.isArray(entry.key)) entry.keys = entry.key;
+                else entry.keys = [];
+              }
+              // secondary_keys 兜底
+              if (!Array.isArray(entry.secondary_keys) || entry.secondary_keys.length === 0) {
+                if (Array.isArray(entry.keysecondary)) entry.secondary_keys = entry.keysecondary;
+              }
+              return entry;
+            });
+          } catch {}
+          const entryCount = Array.isArray(normalized) ? normalized.length : 0;
 
           if (entryCount > 0) {
-            // 使用新API优先替换整个世界书，若不可用则回退为追加
+            // 优先整体替换，回退为追加
             if (typeof TH.createOrReplaceWorldbook === 'function') {
-              await TH.createOrReplaceWorldbook(targetWorldbook, entriesArray, { render: 'debounced' });
+              await TH.createOrReplaceWorldbook(targetWorldbook, normalized, { render: 'debounced' });
             } else if (typeof TH.replaceWorldbook === 'function') {
-              await TH.replaceWorldbook(targetWorldbook, entriesArray, { render: 'debounced' });
+              await TH.replaceWorldbook(targetWorldbook, normalized, { render: 'debounced' });
             } else {
-              await TH.createWorldbookEntries(targetWorldbook, entriesArray, { render: 'debounced' });
+              await TH.createWorldbookEntries(targetWorldbook, normalized, { render: 'debounced' });
             }
-            console.log(`已更新 ${entryCount} 个世界书条目到: ${targetWorldbook}`);
           }
+
+          // 清理临时世界书
+          try {
+            await TH.deleteWorldbook(tempWbName);
+          } catch {}
 
           const versionInfo = worldbookData.version ? ` (版本: ${worldbookData.version})` : '';
 
