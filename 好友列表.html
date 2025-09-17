@@ -1564,7 +1564,7 @@
         if (typeof triggerSlash === 'function') {
           if (type === 'group') {
             const message = `/send <群成员：${members}>
-      【和${name}的聊天】
+【和${name}的聊天】
 <qunliao>
 </qunliao>`;
             triggerSlash(message);
@@ -1578,20 +1578,20 @@
           // 如果triggerSlash不可用，显示消息内容
           if (type === 'group') {
             console.log(`<群成员：${members}>
-      【和${name}的聊天】
+【和${name}的聊天】
 <qunliao>
 </qunliao>`);
             alert(`群聊消息：<群成员：${members}>
-      【和${name}的聊天】
-  <qunliao>
-  </qunliao>`);
+【和${name}的聊天】
+<qunliao>
+</qunliao>`);
           } else {
             console.log(`【和${name}的聊天】
-  <shouji>
-  </shouji>`);
+<shouji>
+</shouji>`);
             alert(`好友消息：【和${name}的聊天】
-  <shouji>
-  </shouji>`);
+<shouji>
+</shouji>`);
           }
         }
       }
