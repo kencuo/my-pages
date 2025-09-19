@@ -14621,34 +14621,74 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 查看对方状态
       function checkCharacterStatus() {
-        console.log(' 查看对方状态');
+        console.log('查看对方状态');
 
         // 获取当前角色名称
         const charNameElement = document.getElementById('chatPersonName');
         const charName = charNameElement ? charNameElement.textContent.trim() : '对方';
 
-        // 先发送用户消息
-        const userMessage = {
-          sender: 'user',
-          content: '查看对方的状态',
-          time: getTimeStr(),
-          timestamp: Date.now()
-        };
+        // 尝试获取SillyTavern的输入框
+        const sillyTavernInput = document.getElementById('send_textarea');
+        // 获取当前页面的输入框
+        const localInput = document.getElementById('chatInput');
 
-        // 添加用户消息到历史
-        state.messageHistory.push(userMessage);
-        appendMessage(userMessage, state.messageHistory.length - 1);
+        const statusText = '查看对方状态';
 
-        // 滚动到底部
-        scrollToBottom();
+        // 优先使用SillyTavern的输入框
+        if (sillyTavernInput) {
+          sillyTavernInput.value = statusText;
+          sillyTavernInput.focus();
 
-        // 自动请求AI回复来描述对方状态
-        setTimeout(() => {
-          requestAiReply();
-        }, 500);
+          // 触发input事件，确保SillyTavern能检测到输入变化
+          const inputEvent = new Event('input', { bubbles: true });
+          sillyTavernInput.dispatchEvent(inputEvent);
 
-        // 提示用户
-        showToast(`正在查看${charName}的状态...`);
+          // 触发change事件
+          const changeEvent = new Event('change', { bubbles: true });
+          sillyTavernInput.dispatchEvent(changeEvent);
+
+          showToast(`已在输入框填入"${statusText}"`);
+          console.log('已在SillyTavern输入框填入文字:', statusText);
+        }
+        // 如果没有找到SillyTavern输入框，使用本地输入框
+        else if (localInput) {
+          localInput.value = statusText;
+          localInput.focus();
+
+          // 触发input事件
+          const inputEvent = new Event('input', { bubbles: true });
+          localInput.dispatchEvent(inputEvent);
+
+          showToast(`已在输入框填入"${statusText}"`);
+          console.log('已在本地输入框填入文字:', statusText);
+        }
+        // 如果都没找到，回退到原来的自动发送方式
+        else {
+          console.log('未找到输入框，使用原来的自动发送方式');
+
+          // 先发送用户消息
+          const userMessage = {
+            sender: 'user',
+            content: statusText,
+            time: getTimeStr(),
+            timestamp: Date.now()
+          };
+
+          // 添加用户消息到历史
+          state.messageHistory.push(userMessage);
+          appendMessage(userMessage, state.messageHistory.length - 1);
+
+          // 滚动到底部
+          scrollToBottom();
+
+          // 自动请求AI回复来描述对方状态
+          setTimeout(() => {
+            requestAiReply();
+          }, 500);
+
+          // 提示用户
+          showToast(`正在查看${charName}的状态...`);
+        }
       }
 
       // 兼容 SillyTavern 渲染
@@ -15209,7 +15249,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
-            avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+
+            // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+            const charName = msg.charName || msg.name || getCurrentCharName();
+            const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
+
+            if (characterAvatarUrl) {
+              // 最高优先级：使用角色配置中的头像（类似SillyTavern）
+              avatar.src = characterAvatarUrl;
+            } else if (msg.customAvatarUrl) {
+              // 次高优先级：使用消息中保存的自定义头像
+              avatar.src = msg.customAvatarUrl;
+            } else if (settingsState.charAvatars[charName]) {
+              // 中等优先级：使用设置中的角色头像
+              avatar.src = settingsState.charAvatars[charName];
+            } else {
+              // 最低优先级：使用格式中的头像
+              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+            }
+
             message.appendChild(avatar);
           }
           message.appendChild(wrapper);
