@@ -13385,9 +13385,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
 
-            // 头像优先级：消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
-            if (msg.customAvatarUrl) {
-              // 最高优先级：使用消息中保存的自定义头像
+            // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+            const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
+
+            if (characterAvatarUrl) {
+              // 最高优先级：使用角色配置中的头像（类似SillyTavern）
+              avatar.src = characterAvatarUrl;
+            } else if (msg.customAvatarUrl) {
+              // 次高优先级：使用消息中保存的自定义头像
               avatar.src = msg.customAvatarUrl;
             } else if (charName && settingsState.charAvatars[charName]) {
               // 中等优先级：使用设置中的角色头像
