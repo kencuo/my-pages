@@ -3902,6 +3902,79 @@
         word-wrap: break-word;
       }
 
+      /* 表情包识图插件相关样式 */
+      .sticker-ai-indicator {
+        position: absolute !important;
+        top: 4px !important;
+        left: 4px !important;
+        background: rgba(7, 193, 96, 0.9) !important;
+        color: white !important;
+        padding: 2px 4px !important;
+        border-radius: 4px !important;
+        font-size: 10px !important;
+        font-weight: 500 !important;
+        z-index: 10 !important;
+        cursor: help !important;
+      }
+
+      .sticker-url-indicator {
+        position: absolute !important;
+        top: 4px !important;
+        right: 24px !important;
+        background: rgba(0, 123, 255, 0.9) !important;
+        color: white !important;
+        padding: 2px 4px !important;
+        border-radius: 4px !important;
+        font-size: 10px !important;
+        font-weight: 500 !important;
+        z-index: 10 !important;
+        cursor: pointer !important;
+        transition: background-color 0.2s !important;
+      }
+
+      .sticker-url-indicator:hover {
+        background: rgba(0, 123, 255, 1) !important;
+      }
+
+      /* 上传进度样式 */
+      #stickerUploadProgress {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        padding: 20px !important;
+        border-radius: 8px !important;
+        z-index: 10000 !important;
+        text-align: center !important;
+        min-width: 200px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+      }
+
+      /* 表情包通知动画 */
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+
       .sticker-placeholder {
         width: 120px;
         height: 120px;
@@ -13629,6 +13702,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         tags: ['默认'],
         currentTag: '',
         currentFiles: [],
+        processedData: null, // 存储识图插件处理的数据
         stickerDB: null,
       };
 
@@ -13780,8 +13854,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         stickerForm.style.display = 'none';
         uploadZone.style.display = 'block';
         stickerNote.value = '';
+        stickerNote.placeholder = '给表情包添加备注...';
         stickerTagSelect.value = '';
         stickerState.currentFiles = [];
+        stickerState.processedData = null; // 清理识图插件处理的数据
+        hideStickerUploadProgress(); // 隐藏可能存在的进度条
       }
 
       // 加载表情包数据
@@ -13802,7 +13879,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       }
 
-      // 更新表情包显示
+      // 更新表情包显示 - 增强版，显示识图信息
       function updateStickerDisplay() {
         const filteredStickers = stickerState.currentTag
           ? stickerState.stickers.filter(s => s.tag === stickerState.currentTag)
@@ -13821,11 +13898,63 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           item.appendChild(img);
 
+          // 显示备注
           if (sticker.note) {
             const note = document.createElement('div');
             note.className = 'sticker-note';
             note.textContent = sticker.note;
             item.appendChild(note);
+          }
+
+          // 显示AI识图标识
+          if (sticker.aiDescription && sticker.uploadMethod === 'vision-plugin') {
+            const aiIndicator = document.createElement('div');
+            aiIndicator.className = 'sticker-ai-indicator';
+            aiIndicator.style.cssText = `
+              position: absolute;
+              top: 4px;
+              left: 4px;
+              background: rgba(7, 193, 96, 0.9);
+              color: white;
+              padding: 2px 4px;
+              border-radius: 4px;
+              font-size: 10px;
+              font-weight: 500;
+              z-index: 10;
+            `;
+            aiIndicator.textContent = 'AI';
+            aiIndicator.title = `AI识图: ${sticker.aiDescription}`;
+            item.appendChild(aiIndicator);
+          }
+
+          // 显示服务器URL标识
+          if (sticker.serverUrl) {
+            const urlIndicator = document.createElement('div');
+            urlIndicator.className = 'sticker-url-indicator';
+            urlIndicator.style.cssText = `
+              position: absolute;
+              top: 4px;
+              right: 24px;
+              background: rgba(0, 123, 255, 0.9);
+              color: white;
+              padding: 2px 4px;
+              border-radius: 4px;
+              font-size: 10px;
+              font-weight: 500;
+              z-index: 10;
+              cursor: pointer;
+            `;
+            urlIndicator.textContent = '🔗';
+            urlIndicator.title = `服务器URL: ${sticker.serverUrl}`;
+            urlIndicator.onclick = (e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(sticker.serverUrl).then(() => {
+                showStickerNotification('✅ 服务器URL已复制到剪贴板', 'success');
+              }).catch(() => {
+                prompt('服务器URL:', sticker.serverUrl);
+              });
+            };
+            item.appendChild(urlIndicator);
           }
 
           // 删除按钮
@@ -13892,46 +14021,61 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      // 发送表情包
+      // 发送表情包 - 增强版，优先使用服务器URL
       async function sendSticker(sticker) {
-        // 简化：只发送备注，不发送完整的图片数据
         let content = sticker.note || '表情包';
-        let aiDescription = null;
+        let aiDescription = sticker.aiDescription || null;
+        let imageUrl = sticker.serverUrl || null; // 优先使用服务器URL
 
-        // 检查是否启用AI识图功能
-        const enableAIVision = localStorage.getItem('sticker-ai-vision-enabled') !== 'false'; // 默认启用
-
-        if (enableAIVision && typeof top.window.__uploadImageByPlugin === 'function') {
+        // 如果没有服务器URL但启用了AI识图功能，尝试重新上传
+        const enableAIVision = localStorage.getItem('sticker-ai-vision-enabled') !== 'false';
+        
+        if (!imageUrl && enableAIVision && typeof top.window.__uploadImageByPlugin === 'function') {
           try {
+            console.log('🔄 表情包没有服务器URL，尝试重新上传...');
+            
             // 将DataURL转换为File对象
             const response = await fetch(sticker.dataURL);
             const blob = await response.blob();
-            const file = new File([blob], 'sticker.png', { type: 'image/png' });
+            const file = new File([blob], sticker.fileName || 'sticker.png', { type: 'image/png' });
 
-            // 调用插件进行图像识别
+            // 调用插件进行图像上传和识别
             const result = await top.window.__uploadImageByPlugin(file, {
               enableAIVision: true,
               aiPrompt: '请简单描述这个表情包的内容，用一句话概括即可'
             });
 
-            if (result.success && result.aiDescription) {
-              aiDescription = result.aiDescription;
-              // 如果没有用户备注，使用AI描述作为内容
-              if (!sticker.note || sticker.note.trim() === '') {
-                content = `AI识图: ${aiDescription}`;
+            if (result.success) {
+              imageUrl = result.url;
+              if (result.aiDescription && !aiDescription) {
+                aiDescription = result.aiDescription;
               }
+              
+              // 更新表情包记录，保存服务器URL
+              sticker.serverUrl = imageUrl;
+              sticker.aiDescription = aiDescription;
+              await saveStickerToDB(sticker);
+              
+              console.log('✅ 表情包重新上传成功:', imageUrl);
             }
           } catch (error) {
-            console.log('[表情包识图] AI识图失败，使用原始备注:', error.message);
+            console.log('❌ 表情包重新上传失败:', error.message);
           }
+        }
+
+        // 如果没有用户备注但有AI描述，使用AI描述
+        if ((!sticker.note || sticker.note.trim() === '') && aiDescription) {
+          content = aiDescription;
         }
 
         const newMessage = {
           sender: 'user',
           type: 'sticker',
           content: content,
-          stickerData: sticker.dataURL, // 图片数据单独存储，不放在消息内容中
+          stickerData: imageUrl || sticker.dataURL, // 优先使用服务器URL，回退到DataURL
+          serverUrl: imageUrl, // 保存服务器URL
           aiDescription: aiDescription, // 保存AI描述
+          uploadMethod: sticker.uploadMethod || 'legacy', // 保存上传方式
           time: getTimeStr(),
         };
 
@@ -13939,7 +14083,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         appendMessage(newMessage, state.messageHistory.length - 1);
         syncToSillyTavern();
         state.userHasSentNewMessage = true;
-        updateAiRequestButtonVisibility(); // 更新AI请求按钮显示状态
+        updateAiRequestButtonVisibility();
+        
+        // 显示发送成功提示
+        const method = imageUrl ? '服务器图片' : '本地图片';
+        console.log(`📤 表情包已发送 (${method}):`, content);
       }
 
       // 添加对方表情包到我的表情包
@@ -14076,7 +14224,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         handleFiles(e.target.files);
       };
 
-      // 处理文件
+      // 处理文件 - 增强版，集成识图插件
       async function handleFiles(files) {
         const validFiles = Array.from(files).filter(file => {
           if (!file.type.startsWith('image/')) {
@@ -14092,7 +14240,110 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         if (validFiles.length === 0) return;
 
+        // 显示处理进度
+        showStickerUploadProgress('开始处理图片...', 0);
+        
+        try {
+          // 检查是否有识图插件
+          const hasVisionPlugin = typeof top.window.__uploadImageByPlugin === 'function';
+          
+          if (hasVisionPlugin) {
+            // 使用识图插件处理文件
+            await handleFilesWithVisionPlugin(validFiles);
+          } else {
+            // 回退到原有处理方式
+            await handleFilesLegacy(validFiles);
+          }
+        } catch (error) {
+          console.error('文件处理失败:', error);
+          hideStickerUploadProgress();
+          alert(`文件处理失败: ${error.message}`);
+        }
+      }
+
+      // 使用识图插件处理文件
+      async function handleFilesWithVisionPlugin(validFiles) {
+        const processedFiles = [];
+        
+        for (let i = 0; i < validFiles.length; i++) {
+          const file = validFiles[i];
+          const progress = Math.round(((i + 1) / validFiles.length) * 100);
+          
+          showStickerUploadProgress(`正在处理 ${file.name}...`, progress);
+          
+          try {
+            // 调用识图插件上传到SillyTavern服务器
+            const result = await top.window.__uploadImageByPlugin(file, {
+              enableAIVision: true,
+              aiPrompt: '请简单描述这张图片的内容，用一句话概括即可'
+            });
+            
+            if (result.success) {
+              // 获取上传后的URL和AI识图结果
+              const imageUrl = result.url;
+              const aiDescription = result.aiDescription || '';
+              
+              // 将网络图片转换为DataURL以便本地存储
+              const dataURL = await urlToDataURL(imageUrl);
+              
+              processedFiles.push({
+                file: file,
+                dataURL: dataURL,
+                serverUrl: imageUrl,
+                aiDescription: aiDescription,
+                fileName: file.name,
+                fileSize: file.size
+              });
+              
+              console.log(`✅ ${file.name} 处理完成:`, {
+                serverUrl: imageUrl,
+                aiDescription: aiDescription
+              });
+            } else {
+              throw new Error(result.error || '上传失败');
+            }
+          } catch (error) {
+            console.error(`❌ ${file.name} 处理失败:`, error);
+            // 继续处理其他文件，不中断整个流程
+            alert(`${file.name} 处理失败: ${error.message}`);
+          }
+        }
+        
+        if (processedFiles.length > 0) {
+          // 存储处理结果
+          stickerState.currentFiles = processedFiles.map(item => item.file);
+          stickerState.processedData = processedFiles;
+          
+          // 显示表单
+          uploadZone.style.display = 'none';
+          stickerForm.style.display = 'block';
+          
+          // 预填AI识图结果作为备注
+          if (processedFiles.length === 1 && processedFiles[0].aiDescription) {
+            stickerNote.value = processedFiles[0].aiDescription;
+            stickerNote.placeholder = '已自动填入AI识图结果，可以修改';
+          } else if (processedFiles.length === 1) {
+            const fileName = processedFiles[0].fileName.replace(/\.[^/.]+$/, '');
+            stickerNote.placeholder = `例如: ${fileName}`;
+          } else {
+            stickerNote.placeholder = `批量上传 ${processedFiles.length} 张图片`;
+          }
+          
+          hideStickerUploadProgress();
+          
+          // 显示成功提示
+          showStickerNotification(`✅ 成功处理 ${processedFiles.length} 张图片，已上传到服务器并完成AI识图`, 'success');
+        } else {
+          hideStickerUploadProgress();
+          alert('没有成功处理任何文件');
+        }
+      }
+
+      // 传统文件处理方式（备用）
+      async function handleFilesLegacy(validFiles) {
         stickerState.currentFiles = validFiles;
+        stickerState.processedData = null;
+        
         uploadZone.style.display = 'none';
         stickerForm.style.display = 'block';
 
@@ -14101,6 +14352,100 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const fileName = validFiles[0].name.replace(/\.[^/.]+$/, '');
           stickerNote.placeholder = `例如: ${fileName}`;
         }
+        
+        hideStickerUploadProgress();
+      }
+
+      // 将URL转换为DataURL
+      async function urlToDataURL(url) {
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.error('URL转DataURL失败:', error);
+          throw error;
+        }
+      }
+
+      // 显示上传进度
+      function showStickerUploadProgress(message, progress) {
+        let progressDiv = document.getElementById('stickerUploadProgress');
+        if (!progressDiv) {
+          progressDiv = document.createElement('div');
+          progressDiv.id = 'stickerUploadProgress';
+          progressDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            text-align: center;
+            min-width: 200px;
+          `;
+          document.body.appendChild(progressDiv);
+        }
+        
+        progressDiv.innerHTML = `
+          <div style="margin-bottom: 10px;">${message}</div>
+          <div style="background: #333; height: 6px; border-radius: 3px; overflow: hidden;">
+            <div style="background: #07c160; height: 100%; width: ${progress}%; transition: width 0.3s;"></div>
+          </div>
+          <div style="margin-top: 8px; font-size: 12px;">${progress}%</div>
+        `;
+        progressDiv.style.display = 'block';
+      }
+
+      // 隐藏上传进度
+      function hideStickerUploadProgress() {
+        const progressDiv = document.getElementById('stickerUploadProgress');
+        if (progressDiv) {
+          progressDiv.style.display = 'none';
+        }
+      }
+
+      // 显示表情包通知
+      function showStickerNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007AFF'};
+          color: white;
+          padding: 12px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          z-index: 10000;
+          font-size: 14px;
+          max-width: 300px;
+          word-wrap: break-word;
+          animation: slideInRight 0.3s ease;
+        `;
+
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => {
+              if (notification.parentNode) {
+                document.body.removeChild(notification);
+              }
+            }, 300);
+          }
+        }, 3000);
       }
 
       // 新建标签按钮
@@ -14112,7 +14457,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
       };
 
-      // 保存表情包
+      // 保存表情包 - 增强版，支持识图插件数据
       saveStickerBtn.onclick = async () => {
         if (stickerState.currentFiles.length === 0) return;
 
@@ -14120,20 +14465,72 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const tag = stickerTagSelect.value || '默认';
 
         try {
-          for (const file of stickerState.currentFiles) {
-            const dataURL = await fileToDataURL(file);
-            const sticker = {
-              id: Date.now() + Math.random(),
-              dataURL: dataURL,
-              note: note,
-              tag: tag,
-              addTime: new Date().toISOString(),
-              fileName: file.name,
-              fileSize: file.size,
-            };
+          // 检查是否有识图插件处理的数据
+          if (stickerState.processedData && stickerState.processedData.length > 0) {
+            // 使用识图插件处理的数据
+            for (let i = 0; i < stickerState.processedData.length; i++) {
+              const processedItem = stickerState.processedData[i];
+              
+              // 如果是批量上传，为每个表情包添加序号
+              let finalNote = note;
+              if (stickerState.processedData.length > 1) {
+                finalNote = note ? `${note} (${i + 1})` : processedItem.aiDescription || `表情包 ${i + 1}`;
+              } else if (!note && processedItem.aiDescription) {
+                // 单个文件且没有手动输入备注时，使用AI识图结果
+                finalNote = processedItem.aiDescription;
+              }
+              
+              const sticker = {
+                id: Date.now() + Math.random() + i,
+                dataURL: processedItem.dataURL,
+                note: finalNote,
+                tag: tag,
+                addTime: new Date().toISOString(),
+                fileName: processedItem.fileName,
+                fileSize: processedItem.fileSize,
+                serverUrl: processedItem.serverUrl, // 保存服务器URL
+                aiDescription: processedItem.aiDescription, // 保存AI识图结果
+                uploadMethod: 'vision-plugin', // 标记使用识图插件上传
+              };
 
-            await saveStickerToDB(sticker);
-            stickerState.stickers.push(sticker);
+              await saveStickerToDB(sticker);
+              stickerState.stickers.push(sticker);
+              
+              console.log(`💾 保存表情包: ${sticker.fileName}`, {
+                serverUrl: sticker.serverUrl,
+                aiDescription: sticker.aiDescription,
+                note: sticker.note
+              });
+            }
+            
+            showStickerNotification(`✅ 成功保存 ${stickerState.processedData.length} 张表情包到本地`, 'success');
+          } else {
+            // 传统方式处理
+            for (let i = 0; i < stickerState.currentFiles.length; i++) {
+              const file = stickerState.currentFiles[i];
+              const dataURL = await fileToDataURL(file);
+              
+              let finalNote = note;
+              if (stickerState.currentFiles.length > 1) {
+                finalNote = note ? `${note} (${i + 1})` : `表情包 ${i + 1}`;
+              }
+              
+              const sticker = {
+                id: Date.now() + Math.random() + i,
+                dataURL: dataURL,
+                note: finalNote,
+                tag: tag,
+                addTime: new Date().toISOString(),
+                fileName: file.name,
+                fileSize: file.size,
+                uploadMethod: 'legacy', // 标记使用传统方式
+              };
+
+              await saveStickerToDB(sticker);
+              stickerState.stickers.push(sticker);
+            }
+            
+            showStickerNotification(`✅ 成功保存 ${stickerState.currentFiles.length} 张表情包到本地`, 'success');
           }
 
           updateStickerDisplay();
@@ -14143,7 +14540,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           document.querySelector('[data-tab="my-stickers"]').click();
 
         } catch (error) {
-          alert('保存表情包失败，请重试');
+          console.error('保存表情包失败:', error);
+          showStickerNotification(`❌ 保存表情包失败: ${error.message}`, 'error');
         }
       };
 
