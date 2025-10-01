@@ -1035,6 +1035,8 @@
         width: 271px; /* 255 + 8*2 */
         height: 716px; /* 700 + 8*2 */
         box-sizing: border-box;
+        transform-origin: top center;
+        transform: scale(1);
       }
       .cute-phone {
         width: 255px; /* 固定宽度 - 调整为255px */
@@ -1176,7 +1178,7 @@
       .friends-btn {
         position: absolute;
         top: 6px;
-        left: 56px; /* 位于请求AI按钮右侧 */
+        right: 100px; /* 调整到右侧，避免遮挡人名 */
         width: 32px;
         height: 32px;
         background-color: var(--bg-tertiary);
@@ -1716,6 +1718,96 @@
         padding: 12px;
         background: #f8f8f8;
         border-radius: 8px;
+      }
+
+      .slider-setting {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 14px 16px 14px;
+        background: #f8f8f8;
+        border-radius: 8px;
+      }
+
+      .slider-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+        color: #333;
+      }
+
+      .slider-title {
+        font-weight: 500;
+      }
+
+      .slider-value {
+        color: var(--accent-primary);
+        font-weight: 600;
+      }
+
+      .setting-slider {
+        width: 100%;
+        height: 4px;
+        border-radius: 2px;
+        appearance: none;
+        background: var(--border-secondary);
+        outline: none;
+        cursor: pointer;
+      }
+
+      .setting-slider::-webkit-slider-thumb {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        transition: transform 0.2s ease;
+      }
+
+      .setting-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.1);
+      }
+
+      .setting-slider::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        border: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        transition: transform 0.2s ease;
+      }
+
+      .setting-slider::-moz-range-thumb:hover {
+        transform: scale(1.1);
+      }
+
+      .slider-marks {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--text-tertiary);
+        padding: 0 4px;
+      }
+
+      .slider-marks span {
+        flex: 1;
+        text-align: center;
+      }
+
+      .slider-marks span:first-child {
+        text-align: left;
+      }
+
+      .slider-marks span:last-child {
+        text-align: right;
+      }
+
+      .slider-marks-typing span {
+        flex: none;
+        width: 33%;
       }
 
       .avatar-preview {
@@ -6531,6 +6623,58 @@
           </div>
 
           <!-- 主题设置 -->
+          <!-- 界面缩放 -->
+          <div class="setting-section">
+            <label class="setting-label">界面缩放</label>
+            <div class="slider-setting">
+              <div class="slider-meta">
+                <span class="slider-title">缩放比例</span>
+                <span class="slider-value" id="interfaceScaleLabel">100%</span>
+              </div>
+              <input
+                type="range"
+                id="interfaceScaleSlider"
+                min="90"
+                max="120"
+                step="5"
+                value="100"
+                class="setting-slider"
+              />
+              <div class="slider-marks">
+                <span>90%</span>
+                <span>100%</span>
+                <span>110%</span>
+                <span>120%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 输入提示速度 -->
+          <div class="setting-section">
+            <label class="setting-label">输入提示速度</label>
+            <div class="slider-setting">
+              <div class="slider-meta">
+                <span class="slider-title">打字效果</span>
+                <span class="slider-value" id="typingSpeedLabel">标准</span>
+              </div>
+              <input
+                type="range"
+                id="typingSpeedSlider"
+                min="1"
+                max="3"
+                step="1"
+                value="2"
+                class="setting-slider"
+              />
+              <div class="slider-marks slider-marks-typing">
+                <span>慢</span>
+                <span>标准</span>
+                <span>快</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 主题设置 -->
           <div class="setting-section">
             <label class="setting-label">🎨 界面主题</label>
             <div class="setting-preview">
@@ -7215,6 +7359,8 @@
         availableVisionModels: [],
         // For serialization of other conversations without UI switching
         forceCharNameForSerialization: null,
+        interfaceScale: 1,
+        typingSpeedLevel: 2,
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -7231,7 +7377,7 @@
       }
 
       // Helper to apply user avatar from parent frame
-      function applyUserAvatar(avatarElement) {
+function applyUserAvatar(avatarElement) {
         // 优先使用用户设置的头像，没有则使用默认头像
         const userAvatarUrl = settingsState.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg';
         if (avatarElement) {
@@ -7239,6 +7385,45 @@
           avatarElement.style.backgroundSize = 'cover';
           avatarElement.style.backgroundPosition = 'center';
           avatarElement.style.backgroundColor = '#fff'; // Add a fallback bg color
+        }
+      }
+
+      function applyInterfaceScale(scale) {
+        const clamped = Math.min(1.2, Math.max(0.9, scale));
+        state.interfaceScale = clamped;
+        const phoneShell = document.querySelector('.phone-shell');
+        if (phoneShell) {
+          phoneShell.style.transform = `scale(${clamped})`;
+        }
+        const label = document.getElementById('interfaceScaleLabel');
+        if (label) {
+          label.textContent = `${Math.round(clamped * 100)}%`;
+        }
+        const slider = document.getElementById('interfaceScaleSlider');
+        if (slider && document.activeElement !== slider) {
+          slider.value = Math.round(clamped * 100);
+        }
+      }
+
+      function updateTypingSpeedUI() {
+        const slider = document.getElementById('typingSpeedSlider');
+        if (slider && document.activeElement !== slider) {
+          slider.value = state.typingSpeedLevel;
+        }
+        const label = document.getElementById('typingSpeedLabel');
+        if (label) {
+          label.textContent = state.typingSpeedLevel === 1 ? '慢' : state.typingSpeedLevel === 3 ? '快' : '标准';
+        }
+      }
+
+      function getTypingIndicatorInterval() {
+        switch (state.typingSpeedLevel) {
+          case 1:
+            return 700;
+          case 3:
+            return 300;
+          default:
+            return 500;
         }
       }
 
@@ -11020,19 +11205,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               const currentName = (document.getElementById('chatPersonName')?.textContent || '').trim() || getCurrentCharName();
               if (msg.sender === 'char' && msg.charName && currentName && msg.charName !== currentName) {
                 if (!Array.isArray(state.privateConversations)) state.privateConversations = [];
-                let idx = state.privateConversations.findIndex(c => c && c.name === msg.charName);
-                if (idx < 0) {
-                  state.privateConversations.push({ name: msg.charName, messages: [] });
-                  idx = state.privateConversations.length - 1;
+                const idx = state.privateConversations.findIndex(c => c && c.name === msg.charName);
+                if (idx >= 0) {
+                  const conv = state.privateConversations[idx];
+                  conv.messages = conv.messages || [];
+                  conv.messages.push(msg);
+                  routedOther = true;
+                  continue;
                 }
-                const conv = state.privateConversations[idx];
-                conv.messages = conv.messages || [];
-                conv.messages.push(msg);
-                routedOther = true;
-              } else {
-                state.messageHistory.push(msg);
-                appendMessage(msg, state.messageHistory.length - 1);
+                msg.originalCharName = msg.charName;
+                msg.charName = currentName;
               }
+
+              state.messageHistory.push(msg);
+              appendMessage(msg, state.messageHistory.length - 1);
 
               if (state.inVoiceCall && msg.callContext) {
                 state.currentCallTranscript.push(msg);
@@ -11152,6 +11338,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
             // 添加动态点点点效果
             let dots = 0;
+            const intervalMs = getTypingIndicatorInterval();
             const interval = setInterval(() => {
               if (!document.getElementById('call-typing-indicator')) {
                 clearInterval(interval);
@@ -11159,9 +11346,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               }
               dots = (dots + 1) % 4;
               callTyping.textContent = '对方输入中' + '.'.repeat(dots);
-            }, 500);
+            }, intervalMs);
 
-            callTyping.dataset.interval = interval;
+            callTyping.dataset.interval = String(interval);
           }
         }
 
@@ -11182,6 +11369,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         // 🚀 优化：添加动态点点点效果，提升视觉反馈
         let dots = 0;
+        const intervalMs = getTypingIndicatorInterval();
         const interval = setInterval(() => {
           if (!document.getElementById('typing-indicator')) {
             clearInterval(interval);
@@ -11189,9 +11377,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
           dots = (dots + 1) % 4;
           typing.textContent = '对方输入中' + '.'.repeat(dots);
-        }, 500);
+        }, intervalMs);
 
-        typing.dataset.interval = interval;
+        typing.dataset.interval = String(interval);
       }
       function hideTypingIndicator() {
         // 隐藏语音通话界面的输入指示器
@@ -16659,6 +16847,22 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }
 
         // 加载识图API配置
+        const savedScale = localStorage.getItem('interfaceScale');
+        if (savedScale) {
+          const percent = Math.min(120, Math.max(90, parseInt(savedScale, 10) || 100));
+          state.interfaceScale = percent / 100;
+        }
+        applyInterfaceScale(state.interfaceScale);
+
+        const savedTypingLevel = localStorage.getItem('typingSpeedLevel');
+        if (savedTypingLevel) {
+          const level = parseInt(savedTypingLevel, 10);
+          if ([1, 2, 3].includes(level)) {
+            state.typingSpeedLevel = level;
+          }
+        }
+        updateTypingSpeedUI();
+
         const savedVisionMode = localStorage.getItem('visionMode');
         const savedVisionApiUrl = localStorage.getItem('visionApiUrl');
         const savedVisionApiKey = localStorage.getItem('visionApiKey');
@@ -17577,6 +17781,26 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 保存到localStorage
         localStorage.setItem('jailbreakEnabled', state.jailbreakEnabled);
       });
+
+      const interfaceScaleSlider = document.getElementById('interfaceScaleSlider');
+      if (interfaceScaleSlider) {
+        interfaceScaleSlider.addEventListener('input', (e) => {
+          const percent = Math.min(120, Math.max(90, parseInt(e.target.value, 10) || 100));
+          const scale = percent / 100;
+          applyInterfaceScale(scale);
+          localStorage.setItem('interfaceScale', String(percent));
+        });
+      }
+
+      const typingSpeedSlider = document.getElementById('typingSpeedSlider');
+      if (typingSpeedSlider) {
+        typingSpeedSlider.addEventListener('input', (e) => {
+          const level = Math.min(3, Math.max(1, parseInt(e.target.value, 10) || 2));
+          state.typingSpeedLevel = level;
+          updateTypingSpeedUI();
+          localStorage.setItem('typingSpeedLevel', String(level));
+        });
+      }
 
       // 主题切换功能
       function switchTheme(themeName) {
