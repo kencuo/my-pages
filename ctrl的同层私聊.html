@@ -7213,6 +7213,8 @@
         visionApiKey: '',
         visionModel: '',
         availableVisionModels: [],
+        // For serialization of other conversations without UI switching
+        forceCharNameForSerialization: null,
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -10990,6 +10992,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               // 当前片段不完整，先忽略
             }
 
+            // Route messages to the correct private conversation to avoid mixing
+            let routedOther = false;
+
             while (handled < msgs.length) {
               const msg = msgs[handled++];
 
@@ -11011,8 +11016,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 }
               }
 
-              state.messageHistory.push(msg);
-              appendMessage(msg, state.messageHistory.length - 1);
+              // Route by charName if provided
+              const currentName = (document.getElementById('chatPersonName')?.textContent || '').trim() || getCurrentCharName();
+              if (msg.sender === 'char' && msg.charName && currentName && msg.charName !== currentName) {
+                if (!Array.isArray(state.privateConversations)) state.privateConversations = [];
+                let idx = state.privateConversations.findIndex(c => c && c.name === msg.charName);
+                if (idx < 0) {
+                  state.privateConversations.push({ name: msg.charName, messages: [] });
+                  idx = state.privateConversations.length - 1;
+                }
+                const conv = state.privateConversations[idx];
+                conv.messages = conv.messages || [];
+                conv.messages.push(msg);
+                routedOther = true;
+              } else {
+                state.messageHistory.push(msg);
+                appendMessage(msg, state.messageHistory.length - 1);
+              }
 
               if (state.inVoiceCall && msg.callContext) {
                 state.currentCallTranscript.push(msg);
@@ -11023,6 +11043,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               if (msg.type === 'voicecall-end' && msg.sender === 'char' && state.inVoiceCall) {
                 setTimeout(() => endVoiceCall('char-hangedup'), 1000);
               }
+            }
+
+            if (routedOther) {
+              buildPrivateChatTabs(state.privateConversations, state.currentPrivateIndex || 0);
+              deferredSync();
             }
           };
 
@@ -14799,6 +14824,32 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const msgObj = getChatMessages(currentId)[0];
           const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
           const shoujiMatch = raw.match(/<shouji>([\s\S]*?)<\/shouji>/);
+          // Rebuild all <private> blocks from memory to avoid mixing between chats
+          if (shoujiMatch) {
+            const innerEarly = shoujiMatch[1];
+            if (/<private>[\s\S]*?<\/private>/.test(innerEarly)) {
+              let rebuiltAll = '';
+              if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
+                for (const conv of state.privateConversations) {
+                  const prevForceName = state.forceCharNameForSerialization;
+                  try {
+                    state.forceCharNameForSerialization = conv.name || getCurrentCharName() || '对方';
+                    const s = serializeShoujiLog(conv.messages || []);
+                    const m = s.match(/<shouji>([\s\S]*?)<\/shouji>/);
+                    const innerPart = m ? (m[1] || '').trim() : '';
+                    rebuiltAll += `<private>\n${innerPart}\n</private>\n`;
+                  } finally {
+                    state.forceCharNameForSerialization = prevForceName;
+                  }
+                }
+              } else {
+                rebuiltAll = innerEarly;
+              }
+              const updatedAll = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${rebuiltAll}\n</shouji>`);
+              await setChatMessages([{ message_id: currentId, message: updatedAll }], { refresh: 'none' });
+              return;
+            }
+          }
           if (shoujiMatch) {
             const inner = shoujiMatch[1];
             if (/<private>[\s\S]*?<\/private>/.test(inner)) {
@@ -14871,6 +14922,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function deferredSync(delay = 300) {
         if (syncTimeout) {
           clearTimeout(syncTimeout);
+        }
+
+        // Make sure current conversation cache stays in sync immediately
+        if (Array.isArray(state.privateConversations) &&
+            typeof state.currentPrivateIndex === 'number' &&
+            state.privateConversations[state.currentPrivateIndex]) {
+          state.privateConversations[state.currentPrivateIndex].messages = [...state.messageHistory];
         }
 
         syncTimeout = setTimeout(async () => {
@@ -15653,6 +15711,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 获取当前角色名称
       function getCurrentCharName() {
+        if (state && state.forceCharNameForSerialization) {
+          return state.forceCharNameForSerialization;
+        }
         // 首先检查页面上显示的人名
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && nameSpan.textContent.trim()) {
