@@ -12296,52 +12296,92 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 发送表情包
       async function sendSticker(sticker) {
-        // 简化：只发送备注，不发送完整的图片数据
-        let content = sticker.note || '表情包';
+        // 目标：将表情包以“图片消息(短链接)”入聊，并与本地图片识图流程对齐
+        const note = (sticker && sticker.note ? sticker.note.trim() : '') || '表情包';
+        const fileName = (sticker && sticker.fileName) ? sticker.fileName : 'sticker.png';
+
+        let shortUrl = null;
         let aiDescription = null;
 
-        // 检查是否启用AI识图功能
-        const enableAIVision = localStorage.getItem('sticker-ai-vision-enabled') !== 'false'; // 默认启用
+        // 将 DataURL 转为 File
+        let blob;
+        try {
+          const resp = await fetch(sticker.dataURL);
+          blob = await resp.blob();
+        } catch (e) {
+          console.error('[表情包] DataURL 转 Blob 失败:', e);
+        }
 
-        if (enableAIVision && typeof top.window.__uploadImageByPlugin === 'function') {
+        // 先调用插件，获取短链接和可选识图
+        const enableAIVision = localStorage.getItem('sticker-ai-vision-enabled') !== 'false';
+        if (blob && typeof top.window.__uploadImageByPlugin === 'function') {
           try {
-            // 将DataURL转换为File对象
-            const response = await fetch(sticker.dataURL);
-            const blob = await response.blob();
-            const file = new File([blob], 'sticker.png', { type: 'image/png' });
-
-            // 调用插件进行图像识别
+            const file = new File([blob], fileName, { type: blob.type || 'image/png' });
             const result = await top.window.__uploadImageByPlugin(file, {
-              enableAIVision: true,
+              enableAIVision: enableAIVision,
               aiPrompt: '请简单描述这个表情包的内容，用一句话概括即可'
             });
-
-            if (result.success && result.aiDescription) {
-              aiDescription = result.aiDescription;
-              // 如果没有用户备注，使用AI描述作为内容
-              if (!sticker.note || sticker.note.trim() === '') {
-                content = `AI识图: ${aiDescription}`;
-              }
+            if (result) {
+              shortUrl = result.url || result.path || result.shortUrl || null;
+              aiDescription = result.aiDescription || result.description || result.text || result.summary || null;
             }
-          } catch (error) {
-            console.log('[表情包识图] AI识图失败，使用原始备注:', error.message);
+          } catch (e) {
+            console.warn('[表情包] 插件上传失败，尝试回退 API 上传:', e.message || e);
           }
         }
 
+        // 如果插件没有得到短链接，则回退到 /api/images/upload
+        if (!shortUrl && blob) {
+          try {
+            const dataUrl = await convertFileToBase64(new File([blob], fileName, { type: blob.type || 'image/png' }));
+            const commaIdx = dataUrl.indexOf(',');
+            const base64Data = commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl;
+            // 推断格式
+            let ext = 'png';
+            const lower = (fileName || '').toLowerCase();
+            if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) ext = 'jpeg';
+            else if (lower.endsWith('.webp')) ext = 'webp';
+            else if (lower.endsWith('.gif')) ext = 'gif';
+            else if (lower.endsWith('.bmp')) ext = 'bmp';
+
+            const apiResp = await fetch('/api/images/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: base64Data, format: ext, filename: fileName })
+            });
+            if (apiResp.ok) {
+              const data = await apiResp.json().catch(() => null);
+              if (data && data.path) {
+                shortUrl = data.path;
+              }
+            } else {
+              console.warn('/api/images/upload 返回非200:', apiResp.status, apiResp.statusText);
+            }
+          } catch (e) {
+            console.warn('[表情包] 回退 API 上传失败:', e.message || e);
+          }
+        }
+
+        // 组装图片消息（与“本地图片”一致的结构）
+        const imageData = shortUrl || sticker.dataURL; // 最差回退到原始 DataURL
+        const imageDescription = (aiDescription && aiDescription.trim()) || note;
+        const needsVision = state.visionMode !== 'direct';
+
         const newMessage = {
           sender: 'user',
-          type: 'sticker',
-          content: content,
-          stickerData: sticker.dataURL, // 图片数据单独存储，不放在消息内容中
-          aiDescription: aiDescription, // 保存AI描述
+          type: 'image',
+          imageData: imageData,
+          fileName: fileName,
+          imageDescription: imageDescription,
           time: getTimeStr(),
+          needsVisionAnalysis: needsVision
         };
 
         state.messageHistory.push(newMessage);
         appendMessage(newMessage, state.messageHistory.length - 1);
         syncToSillyTavern();
         state.userHasSentNewMessage = true;
-        updateAiRequestButtonVisibility(); // 更新AI请求按钮显示状态
+        updateAiRequestButtonVisibility();
       }
 
       // 添加对方表情包到我的表情包
