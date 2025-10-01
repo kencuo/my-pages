@@ -16299,7 +16299,261 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
     <!-- 🎉 消息特效容器 -->
     <div id="messageEffectsContainer" class="message-effects-container"></div>
+    <script>
+      // 表情/贴纸识图桥接与短链接入群聊（与私聊一致）
+      (function(){
+        const chatRoot = document.querySelector('#chatMessages') || document.querySelector('.chat-messages');
+        if (!chatRoot) return;
+
+        const SAVE_FOLDER_NAME = 'stickers';
+
+        // 统一桥接：提供 VisionPlugin.analyzeUrl，默认转调媒体扩展插件
+        try {
+          window.VisionPlugin = window.VisionPlugin || {};
+          if (typeof window.VisionPlugin.analyzeUrl !== 'function') {
+            window.VisionPlugin.analyzeUrl = async function(imageUrl){
+              try {
+                const file = await fetchImageAsFile(imageUrl);
+                if (file && typeof window.__uploadImageByPlugin === 'function') {
+                  const result = await window.__uploadImageByPlugin(file, {
+                    enableAIVision: true,
+                    aiPrompt: '请你用一两句话描述这张图片的关键信息（中文）。',
+                  });
+                  return (result && (result.aiDescription || result.description || result.text || result.summary)) || '';
+                }
+              } catch (e) {}
+              return '';
+            };
+          }
+        } catch(e){}
+
+        function attachVisionToEmoji(img){
+          if (!img || img.dataset.visionAttached) return;
+          img.dataset.visionAttached = '1';
+
+          const url = img.currentSrc || img.src;
+          const container = img.closest('.image-container') || wrapImage(img);
+          const indicator = ensureIndicator(container);
+
+          const onAnalyze = async () => {
+            try {
+              indicator.style.opacity = '1';
+              const desc = await tryAnalyze(url);
+              showDescription(container, desc || '');
+
+              const shouldSave = confirm('将此图片保存为表情包到 SillyTavern 并插入短链接吗？');
+              if (shouldSave) {
+                const { ok, message, url: shortUrl } = await saveImageToSillyTavern(url, SAVE_FOLDER_NAME);
+                if (!ok) {
+                  alert(message || '保存失败');
+                } else if (shortUrl) {
+                  try { img.src = shortUrl; } catch(e){}
+                  try { if (navigator.clipboard) navigator.clipboard.writeText(shortUrl); } catch(e){}
+                  try {
+                    const fileName = (shortUrl.split('/').pop() || '').trim() || ('sticker_' + Date.now() + '.png');
+                    const now = new Date();
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const mm = String(now.getMinutes()).padStart(2, '0');
+                    const timestamp = `${hh}:${mm}`;
+
+                    // 优先走内置 state → 序列化 → setChatMessages（与私聊一致）
+                    if (window.state && Array.isArray(window.state.messageHistory) && typeof serializeShoujiLog === 'function' && typeof setChatMessages === 'function' && typeof getCurrentMessageId === 'function') {
+                      const newMsg = { sender: 'user', type: 'image', imageData: shortUrl, fileName: fileName, imageDescription: '表情包', time: timestamp };
+                      window.state.messageHistory.push(newMsg);
+                      if (typeof window.appendMessage === 'function') {
+                        window.appendMessage(newMsg, window.state.messageHistory.length - 1);
+                      }
+                      const currentId = window.state.currentMsgId || getCurrentMessageId();
+                      const log = serializeShoujiLog(window.state.messageHistory);
+                      try { await setChatMessages([{ message_id: currentId, message: log }], { refresh: 'none' }); } catch(e){}
+                    } else if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function' && typeof setChatMessages === 'function') {
+                      const currentId = getCurrentMessageId();
+                      const msg = getChatMessages(currentId)[0];
+                      const raw = msg && msg.message ? String(msg.message) : '<shouji>\n</shouji>';
+                      const line = `[我方消息|图片|表情包|IMGDATA:${shortUrl}|FILENAME:${fileName}|${timestamp}]`;
+                      const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, (m)=>{
+                        const inner = m.slice(8, -9).trim();
+                        return `<shouji>\n${inner ? inner + '\n' : ''}${line}\n</shouji>`;
+                      });
+                      try { await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' }); } catch(e){}
+                    }
+                  } catch(e){}
+                }
+              }
+            } catch (e) {
+              showDescription(container, '识别失败');
+            } finally {
+              setTimeout(()=>indicator.style.opacity='0', 800);
+            }
+          };
+
+          img.addEventListener('dblclick', onAnalyze);
+          img.addEventListener('contextmenu', (e)=>{ e.preventDefault(); onAnalyze(); });
+        }
+
+        function wrapImage(img){
+          const wrapper = document.createElement('span');
+          wrapper.className = 'image-container';
+          img.replaceWith(wrapper);
+          wrapper.appendChild(img);
+          return wrapper;
+        }
+
+        function ensureIndicator(container){
+          let el = container.querySelector('.vision-analysis-indicator');
+          if (!el) {
+            el = document.createElement('span');
+            el.className = 'vision-analysis-indicator';
+            el.textContent = 'AI';
+            el.style.opacity = '0';
+            container.appendChild(el);
+          }
+          return el;
+        }
+
+        function showDescription(container, text){
+          if (!text) return;
+          let el = container.querySelector('.image-description');
+          if (!el) {
+            el = document.createElement('div');
+            el.className = 'image-description';
+            container.appendChild(el);
+          }
+          el.textContent = text;
+          el.classList.add('show');
+          setTimeout(()=>el.classList.remove('show'), 6000);
+        }
+
+        async function tryAnalyze(imageUrl){
+          const analyzeByUrl =
+            (window.VisionPlugin && window.VisionPlugin.analyzeUrl)
+            || null;
+
+          if (analyzeByUrl) {
+            try { return await analyzeByUrl(imageUrl); } catch(_){}
+          }
+
+          const file = await fetchImageAsFile(imageUrl);
+          if (file && window.__uploadImageByPlugin) {
+            try {
+              const result = await window.__uploadImageByPlugin(file, {
+                enableAIVision: true,
+                aiPrompt: '请你用一两句话描述这张图片的关键信息（中文）。',
+              });
+              return (result && (result.aiDescription || result.description || result.text || result.summary)) || '';
+            } catch(_){}
+          }
+          return '';
+        }
+
+        async function saveImageToSillyTavern(imageUrl, folder){
+          try {
+            const file = await fetchImageAsFile(imageUrl);
+            if (!file) return { ok: false, message: '获取图片失败' };
+
+            const { base64, format } = await fileToBase64AndFormat(file);
+            if (!base64 || !format) return { ok: false, message: '不支持的图片格式' };
+
+            const filename = `${folder}_` + Date.now() + '.' + format;
+            const body = { image: base64, format, filename };
+            const res = await fetch('/api/images/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+              cache: 'no-cache',
+            });
+            if (!res.ok) return { ok: false, message: '上传失败: ' + res.status };
+            const data = await res.json().catch(()=>null);
+            const shortUrl = (data && data.path) ? data.path : null;
+            return { ok: true, url: shortUrl };
+          } catch (err) {
+            return { ok: false, message: String(err) };
+          }
+        }
+
+        async function fetchImageAsFile(imageUrl){
+          try {
+            const resp = await fetch(imageUrl, { mode: 'cors' });
+            if (!resp.ok) throw new Error('fetch 失败');
+            const blob = await resp.blob();
+            const ext = guessExtFromType(blob.type) || 'png';
+            return new File([blob], 'emoji.' + ext, { type: blob.type || 'image/'+ext });
+          } catch (e) {
+            try { return await drawImageToFile(imageUrl); } catch { return null; }
+          }
+        }
+
+        function guessExtFromType(type){
+          if (!type) return '';
+          if (type.includes('png')) return 'png';
+          if (type.includes('jpeg') || type.includes('jpg')) return 'jpg';
+          if (type.includes('webp')) return 'webp';
+          if (type.includes('gif')) return 'gif';
+          if (type.includes('bmp')) return 'bmp';
+          return '';
+        }
+
+        async function drawImageToFile(src){
+          return new Promise((resolve, reject)=>{
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob((blob)=>{
+                  if (!blob) return reject('toBlob 失败');
+                  resolve(new File([blob], 'emoji.png', { type: 'image/png' }));
+                }, 'image/png');
+              } catch (e) { reject(e); }
+            };
+            img.onerror = reject;
+            img.src = src;
+          });
+        }
+
+        async function fileToBase64AndFormat(file){
+          const ext = (file.name.split('.').pop() || '').toLowerCase();
+          const format = ext === 'jpg' ? 'jpeg' : ext;
+          const ok = ['png','jpeg','jpg','webp','gif','bmp'].includes(ext);
+          if (!ok) return { base64: null, format: null };
+          const base64 = await fileToBase64(file);
+          const comma = base64.indexOf(',');
+          return { base64: comma >= 0 ? base64.slice(comma+1) : base64, format };
+        }
+
+        function fileToBase64(file){
+          return new Promise((resolve, reject)=>{
+            const reader = new FileReader();
+            reader.onload = ()=> resolve(String(reader.result || ''));
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        }
+
+        const scan = root => {
+          root.querySelectorAll('img.emoji, img.sticker').forEach(attachVisionToEmoji);
+          if (root.matches && root.matches('img.emoji, img.sticker')) attachVisionToEmoji(root);
+        };
+
+        // 初次扫描与后续新增节点监听
+        scan(document);
+        const mo = new MutationObserver(muts=>{
+          for (const m of muts){
+            for (const n of m.addedNodes){
+              if (!(n instanceof HTMLElement)) continue;
+              scan(n);
+            }
+          }
+        });
+        mo.observe(chatRoot, {childList:true, subtree:true});
+      })();
+    </script>
   </body>
 </html>
+
 
 
