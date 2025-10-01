@@ -1564,17 +1564,15 @@
         if (typeof triggerSlash === 'function') {
           if (type === 'group') {
             const message = `/send <群成员：${members}>
-<qunliao>
-
-<private>
 【和${name}的聊天】
-</private>
-
+<qunliao>
 </qunliao>`;
             triggerSlash(message);
           } else {
-            const message = `/send 【和${name}的聊天】
-<shouji>
+            const message = `/send <shouji>
+<private>
+【和${name}的聊天】
+</private>
 </shouji>`;
             triggerSlash(message);
           }
