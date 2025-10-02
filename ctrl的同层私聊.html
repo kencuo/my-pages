@@ -1245,6 +1245,7 @@
         border: 1px solid var(--border-primary);
         cursor: pointer;
         transition: transform .1s ease;
+        gap: 8px;
       }
       .friend-item:hover { transform: translateY(-1px); }
       .friend-avatar {
@@ -1265,6 +1266,27 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        flex: 1;
+        margin-right: 4px;
+      }
+      .friend-delete {
+        margin-left: auto;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: var(--text-tertiary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .friend-delete:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: var(--accent-danger);
+        transform: scale(1.05);
       }
       #requestAiBtn {
         position: absolute;
@@ -12810,9 +12832,20 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             return `<div class="friend-item" data-name="${encodeURIComponent(n)}">
                       <div class="friend-avatar">${initial}</div>
                       <div class="friend-name">${n}</div>
+                      <button class="friend-delete" data-name="${encodeURIComponent(n)}" title="删除好友">×</button>
                     </div>`;
           })
           .join('');
+        box.querySelectorAll('.friend-delete').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const encoded = btn.getAttribute('data-name') || '';
+            const name = decodeURIComponent(encoded);
+            if (!name) return;
+            if (!confirm(`确认删除好友「${name}」吗？`)) return;
+            removeFriend(name);
+          });
+        });
         // 绑定点击事件
         box.querySelectorAll('.friend-item').forEach(el => {
           el.addEventListener('click', () => {
@@ -12825,7 +12858,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      function toggleFriendsPanel(show) {
+function removeFriend(name) {
+        const trimmed = (name || '').trim();
+        if (!trimmed) return;
+        const list = loadFriendsList();
+        const filtered = list.filter(f => (f && (f.name || '') !== trimmed));
+        if (filtered.length === list.length) return;
+        saveFriendsList(filtered);
+        displayFriendsInPanel(filtered);
+      }
+function toggleFriendsPanel(show) {
         const panel = document.getElementById('friendsPanel');
         if (!panel) return;
         if (show) {
