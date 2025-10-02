@@ -5474,6 +5474,11 @@
           </svg>
         </button>
         <span id="chatPersonName" class="cute-person-name"></span>
+        <button class="friends-btn" id="friendsBtn" title="好友列表">
+          <svg viewBox="0 0 24 24">
+            <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3m-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3m0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C18 14.17 13.33 13 11 13m8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h4v-2.5c0-2.33-4.67-3.5-7-3.5" />
+          </svg>
+        </button>
         <button class="screenshot-btn" id="screenshotBtn" title="截屏聊天记录">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -5488,6 +5493,71 @@
             ></path>
           </svg>
         </button>
+      </div>
+      <style>
+        .friends-btn { background: transparent; border: none; color: var(--text-primary); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; }
+        .friends-btn:hover { background: var(--bg-secondary); }
+        .friends-overlay { position: absolute; inset: 0; background: var(--bg-secondary); display: none; align-items: stretch; justify-content: center; padding: 0; z-index: 900; }
+        .friends-panel { width: 100%; height: 100%; background: var(--bg-secondary); border: 0; border-radius: 0; box-shadow: none; display: flex; flex-direction: column; overflow: hidden; animation: pageSlideIn .25s ease-out; }
+        .friends-panel header { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: var(--bg-header); border-bottom: 1px solid var(--border-primary); }
+        .friends-panel header h3 { margin: 0; font-size: 16px; color: var(--text-primary); }
+        .friends-header-actions { display: flex; gap: 6px; align-items: center; }
+        .friends-add { background: transparent; border: none; color: var(--text-primary); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 20px; line-height: 32px; }
+        .friends-add:hover { background: var(--bg-secondary); }
+        .friends-close { background: transparent; border: none; color: var(--text-primary); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; }
+        .friends-close:hover { background: var(--bg-secondary); }
+        .friends-body { padding: 12px; overflow-y: auto; gap: 14px; display: flex; flex-direction: column; flex: 1; }
+        .friends-section { background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 10px; padding: 10px; }
+        .friends-section h4 { margin: 0 0 8px 0; font-size: 14px; color: var(--text-primary); }
+        .input-row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+        .input-row input, .input-row textarea { flex: 1; min-height: 34px; border-radius: 8px; border: 1px solid var(--border-secondary); background: var(--bg-secondary); color: var(--text-primary); padding: 6px 10px; font-size: 14px; }
+        .input-row textarea { min-height: 68px; resize: vertical; }
+        .btn-row { display: flex; gap: 8px; }
+        .btn { background: var(--accent-primary); border: 1px solid var(--border-secondary); color: var(--text-char); padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .btn.secondary { background: var(--bg-secondary); color: var(--text-primary); }
+        .chat-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; border: 1px solid var(--border-secondary); border-radius: 8px; margin: 6px 0; background: var(--bg-secondary); cursor: pointer; }
+        .chat-item:hover { background: var(--bg-tertiary); }
+        .chat-item small { color: var(--text-secondary); }
+        .muted { color: var(--text-secondary); font-size: 12px; }
+        .friend-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border: 1px solid var(--border-secondary); border-radius: 8px; margin: 6px 0; background: var(--bg-secondary); cursor: pointer; }
+        .friend-item:hover { background: var(--bg-tertiary); }
+        .friend-title { font-weight: 600; color: var(--text-primary); }
+        .friend-sub { font-size: 12px; color: var(--text-secondary); }
+        .friend-actions { display: flex; gap: 8px; align-items: center; }
+        .friend-actions button { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; border-radius: 6px; }
+        .friend-actions button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+      </style>
+      <div class="friends-overlay" id="friendsOverlay">
+        <div class="friends-panel">
+          <header>
+            <h3>群聊与私聊</h3>
+            <div class="friends-header-actions">
+              <button class="friends-add" id="friendsAddBtn" title="添加">＋</button>
+              <button class="friends-close" id="friendsClose" title="关闭">✕</button>
+            </div>
+          </header>
+          <div class="friends-body">
+            <div class="friends-section">
+              <h4>群聊列表</h4>
+              <div class="muted" style="margin-bottom:6px">点击进入对应群聊；右侧可置顶或删除</div>
+              <div id="groupList"></div>
+            </div>
+            <div class="friends-section">
+              <h4>群聊信息（只允许添加群聊）</h4>
+              <div class="input-row"><input id="groupNicknameInput" placeholder="群昵称（如：班级群）" /></div>
+              <div class="input-row"><textarea id="groupMembersInput" placeholder="群成员，逗号分隔（如：小李,小王,小张）"></textarea></div>
+              <div class="btn-row">
+                <button class="btn" id="saveGroupInfoBtn">保存群聊</button>
+              </div>
+              <div class="muted" id="groupInfoHint"></div>
+            </div>
+            <div class="friends-section">
+              <h4>成员列表</h4>
+              <div class="muted" style="margin-bottom:6px">成员来自上方“群成员”输入；点击成员进入与其的私聊</div>
+              <div id="privateChatsList"></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-area">
@@ -16337,6 +16407,344 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       }, 1000);
     </script>
 
+    <script>
+      // ===== Multi(多私聊) 管理状态 =====
+      window.multiState = {
+        groupName: '',
+        groupMembers: [],
+        chats: {}, // { chatName: Message[] }
+        currentChat: '',
+      };
+
+      function unique(arr){ return Array.from(new Set((arr||[]).filter(Boolean).map(s => String(s).trim()))); }
+      function parseMembers(str){
+        if (!str) return [];
+        return unique(String(str).replace(/[\n\r]+/g, ',').replace(/[，、]/g, ',').split(',').map(s => s.trim()).filter(Boolean));
+      }
+
+      // 解析 qunliao（支持 multi 分段）
+      function parseMultiQunliao(text){
+        const result = { groupName: '', groupMembers: [], chats: {} };
+        if (!text || typeof text !== 'string') return result;
+        const m = text.match(/<qunliao>([\s\S]*?)<\/qunliao>/);
+        if (!m) return result;
+        const inner = m[1];
+        const multiBlocks = Array.from(inner.matchAll(/<multi>([\s\S]*?)<\/multi>/g));
+        if (multiBlocks.length === 0) {
+          // 无 multi，整体当作一个会话
+          const lines = inner.replace(/^[\s\S]*?\n?/, '').trim();
+          const msgs = parseQunliaoLog(`<qunliao>\n${lines}\n</qunliao>`);
+          result.chats['群聊'] = msgs;
+          const t = inner.split(/\n/).map(s=>s.trim()).find(s => /^【.+的聊天】$/.test(s));
+          if (t) result.groupName = t.replace(/^【|】$/g,'').replace(/的聊天$/,'');
+          // 尝试解析顶层成员（如存在）
+          const memberTop = (inner.match(/<群成员：([^>]+)>/) || [])[1] || '';
+          if (memberTop) result.groupMembers = parseMembers(memberTop);
+          return result;
+        }
+
+        for (const mb of multiBlocks) {
+          const body = mb[1].trim();
+          const memberLine = (body.match(/<群成员：([^>]+)>/) || [])[1] || '';
+          const members = parseMembers(memberLine);
+          if (members.length) result.groupMembers = unique(result.groupMembers.concat(members));
+          const chatTitle = (body.match(/【和(.+?)的聊天】/) || [])[1] || '';
+          const content = body
+            .replace(/<群成员：[^>]+>/, '')
+            .replace(/【和.+?的聊天】/, '')
+            .trim();
+          const msgs = parseQunliaoLog(`<qunliao>\n${content}\n</qunliao>`);
+          const key = chatTitle || `会话${Object.keys(result.chats).length+1}`;
+          result.chats[key] = msgs;
+        }
+        return result;
+      }
+
+      function serializeMessagesOnly(msgArr){
+        let s = serializeQunliaoLog(msgArr || []);
+        s = s.replace(/^<qunliao>\s*/,'').replace(/\s*<\/qunliao>\s*$/, '');
+        const lines = s.split(/\n/).filter(Boolean);
+        if (lines.length && /^【.+的聊天】$/.test(lines[0])) lines.shift();
+        return lines.join('\n');
+      }
+
+      function serializeMultiQunliao(ms){
+        if (!ms || !ms.chats) return '<qunliao>\n</qunliao>';
+        const membersStr = (ms.groupMembers || []).join(',');
+        let out = '<qunliao>\n';
+        for (const name of Object.keys(ms.chats)){
+          out += '<multi>\n';
+          out += (membersStr ? `<群成员：${membersStr}>\n` : '');
+          out += `【和${name}的聊天】\n`;
+          const body = serializeMessagesOnly(ms.chats[name]);
+          if (body) out += body + '\n';
+          out += '</multi>\n';
+        }
+        out += '</qunliao>';
+        return out;
+      }
+
+      async function syncToSillyTavernMulti(){
+        try{
+          if (typeof getCurrentMessageId !== 'function' || typeof setChatMessages !== 'function') return;
+          if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
+          if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
+          const all = serializeMultiQunliao(multiState);
+          await setChatMessages([{ message_id: state.currentMsgId, message: all }], { refresh: 'none' });
+        }catch(e){ console.error('syncToSillyTavernMulti error:', e); }
+      }
+      // 覆盖原有同步函数
+      window.syncToSillyTavern = syncToSillyTavernMulti;
+
+      // 接管延迟同步
+      window.deferredSync = function(delay){ setTimeout(() => { syncToSillyTavernMulti(); }, typeof delay==='number' ? delay : 300); };
+
+      // 重新加载为 multi 视图
+      function reloadAsMulti(){
+        try{
+          if (typeof getCurrentMessageId !== 'function' || typeof getChatMessages !== 'function') return;
+          state.currentMsgId = getCurrentMessageId();
+          const msg = getChatMessages(state.currentMsgId)[0];
+          if (msg && msg.message) {
+            const parsed = parseMultiQunliao(msg.message);
+            multiState.groupName = parsed.groupName || multiState.groupName || '';
+            multiState.groupMembers = parsed.groupMembers || [];
+            multiState.chats = parsed.chats || {};
+            // 若解析到了成员但没有对应会话，按成员生成空会话
+            (multiState.groupMembers || []).forEach(n => { if (!multiState.chats[n]) multiState.chats[n] = []; });
+            const keys = Object.keys(multiState.chats);
+            multiState.currentChat = keys[0] || '';
+            state.messageHistory = multiState.currentChat ? (multiState.chats[multiState.currentChat] || []) : [];
+            lastHistoryCount = 0;
+            const nameSpan = document.getElementById('chatPersonName');
+            if (nameSpan){ nameSpan.textContent = multiState.currentChat ? `和${multiState.currentChat}的聊天` : (multiState.groupName || ''); }
+            setTimeout(() => { renderAllMessages(); updateAiRequestButtonVisibility(); }, 50);
+          }
+        }catch(e){ console.error('reloadAsMulti error:', e); }
+      }
+
+      // 切换会话 / 新增会话
+      window.switchPrivateChat = function(name){
+        if (!name) return;
+        if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
+        multiState.currentChat = name;
+        state.messageHistory = multiState.chats[name] || [];
+        lastHistoryCount = 0;
+        const nameSpan = document.getElementById('chatPersonName');
+        if (nameSpan) nameSpan.textContent = `和${name}的聊天`;
+        renderAllMessages();
+        updateAiRequestButtonVisibility();
+      };
+      window.addPrivateChat = function(name){
+        const n = String(name||'').trim();
+        if (!n) return alert('请输入私聊成员名');
+        if (!multiState.chats[n]) multiState.chats[n] = [];
+        window.switchPrivateChat(n);
+        buildPrivateChatsList();
+        syncToSillyTavernMulti();
+      };
+
+      // 好友面板交互
+      const friendsBtn = document.getElementById('friendsBtn');
+      const friendsOverlay = document.getElementById('friendsOverlay');
+      const friendsClose = document.getElementById('friendsClose');
+      const friendsAddBtn = document.getElementById('friendsAddBtn');
+      const groupNicknameInput = document.getElementById('groupNicknameInput');
+      const groupMembersInput = document.getElementById('groupMembersInput');
+      const saveGroupInfoBtn = document.getElementById('saveGroupInfoBtn');
+      const privateChatsList = document.getElementById('privateChatsList');
+      const groupInfoHint = document.getElementById('groupInfoHint');
+      const groupListEl = document.getElementById('groupList');
+
+      // ========== 好友/群聊 持久化：按角色隔离 tavern_friends_${source}_${id} ==========
+      function getCurrentCharId(){
+        try{
+          if (typeof parent !== 'undefined'){
+            if (parent.this_chid !== undefined && parent.this_chid !== null) return String(parent.this_chid);
+            if (parent.characterId !== undefined && parent.characterId !== null) return String(parent.characterId);
+            if (parent.window && parent.window.localStorage){
+              const cid = parent.window.localStorage.getItem('current_character_id');
+              if (cid) return String(cid);
+            }
+          }
+        }catch(e){}
+        try{
+          const p = new URLSearchParams(location.search);
+          const id = p.get('id') || p.get('char') || localStorage.getItem('current_character_id');
+          if (id) return String(id);
+        }catch(e){}
+        return 'default';
+      }
+      function getFriendsStorageKey(){
+        let source = 'ext';
+        try{ if (typeof parent === 'undefined' || !parent.extension_settings) source = 'local'; }catch(e){ source='local'; }
+        const id = getCurrentCharId();
+        return `tavern_friends_${source}_${id}`;
+      }
+      function readFromExtensionSettings(key){
+        try{ if (typeof parent !== 'undefined' && parent.extension_settings && parent.extension_settings[key]) return JSON.parse(JSON.stringify(parent.extension_settings[key])); }catch(e){}
+        return null;
+      }
+      function writeToExtensionSettings(key, value){
+        try{
+          if (typeof parent !== 'undefined' && parent.extension_settings){
+            parent.extension_settings[key] = JSON.parse(JSON.stringify(value));
+            if (typeof parent.saveSettingsDebounced === 'function') parent.saveSettingsDebounced();
+            return true;
+          }
+        }catch(e){}
+        return false;
+      }
+      function loadFriendsStore(){
+        const key = getFriendsStorageKey();
+        const ext = readFromExtensionSettings(key);
+        if (ext && typeof ext === 'object') return ext;
+        try{ const ls = localStorage.getItem(key); if (ls) return JSON.parse(ls); }catch(e){}
+        return { groups: [] };
+      }
+      function saveFriendsStore(obj){
+        const key = getFriendsStorageKey();
+        writeToExtensionSettings(key, obj);
+        try{ localStorage.setItem(key, JSON.stringify(obj)); }catch(e){}
+      }
+      function upsertGroup(group){
+        const store = loadFriendsStore();
+        const list = Array.isArray(store.groups) ? store.groups : [];
+        const idx = list.findIndex(g => g.id === group.id);
+        if (idx >= 0) list[idx] = group; else list.unshift(group);
+        store.groups = list; saveFriendsStore(store);
+      }
+      function deleteGroup(groupId){
+        const store = loadFriendsStore();
+        store.groups = (store.groups||[]).filter(g => g.id !== groupId);
+        saveFriendsStore(store);
+      }
+
+      function buildGroupList(){
+        if (!groupListEl) return;
+        const store = loadFriendsStore();
+        const groups = (store.groups||[]).slice().sort((a,b)=>{
+          const ap = a.pinned?1:0, bp=b.pinned?1:0; if (ap!==bp) return bp-ap; // pinned first
+          const at = a.updatedAt||a.createdAt||0; const bt=b.updatedAt||b.createdAt||0; return bt-at;
+        });
+        groupListEl.innerHTML = groups.length? '' : '<div class="muted">暂无群聊，点击右上角 + 添加</div>';
+        groups.forEach(g => {
+          const item = document.createElement('div');
+          item.className = 'friend-item';
+          const left = document.createElement('div');
+          left.innerHTML = `<div class="friend-title">${g.name || '未命名群'}${g.pinned?' 📌':''}</div><div class="friend-sub">成员：${(g.members||[]).join(', ') || '未设置'}</div>`;
+          const actions = document.createElement('div');
+          actions.className = 'friend-actions';
+          const pinBtn = document.createElement('button'); pinBtn.title = g.pinned?'取消置顶':'置顶'; pinBtn.textContent = '📌';
+          const delBtn = document.createElement('button'); delBtn.title = '删除'; delBtn.textContent = '🗑️';
+          actions.appendChild(pinBtn); actions.appendChild(delBtn);
+          item.appendChild(left); item.appendChild(actions);
+          item.onclick = () => openConversation(g.name);
+          pinBtn.onclick = (e)=>{ e.stopPropagation(); g.pinned = !g.pinned; g.updatedAt = Date.now(); upsertGroup(g); buildGroupList(); };
+          delBtn.onclick = (e)=>{ e.stopPropagation(); if (confirm(`删除群聊“${g.name}”？`)){ deleteGroup(g.id); buildGroupList(); } };
+          groupListEl.appendChild(item);
+        });
+      }
+
+      // 进入（或创建）群聊会话，并同步到 <multi>
+      window.openConversation = function(name){
+        const n = String(name||'').trim(); if (!n) return;
+        // 从存储加载对应群成员
+        const store = loadFriendsStore();
+        const g = (store.groups||[]).find(x => x.name === n);
+        if (g){
+          multiState.groupName = g.name;
+          multiState.groupMembers = Array.isArray(g.members) ? g.members : [];
+        }
+        if (!multiState.chats[n]) multiState.chats[n] = [];
+        if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
+        multiState.currentChat = n;
+        state.messageHistory = multiState.chats[n] || [];
+        lastHistoryCount = 0;
+        const nameSpan = document.getElementById('chatPersonName');
+        if (nameSpan) nameSpan.textContent = `和${n}的聊天`;
+        renderAllMessages();
+        updateAiRequestButtonVisibility();
+        // 写回 qunliao 的 multi 结构
+        deferredSync(200);
+      };
+
+      function addGroupPrompt(){
+        const name = prompt('请输入群聊名称（如：班级群）');
+        if (!name) return;
+        const membersStr = prompt('请输入群成员，逗号或换行分隔（如：小李,小王,小张）') || '';
+        const members = parseMembers(membersStr);
+        const group = { id: 'group_'+Date.now(), name: String(name).trim(), members, pinned: false, createdAt: Date.now(), updatedAt: Date.now() };
+        upsertGroup(group);
+        buildGroupList();
+      }
+
+      function openFriends(){
+        groupNicknameInput.value = multiState.groupName || '';
+        groupMembersInput.value = (multiState.groupMembers || []).join(',');
+        buildGroupList();
+        buildPrivateChatsList();
+        friendsOverlay.style.display = 'flex';
+      }
+      function closeFriends(){ friendsOverlay.style.display = 'none'; }
+      window.toggleFriendsPanel = function(show){ if (show) openFriends(); else closeFriends(); };
+      function buildPrivateChatsList(){
+        const set = new Set((multiState.groupMembers || []).map(s => String(s).trim()).filter(Boolean));
+        Object.keys(multiState.chats || {}).forEach(n => set.add(String(n).trim()));
+        const names = Array.from(set);
+        if (!privateChatsList) return;
+        privateChatsList.innerHTML = names.length ? '' : '<div class="muted">暂无成员/会话</div>';
+        names.forEach(name => {
+          if (!multiState.chats[name]) multiState.chats[name] = [];
+          const div = document.createElement('div');
+          div.className = 'chat-item';
+          const count = (multiState.chats[name] || []).length;
+          div.innerHTML = `<div><strong>${name}</strong><br><small>消息数 ${count}</small></div><div>${multiState.currentChat===name?'当前':''}</div>`;
+          div.onclick = () => { switchPrivateChat(name); closeFriends(); };
+          privateChatsList.appendChild(div);
+        });
+      }
+      if (friendsBtn) friendsBtn.onclick = openFriends;
+      if (friendsClose) friendsClose.onclick = closeFriends;
+      if (friendsAddBtn) friendsAddBtn.onclick = addGroupPrompt;
+      if (friendsOverlay) friendsOverlay.addEventListener('click', (e)=>{ if (e.target===friendsOverlay) closeFriends(); });
+      if (saveGroupInfoBtn) saveGroupInfoBtn.onclick = () => {
+        multiState.groupName = String(groupNicknameInput.value||'').trim();
+        multiState.groupMembers = parseMembers(groupMembersInput.value);
+        // 为每个成员确保存在对应会话
+        (multiState.groupMembers || []).forEach(n => { if (!multiState.chats[n]) multiState.chats[n] = []; });
+        buildPrivateChatsList();
+        // 写入群聊列表存储，便于下次直接选择
+        (function(){
+          const name = multiState.groupName || '未命名群';
+          const store = loadFriendsStore();
+          const existed = (store.groups||[]).find(g => g.name === name);
+          const group = {
+            id: existed? existed.id : ('group_'+Date.now()),
+            name,
+            members: (multiState.groupMembers||[]),
+            pinned: existed? !!existed.pinned : false,
+            createdAt: existed? existed.createdAt : Date.now(),
+            updatedAt: Date.now(),
+          };
+          upsertGroup(group);
+          buildGroupList();
+        })();
+        groupInfoHint.textContent = `已保存：${multiState.groupName || '未命名群'}，成员${multiState.groupMembers.length}人`;
+        // 若未选择会话，默认切到第一个成员
+        if (!multiState.currentChat && multiState.groupMembers.length){
+          switchPrivateChat(multiState.groupMembers[0]);
+        } else {          const nameSpan = document.getElementById('chatPersonName');
+          if (nameSpan && !multiState.currentChat) nameSpan.textContent = multiState.groupName || '';
+        }
+        syncToSillyTavernMulti();
+      };
+      // 私聊项由群成员自动生成，无需手动添加按钮
+
+      // DOM 就绪后，以 multi 方式重载一次
+      document.addEventListener('DOMContentLoaded', () => { setTimeout(reloadAsMulti, 200); });
+    </script>
+
     <!-- 🎉 消息特效容器 -->
     <div id="messageEffectsContainer" class="message-effects-container"></div>
     <script>
@@ -16594,6 +17002,3 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
     </script>
   </body>
 </html>
-
-
-
