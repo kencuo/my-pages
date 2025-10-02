@@ -1563,9 +1563,13 @@
       function startChat(name, type, members) {
         if (typeof triggerSlash === 'function') {
           if (type === 'group') {
-            const message = `/send <群成员：${members}>
+            const message = `/send <qunliao>
+            
+<multi>
+<群成员：${members}>
 【和${name}的聊天】
-<qunliao>
+</multi>
+
 </qunliao>`;
             triggerSlash(message);
           } else {
@@ -1581,20 +1585,36 @@
         } else {
           // 如果triggerSlash不可用，显示消息内容
           if (type === 'group') {
-            console.log(`<群成员：${members}>
+            console.log(`<qunliao>
+            
+<multi>
+<群成员：${members}>
 【和${name}的聊天】
-<qunliao>
+</multi>
+
 </qunliao>`);
-            alert(`群聊消息：<群成员：${members}>
+            alert(`群聊消息：<qunliao>
+            
+<multi>
+<群成员：${members}>
 【和${name}的聊天】
-<qunliao>
+</multi>
+
 </qunliao>`);
           } else {
-            console.log(`【和${name}的聊天】
-<shouji>
+            console.log(`<shouji>
+            
+<private>
+【和${name}的聊天】
+</private>
+
 </shouji>`);
-            alert(`好友消息：【和${name}的聊天】
-<shouji>
+            alert(`好友消息：<shouji>
+            
+<private>
+【和${name}的聊天】
+</private>
+
 </shouji>`);
           }
         }
