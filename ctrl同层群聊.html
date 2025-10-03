@@ -5474,6 +5474,7 @@
           </svg>
         </button>
         <span id="chatPersonName" class="cute-person-name"></span>
+        <button class="friends-btn" id="membersBtn" title="群成员">👥</button>
         <button class="friends-btn" id="friendsBtn" title="好友列表">
           <svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3m-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3m0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C18 14.17 13.33 13 11 13m8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h4v-2.5c0-2.33-4.67-3.5-7-3.5" />
@@ -5498,15 +5499,20 @@
         .friends-btn { background: transparent; border: none; color: var(--text-primary); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; }
         .friends-btn:hover { background: var(--bg-secondary); }
         .friends-overlay { position: absolute; inset: 0; background: var(--bg-secondary); display: none; align-items: stretch; justify-content: center; padding: 0; z-index: 900; }
+        .members-overlay { position: absolute; inset: 0; background: var(--bg-secondary); display: none; align-items: stretch; justify-content: center; padding: 0; z-index: 901; }
         .friends-panel { width: 100%; height: 100%; background: var(--bg-secondary); border: 0; border-radius: 0; box-shadow: none; display: flex; flex-direction: column; overflow: hidden; animation: pageSlideIn .25s ease-out; }
+        .members-panel { width: 100%; height: 100%; background: var(--bg-secondary); border: 0; border-radius: 0; box-shadow: none; display: flex; flex-direction: column; overflow: hidden; animation: pageSlideIn .25s ease-out; }
         .friends-panel header { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: var(--bg-header); border-bottom: 1px solid var(--border-primary); }
+        .members-panel header { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: var(--bg-header); border-bottom: 1px solid var(--border-primary); }
         .friends-panel header h3 { margin: 0; font-size: 16px; color: var(--text-primary); }
+        .members-panel header h3 { margin: 0; font-size: 16px; color: var(--text-primary); }
         .friends-header-actions { display: flex; gap: 6px; align-items: center; }
         .friends-add { background: transparent; border: none; color: var(--text-primary); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 20px; line-height: 32px; }
         .friends-add:hover { background: var(--bg-secondary); }
         .friends-close { background: transparent; border: none; color: var(--text-primary); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; }
         .friends-close:hover { background: var(--bg-secondary); }
         .friends-body { padding: 12px; overflow-y: auto; gap: 14px; display: flex; flex-direction: column; flex: 1; }
+        .members-body { padding: 12px; overflow-y: auto; gap: 8px; display: flex; flex-direction: column; flex: 1; }
         .friends-section { background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 10px; padding: 10px; }
         .friends-section h4 { margin: 0 0 8px 0; font-size: 14px; color: var(--text-primary); }
         .input-row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
@@ -5526,11 +5532,13 @@
         .friend-actions { display: flex; gap: 8px; align-items: center; }
         .friend-actions button { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; border-radius: 6px; }
         .friend-actions button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .member-item { display:flex; align-items:center; justify-content:space-between; padding:8px; border:1px solid var(--border-secondary); border-radius:8px; background:var(--bg-secondary); cursor:pointer; }
+        .member-item:hover { background: var(--bg-tertiary); }
       </style>
       <div class="friends-overlay" id="friendsOverlay">
         <div class="friends-panel">
           <header>
-            <h3>群聊与私聊</h3>
+            <h3>群聊列表</h3>
             <div class="friends-header-actions">
               <button class="friends-add" id="friendsAddBtn" title="添加">＋</button>
               <button class="friends-close" id="friendsClose" title="关闭">✕</button>
@@ -5556,6 +5564,18 @@
               <div class="muted" style="margin-bottom:6px">成员来自上方“群成员”输入；点击成员进入与其的私聊</div>
               <div id="privateChatsList"></div>
             </div>
+          </div>
+        </div>
+      </div>
+      <div class="members-overlay" id="membersOverlay">
+        <div class="members-panel">
+          <header>
+            <h3>群成员</h3>
+            <div class="friends-header-actions">
+              <button class="friends-close" id="membersClose" title="关闭">✕</button>
+            </div>
+          </header>
+          <div class="members-body" id="membersList">
           </div>
         </div>
       </div>
@@ -8259,6 +8279,25 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
+        // Route streamed AI outputs to matching private chat based on charName
+        try {
+          if (window.multiState && msg && msg.sender === 'char') {
+            const n = String(msg.charName || '').trim();
+            if (n && n !== window.multiState.currentChat) {
+              if (Array.isArray(state.messageHistory) && state.messageHistory[idx] === msg) {
+                // undo last push into current conversation
+                try { state.messageHistory.pop(); } catch(_){}
+              }
+              if (!window.multiState.chats[n]) window.multiState.chats[n] = [];
+              window.multiState.chats[n].push(msg);
+              try { if (!window.multiState.unread) window.multiState.unread = {}; window.multiState.unread[n] = (window.multiState.unread[n]||0) + 1; } catch(_){}
+              try { buildPrivateChatsList(); } catch(e){}
+              deferredSync(200);
+              return; // do not render into current view
+            }
+          }
+        } catch (e) {}
+
         const message = createMessageElement(msg, idx);
         if (message) {
           // 标记生成的消息用于优化渲染
@@ -8266,6 +8305,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             message.classList.add('generated');
           }
           chat.appendChild(message);
+
+          // keep immediate cache in private conversations
+          try { if (window.multiState && window.multiState.currentChat) window.multiState.chats[window.multiState.currentChat] = state.messageHistory.slice(); } catch(_){}
 
           // 🎉 检测关键词特效（只对用户发送的消息触发）
           if (msg.sender === 'user' && msg.content && typeof msg.content === 'string') {
@@ -16414,7 +16456,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         groupMembers: [],
         chats: {}, // { chatName: Message[] }
         currentChat: '',
+        unread: {}, // { chatName: number }
       };
+
+      // Expose private conversations via state.privateConversations for external sync logic
+      try {
+        Object.defineProperty(state, 'privateConversations', {
+          get() { return window.multiState && window.multiState.chats ? window.multiState.chats : {}; },
+          set(v) { if (window.multiState) window.multiState.chats = v || {}; }
+        });
+      } catch (e) {}
 
       function unique(arr){ return Array.from(new Set((arr||[]).filter(Boolean).map(s => String(s).trim()))); }
       function parseMembers(str){
@@ -16472,7 +16523,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (!ms || !ms.chats) return '<qunliao>\n</qunliao>';
         const membersStr = (ms.groupMembers || []).join(',');
         let out = '<qunliao>\n';
-        for (const name of Object.keys(ms.chats)){
+        const __keys = Object.keys(ms.chats || {}).sort((a,b)=>String(a).localeCompare(String(b), 'zh'));
+        for (const name of __keys){
           out += '<multi>\n';
           out += (membersStr ? `<群成员：${membersStr}>\n` : '');
           out += `【和${name}的聊天】\n`;
@@ -16529,11 +16581,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
         multiState.currentChat = name;
         state.messageHistory = multiState.chats[name] || [];
+        try { if (multiState.unread) multiState.unread[name] = 0; } catch(_){}
         lastHistoryCount = 0;
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan) nameSpan.textContent = `和${name}的聊天`;
         renderAllMessages();
         updateAiRequestButtonVisibility();
+        try { buildPrivateChatsList(); buildGroupList(); } catch(e){}
       };
       window.addPrivateChat = function(name){
         const n = String(name||'').trim();
@@ -16620,6 +16674,67 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         saveFriendsStore(store);
       }
 
+      // —— 反向同步到 好友列表.html ——
+      function getFriendsKeysForCurrentChar(){
+        const keys = [];
+        const charId = getCurrentCharId();
+        try{
+          if (typeof parent !== 'undefined' && parent.extension_settings){
+            Object.keys(parent.extension_settings).forEach(k=>{ if (/^tavern_friends_/.test(k||'') && k.endsWith('_'+charId)) keys.push(k); });
+          }
+        }catch(e){}
+        try{
+          for (let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if (/^tavern_friends_/.test(k||'') && k.endsWith('_'+charId)) keys.push(k); }
+        }catch(e){}
+        return Array.from(new Set(keys));
+      }
+      function updateFriendsPinned(name, pinned){
+        if (!name) return;
+        const keys = getFriendsKeysForCurrentChar();
+        // ext settings
+        try{
+          if (typeof parent !== 'undefined' && parent.extension_settings){
+            keys.forEach(k=>{
+              const arr = Array.isArray(parent.extension_settings[k]) ? parent.extension_settings[k] : [];
+              const next = arr.map(it => { if (it && it.type==='group' && String(it.name||'').trim()===String(name).trim()) return { ...it, pinned: !!pinned }; return it; });
+              parent.extension_settings[k] = JSON.parse(JSON.stringify(next));
+            });
+            if (typeof parent.saveSettingsDebounced === 'function') parent.saveSettingsDebounced();
+          }
+        }catch(e){}
+        // localStorage mirror
+        try{
+          keys.forEach(k=>{
+            let arr = [];
+            try{ arr = JSON.parse(localStorage.getItem(k)||'[]'); }catch(_){ arr=[]; }
+            const next = Array.isArray(arr) ? arr.map(it => { if (it && it.type==='group' && String(it.name||'').trim()===String(name).trim()) return { ...it, pinned: !!pinned }; return it; }) : [];
+            localStorage.setItem(k, JSON.stringify(next));
+          });
+        }catch(e){}
+      }
+      function removeFromFriends(name){
+        if (!name) return;
+        const keys = getFriendsKeysForCurrentChar();
+        try{
+          if (typeof parent !== 'undefined' && parent.extension_settings){
+            keys.forEach(k=>{
+              const arr = Array.isArray(parent.extension_settings[k]) ? parent.extension_settings[k] : [];
+              const next = arr.filter(it => !(it && it.type==='group' && String(it.name||'').trim()===String(name).trim()));
+              parent.extension_settings[k] = JSON.parse(JSON.stringify(next));
+            });
+            if (typeof parent.saveSettingsDebounced === 'function') parent.saveSettingsDebounced();
+          }
+        }catch(e){}
+        try{
+          keys.forEach(k=>{
+            let arr = [];
+            try{ arr = JSON.parse(localStorage.getItem(k)||'[]'); }catch(_){ arr=[]; }
+            const next = Array.isArray(arr) ? arr.filter(it => !(it && it.type==='group' && String(it.name||'').trim()===String(name).trim())) : [];
+            localStorage.setItem(k, JSON.stringify(next));
+          });
+        }catch(e){}
+      }
+
       function buildGroupList(){
         if (!groupListEl) return;
         const store = loadFriendsStore();
@@ -16639,7 +16754,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const delBtn = document.createElement('button'); delBtn.title = '删除'; delBtn.textContent = '🗑️';
           actions.appendChild(pinBtn); actions.appendChild(delBtn);
           item.appendChild(left); item.appendChild(actions);
-          item.onclick = () => openConversation(g.name);
+          item.onclick = () => { openConversation(g.name); closeFriends(); };
+          // override delete handler to also update 好友列表.html
+          delBtn.onclick = (e)=>{ e.stopPropagation(); if (confirm(`删除群聊“${g.name}”？`)){
+            const gid = g.source==='store' ? g.id : ('friends_'+encodeURIComponent(g.name));
+            deleteGroup(gid);
+            try { removeFromFriends(g.name); } catch(_){}
+            buildGroupList();
+          } };
           pinBtn.onclick = (e)=>{ e.stopPropagation(); g.pinned = !g.pinned; g.updatedAt = Date.now(); upsertGroup(g); buildGroupList(); };
           delBtn.onclick = (e)=>{ e.stopPropagation(); if (confirm(`删除群聊“${g.name}”？`)){ deleteGroup(g.id); buildGroupList(); } };
           groupListEl.appendChild(item);
@@ -16700,6 +16822,19 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           div.className = 'chat-item';
           const count = (multiState.chats[name] || []).length;
           div.innerHTML = `<div><strong>${name}</strong><br><small>消息数 ${count}</small></div><div>${multiState.currentChat===name?'当前':''}</div>`;
+          // append unread badge into the title row
+          try {
+            const unread = (multiState.unread && multiState.unread[name]) ? multiState.unread[name] : 0;
+            if (unread > 0) {
+              const firstDiv = div.firstElementChild;
+              if (firstDiv && firstDiv.firstElementChild && firstDiv.firstElementChild.tagName === 'STRONG') {
+                const s = document.createElement('span');
+                s.textContent = ` 未读 ${unread}`;
+                s.style.marginLeft = '6px'; s.style.background = '#ff4d4f'; s.style.color = '#fff'; s.style.borderRadius = '10px'; s.style.padding = '0 6px'; s.style.fontSize = '12px';
+                firstDiv.firstElementChild.after(s);
+              }
+            }
+          } catch (e) {}
           div.onclick = () => { switchPrivateChat(name); closeFriends(); };
           privateChatsList.appendChild(div);
         });
@@ -16708,6 +16843,29 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       if (friendsClose) friendsClose.onclick = closeFriends;
       if (friendsAddBtn) friendsAddBtn.onclick = addGroupPrompt;
       if (friendsOverlay) friendsOverlay.addEventListener('click', (e)=>{ if (e.target===friendsOverlay) closeFriends(); });
+      // Members quick view
+      const membersBtn = document.getElementById('membersBtn');
+      const membersOverlay = document.getElementById('membersOverlay');
+      const membersClose = document.getElementById('membersClose');
+      const membersList = document.getElementById('membersList');
+      function buildMembersList(){
+        if (!membersList) return;
+        const names = Array.from(new Set((multiState.groupMembers || []).map(s => String(s).trim()).filter(Boolean)));
+        membersList.innerHTML = names.length ? '' : '<div class="muted">暂无群成员</div>';
+        names.forEach(n => {
+          const row = document.createElement('div');
+          row.className = 'member-item';
+          const cnt = (multiState.chats && multiState.chats[n]) ? multiState.chats[n].length : 0;
+          row.innerHTML = `<div>${n}</div><div style="font-size:12px;color:var(--text-secondary)">${cnt}条消息</div>`;
+          row.onclick = () => { try{ switchPrivateChat(n); }catch(e){} if (membersOverlay) membersOverlay.style.display = 'none'; };
+          membersList.appendChild(row);
+        });
+      }
+      function openMembers(){ if (membersOverlay){ buildMembersList(); membersOverlay.style.display = 'flex'; } }
+      function closeMembers(){ if (membersOverlay) membersOverlay.style.display = 'none'; }
+      if (membersBtn) membersBtn.onclick = openMembers;
+      if (membersClose) membersClose.onclick = closeMembers;
+      if (membersOverlay) membersOverlay.addEventListener('click', (e)=>{ if (e.target===membersOverlay) closeMembers(); });
       if (saveGroupInfoBtn) saveGroupInfoBtn.onclick = () => {
         multiState.groupName = String(groupNicknameInput.value||'').trim();
         multiState.groupMembers = parseMembers(groupMembersInput.value);
@@ -16742,6 +16900,135 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 私聊项由群成员自动生成，无需手动添加按钮
 
       // DOM 就绪后，以 multi 方式重载一次
+      
+      // ========== 聚合群聊来源与覆盖逻辑 ==========
+      function getAllGroupEntries(){
+        const seen = new Set();
+        const out = [];
+        const store = loadFriendsStore();
+        const list = Array.isArray(store.groups) ? store.groups : [];
+        list.forEach(g => {
+          const name = String(g && g.name || '').trim();
+          if (!name || seen.has(name)) return;
+          out.push({ ...g, name, members: Array.isArray(g.members) ? g.members : parseMembers(g.members||''), source: 'store' });
+          seen.add(name);
+        });
+        const charId = getCurrentCharId();
+        try{
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            Object.keys(parent.extension_settings).forEach(k => {
+              if (!/^tavern_friends_/.test(k||'')) return;
+              if (!k.endsWith('_'+charId)) return;
+              const arr = parent.extension_settings[k];
+              if (Array.isArray(arr)) {
+                arr.filter(it => it && it.type === 'group').forEach(it => {
+                  const name = String(it.name||'').trim();
+                  if (!name || seen.has(name)) return;
+                  const members = parseMembers(it.members||'');
+                  out.push({ id: 'friends_'+encodeURIComponent(name), name, members, pinned: false, createdAt: 0, updatedAt: 0, source: 'friends' });
+                  seen.add(name);
+                });
+              }
+            });
+          }
+        }catch(e){}
+        try{
+          const keys = [];
+          for (let i=0;i<localStorage.length;i++){ try { keys.push(localStorage.key(i)); } catch(_){} }
+          keys.forEach(k => {
+            if (!/^tavern_friends_/.test(k||'')) return;
+            if (!k.endsWith('_'+charId)) return;
+            let arr = [];
+            try{ arr = JSON.parse(localStorage.getItem(k)||'[]'); }catch(_){ arr = []; }
+            if (Array.isArray(arr)) {
+              arr.filter(it => it && it.type === 'group').forEach(it => {
+                const name = String(it.name||'').trim();
+                if (!name || seen.has(name)) return;
+                const members = parseMembers(it.members||'');
+                out.push({ id: 'friends_'+encodeURIComponent(name), name, members, pinned: false, createdAt: 0, updatedAt: 0, source: 'friends' });
+                seen.add(name);
+              });
+            }
+          });
+        }catch(e){}
+        return out;
+      }
+
+      // 覆盖群聊列表构建：合并好友列表.html中的群聊
+      function buildGroupList(){
+        if (!groupListEl) return;
+        const groups = getAllGroupEntries().slice().sort((a,b)=>{
+          const ap = a.pinned?1:0, bp=b.pinned?1:0; if (ap!==bp) return bp-ap;
+          const at = a.updatedAt||a.createdAt||0; const bt=b.updatedAt||b.createdAt||0; return bt-at;
+        });
+        groupListEl.innerHTML = groups.length? '' : '<div class="muted">暂无群聊，点击右上角 + 添加</div>';
+        groups.forEach(g => {
+          const item = document.createElement('div');
+          item.className = 'friend-item';
+          const left = document.createElement('div');
+          const membersText = Array.isArray(g.members) ? g.members.join(', ') : String(g.members||'');
+          left.innerHTML = `<div class=\"friend-title\">${g.name || '未命名群'}${g.pinned?' 🔝':''}</div><div class=\"friend-sub\">成员：${membersText || '未设置'}</div>`;
+          // append unread badge if any (for current group only)
+          try{
+            const groupUnread = (window.multiState && g.name === window.multiState.groupName && window.multiState.unread)
+              ? Object.values(window.multiState.unread).reduce((a,b)=>a + (b||0), 0)
+              : 0;
+            if (groupUnread > 0) {
+              const t = left.querySelector('.friend-title');
+              if (t) {
+                const s = document.createElement('span');
+                s.textContent = ` 未读 ${groupUnread}`;
+                s.style.marginLeft = '6px';
+                s.style.background = '#ff4d4f';
+                s.style.color = '#fff';
+                s.style.borderRadius = '10px';
+                s.style.padding = '0 6px';
+                s.style.fontSize = '12px';
+                t.appendChild(s);
+              }
+            }
+          }catch(e){}
+          const actions = document.createElement('div');
+          actions.className = 'friend-actions';
+          const pinBtn = document.createElement('button'); pinBtn.title = g.pinned?'取消置顶':'置顶'; pinBtn.textContent = '📌';
+          const delBtn = document.createElement('button'); delBtn.title = '删除'; delBtn.textContent = '🗑️';
+          actions.appendChild(pinBtn); actions.appendChild(delBtn);
+          item.appendChild(left); item.appendChild(actions);
+          item.onclick = () => { openConversation(g.name); closeFriends(); };
+          pinBtn.onclick = (e)=>{ e.stopPropagation();
+            const now = Date.now();
+            const gid = g.source==='store' ? g.id : ('friends_'+encodeURIComponent(g.name));
+            const storeObj = { id: gid, name: g.name, members: Array.isArray(g.members)?g.members:parseMembers(g.members||''), pinned: !g.pinned, createdAt: g.createdAt||now, updatedAt: now };
+            upsertGroup(storeObj);
+            try { if (typeof updateFriendsPinned === 'function') updateFriendsPinned(g.name, storeObj.pinned); } catch(_){}
+            buildGroupList(); };
+          delBtn.onclick = (e)=>{ e.stopPropagation(); if (confirm(`删除群聊“${g.name}”？`)){
+            const gid = g.source==='store' ? g.id : ('friends_'+encodeURIComponent(g.name));
+            deleteGroup(gid); buildGroupList(); } };
+          groupListEl.appendChild(item);
+        });
+      }
+
+      // 覆盖 openConversation：进入时带上聚合成员
+      window.openConversation = function(name){
+        const n = String(name||'').trim(); if (!n) return;
+        const g = (getAllGroupEntries()||[]).find(x => x.name === n);
+        if (g){
+          multiState.groupName = g.name;
+          multiState.groupMembers = Array.isArray(g.members) ? g.members : parseMembers(g.members||'');
+        }
+        if (!multiState.chats[n]) multiState.chats[n] = [];
+        if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
+        multiState.currentChat = n;
+        state.messageHistory = multiState.chats[n] || [];
+        lastHistoryCount = 0;
+        const nameSpan = document.getElementById('chatPersonName');
+        if (nameSpan) nameSpan.textContent = `和${n}的聊天`;
+        renderAllMessages();
+        updateAiRequestButtonVisibility();
+        deferredSync(200);
+      };
+
       document.addEventListener('DOMContentLoaded', () => { setTimeout(reloadAsMulti, 200); });
     </script>
 
@@ -16998,6 +17285,104 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
         });
         mo.observe(chatRoot, {childList:true, subtree:true});
+      })();
+    </script>
+    <!-- 仅群聊：列表专用 + 浮动返回按钮注入 -->
+    <style>
+      .floating-list-btn {
+        position: absolute;
+        top: 52px; /* 放在头部下方，避免被群名挡住 */
+        left: 8px;
+        z-index: 950;
+        padding: 6px 10px;
+        font-size: 12px;
+        color: var(--text-primary);
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-secondary);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px var(--shadow-light);
+        cursor: pointer;
+        user-select: none;
+      }
+      .floating-list-btn:hover {
+        background: var(--bg-tertiary);
+      }
+    </style>
+    <script>
+      (function(){
+        function byId(id){ return document.getElementById(id); }
+        // 头部标题：固定显示群名
+        function setHeaderToGroup(){
+          try{
+            var nameSpan = byId('chatPersonName');
+            if (!nameSpan) return;
+            var g = (window.multiState && window.multiState.groupName) ? window.multiState.groupName : '';
+            if (g) nameSpan.textContent = String(g);
+          }catch(e){}
+        }
+
+        // 覆盖 openConversation，进入群聊后标题仅显示群名
+        if (typeof window.openConversation === 'function'){
+          var __oldOpenConv = window.openConversation;
+          window.openConversation = function(name){
+            __oldOpenConv.apply(this, arguments);
+            var nameSpan = byId('chatPersonName');
+            if (nameSpan) nameSpan.textContent = String(name||'');
+          };
+        }
+
+        // 覆盖 reloadAsMulti 行为，始终将标题设为群名
+        if (typeof window.reloadAsMulti === 'function'){
+          var __oldReload = window.reloadAsMulti;
+          window.reloadAsMulti = function(){
+            try { __oldReload.apply(this, arguments); } finally { setHeaderToGroup(); }
+          };
+        } else {
+          // 初始化延迟设置一次
+          document.addEventListener('DOMContentLoaded', function(){ setTimeout(setHeaderToGroup, 200); });
+        }
+
+        // 调整好友面板：只保留群聊列表
+        try{
+          var friendsOverlay = byId('friendsOverlay');
+          if (friendsOverlay){
+            // 修正标题为“群聊列表”
+            var h = friendsOverlay.querySelector('header h3');
+            if (h) h.textContent = '群聊列表';
+            // 隐藏后两个区块（群信息编辑、成员/私聊列表）
+            var sections = friendsOverlay.querySelectorAll('.friends-body .friends-section');
+            if (sections && sections.length > 1){
+              for (var i = 1; i < sections.length; i++){
+                sections[i].style.display = 'none';
+              }
+            }
+          }
+        }catch(e){}
+
+        // 注入悬浮“群聊列表”按钮（头部下方，避免被群名遮挡）
+        try{
+          var root = document.querySelector('.cute-phone');
+          if (root && !byId('floatingListBtn')){
+            var btn = document.createElement('button');
+            btn.id = 'floatingListBtn';
+            btn.className = 'floating-list-btn';
+            btn.title = '返回群聊列表';
+            btn.textContent = '☰ 群聊';
+            btn.addEventListener('click', function(){
+              if (typeof window.toggleFriendsPanel === 'function') window.toggleFriendsPanel(true);
+              else {
+                var ov = byId('friendsOverlay'); if (ov) ov.style.display = 'flex';
+              }
+            });
+            root.appendChild(btn);
+          }
+        }catch(e){}
+
+        // 打开好友面板时也矫正标题
+        try{
+          var friendsBtn = byId('friendsBtn');
+          if (friendsBtn){ friendsBtn.addEventListener('click', function(){ setTimeout(setHeaderToGroup, 50); }); }
+        }catch(e){}
       })();
     </script>
   </body>
