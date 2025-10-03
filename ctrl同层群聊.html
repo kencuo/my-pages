@@ -16772,15 +16772,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const delBtn = document.createElement('button'); delBtn.title = '删除'; delBtn.textContent = '🗑️';
           actions.appendChild(pinBtn); actions.appendChild(delBtn);
           item.appendChild(left); item.appendChild(actions);
-          item.onclick = () => {
-            if (isBroadcast) {
-              const nowChecked = !selected.has(g.name);
-              toggleGroupSelection(g.name, nowChecked);
-              buildGroupList();
-            } else {
-              openConversation(g.name); closeFriends();
-            }
-          };
+          item.onclick = () => { openConversation(g.name); closeFriends(); };
           // override delete handler to also update 好友列表.html
           delBtn.onclick = (e)=>{ e.stopPropagation(); if (confirm(`删除群聊“${g.name}”？`)){
             const gid = g.source==='store' ? g.id : ('friends_'+encodeURIComponent(g.name));
@@ -16980,17 +16972,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           item.className = 'friend-item';
           const left = document.createElement('div');
           const membersText = Array.isArray(g.members) ? g.members.join(', ') : String(g.members||'');
-          if (isBroadcast) {
-            const chk = document.createElement('input');
-            chk.type = 'checkbox';
-            chk.style.marginRight = '8px';
-            chk.checked = selected.has(g.name);
-            chk.addEventListener('click', (e)=>{ e.stopPropagation(); toggleGroupSelection(g.name, chk.checked); });
-            item.appendChild(chk);
-            if (chk.checked) { item.style.outline = '2px solid var(--accent-secondary)'; item.style.borderRadius = '8px'; }
-          } else {
-            item.style.outline = '';
-          }
           left.innerHTML = `<div class=\"friend-title\">${g.name || '未命名群'}${g.pinned?' 🔝':''}</div><div class=\"friend-sub\">成员：${membersText || '未设置'}</div>`;
           // append unread badge if any (for current group only)
           try{
@@ -17409,56 +17390,5 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }catch(e){}
       })();
     </script>
-  <script>
-    (function(){
-      try{
-        var friendsOverlay = document.getElementById('friendsOverlay');
-        var headerActions = friendsOverlay && friendsOverlay.querySelector('.friends-header-actions');
-        if (headerActions && !document.getElementById('broadcastToggleBtn')){
-          var bbtn = document.createElement('button');
-          bbtn.id = 'broadcastToggleBtn';
-          bbtn.className = 'friends-add';
-          bbtn.title = 'Ⱥ����ʽ';
-          bbtn.textContent = 'Ⱥ��';
-          bbtn.addEventListener('click', function(){
-            try{
-              window.multiState.broadcastMode = !window.multiState.broadcastMode;
-              if (!window.multiState.broadcastMode) window.multiState.selectedGroups = [];
-              if (typeof buildGroupList === 'function') buildGroupList();
-              bbtn.style.background = window.multiState.broadcastMode ? 'var(--bg-tertiary)' : 'transparent';
-            }catch(e){}
-          });
-          headerActions.insertBefore(bbtn, headerActions.firstChild);
-        }
-      }catch(e){}
-      try{
-        if (!window.__sendMessagePatched && typeof window.sendMessage === 'function'){
-          window.__sendMessagePatched = true;
-          window.__sendMessageOriginal = window.sendMessage;
-          window.sendMessage = async function(extra = {}){
-            try{
-              var ms = window.multiState || {};
-              var targets = Array.isArray(ms.selectedGroups) ? ms.selectedGroups.slice() : [];
-              if (ms.broadcastMode && targets.length > 0){
-                var inputEl = document.getElementById('chatInput');
-                var savedText = inputEl ? String(inputEl.value || '').trim() : '';
-                var prevChat = ms.currentChat;
-                for (var i=0;i<targets.length;i++){
-                  var gname = targets[i];
-                  if (typeof window.openConversation === 'function') window.openConversation(gname);
-                  if (inputEl) inputEl.value = savedText;
-                  await window.__sendMessageOriginal(extra);
-                }
-                if (typeof window.openConversation === 'function' && prevChat) window.openConversation(prevChat);
-                if (inputEl) inputEl.value = '';
-                return;
-              }
-            }catch(e){ console.error(e); }
-            return window.__sendMessageOriginal(extra);
-          }
-        }
-      }catch(e){}
-    })();
-  </script>
   </body>
 </html>
