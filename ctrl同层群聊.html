@@ -16587,7 +16587,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (nameSpan) nameSpan.textContent = `和${name}的聊天`;
         renderAllMessages();
         updateAiRequestButtonVisibility();
-        try { buildPrivateChatsList(); buildGroupList(); } catch(e){}
       };
       window.addPrivateChat = function(name){
         const n = String(name||'').trim();
@@ -16822,19 +16821,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           div.className = 'chat-item';
           const count = (multiState.chats[name] || []).length;
           div.innerHTML = `<div><strong>${name}</strong><br><small>消息数 ${count}</small></div><div>${multiState.currentChat===name?'当前':''}</div>`;
-          // append unread badge into the title row
-          try {
-            const unread = (multiState.unread && multiState.unread[name]) ? multiState.unread[name] : 0;
-            if (unread > 0) {
-              const firstDiv = div.firstElementChild;
-              if (firstDiv && firstDiv.firstElementChild && firstDiv.firstElementChild.tagName === 'STRONG') {
-                const s = document.createElement('span');
-                s.textContent = ` 未读 ${unread}`;
-                s.style.marginLeft = '6px'; s.style.background = '#ff4d4f'; s.style.color = '#fff'; s.style.borderRadius = '10px'; s.style.padding = '0 6px'; s.style.fontSize = '12px';
-                firstDiv.firstElementChild.after(s);
-              }
-            }
-          } catch (e) {}
           div.onclick = () => { switchPrivateChat(name); closeFriends(); };
           privateChatsList.appendChild(div);
         });
