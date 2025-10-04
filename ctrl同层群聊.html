@@ -9829,6 +9829,26 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 发送消息
       async function sendMessage(extra = {}) {
+        // 确保多群聊场景下，当前群聊已正确选中（兜底保护）
+        try {
+          if (window.multiState) {
+            if (!multiState.currentChat || !multiState.chats || !multiState.chats[multiState.currentChat]) {
+              const saved = (typeof loadSelectedChat === 'function') ? loadSelectedChat() : '';
+              if (saved && multiState.chats && multiState.chats[saved]) {
+                multiState.currentChat = saved;
+                state.messageHistory = multiState.chats[saved];
+                lastHistoryCount = state.messageHistory.length;
+              } else {
+                const keys = Object.keys(multiState.chats || {});
+                if (keys.length) {
+                  multiState.currentChat = keys[0];
+                  state.messageHistory = multiState.chats[multiState.currentChat] || [];
+                  lastHistoryCount = state.messageHistory.length;
+                }
+              }
+            }
+          }
+        } catch (_) {}
         const input = document.getElementById('chatInput');
         let text = input.value.trim();
         let finalExtra = { ...extra };
@@ -9929,6 +9949,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         state.messageHistory.push(parsedMsg);
         appendMessage(parsedMsg, newIndex);
+        // Update per-chat store immediately so switches don't lose new messages
+        try {
+          if (window.multiState && multiState.currentChat) {
+            multiState.chats[multiState.currentChat] = state.messageHistory.slice();
+          }
+        } catch(_) {}
 
         // Add to call transcript if in call
         if (state.inVoiceCall) {
@@ -16556,11 +16582,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             multiState.groupMembers = parsed.groupMembers || [];
             // 加载所有 <multi> 会话
             const allChats = parsed.chats || {};
+            // Merge with any existing unsynced chats to avoid losing data
+            try {
+              const existingChats = multiState?.chats || {};
+              for (const [key, arr] of Object.entries(existingChats)) {
+                if (!allChats[key] && Array.isArray(arr) && arr.length) {
+                  allChats[key] = arr;
+                }
+              }
+            } catch(_) {}
             multiState.chats = allChats;
             // 将解析到的群聊名称同步到群聊列表存储，便于列表切换
             try { ensureGroupsFromMulti(Object.keys(allChats)); } catch(_) {}
             // 选择当前会话：优先保持原会话名，其次用 groupName，再次第一个会话
             let chosen = multiState.currentChat && allChats[multiState.currentChat] ? multiState.currentChat : '';
+            // 优先使用上次用户选择的会话
+            const savedChoice = (typeof loadSelectedChat === 'function') ? loadSelectedChat() : '';
+            if (!chosen && savedChoice && allChats[savedChoice]) chosen = savedChoice;
             if (!chosen && parsed.groupName && allChats[parsed.groupName]) chosen = parsed.groupName;
             if (!chosen && allChats['群聊']) chosen = '群聊';
             if (!chosen){
@@ -16568,6 +16606,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               chosen = ks[0] || '群聊';
             }
             multiState.currentChat = chosen;
+            try { if (typeof saveSelectedChat === 'function') saveSelectedChat(chosen); } catch(_) {}
             const chosenMsgs = allChats[chosen] || [];
             state.messageHistory = chosenMsgs.slice();
             lastHistoryCount = 0;
@@ -16604,6 +16643,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (!name) return;
         if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
         multiState.currentChat = name;
+        // Persist selected chat for future reloads
+        try { if (typeof saveSelectedChat === 'function') saveSelectedChat(name); } catch(_) {}
         state.messageHistory = multiState.chats[name] || [];
         lastHistoryCount = 0;
         const nameSpan = document.getElementById('chatPersonName');
@@ -16664,6 +16705,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         try{ if (typeof parent === 'undefined' || !parent.extension_settings) source = 'local'; }catch(e){ source='local'; }
         const id = getCurrentCharId();
         return `tavern_friends_${source}_${id}`;
+      }
+
+      // 选中群聊持久化（按角色隔离）
+      function getSelectedChatStorageKey(){
+        const id = getCurrentCharId();
+        return `tavern_selected_chat_${id}`;
+      }
+      function saveSelectedChat(name){
+        try{ localStorage.setItem(getSelectedChatStorageKey(), String(name||'')); }catch(e){}
+      }
+      function loadSelectedChat(){
+        try{ return localStorage.getItem(getSelectedChatStorageKey()) || ''; }catch(e){ return ''; }
       }
       function readFromExtensionSettings(key){
         try{ if (typeof parent !== 'undefined' && parent.extension_settings && parent.extension_settings[key]) return JSON.parse(JSON.stringify(parent.extension_settings[key])); }catch(e){}
@@ -16743,6 +16796,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (!multiState.chats[n]) multiState.chats[n] = [];
         if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
         multiState.currentChat = n;
+        // Persist selected chat immediately when opening
+        try { if (typeof saveSelectedChat === 'function') saveSelectedChat(n); } catch(_) {}
         state.messageHistory = multiState.chats[n] || [];
         lastHistoryCount = 0;
         const nameSpan = document.getElementById('chatPersonName');
