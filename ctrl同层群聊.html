@@ -17138,6 +17138,85 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
         mo.observe(chatRoot, {childList:true, subtree:true});
       })();
+
+      // === 多群批量AI回复辅助 ===
+      // 说明：SillyTavern 的生成函数是全局单通道的，不支持真正“并发”。
+      // 这里提供顺序队列：依次切换群 → 等待AI回复 → 保存 → 切下一个。
+      // 使用方式：
+      //  - Alt/Option + 点击左上角“请求AI”按钮：对所有群按需轮询回复
+      //  - 或在控制台调用：aiReplyAll({ onlyIfUserLast: true, gap: 400 })
+
+      window._batchAiCancel = false;
+
+      function getLastMsgSenderFromChat(name){
+        try{
+          const arr = (multiState && multiState.chats && multiState.chats[name]) ? multiState.chats[name] : [];
+          if (!arr || !arr.length) return '';
+          return arr[arr.length - 1].sender || '';
+        }catch(_){ return ''; }
+      }
+
+      async function aiReplyForChat(name, opts={}){
+        const onlyIfUserLast = opts.onlyIfUserLast !== false; // 默认只在“最后一条是用户”时才回复
+        if (!multiState || !multiState.chats || !multiState.chats[name]) return 'skip';
+        const lastSender = getLastMsgSenderFromChat(name);
+        if (onlyIfUserLast && lastSender !== 'user') return 'skip';
+
+        // 切换到目标会话
+        try { window.switchPrivateChat(name); } catch(_){ return 'error'; }
+        await sleep(opts.beforeDelay ?? 120);
+
+        // 触发AI回复
+        try {
+          await requestAiReply();
+          // 回复后写回该会话的历史，避免切换时丢失
+          try { if (multiState && multiState.currentChat) multiState.chats[multiState.currentChat] = state.messageHistory.slice(); } catch(_){ }
+          // 小延迟后同步到宿主
+          window.deferredSync?.(opts.syncDelay ?? 100);
+          return 'done';
+        } catch(_){
+          return 'error';
+        }
+      }
+
+      // 批量请求AI依次回复多个群
+      window.aiReplyAll = async function(opts={}){
+        window._batchAiCancel = false;
+        const names = Array.isArray(opts.names) && opts.names.length ? opts.names.slice() : Object.keys(multiState?.chats || {});
+        const prev = multiState?.currentChat || '';
+        const gap = typeof opts.gap === 'number' ? opts.gap : 400;
+        const results = {};
+        for (const name of names){
+          if (window._batchAiCancel) break;
+          results[name] = await aiReplyForChat(name, opts);
+          await sleep(gap);
+        }
+        // 切回原会话
+        if (prev && multiState?.chats?.[prev]) {
+          try { window.switchPrivateChat(prev); } catch(_) {}
+        }
+        return results;
+      };
+
+      window.aiReplyCancel = function(){ window._batchAiCancel = true; };
+
+      // Alt/Option + 点击左上角“请求AI” 按钮，触发对所有群的队列回复
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('requestAiBtn');
+        if (!btn) return;
+        // 覆盖点击逻辑：普通点击=当前群；按住Alt/Option=全部群批量
+        btn.onclick = (e) => {
+          try{
+            if (e && (e.altKey || e.metaKey)) {
+              e.preventDefault();
+              e.stopPropagation();
+              window.aiReplyAll({ onlyIfUserLast: true, gap: 400 });
+            } else {
+              requestAiReply();
+            }
+          }catch(_){ requestAiReply(); }
+        };
+      });
     </script>
   </body>
 </html>
