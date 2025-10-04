@@ -16641,6 +16641,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 切换会话 / 新增会话
       window.switchPrivateChat = function(name){
         if (!name) return;
+        // 保存离开群的输入草稿
+        saveCurrentDraft();
         if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
         multiState.currentChat = name;
         // Persist selected chat for future reloads
@@ -16651,6 +16653,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (nameSpan) nameSpan.textContent = `和${name}的聊天`;
         renderAllMessages();
         updateAiRequestButtonVisibility();
+        // 恢复该群草稿
+        restoreDraftFor(name);
       };
       window.addPrivateChat = function(name){
         const n = String(name||'').trim();
@@ -16705,6 +16709,40 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         try{ if (typeof parent === 'undefined' || !parent.extension_settings) source = 'local'; }catch(e){ source='local'; }
         const id = getCurrentCharId();
         return `tavern_friends_${source}_${id}`;
+      }
+
+      // ===== 每群输入草稿持久化（按角色隔离） =====
+      function getDraftsStorageKey(){
+        const id = getCurrentCharId();
+        return `tavern_chat_drafts_${id}`;
+      }
+      function loadChatDrafts(){
+        try { return JSON.parse(localStorage.getItem(getDraftsStorageKey()) || '{}'); } catch(e){ return {}; }
+      }
+      function saveChatDrafts(obj){
+        try { localStorage.setItem(getDraftsStorageKey(), JSON.stringify(obj)); } catch(e){}
+      }
+      function saveCurrentDraft(){
+        try{
+          const input = document.getElementById('chatInput');
+          if (!input) return;
+          const name = multiState?.currentChat || '';
+          if (!name) return;
+          const drafts = loadChatDrafts();
+          drafts[name] = String(input.value || '');
+          saveChatDrafts(drafts);
+        }catch(_){ }
+      }
+      function restoreDraftFor(name){
+        try{
+          const input = document.getElementById('chatInput');
+          if (!input) return;
+          const drafts = loadChatDrafts();
+          const val = drafts?.[name] || '';
+          input.value = val;
+          try { input.dispatchEvent(new Event('input')); } catch(_){ }
+          try { if (typeof updateInputHeight === 'function') updateInputHeight(); } catch(_){ }
+        }catch(_){ }
       }
 
       // 选中群聊持久化（按角色隔离）
@@ -16881,7 +16919,19 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 私聊项由群成员自动生成，无需手动添加按钮
 
       // DOM 就绪后，以 multi 方式重载一次
-      document.addEventListener('DOMContentLoaded', () => { setTimeout(reloadAsMulti, 200); });
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          reloadAsMulti();
+          // 初次载入后，稍候恢复当前会话草稿
+          setTimeout(() => { try { if (multiState?.currentChat) restoreDraftFor(multiState.currentChat); } catch(_) {} }, 150);
+        }, 200);
+        // 绑定输入事件，实时保存草稿
+        const input = document.getElementById('chatInput');
+        if (input) {
+          input.addEventListener('input', () => { saveCurrentDraft(); });
+        }
+        window.addEventListener('beforeunload', () => { saveCurrentDraft(); });
+      });
     </script>
 
     <!-- 🎉 消息特效容器 -->
