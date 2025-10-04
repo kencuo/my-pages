@@ -9984,6 +9984,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
+        // 强制按需识图：直接模式
+        state.visionMode = 'direct';
+
         // 根据识图模式决定处理方式
         if (state.visionMode !== 'direct') {
           // 非直接模式：先用识图API处理图片
@@ -10025,12 +10028,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 统一上下文长度，保证稳定性
         const maxContext = 120; // 语音通话和普通聊天使用相同的上下文长度
         const recentMessages = state.messageHistory.slice(-maxContext);
-        const context = serializeQunliaoLog(recentMessages);
+        const date = new Date();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        let newContent = `启用手机，当前时间：${hours}:${minutes}`;
 
         // 查找最近的图片消息（最多查找最近10条消息）
         const recentImageMsg = recentMessages.slice(-10).reverse().find(msg =>
           msg.type === 'image' && msg.imageData && msg.sender === 'user'
         );
+        if (recentImageMsg) {
+          newContent = `启用手机，已发送图片，当前时间：${hours}:${minutes}`;
+        }
 
         let stream;
 
@@ -10059,7 +10068,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 'user_input'
               ],
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: true
             };
@@ -10076,7 +10085,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             // 普通模式：使用标准generate函数
             console.log('🔒 破限模式未启用，使用SillyTavern预设');
 
-            const requestData = { user_input: context, should_stream: true };
+            const requestData = {
+              injects: [
+                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: true
+            };
 
             if (recentImageMsg) {
               requestData.image = recentImageMsg.imageData;
@@ -10157,13 +10171,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           // 若仍未得到任何消息，再尝试一次性模式
           if (handled === 0) {
-            buffer = await AI_GENERATE({ user_input: context, should_stream: false });
+            buffer = await AI_GENERATE({ injects: [{ role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }], should_stream: false });
             processBuffer();
           }
 
           // 如果没有处理任何消息，尝试一次性模式重试一次
           if (handled === 0) {
-            buffer = await AI_GENERATE({ user_input: context, should_stream: false });
+            buffer = await AI_GENERATE({ injects: [{ role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }], should_stream: false });
             processBuffer();
           }
           
