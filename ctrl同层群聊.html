@@ -5550,7 +5550,7 @@
       <div class="friends-overlay" id="friendsOverlay">
         <div class="friends-panel">
           <header>
-            <h3>群聊与私聊</h3>
+            <h3>群聊</h3>
             <div class="friends-header-actions">
               <button class="friends-add" id="friendsAddBtn" title="添加">＋</button>
               <button class="friends-close" id="friendsClose" title="关闭">✕</button>
@@ -5571,9 +5571,9 @@
               </div>
               <div class="muted" id="groupInfoHint"></div>
             </div>
-            <div class="friends-section">
-              <h4>成员列表</h4>
-              <div class="muted" style="margin-bottom:6px">成员来自上方“群成员”输入；点击成员进入与其的私聊</div>
+            <div class="friends-section" id="membersSection" style="display:none">
+              <h4>成员列表（仅展示，不可私聊）</h4>
+              <div class="muted" style="margin-bottom:6px">已禁用私聊，点击成员不会进入私聊</div>
               <div id="privateChatsList"></div>
             </div>
           </div>
@@ -16492,15 +16492,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function serializeMultiQunliao(ms){
         if (!ms || !ms.chats) return '<qunliao>\n</qunliao>';
         const membersStr = (ms.groupMembers || []).join(',');
+        const current = ms.currentChat || ms.groupName || Object.keys(ms.chats)[0] || '群聊';
+        const msgs = ms.chats[current] || [];
         let out = '<qunliao>\n';
-        for (const name of Object.keys(ms.chats)){
-          out += '<multi>\n';
-          out += (membersStr ? `<群成员：${membersStr}>\n` : '');
-          out += `【和${name}的聊天】\n`;
-          const body = serializeMessagesOnly(ms.chats[name]);
-          if (body) out += body + '\n';
-          out += '</multi>\n';
-        }
+        out += '<multi>\n';
+        out += (membersStr ? `<群成员：${membersStr}>\n` : '');
+        out += `【和${current}的聊天】\n`;
+        const body = serializeMessagesOnly(msgs);
+        if (body) out += body + '\n';
+        out += '</multi>\n';
         out += '</qunliao>';
         return out;
       }
@@ -16530,12 +16530,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const parsed = parseMultiQunliao(msg.message);
             multiState.groupName = parsed.groupName || multiState.groupName || '';
             multiState.groupMembers = parsed.groupMembers || [];
-            multiState.chats = parsed.chats || {};
-            // 若解析到了成员但没有对应会话，按成员生成空会话
-            // (multiState.groupMembers || []).forEach(n => { if (!multiState.chats[n]) multiState.chats[n] = []; }); // 禁用私聊自动创建
-            const keys = Object.keys(multiState.chats);
-            multiState.currentChat = keys[0] || '';
-            state.messageHistory = multiState.currentChat ? (multiState.chats[multiState.currentChat] || []) : [];
+            // 仅限群聊：只保留一个会话
+            const allChats = parsed.chats || {};
+            let chosen = parsed.groupName && allChats[parsed.groupName] ? parsed.groupName : '';
+            if (!chosen && allChats['群聊']) chosen = '群聊';
+            if (!chosen){
+              const ks = Object.keys(allChats);
+              chosen = ks[0] || (parsed.groupName || '群聊');
+            }
+            const chosenMsgs = allChats[chosen] || [];
+            multiState.chats = { [chosen]: chosenMsgs };
+            multiState.currentChat = chosen;
+            state.messageHistory = chosenMsgs.slice();
             lastHistoryCount = 0;
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan){ nameSpan.textContent = multiState.currentChat ? `和${multiState.currentChat}的聊天` : (multiState.groupName || ''); }
