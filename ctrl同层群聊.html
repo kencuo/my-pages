@@ -9829,23 +9829,35 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 发送消息
       async function sendMessage(extra = {}) {
-        // 确保多群聊场景下，当前群聊已正确选中（兜底保护）
+        // 确保多群聊场景下，当前群聊已正确选中并初始化（首次发送兜底保护）
         try {
           if (window.multiState) {
-            if (!multiState.currentChat || !multiState.chats || !multiState.chats[multiState.currentChat]) {
-              const saved = (typeof loadSelectedChat === 'function') ? loadSelectedChat() : '';
-              if (saved && multiState.chats && multiState.chats[saved]) {
-                multiState.currentChat = saved;
-                state.messageHistory = multiState.chats[saved];
-                lastHistoryCount = state.messageHistory.length;
-              } else {
-                const keys = Object.keys(multiState.chats || {});
-                if (keys.length) {
-                  multiState.currentChat = keys[0];
-                  state.messageHistory = multiState.chats[multiState.currentChat] || [];
-                  lastHistoryCount = state.messageHistory.length;
-                }
-              }
+            // 若未选择当前会话，优先使用上次选择 → 群昵称 → 默认“群聊”
+            if (!multiState.currentChat) {
+              const savedChoice = (typeof loadSelectedChat === 'function') ? loadSelectedChat() : '';
+              multiState.currentChat = savedChoice || multiState.groupName || '群聊';
+            }
+
+            // 确保 chats 容器存在
+            if (!multiState.chats) multiState.chats = {};
+
+            // 如果当前会话还没有建档，按当前内存历史或空数组建档，避免首次发送丢失
+            if (!multiState.chats[multiState.currentChat]) {
+              multiState.chats[multiState.currentChat] = (state.messageHistory && state.messageHistory.length)
+                ? state.messageHistory.slice()
+                : [];
+            }
+
+            // 若界面历史为空而仓库已有，绑定到界面历史，确保后续 append 可见
+            if ((!state.messageHistory || state.messageHistory.length === 0) && multiState.chats[multiState.currentChat]) {
+              state.messageHistory = multiState.chats[multiState.currentChat];
+              lastHistoryCount = state.messageHistory.length;
+            }
+
+            // 首次进入时补齐标题展示
+            const nameSpan = document.getElementById('chatPersonName');
+            if (nameSpan && !nameSpan.textContent) {
+              nameSpan.textContent = `和${multiState.currentChat}的聊天`;
             }
           }
         } catch (_) {}
@@ -9913,6 +9925,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const currentTime = getTimeStr();
         const fullTime = getFullTimeStr(); // 保存完整时间用于下次比较
 
+        const preCount = state.messageHistory.length;
         const msg = {
           sender: 'user',
           time: currentTime, // 消息框中显示的时间格式
@@ -9971,8 +9984,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         state.userHasSentNewMessage = true;
         updateAiRequestButtonVisibility();
 
-        // 统一使用延迟同步提升性能，语音通话保持自动AI回复
-        deferredSync();
+        // 首次消息立即落盘，后续走延迟同步，避免“第一次看不到/刷新丢失”
+        if (preCount === 0) {
+          try { await syncToSillyTavern(); } catch (_) { deferredSync(); }
+        } else {
+          deferredSync();
+        }
         if (state.inVoiceCall) {
           requestAiReply(); // 语音通话中自动触发AI回复
         }
