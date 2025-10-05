@@ -16574,9 +16574,50 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       async function syncToSillyTavernMulti(){
         try{
-          if (typeof getCurrentMessageId !== 'function' || typeof setChatMessages !== 'function') return;
+          if (typeof getCurrentMessageId !== 'function' || typeof setChatMessages !== 'function' || typeof getChatMessages !== 'function') return;
+
+          // Ensure current chat buffer is saved back into multiState
+          if (multiState.currentChat){
+            multiState.chats[multiState.currentChat] = Array.isArray(state.messageHistory) ? state.messageHistory.slice() : [];
+          }
+
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
+
+          // Merge with existing remote content to avoid wiping other chats on first sync
+          try {
+            const remote = getChatMessages(state.currentMsgId)[0];
+            const remoteText = remote && remote.message ? String(remote.message) : '';
+            if (remoteText) {
+              const parsed = parseMultiQunliao(remoteText);
+              const remoteChats = parsed && parsed.chats ? parsed.chats : {};
+
+              // Merge strategy: prefer local (multiState) for chats we have in memory; keep remote for others
+              const merged = {};
+
+              // Bring in all remote chats first
+              Object.keys(remoteChats).forEach(name => {
+                merged[name] = Array.isArray(remoteChats[name]) ? remoteChats[name] : [];
+              });
+
+              // Overlay local chats (including current chat buffer)
+              Object.keys(multiState.chats || {}).forEach(name => {
+                const arr = multiState.chats[name];
+                if (Array.isArray(arr)) merged[name] = arr;
+              });
+
+              // Write the merged result back to multiState for serialization
+              multiState.chats = merged;
+
+              // Try to keep group meta when available
+              if (!multiState.groupName && parsed.groupName) multiState.groupName = parsed.groupName;
+              if ((!multiState.groupMembers || multiState.groupMembers.length === 0) && Array.isArray(parsed.groupMembers)) {
+                multiState.groupMembers = parsed.groupMembers.slice();
+              }
+            }
+          } catch (mergeErr) {
+            console.warn('merge remote multi content failed:', mergeErr);
+          }
+
           const all = serializeMultiQunliao(multiState);
           await setChatMessages([{ message_id: state.currentMsgId, message: all }], { refresh: 'none' });
         }catch(e){ console.error('syncToSillyTavernMulti error:', e); }
@@ -17010,26 +17051,21 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                     const mm = String(now.getMinutes()).padStart(2, '0');
                     const timestamp = `${hh}:${mm}`;
 
-                    // 优先走内置 state → 序列化 → setChatMessages（与私聊一致）
-                    if (window.state && Array.isArray(window.state.messageHistory) && typeof serializeShoujiLog === 'function' && typeof setChatMessages === 'function' && typeof getCurrentMessageId === 'function') {
-                      const newMsg = { sender: 'user', type: 'image', imageData: shortUrl, fileName: fileName, imageDescription: '表情包', time: timestamp };
+                    // 统一走群聊多会话路径：追加到当前会话并触发多会话同步
+                    const newMsg = { sender: 'user', type: 'image', imageData: shortUrl, fileName: fileName, imageDescription: '表情包', time: timestamp };
+                    if (window.state && Array.isArray(window.state.messageHistory)) {
                       window.state.messageHistory.push(newMsg);
                       if (typeof window.appendMessage === 'function') {
                         window.appendMessage(newMsg, window.state.messageHistory.length - 1);
                       }
-                      const currentId = window.state.currentMsgId || getCurrentMessageId();
-                      const log = serializeShoujiLog(window.state.messageHistory);
-                      try { await setChatMessages([{ message_id: currentId, message: log }], { refresh: 'none' }); } catch(e){}
-                    } else if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function' && typeof setChatMessages === 'function') {
-                      const currentId = getCurrentMessageId();
-                      const msg = getChatMessages(currentId)[0];
-                      const raw = msg && msg.message ? String(msg.message) : '<shouji>\n</shouji>';
-                      const line = `[我方消息|图片|表情包|IMGDATA:${shortUrl}|FILENAME:${fileName}|${timestamp}]`;
-                      const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, (m)=>{
-                        const inner = m.slice(8, -9).trim();
-                        return `<shouji>\n${inner ? inner + '\n' : ''}${line}\n</shouji>`;
-                      });
-                      try { await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' }); } catch(e){}
+                      if (window.multiState && window.multiState.currentChat) {
+                        window.multiState.chats[window.multiState.currentChat] = window.state.messageHistory.slice();
+                      }
+                      if (typeof window.deferredSync === 'function') {
+                        window.deferredSync(150);
+                      } else if (typeof window.syncToSillyTavern === 'function') {
+                        try { await window.syncToSillyTavern(); } catch(_) {}
+                      }
                     }
                   } catch(e){}
                 }
