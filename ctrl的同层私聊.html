@@ -11282,10 +11282,38 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             });
             processBuffer();
           }
-          
+
           // 如果重试后仍然没有有效消息，记录问题并结束
           if (handled === 0) {
-            throw new Error('AI生成内容无法解析或被过滤');
+            // 兜底：模型确实返回了文本，但不是<shouji>格式时，直接当作对方一条普通文本消息显示
+            const plain = (buffer || '').trim();
+            if (plain) {
+              const fallbackMsg = {
+                sender: 'char',
+                type: 'text',
+                content: plain,
+                time: getTimeStr(),
+              };
+              if (state.inVoiceCall) fallbackMsg.callContext = true;
+              state.messageHistory.push(fallbackMsg);
+              appendMessage(fallbackMsg, state.messageHistory.length - 1);
+
+              // 通话模式下同步到通话记录视图
+              if (state.inVoiceCall) {
+                state.currentCallTranscript.push(fallbackMsg);
+                appendMessageToCallView(fallbackMsg);
+              }
+
+              hideTypingIndicator();
+              // 延迟同步，避免频繁写入
+              setTimeout(() => syncToSillyTavern(), 100);
+              // 标记允许继续显示“AI回复”按钮
+              state.isAiReplying = false;
+              updateAiRequestButtonVisibility();
+              return; // 成功兜底后直接返回
+            } else {
+              throw new Error('AI生成内容无法解析或被过滤');
+            }
           }
 
           hideTypingIndicator();
