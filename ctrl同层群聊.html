@@ -5550,7 +5550,7 @@
       <div class="friends-overlay" id="friendsOverlay">
         <div class="friends-panel">
           <header>
-            <h3>群聊与私聊</h3>
+            <h3>群聊</h3>
             <div class="friends-header-actions">
               <button class="friends-add" id="friendsAddBtn" title="添加">＋</button>
               <button class="friends-close" id="friendsClose" title="关闭">✕</button>
@@ -5571,9 +5571,9 @@
               </div>
               <div class="muted" id="groupInfoHint"></div>
             </div>
-            <div class="friends-section">
-              <h4>成员列表</h4>
-              <div class="muted" style="margin-bottom:6px">成员来自上方“群成员”输入；点击成员进入与其的私聊</div>
+            <div class="friends-section" id="membersSection" style="display:none">
+              <h4>成员列表（仅展示，不可私聊）</h4>
+              <div class="muted" style="margin-bottom:6px">已禁用私聊，点击成员不会进入私聊</div>
               <div id="privateChatsList"></div>
             </div>
           </div>
@@ -6664,6 +6664,8 @@
         visionApiKey: '',
         visionModel: '',
         availableVisionModels: [],
+        // 流式生成中：暂停持久化与重同步，加速前端渲染
+        isStreaming: false,
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -8005,17 +8007,17 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 作者 ctrl 不许偷ado 喵喵喵喵
         const match = text.match(/<qunliao>([\s\S]*?)<\/qunliao>/);
         if (!match) {
-          console.log('No <qunliao> tags found in message');
+          /* console.log('No <qunliao> tags found in message'); */
           return [];
         }
         const raw = match[1].trim();
         if (!raw) {
-          console.log('Empty content inside <qunliao> tags');
+          /* console.log('Empty content inside <qunliao> tags'); */
           return [];
         }
 
         const lines = raw.split(/\n+/).filter(Boolean);
-        console.log('Parsing', lines.length, 'message lines');
+        /* console.log('Parsing', lines.length, 'message lines'); */
 
         const parsedMessages = lines
           .map((line, index) => {
@@ -8023,16 +8025,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               const match = line.match(parser.regex);
               if (match) {
                 const result = parser.handler(match);
-                console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount);
+                /* console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount); */
                 return result;
               }
             }
-            console.log(`Line ${index + 1} not matched:`, line);
+            /* console.log(`Line ${index + 1} not matched:`, line); */
             return null; // No parser matched this line
           })
           .filter(Boolean);
 
-        console.log('Successfully parsed', parsedMessages.length, 'messages');
+        /* console.log('Successfully parsed', parsedMessages.length, 'messages'); */
         return parsedMessages;
       }
 
@@ -9829,6 +9831,39 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 发送消息
       async function sendMessage(extra = {}) {
+        // 确保多群聊场景下，当前群聊已正确选中并初始化（首次发送兜底保护）
+        try {
+          state.isStreaming = true;
+          if (window.multiState) {
+            // 若未选择当前会话，优先使用上次选择 → 群昵称 → 默认“群聊”
+            if (!multiState.currentChat) {
+              const savedChoice = (typeof loadSelectedChat === 'function') ? loadSelectedChat() : '';
+              multiState.currentChat = savedChoice || multiState.groupName || '群聊';
+            }
+
+            // 确保 chats 容器存在
+            if (!multiState.chats) multiState.chats = {};
+
+            // 如果当前会话还没有建档，按当前内存历史或空数组建档，避免首次发送丢失
+            if (!multiState.chats[multiState.currentChat]) {
+              multiState.chats[multiState.currentChat] = (state.messageHistory && state.messageHistory.length)
+                ? state.messageHistory.slice()
+                : [];
+            }
+
+            // 若界面历史为空而仓库已有，绑定到界面历史，确保后续 append 可见
+            if ((!state.messageHistory || state.messageHistory.length === 0) && multiState.chats[multiState.currentChat]) {
+              state.messageHistory = multiState.chats[multiState.currentChat];
+              lastHistoryCount = state.messageHistory.length;
+            }
+
+            // 首次进入时补齐标题展示
+            const nameSpan = document.getElementById('chatPersonName');
+            if (nameSpan && !nameSpan.textContent) {
+              nameSpan.textContent = `和${multiState.currentChat}的聊天`;
+            }
+          }
+        } catch (_) {}
         const input = document.getElementById('chatInput');
         let text = input.value.trim();
         let finalExtra = { ...extra };
@@ -9893,6 +9928,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const currentTime = getTimeStr();
         const fullTime = getFullTimeStr(); // 保存完整时间用于下次比较
 
+        const preCount = state.messageHistory.length;
         const msg = {
           sender: 'user',
           time: currentTime, // 消息框中显示的时间格式
@@ -9929,6 +9965,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
         state.messageHistory.push(parsedMsg);
         appendMessage(parsedMsg, newIndex);
+        // Update per-chat store immediately so switches don't lose new messages
+        try {
+          if (window.multiState && multiState.currentChat) {
+            multiState.chats[multiState.currentChat] = state.messageHistory.slice();
+          }
+        } catch(_) {}
 
         // Add to call transcript if in call
         if (state.inVoiceCall) {
@@ -9945,8 +9987,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         state.userHasSentNewMessage = true;
         updateAiRequestButtonVisibility();
 
-        // 统一使用延迟同步提升性能，语音通话保持自动AI回复
-        deferredSync();
+        // 首次消息立即落盘，后续走延迟同步，避免“第一次看不到/刷新丢失”
+        if (preCount === 0) {
+          try { await syncToSillyTavern(); } catch (_) { deferredSync(); }
+        } else {
+          deferredSync();
+        }
         if (state.inVoiceCall) {
           requestAiReply(); // 语音通话中自动触发AI回复
         }
@@ -9983,6 +10029,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (state.isAiReplying) {
           return;
         }
+
+        // 强制按需识图：直接模式
+        state.visionMode = 'direct';
 
         // 根据识图模式决定处理方式
         if (state.visionMode !== 'direct') {
@@ -10025,12 +10074,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 统一上下文长度，保证稳定性
         const maxContext = 120; // 语音通话和普通聊天使用相同的上下文长度
         const recentMessages = state.messageHistory.slice(-maxContext);
-        const context = serializeQunliaoLog(recentMessages);
+        const date = new Date();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        let newContent = `启用手机，当前时间：${hours}:${minutes}`;
 
         // 查找最近的图片消息（最多查找最近10条消息）
         const recentImageMsg = recentMessages.slice(-10).reverse().find(msg =>
           msg.type === 'image' && msg.imageData && msg.sender === 'user'
         );
+        if (recentImageMsg) {
+          newContent = `启用手机，已发送图片，当前时间：${hours}:${minutes}`;
+        }
 
         let stream;
 
@@ -10059,7 +10114,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 'user_input'
               ],
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: true
             };
@@ -10076,7 +10131,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             // 普通模式：使用标准generate函数
             console.log('🔒 破限模式未启用，使用SillyTavern预设');
 
-            const requestData = { user_input: context, should_stream: true };
+            const requestData = {
+              injects: [
+                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: true
+            };
 
             if (recentImageMsg) {
               requestData.image = recentImageMsg.imageData;
@@ -10106,6 +10166,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
             while (handled < msgs.length) {
               const msg = msgs[handled++];
+              // 防止AI在生成过程中“替用户说话”，过滤掉由AI生成的 user 消息
+              if (msg && msg.sender === 'user') {
+                continue;
+              }
 
               // 🎤 语音通话中的消息处理：保持文本格式，模拟真实通话
               if (state.inVoiceCall) {
@@ -10140,10 +10204,19 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             }
           };
 
+          // 解析节流：仅在出现换行/增量足够/时间间隔足够时解析，降低重解析成本
+          let lastParsedLen = 0;
+          let lastParsedAt = 0;
+
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
               buffer += chunk;
-              processBuffer();
+              const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+              if (buffer.includes('\n') || buffer.length - lastParsedLen > 240 || now - lastParsedAt > 80) {
+                processBuffer();
+                lastParsedLen = buffer.length;
+                lastParsedAt = now;
+              }
               // 语音通话中减少延迟，优先响应速度
               if (!state.inVoiceCall) {
                 await new Promise(r => requestAnimationFrame(r));
@@ -10157,13 +10230,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
           // 若仍未得到任何消息，再尝试一次性模式
           if (handled === 0) {
-            buffer = await AI_GENERATE({ user_input: context, should_stream: false });
+            buffer = await AI_GENERATE({ injects: [{ role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }], should_stream: false });
             processBuffer();
           }
 
           // 如果没有处理任何消息，尝试一次性模式重试一次
           if (handled === 0) {
-            buffer = await AI_GENERATE({ user_input: context, should_stream: false });
+            buffer = await AI_GENERATE({ injects: [{ role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }], should_stream: false });
             processBuffer();
           }
           
@@ -10181,6 +10254,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         } finally {
           // 确保在任何情况下都重置AI回复标志
           state.isAiReplying = false;
+          state.isStreaming = false;
           updateAiRequestButtonVisibility();
         }
       }
@@ -12870,6 +12944,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 🚀 优化：延迟批量同步，避免频繁调用
       function deferredSync(delay = 300) {
+        // 流式生成期间不做持久化同步，避免大文本高频 IO
+        if (state && state.isStreaming) return;
         if (syncTimeout) {
           clearTimeout(syncTimeout);
         }
@@ -16491,13 +16567,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       function serializeMultiQunliao(ms){
         if (!ms || !ms.chats) return '<qunliao>\n</qunliao>';
-        const membersStr = (ms.groupMembers || []).join(',');
+        const chats = ms.chats || {};
         let out = '<qunliao>\n';
-        for (const name of Object.keys(ms.chats)){
+        const chatNames = Object.keys(chats);
+        // 如果没有会话就返回空容器
+        if (chatNames.length === 0) {
+          out += '</qunliao>';
+          return out;
+        }
+        // 依次序列化每个群聊为一个 <multi> 块
+        for (const name of chatNames) {
+          const msgs = chats[name] || [];
           out += '<multi>\n';
-          out += (membersStr ? `<群成员：${membersStr}>\n` : '');
+          // 目前全局成员列表（如有）写入；未来可扩展为 per-chat 成员
+          const membersStr = (ms.groupMembers || []).join(',');
+          if (membersStr) out += `<群成员：${membersStr}>\n`;
           out += `【和${name}的聊天】\n`;
-          const body = serializeMessagesOnly(ms.chats[name]);
+          const body = serializeMessagesOnly(msgs);
           if (body) out += body + '\n';
           out += '</multi>\n';
         }
@@ -16507,9 +16593,50 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       async function syncToSillyTavernMulti(){
         try{
-          if (typeof getCurrentMessageId !== 'function' || typeof setChatMessages !== 'function') return;
+          if (typeof getCurrentMessageId !== 'function' || typeof setChatMessages !== 'function' || typeof getChatMessages !== 'function') return;
+
+          // Ensure current chat buffer is saved back into multiState
+          if (multiState.currentChat){
+            multiState.chats[multiState.currentChat] = Array.isArray(state.messageHistory) ? state.messageHistory.slice() : [];
+          }
+
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
+
+          // Merge with existing remote content to avoid wiping other chats on first sync
+          try {
+            const remote = getChatMessages(state.currentMsgId)[0];
+            const remoteText = remote && remote.message ? String(remote.message) : '';
+            if (remoteText) {
+              const parsed = parseMultiQunliao(remoteText);
+              const remoteChats = parsed && parsed.chats ? parsed.chats : {};
+
+              // Merge strategy: prefer local (multiState) for chats we have in memory; keep remote for others
+              const merged = {};
+
+              // Bring in all remote chats first
+              Object.keys(remoteChats).forEach(name => {
+                merged[name] = Array.isArray(remoteChats[name]) ? remoteChats[name] : [];
+              });
+
+              // Overlay local chats (including current chat buffer)
+              Object.keys(multiState.chats || {}).forEach(name => {
+                const arr = multiState.chats[name];
+                if (Array.isArray(arr)) merged[name] = arr;
+              });
+
+              // Write the merged result back to multiState for serialization
+              multiState.chats = merged;
+
+              // Try to keep group meta when available
+              if (!multiState.groupName && parsed.groupName) multiState.groupName = parsed.groupName;
+              if ((!multiState.groupMembers || multiState.groupMembers.length === 0) && Array.isArray(parsed.groupMembers)) {
+                multiState.groupMembers = parsed.groupMembers.slice();
+              }
+            }
+          } catch (mergeErr) {
+            console.warn('merge remote multi content failed:', mergeErr);
+          }
+
           const all = serializeMultiQunliao(multiState);
           await setChatMessages([{ message_id: state.currentMsgId, message: all }], { refresh: 'none' });
         }catch(e){ console.error('syncToSillyTavernMulti error:', e); }
@@ -16530,12 +16657,35 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const parsed = parseMultiQunliao(msg.message);
             multiState.groupName = parsed.groupName || multiState.groupName || '';
             multiState.groupMembers = parsed.groupMembers || [];
-            multiState.chats = parsed.chats || {};
-            // 若解析到了成员但没有对应会话，按成员生成空会话
-            // (multiState.groupMembers || []).forEach(n => { if (!multiState.chats[n]) multiState.chats[n] = []; }); // 禁用私聊自动创建
-            const keys = Object.keys(multiState.chats);
-            multiState.currentChat = keys[0] || '';
-            state.messageHistory = multiState.currentChat ? (multiState.chats[multiState.currentChat] || []) : [];
+            // 加载所有 <multi> 会话
+            const allChats = parsed.chats || {};
+            // Merge with any existing unsynced chats to avoid losing data
+            try {
+              const existingChats = multiState?.chats || {};
+              for (const [key, arr] of Object.entries(existingChats)) {
+                if (!allChats[key] && Array.isArray(arr) && arr.length) {
+                  allChats[key] = arr;
+                }
+              }
+            } catch(_) {}
+            multiState.chats = allChats;
+            // 将解析到的群聊名称同步到群聊列表存储，便于列表切换
+            try { ensureGroupsFromMulti(Object.keys(allChats)); } catch(_) {}
+            // 选择当前会话：优先保持原会话名，其次用 groupName，再次第一个会话
+            let chosen = multiState.currentChat && allChats[multiState.currentChat] ? multiState.currentChat : '';
+            // 优先使用上次用户选择的会话
+            const savedChoice = (typeof loadSelectedChat === 'function') ? loadSelectedChat() : '';
+            if (!chosen && savedChoice && allChats[savedChoice]) chosen = savedChoice;
+            if (!chosen && parsed.groupName && allChats[parsed.groupName]) chosen = parsed.groupName;
+            if (!chosen && allChats['群聊']) chosen = '群聊';
+            if (!chosen){
+              const ks = Object.keys(allChats);
+              chosen = ks[0] || '群聊';
+            }
+            multiState.currentChat = chosen;
+            try { if (typeof saveSelectedChat === 'function') saveSelectedChat(chosen); } catch(_) {}
+            const chosenMsgs = allChats[chosen] || [];
+            state.messageHistory = chosenMsgs.slice();
             lastHistoryCount = 0;
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan){ nameSpan.textContent = multiState.currentChat ? `和${multiState.currentChat}的聊天` : (multiState.groupName || ''); }
@@ -16544,17 +16694,44 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         }catch(e){ console.error('reloadAsMulti error:', e); }
       }
 
+      // 将解析得到的群聊名称写入群聊列表存储（若不存在则创建占位项）
+      function ensureGroupsFromMulti(names){
+        if (!Array.isArray(names) || names.length === 0) return;
+        const store = loadFriendsStore();
+        const list = Array.isArray(store.groups) ? store.groups : [];
+        let changed = false;
+        names.forEach(n => {
+          const existing = list.find(g => g && g.name === n);
+          if (!existing) {
+            const now = Date.now();
+            list.push({ id: 'multi_' + n, name: n, members: [], pinned: false, createdAt: now, updatedAt: now });
+            changed = true;
+          }
+        });
+        if (changed) {
+          store.groups = list;
+          saveFriendsStore(store);
+          try { buildGroupList(); } catch(_) {}
+        }
+      }
+
       // 切换会话 / 新增会话
       window.switchPrivateChat = function(name){
         if (!name) return;
+        // 保存离开群的输入草稿
+        saveCurrentDraft();
         if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
         multiState.currentChat = name;
+        // Persist selected chat for future reloads
+        try { if (typeof saveSelectedChat === 'function') saveSelectedChat(name); } catch(_) {}
         state.messageHistory = multiState.chats[name] || [];
         lastHistoryCount = 0;
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan) nameSpan.textContent = `和${name}的聊天`;
         renderAllMessages();
         updateAiRequestButtonVisibility();
+        // 恢复该群草稿
+        restoreDraftFor(name);
       };
       window.addPrivateChat = function(name){
         const n = String(name||'').trim();
@@ -16609,6 +16786,52 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         try{ if (typeof parent === 'undefined' || !parent.extension_settings) source = 'local'; }catch(e){ source='local'; }
         const id = getCurrentCharId();
         return `tavern_friends_${source}_${id}`;
+      }
+
+      // ===== 每群输入草稿持久化（按角色隔离） =====
+      function getDraftsStorageKey(){
+        const id = getCurrentCharId();
+        return `tavern_chat_drafts_${id}`;
+      }
+      function loadChatDrafts(){
+        try { return JSON.parse(localStorage.getItem(getDraftsStorageKey()) || '{}'); } catch(e){ return {}; }
+      }
+      function saveChatDrafts(obj){
+        try { localStorage.setItem(getDraftsStorageKey(), JSON.stringify(obj)); } catch(e){}
+      }
+      function saveCurrentDraft(){
+        try{
+          const input = document.getElementById('chatInput');
+          if (!input) return;
+          const name = multiState?.currentChat || '';
+          if (!name) return;
+          const drafts = loadChatDrafts();
+          drafts[name] = String(input.value || '');
+          saveChatDrafts(drafts);
+        }catch(_){ }
+      }
+      function restoreDraftFor(name){
+        try{
+          const input = document.getElementById('chatInput');
+          if (!input) return;
+          const drafts = loadChatDrafts();
+          const val = drafts?.[name] || '';
+          input.value = val;
+          try { input.dispatchEvent(new Event('input')); } catch(_){ }
+          try { if (typeof updateInputHeight === 'function') updateInputHeight(); } catch(_){ }
+        }catch(_){ }
+      }
+
+      // 选中群聊持久化（按角色隔离）
+      function getSelectedChatStorageKey(){
+        const id = getCurrentCharId();
+        return `tavern_selected_chat_${id}`;
+      }
+      function saveSelectedChat(name){
+        try{ localStorage.setItem(getSelectedChatStorageKey(), String(name||'')); }catch(e){}
+      }
+      function loadSelectedChat(){
+        try{ return localStorage.getItem(getSelectedChatStorageKey()) || ''; }catch(e){ return ''; }
       }
       function readFromExtensionSettings(key){
         try{ if (typeof parent !== 'undefined' && parent.extension_settings && parent.extension_settings[key]) return JSON.parse(JSON.stringify(parent.extension_settings[key])); }catch(e){}
@@ -16688,6 +16911,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         if (!multiState.chats[n]) multiState.chats[n] = [];
         if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
         multiState.currentChat = n;
+        // Persist selected chat immediately when opening
+        try { if (typeof saveSelectedChat === 'function') saveSelectedChat(n); } catch(_) {}
         state.messageHistory = multiState.chats[n] || [];
         lastHistoryCount = 0;
         const nameSpan = document.getElementById('chatPersonName');
@@ -16771,7 +16996,19 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 私聊项由群成员自动生成，无需手动添加按钮
 
       // DOM 就绪后，以 multi 方式重载一次
-      document.addEventListener('DOMContentLoaded', () => { setTimeout(reloadAsMulti, 200); });
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          reloadAsMulti();
+          // 初次载入后，稍候恢复当前会话草稿
+          setTimeout(() => { try { if (multiState?.currentChat) restoreDraftFor(multiState.currentChat); } catch(_) {} }, 150);
+        }, 200);
+        // 绑定输入事件，实时保存草稿
+        const input = document.getElementById('chatInput');
+        if (input) {
+          input.addEventListener('input', () => { saveCurrentDraft(); });
+        }
+        window.addEventListener('beforeunload', () => { saveCurrentDraft(); });
+      });
     </script>
 
     <!-- 🎉 消息特效容器 -->
@@ -16833,26 +17070,21 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                     const mm = String(now.getMinutes()).padStart(2, '0');
                     const timestamp = `${hh}:${mm}`;
 
-                    // 优先走内置 state → 序列化 → setChatMessages（与私聊一致）
-                    if (window.state && Array.isArray(window.state.messageHistory) && typeof serializeShoujiLog === 'function' && typeof setChatMessages === 'function' && typeof getCurrentMessageId === 'function') {
-                      const newMsg = { sender: 'user', type: 'image', imageData: shortUrl, fileName: fileName, imageDescription: '表情包', time: timestamp };
+                    // 统一走群聊多会话路径：追加到当前会话并触发多会话同步
+                    const newMsg = { sender: 'user', type: 'image', imageData: shortUrl, fileName: fileName, imageDescription: '表情包', time: timestamp };
+                    if (window.state && Array.isArray(window.state.messageHistory)) {
                       window.state.messageHistory.push(newMsg);
                       if (typeof window.appendMessage === 'function') {
                         window.appendMessage(newMsg, window.state.messageHistory.length - 1);
                       }
-                      const currentId = window.state.currentMsgId || getCurrentMessageId();
-                      const log = serializeShoujiLog(window.state.messageHistory);
-                      try { await setChatMessages([{ message_id: currentId, message: log }], { refresh: 'none' }); } catch(e){}
-                    } else if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function' && typeof setChatMessages === 'function') {
-                      const currentId = getCurrentMessageId();
-                      const msg = getChatMessages(currentId)[0];
-                      const raw = msg && msg.message ? String(msg.message) : '<shouji>\n</shouji>';
-                      const line = `[我方消息|图片|表情包|IMGDATA:${shortUrl}|FILENAME:${fileName}|${timestamp}]`;
-                      const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, (m)=>{
-                        const inner = m.slice(8, -9).trim();
-                        return `<shouji>\n${inner ? inner + '\n' : ''}${line}\n</shouji>`;
-                      });
-                      try { await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' }); } catch(e){}
+                      if (window.multiState && window.multiState.currentChat) {
+                        window.multiState.chats[window.multiState.currentChat] = window.state.messageHistory.slice();
+                      }
+                      if (typeof window.deferredSync === 'function') {
+                        window.deferredSync(150);
+                      } else if (typeof window.syncToSillyTavern === 'function') {
+                        try { await window.syncToSillyTavern(); } catch(_) {}
+                      }
                     }
                   } catch(e){}
                 }
@@ -17028,7 +17260,85 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
         mo.observe(chatRoot, {childList:true, subtree:true});
       })();
+
+      // === 多群批量AI回复辅助 ===
+      // 说明：SillyTavern 的生成函数是全局单通道的，不支持真正“并发”。
+      // 这里提供顺序队列：依次切换群 → 等待AI回复 → 保存 → 切下一个。
+      // 使用方式：
+      //  - Alt/Option + 点击左上角“请求AI”按钮：对所有群按需轮询回复
+      //  - 或在控制台调用：aiReplyAll({ onlyIfUserLast: true, gap: 400 })
+
+      window._batchAiCancel = false;
+
+      function getLastMsgSenderFromChat(name){
+        try{
+          const arr = (multiState && multiState.chats && multiState.chats[name]) ? multiState.chats[name] : [];
+          if (!arr || !arr.length) return '';
+          return arr[arr.length - 1].sender || '';
+        }catch(_){ return ''; }
+      }
+
+      async function aiReplyForChat(name, opts={}){
+        const onlyIfUserLast = opts.onlyIfUserLast !== false; // 默认只在“最后一条是用户”时才回复
+        if (!multiState || !multiState.chats || !multiState.chats[name]) return 'skip';
+        const lastSender = getLastMsgSenderFromChat(name);
+        if (onlyIfUserLast && lastSender !== 'user') return 'skip';
+
+        // 切换到目标会话
+        try { window.switchPrivateChat(name); } catch(_){ return 'error'; }
+        await sleep(opts.beforeDelay ?? 120);
+
+        // 触发AI回复
+        try {
+          await requestAiReply();
+          // 回复后写回该会话的历史，避免切换时丢失
+          try { if (multiState && multiState.currentChat) multiState.chats[multiState.currentChat] = state.messageHistory.slice(); } catch(_){ }
+          // 小延迟后同步到宿主
+          window.deferredSync?.(opts.syncDelay ?? 100);
+          return 'done';
+        } catch(_){
+          return 'error';
+        }
+      }
+
+      // 批量请求AI依次回复多个群
+      window.aiReplyAll = async function(opts={}){
+        window._batchAiCancel = false;
+        const names = Array.isArray(opts.names) && opts.names.length ? opts.names.slice() : Object.keys(multiState?.chats || {});
+        const prev = multiState?.currentChat || '';
+        const gap = typeof opts.gap === 'number' ? opts.gap : 400;
+        const results = {};
+        for (const name of names){
+          if (window._batchAiCancel) break;
+          results[name] = await aiReplyForChat(name, opts);
+          await sleep(gap);
+        }
+        // 切回原会话
+        if (prev && multiState?.chats?.[prev]) {
+          try { window.switchPrivateChat(prev); } catch(_) {}
+        }
+        return results;
+      };
+
+      window.aiReplyCancel = function(){ window._batchAiCancel = true; };
+
+      // Alt/Option + 点击左上角“请求AI” 按钮，触发对所有群的队列回复
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('requestAiBtn');
+        if (!btn) return;
+        // 覆盖点击逻辑：普通点击=当前群；按住Alt/Option=全部群批量
+        btn.onclick = (e) => {
+          try{
+            if (e && (e.altKey || e.metaKey)) {
+              e.preventDefault();
+              e.stopPropagation();
+              window.aiReplyAll({ onlyIfUserLast: true, gap: 400 });
+            } else {
+              requestAiReply();
+            }
+          }catch(_){ requestAiReply(); }
+        };
+      });
     </script>
   </body>
 </html>
-
