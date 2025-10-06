@@ -11110,6 +11110,9 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         let streamStarted = false;
         let streamingPreviewEl = null;
 
+        // 预览更新节流变量（避免每 token 刷新 DOM）
+        let lastPreviewAt = 0;
+        const PREVIEW_THROTTLE_MS = 120;
         function createStreamingPreviewEl() {
           try {
             const chat = document.getElementById('chatMessages');
@@ -11323,9 +11326,12 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               }
               // 更新预览内容（尽可能容错提取正文片段）
               if (streamingPreviewEl) {
+                const nowTs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                const __okUpdate = (nowTs - lastPreviewAt >= PREVIEW_THROTTLE_MS);
+                if (__okUpdate) { lastPreviewAt = nowTs; }
                 const preview = extractStreamingPreviewFromBuffer(buffer);
                 const contentEl = streamingPreviewEl.querySelector('.message-content');
-                if (contentEl && preview) {
+                if (__okUpdate && contentEl && preview) {
                   contentEl.innerHTML = preview;
                   const chat = document.getElementById('chatMessages');
                   if (chat) chat.scrollTop = chat.scrollHeight;
