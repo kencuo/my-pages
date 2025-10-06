@@ -7383,10 +7383,6 @@
         forceCharNameForSerialization: null,
         interfaceScale: 1,
         typingSpeedLevel: 2,
-        // 流式同层回复状态
-        streamingActive: false,
-        streamingMessageIndex: null,
-        streamingBuffer: '',
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -11070,7 +11066,28 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
-        // 识图逻辑改为按需触发：不做前置阻塞，直接在生成时传入图片/视频
+        // 根据识图模式决定处理方式
+        if (state.visionMode !== 'direct') {
+          // 非直接模式：先用识图API处理图片和视频
+          const pendingVisionMessages = state.messageHistory.filter(msg =>
+            (msg.type === 'image' || msg.type === 'video') && msg.needsVisionAnalysis && msg.visionIndicator
+          );
+
+          if (pendingVisionMessages.length > 0) {
+            // 先处理所有需要识图/识视频的媒体
+            for (const mediaMsg of pendingVisionMessages) {
+              if (mediaMsg.visionIndicator) {
+                await requestVisionAnalysis(mediaMsg, mediaMsg.visionIndicator);
+                // 标记该媒体已处理
+                mediaMsg.needsVisionAnalysis = false;
+              }
+            }
+
+            // 识图完成后，等待一下再继续AI回复
+            await sleep(1500);
+          }
+        }
+        // 直接模式：跳过识图API，直接传图片给AI
 
         // 语音通话中允许AI主动回复，普通聊天中防止AI连续回复
         if (!state.inVoiceCall) {
@@ -11087,46 +11104,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 显示AI正在输入动画
         showTypingIndicator();
 
-        // 启动“同层流式”占位气泡（仅普通聊天，不在通话中）
-        if (!state.inVoiceCall && !state.streamingActive) {
-          try {
-            const placeholder = {
-              sender: 'char',
-              type: 'text',
-              content: '…',
-              time: getTimeStr(),
-              charName: getCurrentCharName(),
-            };
-            state.streamingActive = true;
-            state.streamingBuffer = '';
-            state.streamingMessageIndex = state.messageHistory.length;
-            state.messageHistory.push(placeholder);
-            appendMessage(placeholder, state.streamingMessageIndex);
-          } catch (_) {
-            // 占位失败不影响后续
-            state.streamingActive = false;
-            state.streamingMessageIndex = null;
-            state.streamingBuffer = '';
-          }
-        }
-
-        // 极简注入内容：仅注入当前时间和是否发送图片
-        const maxContext = 120; // 保留变量以兼容后续代码（用于查找最近媒体）
+        // 统一上下文长度，保证稳定性
+        const maxContext = 120; // 语音通话和普通聊天使用相同的上下文长度
         const recentMessages = state.messageHistory.slice(-maxContext);
-        const date = new Date();
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        let newContent = `启用手机，当前时间：${hours}:${minutes}`;
+        let context = serializeShoujiLog(recentMessages);
 
         // 查找最近的媒体消息（图片或视频，最多查找最近10条消息）
         const recentMediaMsg = recentMessages.slice(-10).reverse().find(msg =>
           ((msg.type === 'image' && msg.imageData) || (msg.type === 'video' && msg.videoData)) && msg.sender === 'user'
         );
-
-        if (recentMediaMsg) {
-          if (recentMediaMsg.type === 'image') newContent = `启用手机，已发送图片，当前时间：${hours}:${minutes}`;
-          if (recentMediaMsg.type === 'video') newContent = `启用手机，已发送视频，当前时间：${hours}:${minutes}`;
-        }
 
         let stream;
 
@@ -11155,7 +11141,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 'user_input'
               ],
               injects: [
-                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: true
             };
@@ -11178,7 +11164,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
             const requestData = {
               injects: [
-                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: true
             };
@@ -11253,65 +11239,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 msg.charName = currentName;
               }
 
-              // 流式同层渲染：将AI的连续回复合并到占位消息中
-              if (!state.inVoiceCall && state.streamingActive && msg.sender === 'char') {
-                try {
-                  // 仅将可见文本内容并入同层气泡
-                  let appendText = '';
-                  if (msg.type === 'text') {
-                    appendText = String(msg.content || '');
-                  } else if (msg.type === 'voice') {
-                    appendText = `🎤 ${msg.voiceText || '语音消息'}`;
-                  } else if (msg.type === 'transfer') {
-                    appendText = `💰 转账${msg.amount}元`;
-                  } else if (msg.type === 'redpacket') {
-                    appendText = `🧧 红包${msg.amount}元`;
-                  } else if (msg.type === 'claimed-redpacket') {
-                    appendText = `🎉 领取红包${msg.amount}元`;
-                  } else if (msg.type === 'refund') {
-                    appendText = `🔄 已退回收账`;
-                  } else if (msg.type === 'image') {
-                    appendText = `🖼️ ${(msg.imageDescription || '图片')}`;
-                  } else if (msg.type === 'video') {
-                    appendText = `🎬 ${(msg.videoDescription || '视频')}`;
-                  } else if (msg.type === 'location') {
-                    appendText = `📍 ${(msg.locationText || '位置')}`;
-                  } else if (msg.type === 'voice-effect') {
-                    appendText = `🎭 ${(msg.voiceEffect || '变声')}: ${(msg.voiceEffectContent || '')}`;
-                  } else if (msg.type === 'sticker') {
-                    appendText = `😊 ${(msg.content || '表情包')}`;
-                  } else if (msg.type === 'system-time' || msg.type === 'poke' || msg.type?.startsWith('together-listen')) {
-                    // 系统类消息仍按正常流程追加
-                    state.messageHistory.push(msg);
-                    appendMessage(msg, state.messageHistory.length - 1);
-                    continue;
-                  } else {
-                    appendText = String(msg.content || '');
-                  }
-
-                  // 追加到缓冲并更新同层气泡
-                  if (appendText) {
-                    if (state.streamingBuffer) state.streamingBuffer += '\n';
-                    state.streamingBuffer += appendText;
-                  }
-
-                  if (typeof state.streamingMessageIndex === 'number' && state.streamingMessageIndex >= 0) {
-                    const idx = state.streamingMessageIndex;
-                    // 安全更新消息内容
-                    if (state.messageHistory[idx]) {
-                      state.messageHistory[idx].content = state.streamingBuffer || '…';
-                      // 重新渲染该条消息
-                      updateMessage(idx);
-                    }
-                  }
-                  // 跳过将该条AI消息另行 push，避免重复
-                  continue;
-                } catch (_) {
-                  // 出错则退回正常追加
-                }
-              }
-
-              // 默认的追加行为
               state.messageHistory.push(msg);
               appendMessage(msg, state.messageHistory.length - 1);
 
@@ -11351,7 +11278,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (handled === 0) {
             buffer = await AI_GENERATE({
               injects: [
-                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false
             });
@@ -11362,44 +11289,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (handled === 0) {
             buffer = await AI_GENERATE({
               injects: [
-                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false
             });
             processBuffer();
           }
-
+          
           // 如果重试后仍然没有有效消息，记录问题并结束
           if (handled === 0) {
-            // 兜底：模型确实返回了文本，但不是<shouji>格式时，直接当作对方一条普通文本消息显示
-            const plain = (buffer || '').trim();
-            if (plain) {
-              const fallbackMsg = {
-                sender: 'char',
-                type: 'text',
-                content: plain,
-                time: getTimeStr(),
-              };
-              if (state.inVoiceCall) fallbackMsg.callContext = true;
-              state.messageHistory.push(fallbackMsg);
-              appendMessage(fallbackMsg, state.messageHistory.length - 1);
-
-              // 通话模式下同步到通话记录视图
-              if (state.inVoiceCall) {
-                state.currentCallTranscript.push(fallbackMsg);
-                appendMessageToCallView(fallbackMsg);
-              }
-
-              hideTypingIndicator();
-              // 延迟同步，避免频繁写入
-              setTimeout(() => syncToSillyTavern(), 100);
-              // 标记允许继续显示“AI回复”按钮
-              state.isAiReplying = false;
-              updateAiRequestButtonVisibility();
-              return; // 成功兜底后直接返回
-            } else {
-              throw new Error('AI生成内容无法解析或被过滤');
-            }
+            throw new Error('AI生成内容无法解析或被过滤');
           }
 
           hideTypingIndicator();
@@ -11409,32 +11308,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           hideTypingIndicator();
           // 出错时不提供fallback，让用户手动重试或等待下次对话
         } finally {
-          // 结束流式占位（如果占位存在但没有任何内容，移除占位）
-          if (state.streamingActive) {
-            try {
-              const idx = state.streamingMessageIndex;
-              const content = (state.streamingBuffer || '').trim();
-              if (typeof idx === 'number' && idx >= 0) {
-                if (!content) {
-                  // 没有有效内容则移除占位气泡
-                  state.messageHistory.splice(idx, 1);
-                  // 重新全量渲染以校正索引
-                  lastHistoryCount = 0;
-                  renderAllMessages();
-                } else {
-                  // 确保最终内容已渲染
-                  if (state.messageHistory[idx]) {
-                    state.messageHistory[idx].content = content;
-                    updateMessage(idx);
-                  }
-                }
-              }
-            } catch (_) {}
-            state.streamingActive = false;
-            state.streamingMessageIndex = null;
-            state.streamingBuffer = '';
-          }
-
           // 确保在任何情况下都重置AI回复标志
           state.isAiReplying = false;
           updateAiRequestButtonVisibility();
