@@ -17340,5 +17340,133 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         };
       });
     </script>
+  <script>
+  // Streaming fast-path patch: use event bus to render replies incrementally
+  (function() {
+    if (typeof window === 'undefined') return;
+    const original = window.requestAiReply;
+    if (typeof original !== 'function') return;
+    if (window.__qunliao_stream_patch_installed__) return;
+    window.__qunliao_stream_patch_installed__ = true;
+
+    window.requestAiReply = async function patchedRequestAiReply() {
+      // If event bus available, use streaming path. Else fallback to original.
+      if (typeof eventOn === 'function' && typeof iframe_events !== 'undefined' && (typeof AI_GENERATE === 'function' || typeof AI_GENERATE_RAW === 'function')) {
+        try {
+          // Prevent double-run if already replying
+          if (window.state && window.state.isAiReplying) return;
+          if (!window.state) window.state = {};
+          window.state.isAiReplying = true;
+          window.state.userHasSentNewMessage = false;
+          if (typeof updateAiRequestButtonVisibility === 'function') updateAiRequestButtonVisibility();
+          if (typeof showTypingIndicator === 'function') showTypingIndicator();
+
+          // Build inject content similar to original
+          const date = new Date();
+          const hours = date.getHours().toString().padStart(2, '0');
+          const minutes = date.getMinutes().toString().padStart(2, '0');
+          let newContent = `�����ֻ�����ǰʱ�䣺${hours}:${minutes}`;
+          const maxContext = 120;
+          const recentMessages = (window.state.messageHistory || []).slice(-maxContext);
+          const recentImageMsg = recentMessages.slice(-10).reverse().find(msg => msg.type === 'image' && msg.imageData && msg.sender === 'user');
+          if (recentImageMsg) newContent = `�����ֻ����ѷ���ͼƬ����ǰʱ�䣺${hours}:${minutes}`;
+
+          const timeoutMs = 180000;
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AI回复超时')), timeoutMs));
+
+          const generationId = `qunliao-${Date.now()}`;
+          window.state.isStreaming = true;
+          window.state.currentGenerationId = generationId;
+
+          let buffer = '';
+          let handled = 0;
+          if (typeof lastHistoryCount === 'undefined') {
+            window.lastHistoryCount = (window.state.messageHistory || []).length;
+          } else {
+            lastHistoryCount = (window.state.messageHistory || []).length;
+          }
+
+          const processBuffer = () => {
+            let msgs = [];
+            try {
+              msgs = parseQunliaoLog(`<qunliao>${buffer}</qunliao>`);
+            } catch (_) {}
+            while (handled < msgs.length) {
+              const msg = msgs[handled++];
+              if (msg && msg.sender === 'user') continue;
+              if (window.state.inVoiceCall) {
+                if (!msg.callContext) msg.callContext = true;
+                if (msg.sender === 'char' && !['text', 'voicecall-end'].includes(msg.type || 'text')) continue;
+                if (msg.sender === 'user') continue;
+              }
+              window.state.messageHistory.push(msg);
+              appendMessage(msg, window.state.messageHistory.length - 1, true);
+              if (window.state.inVoiceCall && msg.callContext) {
+                window.state.currentCallTranscript.push(msg);
+                appendMessageToCallView(msg);
+              }
+              if (msg.type === 'voicecall-end' && msg.sender === 'char' && window.state.inVoiceCall) {
+                setTimeout(() => endVoiceCall('char-hangedup'), 1000);
+              }
+            }
+          };
+
+          const onStream = (fullText, genId) => {
+            if (genId && genId !== generationId) return;
+            buffer = fullText || '';
+            processBuffer();
+          };
+
+          eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY, onStream);
+
+          let generatePromise;
+          if (window.state.jailbreakEnabled && typeof AI_GENERATE_RAW === 'function') {
+            const rawRequestData = {
+              ordered_prompts: [
+                { role: 'system', content: JAILBREAK_PROMPT },
+                'world_info_before', 'persona_description', 'char_description', 'char_personality', 'scenario',
+                'world_info_after', 'dialogue_examples', 'chat_history', 'user_input'
+              ],
+              injects: [ { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true } ],
+              should_stream: true,
+              generation_id: generationId,
+            };
+            if (recentImageMsg) rawRequestData.image = recentImageMsg.imageData;
+            generatePromise = AI_GENERATE_RAW(rawRequestData);
+          } else if (typeof AI_GENERATE === 'function') {
+            const requestData = {
+              injects: [ { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true } ],
+              should_stream: true,
+              generation_id: generationId,
+            };
+            if (recentImageMsg) requestData.image = recentImageMsg.imageData;
+            generatePromise = AI_GENERATE(requestData);
+          } else {
+            // 无可用生成器，回退
+            if (typeof eventClearEvent === 'function') eventClearEvent(iframe_events.STREAM_TOKEN_RECEIVED_FULLY);
+            window.state.isAiReplying = false; window.state.isStreaming = false; window.state.currentGenerationId = null;
+            if (typeof updateAiRequestButtonVisibility === 'function') updateAiRequestButtonVisibility();
+            return;
+          }
+
+          const finalText = await Promise.race([generatePromise, timeoutPromise]);
+          if (typeof finalText === 'string') { buffer = finalText; processBuffer(); }
+          if (typeof eventClearEvent === 'function') eventClearEvent(iframe_events.STREAM_TOKEN_RECEIVED_FULLY);
+          if (typeof hideTypingIndicator === 'function') hideTypingIndicator();
+          setTimeout(() => { if (typeof syncToSillyTavern === 'function') syncToSillyTavern(); }, 100);
+          window.state.isAiReplying = false; window.state.isStreaming = false; window.state.currentGenerationId = null;
+          if (typeof updateAiRequestButtonVisibility === 'function') updateAiRequestButtonVisibility();
+          return;
+        } catch (e) {
+          try { if (typeof eventClearEvent === 'function') eventClearEvent(iframe_events.STREAM_TOKEN_RECEIVED_FULLY); } catch {}
+          try { if (typeof hideTypingIndicator === 'function') hideTypingIndicator(); } catch {}
+          // 回退到原函数
+        }
+      }
+      // fallback
+      return original.apply(this, arguments);
+    };
+  })();
+  </script>
   </body>
 </html>
