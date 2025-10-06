@@ -6690,18 +6690,7 @@
       }
 
       // 将文件转换为base64格式
-      function convertFileToBase64(file) {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            resolve(e.target.result);
-          };
-          reader.onerror = function(error) {
-            reject(error);
-          };
-          reader.readAsDataURL(file);
-        });
-      }
+      // 重复的 convertFileToBase64 已移除，使用文件顶部定义的通用版本。
 
       // 识图API管理功能
       // 测试Kimi连接
@@ -8660,49 +8649,7 @@
         }
       }
 
-      // 显示提示消息
-      function showToast(message, duration = 2000) {
-        // 移除已存在的toast
-        const existingToast = document.querySelector('.toast-message');
-        if (existingToast) {
-          existingToast.remove();
-        }
-
-        const toast = document.createElement('div');
-        toast.className = 'toast-message';
-        toast.textContent = message;
-        toast.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: rgba(0, 0, 0, 0.8);
-          color: white;
-          padding: 12px 20px;
-          border-radius: 20px;
-          font-size: 14px;
-          z-index: 10001;
-          opacity: 0;
-          transition: opacity 0.3s ease;
-        `;
-
-        document.body.appendChild(toast);
-
-        // 显示动画
-        setTimeout(() => {
-          toast.style.opacity = '1';
-        }, 10);
-
-        // 自动隐藏
-        setTimeout(() => {
-          toast.style.opacity = '0';
-          setTimeout(() => {
-            if (toast.parentNode) {
-              document.body.removeChild(toast);
-            }
-          }, 300);
-        }, duration);
-      }
+      // 轻量提示API已合并到后文的 showToast(message, type)，此处移除重复定义以避免语法/检查器告警。
 
       function renderTransferMessage(contentDiv, msg, idx) {
         contentDiv.classList.add('wechat-transfer');
@@ -10169,7 +10116,8 @@
             for await (const chunk of stream) {
               buffer += chunk;
               const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-              if (buffer.includes('\n') || buffer.length - lastParsedLen > 240 || now - lastParsedAt > 80) {
+              // 解析节流：换行/增量>160/时间>50ms 时刷新，保持流畅且与“流式同层”一致体验
+              if (buffer.includes('\n') || buffer.length - lastParsedLen > 160 || now - lastParsedAt > 50) {
                 processBuffer();
                 lastParsedLen = buffer.length;
                 lastParsedAt = now;
@@ -11329,10 +11277,12 @@
       async function downloadSongFromSearch(song) {
         try {
           // 显示下载状态
-          const downloadBtn = event.target;
-          const originalText = downloadBtn.textContent;
-          downloadBtn.textContent = '下载中...';
-          downloadBtn.disabled = true;
+          const downloadBtn = (typeof event !== 'undefined' && event && event.target) ? event.target : null;
+          const originalText = downloadBtn ? downloadBtn.textContent : '';
+          if (downloadBtn) {
+            downloadBtn.textContent = '下载中...';
+            downloadBtn.disabled = true;
+          }
 
           // 获取音乐播放链接
           const quality = '320'; // 高品质
@@ -11356,19 +11306,23 @@
             document.body.removeChild(link);
 
             // 显示成功状态
-            downloadBtn.textContent = '已下载';
-            downloadBtn.style.background = '#28a745';
-            downloadBtn.style.borderColor = '#28a745';
+            if (downloadBtn) {
+              downloadBtn.textContent = '已下载';
+              downloadBtn.style.background = '#28a745';
+              downloadBtn.style.borderColor = '#28a745';
+            }
 
             // 显示成功提示
             showDownloadNotification(`✅ 开始下载: ${song.name}`, 'success');
 
             // 3秒后恢复按钮状态
             setTimeout(() => {
-              downloadBtn.textContent = originalText;
-              downloadBtn.disabled = false;
-              downloadBtn.style.background = '';
-              downloadBtn.style.borderColor = '';
+              if (downloadBtn) {
+                downloadBtn.textContent = originalText;
+                downloadBtn.disabled = false;
+                downloadBtn.style.background = '';
+                downloadBtn.style.borderColor = '';
+              }
             }, 3000);
 
           } else {
@@ -11378,20 +11332,24 @@
           console.error('下载失败:', error);
 
           // 恢复按钮状态
-          const downloadBtn = event.target;
-          downloadBtn.textContent = '下载失败';
-          downloadBtn.disabled = false;
-          downloadBtn.style.background = '#dc3545';
-          downloadBtn.style.borderColor = '#dc3545';
+          const downloadBtn = (typeof event !== 'undefined' && event && event.target) ? event.target : null;
+          if (downloadBtn) {
+            downloadBtn.textContent = '下载失败';
+            downloadBtn.disabled = false;
+            downloadBtn.style.background = '#dc3545';
+            downloadBtn.style.borderColor = '#dc3545';
+          }
 
           // 显示错误提示
           showDownloadNotification(`❌ 下载失败: ${error.message}`, 'error');
 
           // 3秒后恢复按钮状态
           setTimeout(() => {
-            downloadBtn.textContent = '下载';
-            downloadBtn.style.background = '';
-            downloadBtn.style.borderColor = '';
+            if (downloadBtn) {
+              downloadBtn.textContent = '下载';
+              downloadBtn.style.background = '';
+              downloadBtn.style.borderColor = '';
+            }
           }, 3000);
         }
       }
@@ -17306,6 +17264,38 @@
               if (stream && stream.body && typeof stream.body.getReader === 'function') {
                 const reader = stream.body.getReader();
                 const decoder = new TextDecoder();
+                // 如果是 SSE (text/event-stream)，按事件块解析 data: 行
+                try {
+                  const ct = (stream.headers && typeof stream.headers.get === 'function') ? (stream.headers.get('content-type') || '') : '';
+                  if (/text\/event-stream/i.test(ct)) {
+                    return (async function*(){
+                      let buf = '';
+                      while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        buf += decoder.decode(value, { stream: true });
+                        const parts = buf.split(/\r?\n\r?\n/);
+                        buf = parts.pop() || '';
+                        for (const chunk of parts) {
+                          const data = chunk.split(/\r?\n/)
+                            .filter(line => line.startsWith('data:'))
+                            .map(line => line.replace(/^data:\s?/, ''))
+                            .join('\n');
+                          if (data) yield data;
+                        }
+                      }
+                      // flush leftover
+                      if (buf) {
+                        const data = buf.split(/\r?\n/)
+                          .filter(line => line.startsWith('data:'))
+                          .map(line => line.replace(/^data:\s?/, ''))
+                          .join('\n');
+                        if (data) yield data;
+                      }
+                    })();
+                  }
+                } catch (_) {}
+                // 非 SSE：直接按 chunk 解码
                 return (async function*(){
                   while (true) {
                     const { done, value } = await reader.read();
