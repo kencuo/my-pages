@@ -7383,6 +7383,8 @@
         forceCharNameForSerialization: null,
         interfaceScale: 1,
         typingSpeedLevel: 2,
+        // 流式生成中：暂停持久化与重同步，加速前端渲染
+        isStreaming: false,
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -8070,17 +8072,17 @@ function applyUserAvatar(avatarElement) {
         // 作者 ctrl 不许偷ado 喵喵喵喵
         const match = text.match(/<shouji>([\s\S]*?)<\/shouji>/);
         if (!match) {
-          console.log('No <shouji> tags found in message');
+          /* console.log('No <shouji> tags found in message'); */
           return [];
         }
         const raw = match[1].trim();
         if (!raw) {
-          console.log('Empty content inside <shouji> tags');
+          /* console.log('Empty content inside <shouji> tags'); */
           return [];
         }
 
         const lines = raw.split(/\n+/).filter(Boolean);
-        console.log('Parsing', lines.length, 'message lines');
+        /* console.log('Parsing', lines.length, 'message lines'); */
 
         const parsedMessages = lines
           .map((line, index) => {
@@ -8088,16 +8090,16 @@ function applyUserAvatar(avatarElement) {
               const match = line.match(parser.regex);
               if (match) {
                 const result = parser.handler(match);
-                console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount);
+                /* console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount); */
                 return result;
               }
             }
-            console.log(`Line ${index + 1} not matched:`, line);
+            /* console.log(`Line ${index + 1} not matched:`, line); */
             return null; // No parser matched this line
           })
           .filter(Boolean);
 
-        console.log('Successfully parsed', parsedMessages.length, 'messages');
+        /* console.log('Successfully parsed', parsedMessages.length, 'messages'); */
         return parsedMessages;
       }
 
@@ -9466,6 +9468,8 @@ function applyUserAvatar(avatarElement) {
         }
 
         try {
+          // 进入流式阶段，后端返回分片时仅更新前端，避免频繁持久化
+          state.isStreaming = true;
           renderer(contentDiv, msg, idx);
         } catch (error) {
           console.error('Error rendering message:', error, msg);
@@ -11066,28 +11070,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           return;
         }
 
-        // 根据识图模式决定处理方式
-        if (state.visionMode !== 'direct') {
-          // 非直接模式：先用识图API处理图片和视频
-          const pendingVisionMessages = state.messageHistory.filter(msg =>
-            (msg.type === 'image' || msg.type === 'video') && msg.needsVisionAnalysis && msg.visionIndicator
-          );
-
-          if (pendingVisionMessages.length > 0) {
-            // 先处理所有需要识图/识视频的媒体
-            for (const mediaMsg of pendingVisionMessages) {
-              if (mediaMsg.visionIndicator) {
-                await requestVisionAnalysis(mediaMsg, mediaMsg.visionIndicator);
-                // 标记该媒体已处理
-                mediaMsg.needsVisionAnalysis = false;
-              }
-            }
-
-            // 识图完成后，等待一下再继续AI回复
-            await sleep(1500);
-          }
-        }
-        // 直接模式：跳过识图API，直接传图片给AI
+        // 识图逻辑改为按需触发：不做前置阻塞，直接在生成时传入图片/视频
 
         // 语音通话中允许AI主动回复，普通聊天中防止AI连续回复
         if (!state.inVoiceCall) {
@@ -11104,15 +11087,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 显示AI正在输入动画
         showTypingIndicator();
 
-        // 统一上下文长度，保证稳定性
-        const maxContext = 120; // 语音通话和普通聊天使用相同的上下文长度
+        // 极简注入内容：仅注入当前时间和是否发送图片
+        const maxContext = 120; // 保留变量以兼容后续代码（用于查找最近媒体）
         const recentMessages = state.messageHistory.slice(-maxContext);
-        let context = serializeShoujiLog(recentMessages);
+        const date = new Date();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        let newContent = `启用手机，当前时间：${hours}:${minutes}`;
 
         // 查找最近的媒体消息（图片或视频，最多查找最近10条消息）
         const recentMediaMsg = recentMessages.slice(-10).reverse().find(msg =>
           ((msg.type === 'image' && msg.imageData) || (msg.type === 'video' && msg.videoData)) && msg.sender === 'user'
         );
+
+        if (recentMediaMsg) {
+          if (recentMediaMsg.type === 'image') newContent = `启用手机，已发送图片，当前时间：${hours}:${minutes}`;
+          if (recentMediaMsg.type === 'video') newContent = `启用手机，已发送视频，当前时间：${hours}:${minutes}`;
+        }
 
         let stream;
 
@@ -11141,7 +11132,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 'user_input'
               ],
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: true
             };
@@ -11164,7 +11155,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
             const requestData = {
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: true
             };
@@ -11204,6 +11195,11 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
             while (handled < msgs.length) {
               const msg = msgs[handled++];
+
+              // 防止AI在生成过程中“替用户说话”，过滤掉由AI生成的 user 消息
+              if (msg && msg.sender === 'user') {
+                continue;
+              }
 
               // 🎤 语音通话中的消息处理：保持文本格式，模拟真实通话
               if (state.inVoiceCall) {
@@ -11259,10 +11255,23 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             }
           };
 
+          // 解析节流：仅在出现换行/增量足够/时间间隔足够时解析，降低重解析成本
+          let lastParsedLen = 0;
+          let lastParsedAt = 0;
+
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
               buffer += chunk;
-              processBuffer();
+              const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+              if (
+                buffer.includes('\n') ||
+                buffer.length - lastParsedLen > 240 ||
+                now - lastParsedAt > 80
+              ) {
+                processBuffer();
+                lastParsedLen = buffer.length;
+                lastParsedAt = now;
+              }
               // 语音通话中减少延迟，优先响应速度
               if (!state.inVoiceCall) {
                 await new Promise(r => requestAnimationFrame(r));
@@ -11278,7 +11287,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (handled === 0) {
             buffer = await AI_GENERATE({
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false
             });
@@ -11289,7 +11298,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (handled === 0) {
             buffer = await AI_GENERATE({
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: newContent, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false
             });
@@ -11310,6 +11319,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         } finally {
           // 确保在任何情况下都重置AI回复标志
           state.isAiReplying = false;
+          state.isStreaming = false;
           updateAiRequestButtonVisibility();
         }
       }
@@ -15150,6 +15160,8 @@ function toggleFriendsPanel(show) {
 
       // 🚀 优化：延迟批量同步，避免频繁调用
       function deferredSync(delay = 300) {
+        // 流式生成期间不做持久化同步，避免大文本高频 IO
+        if (state && state.isStreaming) return;
         if (syncTimeout) {
           clearTimeout(syncTimeout);
         }
