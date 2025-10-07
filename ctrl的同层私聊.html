@@ -10783,7 +10783,7 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const d = e?.data || {};
           if (!d || d.generation_id !== generationId) return;
           if (d.type === incEvt) {
-            const inc = d.incremental_text ?? d.text ?? '';
+            const inc = d.incremental_text ?? d.text ?? d.delta ?? '';
             if (inc) { buffer += inc; processNow(); }
           } else if (d.type === fullEvt) {
             const full = d.full_text ?? d.text ?? '';
@@ -10793,6 +10793,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             const finalText = d.text ?? '';
             if (finalText) { buffer = finalText; processNow(); }
             cleanup();
+          } else {
+            // 宽松兼容其它事件名
+            const inc = d.incremental_text ?? d.text ?? d.delta;
+            const full = d.full_text ?? d.text;
+            if (inc) { buffer += String(inc); processNow(); }
+            else if (full) { buffer = String(full); processNow(); }
+            if (d.done === true) { finished = true; cleanup(); }
           }
         };
 
@@ -10846,11 +10853,16 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             }
             // 触发生成
             const __ret_raw = await AI_GENERATE_RAW(rawCfg);
-            // 若事件未触发但函数直接返回最终文本，作为兜底处理
-            if (!finished && typeof __ret_raw === 'string' && __ret_raw) {
-              buffer = cleanGeneratedText(__ret_raw);
-              processNow();
-              cleanup();
+            // 若事件未触发但函数直接返回结果（字符串或对象），兜底处理
+            if (!finished) {
+              let txt = '';
+              if (typeof __ret_raw === 'string') txt = __ret_raw;
+              else if (__ret_raw && typeof __ret_raw === 'object') txt = __ret_raw.full_text || __ret_raw.text || __ret_raw.output || (__ret_raw.message?.content) || (Array.isArray(__ret_raw.choices) && (__ret_raw.choices[0]?.text || __ret_raw.choices[0]?.message?.content)) || '';
+              if (txt) {
+                buffer = cleanGeneratedText(txt);
+                processNow();
+                cleanup();
+              }
             }
           } else {
             const cfg = {
@@ -10864,10 +10876,15 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               if (recentMediaMsg.type === 'video') cfg.video = recentMediaMsg.videoData;
             }
             const __ret = await AI_GENERATE(cfg);
-            if (!finished && typeof __ret === 'string' && __ret) {
-              buffer = cleanGeneratedText(__ret);
-              processNow();
-              cleanup();
+            if (!finished) {
+              let txt = '';
+              if (typeof __ret === 'string') txt = __ret;
+              else if (__ret && typeof __ret === 'object') txt = __ret.full_text || __ret.text || __ret.output || (__ret.message?.content) || (Array.isArray(__ret.choices) && (__ret.choices[0]?.text || __ret.choices[0]?.message?.content)) || '';
+              if (txt) {
+                buffer = cleanGeneratedText(txt);
+                processNow();
+                cleanup();
+              }
             }
           }
         } catch (err) {
@@ -18557,10 +18574,35 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           const onInc=(p,id)=>{ let txt='',gid=id; if(typeof p==='string') txt=p; else if(p&&typeof p==='object'){ txt=p.incremental_text??p.text??''; gid=p.generation_id??gid;} if(gid!==generationId) return; if(txt){ buffer+=txt; processBuffer(); } };
           const onFull=(p,id)=>{ let txt='',gid=id; if(typeof p==='string') txt=p; else if(p&&typeof p==='object'){ txt=p.full_text??p.text??''; gid=p.generation_id??gid;} if(gid!==generationId) return; if(txt){ buffer=txt; processBuffer(); } };
           const onEnd=(p,id)=>{ let txt=p,gid=id; if(p&&typeof p==='object'){ txt=p.text??''; gid=p.generation_id??gid;} if(gid!==generationId) return; finished=true; if(typeof txt==='string'&&txt){ buffer=txt; processBuffer(); } };
-          const messageHandler=(e)=>{ const d=e?.data||{}; if(!d||d.generation_id!==generationId) return; if(d.type===incEvt){ const inc=d.incremental_text??d.text??''; if(inc){ buffer+=inc; processBuffer(); } } else if(d.type===fullEvt){ const full=d.full_text??d.text??''; if(full){ buffer=full; processBuffer(); } } else if(d.type===(EVT.GENERATION_ENDED||'GENERATION_ENDED')){ finished=true; const t=d.text??''; if(t){ buffer=t; processBuffer(); } } };
+          const messageHandler=(e)=>{
+            const d=e?.data||{}; if(!d||d.generation_id!==generationId) return;
+            // 宽松兼容：不强依赖 type 名称，只要有文本就处理
+            if(d.type===incEvt){ const inc=d.incremental_text??d.text??d.delta??''; if(inc){ buffer+=inc; processBuffer(); } }
+            else if(d.type===fullEvt){ const full=d.full_text??d.text??''; if(full){ buffer=full; processBuffer(); } }
+            else if(d.type===(EVT.GENERATION_ENDED||'GENERATION_ENDED')){ finished=true; const t=d.text??''; if(t){ buffer=t; processBuffer(); } }
+            else {
+              const inc = d.incremental_text??d.text??d.delta; const full = d.full_text??d.text;
+              if(inc){ buffer+=String(inc); processBuffer(); }
+              else if(full){ buffer=String(full); processBuffer(); }
+              if(d.done===true) finished = true;
+            }
+          };
           const subscribe=()=>{ if(useBus){ bus.on(incEvt,onInc); bus.on(fullEvt,onFull); bus.on(EVT.GENERATION_ENDED||'GENERATION_ENDED',onEnd);} else { window.addEventListener('message',messageHandler);} };
           const unsubscribe=()=>{ if(useBus){ bus.off(incEvt,onInc); bus.off(fullEvt,onFull); bus.off(EVT.GENERATION_ENDED||'GENERATION_ENDED',onEnd);} else { window.removeEventListener('message',messageHandler);} };
-          subscribe(); let ret; try{ if(AI_GENERATE_RAW){ const ordered_prompts=[{role:'system',content:(typeof JAILBREAK_PROMPT!=='undefined')?JAILBREAK_PROMPT:''},'world_info_before','persona_description','char_description','char_personality','scenario','world_info_after','dialogue_examples','chat_history','user_input']; const req={generation_id:generationId,ordered_prompts,injects:[{role:'system',content:context,position:'in_chat',depth:0,should_scan:true}],should_stream:true}; if(imageData) req.image=imageData; ret=await AI_GENERATE_RAW(req);} else { const req={generation_id:generationId,user_input:context,should_stream:true}; if(imageData) req.image=imageData; ret=await AI_GENERATE(req);} } finally { if(!finished&&typeof ret==='string'&&ret){ buffer=ret; finished=true; processBuffer(); } unsubscribe(); try{ if(typeof hideTypingIndicator==='function') hideTypingIndicator(); }catch(_){} try{ if(typeof syncToSillyTavern==='function') setTimeout(()=>syncToSillyTavern(),100);}catch(_){} }
+          subscribe(); let ret; try{
+            if(AI_GENERATE_RAW){ const ordered_prompts=[{role:'system',content:(typeof JAILBREAK_PROMPT!=='undefined')?JAILBREAK_PROMPT:''},'world_info_before','persona_description','char_description','char_personality','scenario','world_info_after','dialogue_examples','chat_history','user_input']; const req={generation_id:generationId,ordered_prompts,injects:[{role:'system',content:context,position:'in_chat',depth:0,should_scan:true}],should_stream:true}; if(imageData) req.image=imageData; ret=await AI_GENERATE_RAW(req);} else { const req={generation_id:generationId,user_input:context,should_stream:true}; if(imageData) req.image=imageData; ret=await AI_GENERATE(req);} }
+          finally {
+            // 兜底：函数直接返回文本或对象（新 runner 可能返回对象）
+            if(!finished){
+              let retText='';
+              if (typeof ret === 'string') retText = ret;
+              else if (ret && typeof ret === 'object') retText = ret.full_text || ret.text || ret.output || (ret.message?.content) || (Array.isArray(ret.choices) && (ret.choices[0]?.text || ret.choices[0]?.message?.content)) || '';
+              if(retText){ buffer = retText; finished = true; processBuffer(); }
+            }
+            unsubscribe();
+            try{ if(typeof hideTypingIndicator==='function') hideTypingIndicator(); }catch(_){ }
+            try{ if(typeof syncToSillyTavern==='function') setTimeout(()=>syncToSillyTavern(),100);}catch(_){ }
+          }
         } catch(err){ try{ if(typeof hideTypingIndicator==='function') hideTypingIndicator(); }catch(_){} } finally { try{ if(window.state){ state.isAiReplying=false; state.userHasSentNewMessage=false; if(typeof updateAiRequestButtonVisibility==='function') updateAiRequestButtonVisibility(); } }catch(_){} }
       }
       // Override
