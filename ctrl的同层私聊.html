@@ -7365,6 +7365,7 @@
         songNotes: new Map(), // Store song notes/descriptions
         isAiReplying: false, // Added flag to track AI reply status
         jailbreakEnabled: true, // 破限模式开关（默认开启）
+        debugEnabled: true,     // 调试开关（默认开启，可在UI按钮切换）
         // 时间选择功能
         customTimeEnabled: false, // 是否启用自定义时间
         customTime: null, // 自定义时间字符串 (HH:MM)
@@ -11109,6 +11110,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         const recentMessages = state.messageHistory.slice(-maxContext);
         let context = serializeShoujiLog(recentMessages);
 
+        // 调试：记录上下文和模式
+        try { if (state.debugEnabled) {
+          window.__aiDebug = window.__aiDebug || { stream:"", messages:[] };
+          window.__aiDebug.mode = (state.jailbreakEnabled && AI_GENERATE_RAW) ? 'jailbreak(generateRaw)' : 'normal(generate)';
+          window.__aiDebug.context = context;
+          window.__aiDebug.stream = '';
+          window.__aiDebug.messages = [];
+          window.__updateAIDebug && window.__updateAIDebug();
+          console.log('[AI-DEBUG] mode:', window.__aiDebug.mode);
+          console.log('[AI-DEBUG] context:', context);
+        }} catch(_){}
+
         // 查找最近的媒体消息（图片或视频，最多查找最近10条消息）
         const recentMediaMsg = recentMessages.slice(-10).reverse().find(msg =>
           ((msg.type === 'image' && msg.imageData) || (msg.type === 'video' && msg.videoData)) && msg.sender === 'user'
@@ -11146,6 +11159,19 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               should_stream: true
             };
 
+            // 调试：记录破限请求数据与越狱词
+            try { if (state.debugEnabled) {
+              const safe = JSON.parse(JSON.stringify(rawRequestData));
+              if (safe.image && typeof safe.image === 'string') safe.image = `[image base64 omitted, length=${safe.image.length}]`;
+              if (safe.video && typeof safe.video === 'string') safe.video = `[video base64 omitted, length=${safe.video.length}]`;
+              window.__aiDebug = window.__aiDebug || {};
+              window.__aiDebug.jailbreak_prompt = JAILBREAK_PROMPT;
+              window.__aiDebug.request = safe;
+              window.__updateAIDebug && window.__updateAIDebug();
+              console.log('[AI-DEBUG] jailbreak prompt:', JAILBREAK_PROMPT);
+              console.log('[AI-DEBUG] raw request:', safe);
+            }} catch(_){}
+
             if (recentMediaMsg) {
               if (recentMediaMsg.type === 'image') {
                 rawRequestData.image = recentMediaMsg.imageData;
@@ -11168,6 +11194,18 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               ],
               should_stream: true
             };
+
+            // 调试：记录普通请求数据
+            try { if (state.debugEnabled) {
+              const safe = JSON.parse(JSON.stringify(requestData));
+              if (safe.image && typeof safe.image === 'string') safe.image = `[image base64 omitted, length=${safe.image.length}]`;
+              if (safe.video && typeof safe.video === 'string') safe.video = `[video base64 omitted, length=${safe.video.length}]`;
+              window.__aiDebug = window.__aiDebug || {};
+              window.__aiDebug.jailbreak_prompt = '(none)';
+              window.__aiDebug.request = safe;
+              window.__updateAIDebug && window.__updateAIDebug();
+              console.log('[AI-DEBUG] request:', safe);
+            }} catch(_){}
 
             if (recentMediaMsg) {
               if (recentMediaMsg.type === 'image') {
@@ -11242,6 +11280,13 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               state.messageHistory.push(msg);
               appendMessage(msg, state.messageHistory.length - 1);
 
+              // 调试：记录解析后的消息
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.messages.push(msg);
+                window.__updateAIDebug && window.__updateAIDebug();
+                console.log('[AI-DEBUG] parsed msg:', msg);
+              }} catch(_){}
+
               if (state.inVoiceCall && msg.callContext) {
                 state.currentCallTranscript.push(msg);
                 appendMessageToCallView(msg);
@@ -11262,6 +11307,14 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
               buffer += chunk;
+              // 调试：实时追加流式原文
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.stream += String(chunk);
+                if (window.__aiDebug.stream.length > 12000) {
+                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                }
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
               processBuffer();
               // 语音通话中减少延迟，优先响应速度
               if (!state.inVoiceCall) {
@@ -11271,6 +11324,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           } else if (typeof stream === 'string') {
             // 部分后端直接返回完整字符串
             buffer = stream;
+            try { if (state.debugEnabled && window.__aiDebug) {
+              window.__aiDebug.stream = String(stream);
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch(_){}
             processBuffer();
           }
 
@@ -11307,12 +11364,139 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         } catch (e) {
           hideTypingIndicator();
           // 出错时不提供fallback，让用户手动重试或等待下次对话
+          try { if (state.debugEnabled) { console.error('[AI-DEBUG] error:', e); window.__aiDebug = window.__aiDebug || {}; window.__aiDebug.error = String(e && e.stack || e); window.__updateAIDebug && window.__updateAIDebug(); } } catch(_){}
         } finally {
           // 确保在任何情况下都重置AI回复标志
           state.isAiReplying = false;
           updateAiRequestButtonVisibility();
         }
       }
+
+      // ========== AI 调试面板 ==========
+      (function setupAIDebugPanel(){
+        if (window.__aiDebugUIInstalled) return; // 防重复
+        window.__aiDebugUIInstalled = true;
+
+        // 构建UI
+        const wrap = document.createElement('div');
+        wrap.id = 'ai-debug-panel';
+        wrap.style.cssText = [
+          'position:fixed','right:10px','bottom:10px','z-index:99999','max-width:40vw','min-width:280px',
+          'background:rgba(0,0,0,0.7)','color:#fff','border-radius:8px','box-shadow:0 4px 16px rgba(0,0,0,.25)',
+          'font-size:12px','line-height:1.4','backdrop-filter: blur(4px)','display:none'
+        ].join(';');
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.15)';
+        header.innerHTML = '<span>🐛 AI 调试</span>';
+        const btns = document.createElement('div');
+        btns.innerHTML = '<button id="ai-debug-copy" style="margin-right:6px;padding:4px 8px;border-radius:6px;border:none;background:#4CAF50;color:#fff;cursor:pointer">复制</button>'+
+                         '<button id="ai-debug-close" style="padding:4px 8px;border-radius:6px;border:none;background:#777;color:#fff;cursor:pointer">关闭</button>';
+        header.appendChild(btns);
+        wrap.appendChild(header);
+
+        const body = document.createElement('div');
+        body.style.cssText = 'padding:8px 10px;max-height:45vh;overflow:auto;white-space:pre-wrap;word-break:break-all';
+        body.innerHTML = [
+          '<div><b>模式</b>: <code id="ai-debug-mode"></code></div>',
+          '<div style="margin-top:6px"><b>越狱词</b>:</div>',
+          '<pre id="ai-debug-jailbreak" style="white-space:pre-wrap"></pre>',
+          '<div style="margin-top:6px"><b>请求数据</b>:</div>',
+          '<pre id="ai-debug-request" style="white-space:pre-wrap"></pre>',
+          '<div style="margin-top:6px"><b>上下文</b>:</div>',
+          '<pre id="ai-debug-context" style="white-space:pre-wrap"></pre>',
+          '<div style="margin-top:6px"><b>流式原文</b>:</div>',
+          '<pre id="ai-debug-stream" style="white-space:pre-wrap"></pre>',
+          '<div style="margin-top:6px"><b>解析后的消息</b>:</div>',
+          '<pre id="ai-debug-messages" style="white-space:pre-wrap"></pre>',
+          '<div style="margin-top:6px"><b>错误</b>:</div>',
+          '<pre id="ai-debug-error" style="white-space:pre-wrap;color:#ff8080"></pre>'
+        ].join('');
+        wrap.appendChild(body);
+
+        const toggle = document.createElement('button');
+        toggle.id = 'ai-debug-toggle';
+        toggle.textContent = '🐛 调试';
+        toggle.style.cssText = [
+          'position:fixed','right:10px','bottom:10px','z-index:99998','padding:6px 10px','border-radius:999px',
+          'border:none','background:#6C5CE7','color:#fff','cursor:pointer','box-shadow:0 6px 16px rgba(0,0,0,.2)'
+        ].join(';');
+
+        document.body.appendChild(toggle);
+        document.body.appendChild(wrap);
+
+        toggle.onclick = () => {
+          const show = wrap.style.display === 'none';
+          wrap.style.display = show ? 'block' : 'none';
+          localStorage.setItem('ai_debug_visible', show ? '1' : '0');
+        };
+        document.getElementById('ai-debug-close').onclick = () => {
+          wrap.style.display = 'none';
+          localStorage.setItem('ai_debug_visible', '0');
+        };
+        document.getElementById('ai-debug-copy').onclick = () => {
+          const payload = window.__aiDebug || {};
+          const text = JSON.stringify(payload, null, 2);
+          try { navigator.clipboard.writeText(text); } catch(_) {
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+          }
+        };
+
+        // 持久化显示状态
+        if (localStorage.getItem('ai_debug_visible') === '1') {
+          wrap.style.display = 'block';
+        }
+
+        // 数据渲染函数
+        window.__updateAIDebug = () => {
+          const d = window.__aiDebug || {};
+          const el = id => document.getElementById(id);
+          const json = (o) => {
+            try { return JSON.stringify(o, null, 2); } catch { return String(o); }
+          };
+          (el('ai-debug-mode')||{}).textContent = d.mode || '';
+          (el('ai-debug-jailbreak')||{}).textContent = d.jailbreak_prompt || '';
+          (el('ai-debug-request')||{}).textContent = json(d.request || {});
+          (el('ai-debug-context')||{}).textContent = d.context || '';
+          (el('ai-debug-stream')||{}).textContent = d.stream || '';
+          (el('ai-debug-messages')||{}).textContent = json(d.messages || []);
+          (el('ai-debug-error')||{}).textContent = d.error || '';
+        };
+
+        // 键盘快捷键 Ctrl+Shift+D 切换
+        window.addEventListener('keydown', (e) => {
+          if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+            e.preventDefault();
+            toggle.click();
+          }
+        });
+
+      })();
+
+      // 发送前的用户输入调试
+      (function patchSendMessageForDebug(){
+        try {
+          const _origSend = sendMessage;
+          sendMessage = async function(extra = {}){
+            try {
+              if (state.debugEnabled) {
+                const input = document.getElementById('chatInput');
+                const text = input ? String(input.value||'').trim() : '';
+                const safeExtra = JSON.parse(JSON.stringify(extra||{}));
+                if (safeExtra.imageData && typeof safeExtra.imageData === 'string') safeExtra.imageData = `[image base64 omitted, length=${safeExtra.imageData.length}]`;
+                if (safeExtra.videoData && typeof safeExtra.videoData === 'string') safeExtra.videoData = `[video base64 omitted, length=${safeExtra.videoData.length}]`;
+                window.__aiDebug = window.__aiDebug || {};
+                window.__aiDebug.last_user_input = text;
+                window.__aiDebug.last_user_extra = safeExtra;
+                window.__updateAIDebug && window.__updateAIDebug();
+                console.log('[AI-DEBUG] user input:', text, safeExtra);
+              }
+            } catch(_){}
+            return _origSend.apply(this, arguments);
+          }
+        } catch(_){}
+      })();
 
       // 控制AI请求按钮的可见性
       function updateAiRequestButtonVisibility() {
