@@ -9944,94 +9944,142 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         let stream;
 
         try {
-          // 事件与流式处理（使用 js-slash runner 事件总线）
-          const EVT = (window.iframe_events) || {
-            GENERATION_STARTED: 'GENERATION_STARTED',
-            STREAM_TOKEN_RECEIVED_FULLY: 'STREAM_TOKEN_RECEIVED_FULLY',
-            STREAM_TOKEN_RECEIVED_INCREMENTALLY: 'STREAM_TOKEN_RECEIVED_INCREMENTALLY',
-            GENERATION_ENDED: 'GENERATION_ENDED',
-          };
+          // 添加超时处理，3分钟超时
+          const timeoutMs = 180000;
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('AI回复超时')), timeoutMs)
+          );
 
-          const generationId = (window.crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
-          const bus = window.slash_runner_events;
-          const useBus = !!(bus && typeof bus.on === 'function' && typeof bus.off === 'function');
-          const incEvt = EVT.STREAM_TOKEN_RECEIVED_INCREMENTALLY || 'stream_token_received';
-          const fullEvt = EVT.STREAM_TOKEN_RECEIVED_FULLY || 'stream_token_received';
+          if (state.jailbreakEnabled && AI_GENERATE_RAW) {
+            // 破限模式：使用generateRaw完全绕过SillyTavern预设
+            console.log('🔓 破限模式已启用，使用generateRaw绕过SillyTavern预设');
 
+            const rawRequestData = {
+              ordered_prompts: [
+                { role: 'system', content: JAILBREAK_PROMPT },
+                'world_info_before',
+                'persona_description',
+                'char_description',
+                'char_personality',
+                'scenario',
+                'world_info_after',
+                'dialogue_examples',
+                'chat_history',
+                'user_input'
+              ],
+              injects: [
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: true
+            };
+
+            if (recentImageMsg) {
+              rawRequestData.image = recentImageMsg.imageData;
+            }
+
+            stream = await Promise.race([
+              AI_GENERATE_RAW(rawRequestData),
+              timeoutPromise
+            ]);
+          } else {
+            // 普通模式：使用标准generate函数
+            console.log('🔒 破限模式未启用，使用SillyTavern预设');
+
+            const requestData = { user_input: context, should_stream: true };
+
+            if (recentImageMsg) {
+              requestData.image = recentImageMsg.imageData;
+            }
+
+            stream = await Promise.race([
+              AI_GENERATE(requestData),
+              timeoutPromise
+            ]);
+          }
+          
+          // 检查stream是否有效
+          if (!stream) {
+            throw new Error('AI生成返回空结果');
+          }
+          
           let buffer = '';
           let handled = 0;
-          let finished = false;
 
           const processBuffer = () => {
             let msgs = [];
-            try { msgs = parseQunliaoLog(`<qunliao>${buffer}</qunliao>`); } catch {}
+            try {
+              msgs = parseQunliaoLog(`<qunliao>${buffer}</qunliao>`);
+            } catch (_) {
+              // 当前片段不完整，先忽略
+            }
+
             while (handled < msgs.length) {
               const msg = msgs[handled++];
-              if (state.inVoiceCall) msg.callContext = true;
-              if (state.inVoiceCall && msg.sender === 'char' && !['text','voicecall-end'].includes(msg.type || 'text')) continue;
-              if (state.inVoiceCall && msg.sender === 'user') continue;
+
+              // 🎤 语音通话中的消息处理：保持文本格式，模拟真实通话
+              if (state.inVoiceCall) {
+                // 给所有消息添加通话上下文标记（无论是user还是char）
+                if (!msg.callContext) {
+                  msg.callContext = true;
+                }
+                
+                // 语音通话中限制消息类型：只允许文本和通话结束消息
+                if (msg.sender === 'char' && !['text', 'voicecall-end'].includes(msg.type || 'text')) {
+                  continue; // 跳过这个消息
+                }
+                
+                // 确保AI不替用户说话：只处理AI自己的消息
+                if (msg.sender === 'user') {
+                  continue; // 跳过用户消息，AI不应该生成用户消息
+                }
+              }
+
               state.messageHistory.push(msg);
               appendMessage(msg, state.messageHistory.length - 1);
-              if (state.inVoiceCall && msg.callContext) { state.currentCallTranscript.push(msg); appendMessageToCallView(msg); }
-              if (msg.type === 'voicecall-end' && msg.sender === 'char' && state.inVoiceCall) setTimeout(() => endVoiceCall('char-hangedup'), 500);
+
+              if (state.inVoiceCall && msg.callContext) {
+                state.currentCallTranscript.push(msg);
+                appendMessageToCallView(msg);
+              }
+
+              // AI 主动挂断
+              if (msg.type === 'voicecall-end' && msg.sender === 'char' && state.inVoiceCall) {
+                setTimeout(() => endVoiceCall('char-hangedup'), 1000);
+              }
             }
           };
 
-          const onInc = (payload, id) => {
-            let txt = '', gid = id;
-            if (typeof payload === 'string') { txt = payload; }
-            else if (payload && typeof payload === 'object') { txt = payload.incremental_text ?? payload.text ?? ''; gid = payload.generation_id ?? gid; }
-            if (gid !== generationId) return; if (txt) { buffer += txt; processBuffer(); }
-          };
-          const onFull = (payload, id) => {
-            let txt = '', gid = id;
-            if (typeof payload === 'string') { txt = payload; }
-            else if (payload && typeof payload === 'object') { txt = payload.full_text ?? payload.text ?? ''; gid = payload.generation_id ?? gid; }
-            if (gid !== generationId) return; if (txt) { buffer = txt; processBuffer(); }
-          };
-          const onEnd = (payload, id) => {
-            let txt = payload, gid = id;
-            if (payload && typeof payload === 'object') { txt = payload.text ?? ''; gid = payload.generation_id ?? gid; }
-            if (gid !== generationId) return; finished = true; if (typeof txt === 'string' && txt) { buffer = txt; processBuffer(); }
-          };
-          const messageHandler = (e) => {
-            const d = e?.data || {}; if (!d || d.generation_id !== generationId) return;
-            if (d.type === incEvt) { const inc = d.incremental_text ?? d.text ?? ''; if (inc) { buffer += inc; processBuffer(); } }
-            else if (d.type === fullEvt) { const full = d.full_text ?? d.text ?? ''; if (full) { buffer = full; processBuffer(); } }
-            else if (d.type === EVT.GENERATION_ENDED) { finished = true; const t = d.text ?? ''; if (t) { buffer = t; processBuffer(); } }
-          };
-
-          const subscribe = () => { if (useBus) { bus.on(incEvt, onInc); bus.on(fullEvt, onFull); bus.on(EVT.GENERATION_ENDED, onEnd); } else { window.addEventListener('message', messageHandler); } };
-          const unsubscribe = () => { if (useBus) { bus.off(incEvt, onInc); bus.off(fullEvt, onFull); bus.off(EVT.GENERATION_ENDED, onEnd); } else { window.removeEventListener('message', messageHandler); } };
-
-          subscribe();
-
-          // 启动生成
-          let ret;
-          if (state.jailbreakEnabled && AI_GENERATE_RAW) {
-            const rawRequestData = {
-              generation_id: generationId,
-              ordered_prompts: [
-                { role: 'system', content: JAILBREAK_PROMPT },
-                'world_info_before','persona_description','char_description','char_personality','scenario','world_info_after','dialogue_examples','chat_history','user_input'
-              ],
-              injects: [{ role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }],
-              should_stream: true
-            };
-            if (recentImageMsg) rawRequestData.image = recentImageMsg.imageData;
-            ret = await AI_GENERATE_RAW(rawRequestData);
-          } else {
-            const requestData = { generation_id: generationId, user_input: context, should_stream: true };
-            if (recentImageMsg) requestData.image = recentImageMsg.imageData;
-            ret = await AI_GENERATE(requestData);
+          if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
+            for await (const chunk of stream) {
+              buffer += chunk;
+              processBuffer();
+              // 语音通话中减少延迟，优先响应速度
+              if (!state.inVoiceCall) {
+                await new Promise(r => requestAnimationFrame(r));
+              }
+            }
+          } else if (typeof stream === 'string') {
+            // 部分后端直接返回完整字符串
+            buffer = stream;
+            processBuffer();
           }
 
-          // 若事件未触发但函数直接返回最终文本，作为兜底
-          if (!finished && typeof ret === 'string' && ret) {
-            buffer = ret; processBuffer();
+          // 若仍未得到任何消息，再尝试一次性模式
+          if (handled === 0) {
+            buffer = await AI_GENERATE({ user_input: context, should_stream: false });
+            processBuffer();
           }
 
-          unsubscribe();
+          // 如果没有处理任何消息，尝试一次性模式重试一次
+          if (handled === 0) {
+            buffer = await AI_GENERATE({ user_input: context, should_stream: false });
+            processBuffer();
+          }
+          
+          // 如果重试后仍然没有有效消息，记录问题并结束
+          if (handled === 0) {
+            throw new Error('AI生成内容无法解析或被过滤');
+          }
 
           hideTypingIndicator();
           // 统一使用延迟同步，提升响应速度
@@ -16546,4 +16594,5 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
     </script>
   </body>
 </html>
+
 
