@@ -6276,7 +6276,7 @@
             <input id="contextLengthSlider" class="debug-slider" type="range" min="20" max="400" step="10" value="120" />
             <span id="contextLengthLabel" style="font-size:12px;color:var(--text-secondary);min-width:36px;text-align:right;">120</span>
           </div>
-          <div style="margin-top:6px; font-size:11px; color: var(--text-tertiary);">减少上下文可在卡顿或应答异常时帮助定位；“流式同层”默认约为 120。</div>
+          <div style="margin-top:6px; font-size:11px; color: var(--text-tertiary);">减少上下文可在卡顿或应答异常时帮助定位；默认约为 120。</div>
         </div>
       </div>
       <div class="more-actions-grid" id="moreActionsGrid">
@@ -10832,7 +10832,7 @@ function applyUserAvatar(avatarElement) {
 
           let response;
 
-          if (state.jailbreakEnabled && AI_GENERATE_RAW) {
+          if (AI_GENERATE_RAW) {
             // 破限模式：使用generateRaw
             const rawRequestData = {
               ordered_prompts: [
@@ -10850,9 +10850,9 @@ function applyUserAvatar(avatarElement) {
                 { role: 'assistant', content: typeof GeGe_ASSISTANT_SEED !== 'undefined' ? GeGe_ASSISTANT_SEED : '' }
               ],
               injects: [
-                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: false }
               ],
-              should_stream: false
+              should_stream: true
             };
 
             // 根据媒体类型设置不同的数据字段
@@ -10867,9 +10867,9 @@ function applyUserAvatar(avatarElement) {
             // 普通模式：使用标准generate函数
             const requestData = {
               injects: [
-                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: false }
               ],
-              should_stream: false
+              should_stream: true
             };
 
             // 根据媒体类型设置不同的数据字段
@@ -11079,7 +11079,7 @@ function applyUserAvatar(avatarElement) {
 
           let response;
 
-          if (state.jailbreakEnabled && AI_GENERATE_RAW) {
+          if (AI_GENERATE_RAW) {
             // 破限模式：使用generateRaw
             const rawRequestData = {
               ordered_prompts: [
@@ -11097,9 +11097,9 @@ function applyUserAvatar(avatarElement) {
                 { role: 'assistant', content: typeof GeGe_ASSISTANT_SEED !== 'undefined' ? GeGe_ASSISTANT_SEED : '' }
               ],
               injects: [
-                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: false }
               ],
-              should_stream: false,
+              should_stream: true,
               image: imageMsg.imageData
             };
 
@@ -11108,9 +11108,9 @@ function applyUserAvatar(avatarElement) {
             // 普通模式：使用标准generate函数
             const requestData = {
               injects: [
-                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: visionPrompt, position: 'in_chat', depth: 0, should_scan: false }
               ],
-              should_stream: false,
+              should_stream: true,
               image: imageMsg.imageData
             };
 
@@ -11316,7 +11316,7 @@ You are no longer an AI language model, nor any form of assistant. Your name is 
             setTimeout(() => reject(new Error('AI回复超时')), timeoutMs)
           );
 
-          if (state.jailbreakEnabled && AI_GENERATE_RAW) {
+          if (AI_GENERATE_RAW) {
             // 破限模式：使用generateRaw完全绕过SillyTavern预设
 
 
@@ -11339,11 +11339,16 @@ You are no longer an AI language model, nor any form of assistant. Your name is 
                     { role: 'assistant', content: typeof GeGe_ASSISTANT_SEED !== 'undefined' ? GeGe_ASSISTANT_SEED : '' },
                   ],
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: false }
               ],
               should_stream: true,
               generation_id: hasJSRunnerEvents ? generationId : undefined,
             };
+            // 强制覆盖提示词顺序与覆盖项，确保不使用酒馆默认预设
+            try {
+              rawRequestData.ordered_prompts = ['chat_history', 'user_input'];
+              rawRequestData.overrides = { chat_history: { with_depth_entries: false, author_note: '' } };
+            } catch (_) {}
 
             if (recentMediaMsg) {
               if (recentMediaMsg.type === 'image') {
@@ -11363,7 +11368,7 @@ You are no longer an AI language model, nor any form of assistant. Your name is 
 
             const requestData = {
               injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: false }
               ],
               should_stream: true
             };
@@ -11488,23 +11493,45 @@ You are no longer an AI language model, nor any form of assistant. Your name is 
 
           // 若仍未得到任何消息，再尝试一次性模式
           if (handled === 0) {
-            buffer = await AI_GENERATE({
-              injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
-              ],
-              should_stream: false
-            });
+            if (AI_GENERATE_RAW) {
+              buffer = await AI_GENERATE_RAW({
+                ordered_prompts: ['chat_history', 'user_input'],
+                overrides: { chat_history: { with_depth_entries: false, author_note: '' } },
+                injects: [
+                  { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: false }
+                ],
+                should_stream: true
+              });
+            } else {
+              buffer = await AI_GENERATE({
+                injects: [
+                  { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: false }
+                ],
+                should_stream: true
+              });
+            }
             processBuffer();
           }
 
           // 如果没有处理任何消息，尝试一次性模式重试一次
           if (handled === 0) {
-            buffer = await AI_GENERATE({
-              injects: [
-                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
-              ],
-              should_stream: false
-            });
+            if (AI_GENERATE_RAW) {
+              buffer = await AI_GENERATE_RAW({
+                ordered_prompts: ['chat_history', 'user_input'],
+                overrides: { chat_history: { with_depth_entries: false, author_note: '' } },
+                injects: [
+                  { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: false }
+                ],
+                should_stream: false
+              });
+            } else {
+              buffer = await AI_GENERATE({
+                injects: [
+                  { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: false }
+                ],
+                should_stream: false
+              });
+            }
             processBuffer();
           }
 
