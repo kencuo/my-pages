@@ -10725,10 +10725,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         // 显示AI正在输入动画
         showTypingIndicator();
 
-        // 统一上下文长度，保证稳定性
-        const maxContext = 120; // 语音通话和普通聊天使用相同的上下文长度
-        const recentMessages = state.messageHistory.slice(-maxContext);
-        let context = serializeShoujiLog(recentMessages);
+          // 统一上下文长度，保证稳定性
+          const maxContext = 60; // 语音通话和普通聊天使用相同的上下文长度（从120缩短为60以减少重复回复）
+          const recentMessages = state.messageHistory.slice(-maxContext);
+          let context = serializeShoujiLog(recentMessages);
 
         // 查找最近的媒体消息（图片或视频，最多查找最近10条消息）
         const recentMediaMsg = recentMessages.slice(-10).reverse().find(msg =>
