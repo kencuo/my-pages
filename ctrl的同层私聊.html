@@ -8066,38 +8066,114 @@ function applyUserAvatar(avatarElement) {
         },
       ];
 
+      // 完全套用“流式同层.html”的 parseMessages 规则（对本页 bracket 语法做适配）
+      function parseMessages(text) {
+        const raw = text
+          .split(/\[(.*?)\](.*?)(?=\[|$)/gs)
+          .filter((s) => s.trim());
+        const res = [];
+        for (let i = 0; i < raw.length - 1; i += 2) {
+          res.push({ header: raw[i], body: (raw[i + 1] || "").trim() });
+        }
+        return res;
+      }
+
       function parseShoujiLog(text) {
         // 作者 ctrl 不许偷ado 喵喵喵喵
-        const match = text.match(/<shouji>([\s\S]*?)<\/shouji>/);
+        const match = text && String(text).match(/<shouji>([\s\S]*?)<\/shouji>/);
         if (!match) {
           console.log('No <shouji> tags found in message');
           return [];
         }
-        const raw = match[1].trim();
+        const raw = (match[1] || '').trim();
         if (!raw) {
           console.log('Empty content inside <shouji> tags');
           return [];
         }
 
-        const lines = raw.split(/\n+/).filter(Boolean);
-        console.log('Parsing', lines.length, 'message lines');
+        // 先用 parseMessages 进行基于 [header]body 的切分（对流式更稳健）
+        const segments = parseMessages(raw);
 
-        const parsedMessages = lines
-          .map((line, index) => {
-            for (const parser of messageParsers) {
-              const match = line.match(parser.regex);
-              if (match) {
-                const result = parser.handler(match);
-                console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount);
-                return result;
+        // 如果没有检测到任何 [] 段落，则回退到旧的按行解析逻辑，以保持兼容
+        if (!segments || segments.length === 0) {
+          const linesFallback = raw.split(/\n+/).filter(Boolean);
+          console.log('Parsing (fallback by lines)', linesFallback.length, 'message lines');
+          const parsedFallback = linesFallback
+            .map((line, index) => {
+              for (const parser of messageParsers) {
+                const mm = line.match(parser.regex);
+                if (mm) {
+                  const result = parser.handler(mm);
+                  console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount);
+                  return result;
+                }
               }
+              console.warn('Cannot parse line (fallback)', index + 1, ':', line);
+              return null;
+            })
+            .filter(Boolean);
+          console.log('Successfully parsed (fallback)', parsedFallback.length, 'messages');
+          return parsedFallback;
+        }
+
+        console.log('Parsing by parseMessages segments:', segments.length);
+
+        // 将 [header]body 适配为本页既有的 bracket 语法（content 放在中间位）
+        function normalizeHeaderWithBody(header, body) {
+          const b = (body || '').trim();
+          // 如果 body 为空，直接返回原 header
+          if (!b) return header;
+
+          const parts = header.split('|');
+          // 末尾若是时间（HH:MM），将 body 插入到时间前的位置
+          const maybeTime = parts[parts.length - 1] || '';
+          if (/^\d{2}:\d{2}$/.test(maybeTime)) {
+            // 针对 [我方消息|...|时间] 或 [名字|头像|...|时间]
+            // 只在未明确包含类型（如 图片/视频/文档/语音通话 等）且缺少正文时插入
+            const TYPES = ['图片','视频','文档','语音消息','语音通话','转账','收账','红包','领取红包','变音特效','文件','位置','已退回收账'];
+            const hasType = parts.some(p => TYPES.includes(p));
+            // 判断是否已有正文：对用户形如 我方消息|正文|时间；对对方形如 名称|头像|正文|时间
+            const looksUser = parts[0] === '我方消息';
+            const hasContent = looksUser ? parts.length >= 3 : parts.length >= 4;
+            if (!hasType && !hasContent) {
+              // 在时间前插入正文 body
+              parts.splice(parts.length - 1, 0, b.replace(/[\r\n]+/g, ' '));
+              return parts.join('|');
             }
-            console.log(`Line ${index + 1} not matched:`, line);
-            return null; // No parser matched this line
+          }
+          // 否则不改动
+          return header;
+        }
+
+        const parsedMessages = segments
+          .map(({ header, body }, index) => {
+            // 尝试直接按现有解析器匹配
+            let line = `[${header}]`;
+            let matched = null;
+            for (const parser of messageParsers) {
+              const mm = line.match(parser.regex);
+              if (mm) { matched = parser.handler(mm); break; }
+            }
+            if (matched) return matched;
+
+            // 若未匹配且存在 body，则插入正文再尝试一次
+            const adjustedHeader = normalizeHeaderWithBody(header, body);
+            if (adjustedHeader !== header) {
+              line = `[${adjustedHeader}]`;
+              for (const parser of messageParsers) {
+                const mm = line.match(parser.regex);
+                if (mm) { matched = parser.handler(mm); break; }
+              }
+              if (matched) return matched;
+            }
+
+            // 仍未匹配则记录告警并忽略
+            console.warn('Cannot parse segment', index + 1, ':', { header, body });
+            return null;
           })
           .filter(Boolean);
 
-        console.log('Successfully parsed', parsedMessages.length, 'messages');
+        console.log('Successfully parsed (segments)', parsedMessages.length, 'messages');
         return parsedMessages;
       }
 
@@ -8447,6 +8523,36 @@ function applyUserAvatar(avatarElement) {
             chat.removeChild(children[i]);
           }
         }
+      }
+
+      // 流式预览容器渲染与清理（对齐“流式同层.html”的回退体验）
+      function removeStreamingPreview() {
+        try {
+          const n = document.getElementById('streaming-preview');
+          if (n && n.parentNode) n.parentNode.removeChild(n);
+        } catch(_) {}
+      }
+
+      function renderStreamingPreviewFromBuffer(buffer) {
+        try {
+          const chat = document.getElementById('chatMessages');
+          if (!chat) return;
+          // 使用 parseShoujiLog（已接入 parseMessages 切分）解析当前完整缓冲
+          const msgs = parseShoujiLog(`<shouji>${buffer}</shouji>`);
+          removeStreamingPreview();
+          const container = document.createElement('div');
+          container.id = 'streaming-preview';
+          chat.appendChild(container);
+          const baseIndex = (Array.isArray(state.messageHistory) ? state.messageHistory.length : 0);
+          msgs.forEach((m, i) => {
+            const el = createMessageElement(m, baseIndex + i);
+            if (el) {
+              el.classList.add('generated');
+              container.appendChild(el);
+            }
+          });
+          chat.scrollTop = chat.scrollHeight;
+        } catch(_) {}
       }
 
       // Append a single message to the chat
@@ -11037,7 +11143,8 @@ You are no longer an AI language model, nor any form of assistant. Your name is 
         state.userHasSentNewMessage = false;
         updateAiRequestButtonVisibility();
 
-        // 显示AI正在输入动画
+        // 清理上一次流式预览并显示AI正在输入动画
+        removeStreamingPreview();
         showTypingIndicator();
 
         // 统一上下文长度，保证稳定性
@@ -11106,8 +11213,19 @@ You are no longer an AI language model, nor any form of assistant. Your name is 
         let onFullListener = null;
         let onEndListener = null;
         if (hasJSRunnerEvents && generationId) {
-          onFullListener = (fullText, id) => { if (id !== generationId) return; buffer = fullText; processBuffer(); };
-          onEndListener = (finalText, id) => { if (id !== generationId) return; buffer = finalText; processBuffer(); };
+          onFullListener = (fullText, id) => {
+            if (id !== generationId) return;
+            buffer = fullText;
+            // 流式阶段仅渲染预览，不写入历史，支持回退
+            renderStreamingPreviewFromBuffer(buffer);
+          };
+          onEndListener = (finalText, id) => {
+            if (id !== generationId) return;
+            buffer = finalText;
+            // 结束时移除预览并一次性提交到历史
+            removeStreamingPreview();
+            processBuffer();
+          };
           eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY, onFullListener);
           eventOn(iframe_events.GENERATION_ENDED, onEndListener);
         }
