@@ -10677,202 +10677,238 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
 `;
 
-      // 请求AI回复（流式）：should_stream: true + generation_id + 事件订阅
+      // 请求AI回复
       async function requestAiReply() {
+        // 检查可用的生成函数
         if (!AI_GENERATE && !AI_GENERATE_RAW) return;
-        if (state.isAiReplying) return;
 
-        // 识图（非direct）先处理，避免占用生成时间
-        if (state.visionMode !== 'direct') {
-          const pend = state.messageHistory.filter(m => (m.type === 'image' || m.type === 'video') && m.needsVisionAnalysis && m.visionIndicator);
-          for (const m of pend) { await requestVisionAnalysis(m, m.visionIndicator); m.needsVisionAnalysis = false; }
+        // 防止重复调用AI回复
+        if (state.isAiReplying) {
+          return;
         }
 
-        // 普通聊天防AI连发
+        // 根据识图模式决定处理方式
+        if (state.visionMode !== 'direct') {
+          // 非直接模式：先用识图API处理图片和视频
+          const pendingVisionMessages = state.messageHistory.filter(msg =>
+            (msg.type === 'image' || msg.type === 'video') && msg.needsVisionAnalysis && msg.visionIndicator
+          );
+
+          if (pendingVisionMessages.length > 0) {
+            // 先处理所有需要识图/识视频的媒体
+            for (const mediaMsg of pendingVisionMessages) {
+              if (mediaMsg.visionIndicator) {
+                await requestVisionAnalysis(mediaMsg, mediaMsg.visionIndicator);
+                // 标记该媒体已处理
+                mediaMsg.needsVisionAnalysis = false;
+              }
+            }
+
+            // 识图完成后，等待一下再继续AI回复
+            await sleep(1500);
+          }
+        }
+        // 直接模式：跳过识图API，直接传图片给AI
+
+        // 语音通话中允许AI主动回复，普通聊天中防止AI连续回复
         if (!state.inVoiceCall) {
-          const last = state.messageHistory[state.messageHistory.length - 1];
-          if (last && last.sender === 'char' && !state.userHasSentNewMessage) return;
+          const lastMessage = state.messageHistory[state.messageHistory.length - 1];
+          if (lastMessage && lastMessage.sender === 'char' && !state.userHasSentNewMessage) {
+            return;
+          }
         }
 
         state.isAiReplying = true;
         state.userHasSentNewMessage = false;
         updateAiRequestButtonVisibility();
+
+        // 显示AI正在输入动画
         showTypingIndicator();
 
-        // 上下文与严格user_input
-        const recentMessages = state.messageHistory.slice(-50);
-        const context = serializeShoujiLog(recentMessages);
-        const recentMediaMsg = recentMessages.slice(-10).reverse().find(m => ((m.type === 'image' && m.imageData) || (m.type === 'video' && m.videoData)) && m.sender === 'user');
-        const userInput = [
-          '请延续以上<shouji>聊天，仅输出新的消息，严格遵循：',
-          '1) 只输出<shouji>...</shouji>，不要任何额外解释；',
-          '2) 每条消息一行，使用[]或<>格式；',
-          '3) 若需要多条，按行输出。'
-        ].join('\n');
+          // 统一上下文长度，保证稳定性
+          const maxContext = 60; // 语音通话和普通聊天使用相同的上下文长度（从120缩短为60以减少重复回复）
+          const recentMessages = state.messageHistory.slice(-maxContext);
+          let context = serializeShoujiLog(recentMessages);
 
-        // 事件常量与监听
-        const EVT = (window.iframe_events) || {
-          GENERATION_STARTED: 'GENERATION_STARTED',
-          STREAM_TOKEN_RECEIVED_FULLY: 'STREAM_TOKEN_RECEIVED_FULLY',
-          STREAM_TOKEN_RECEIVED_INCREMENTALLY: 'STREAM_TOKEN_RECEIVED_INCREMENTALLY',
-          GENERATION_ENDED: 'GENERATION_ENDED',
-        };
+        // 查找最近的媒体消息（图片或视频，最多查找最近10条消息）
+        const recentMediaMsg = recentMessages.slice(-10).reverse().find(msg =>
+          ((msg.type === 'image' && msg.imageData) || (msg.type === 'video' && msg.videoData)) && msg.sender === 'user'
+        );
 
-        const generationId = (window.crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
-        let buffer = '';
-        let handled = 0;
-        let finished = false;
-
-        const processNow = () => {
-          let msgs = [];
-          try { msgs = parseShoujiFromBuffer(cleanGeneratedText(buffer)); } catch {}
-          while (handled < msgs.length) {
-            const msg = msgs[handled++];
-            if (state.inVoiceCall) msg.callContext = true;
-            if (state.inVoiceCall && msg.sender === 'char' && !['text','voicecall-end'].includes(msg.type || 'text')) continue;
-            if (state.inVoiceCall && msg.sender === 'user') continue;
-            state.messageHistory.push(msg);
-            appendMessage(msg, state.messageHistory.length - 1);
-            if (state.inVoiceCall && msg.callContext) { state.currentCallTranscript.push(msg); appendMessageToCallView(msg); }
-            if (msg.type === 'voicecall-end' && msg.sender === 'char' && state.inVoiceCall) setTimeout(() => endVoiceCall('char-hangedup'), 500);
-          }
-        };
-
-        // 事件总线优先，其次 window.postMessage 兜底
-        const bus = window.slash_runner_events;
-        const useBus = !!(bus && typeof bus.on === 'function' && typeof bus.off === 'function');
-        const incEvt = EVT.STREAM_TOKEN_RECEIVED_INCREMENTALLY || 'stream_token_received';
-        const fullEvt = EVT.STREAM_TOKEN_RECEIVED_FULLY || 'stream_token_received';
-
-        const onInc = (payload, id) => {
-          let txt = '', gid = id;
-          if (typeof payload === 'string') { txt = payload; }
-          else if (payload && typeof payload === 'object') {
-            txt = payload.incremental_text ?? payload.text ?? '';
-            gid = payload.generation_id ?? gid;
-          }
-          if (gid !== generationId) return;
-          if (txt) { buffer += txt; processNow(); }
-        };
-
-        const onFull = (payload, id) => {
-          let txt = '', gid = id;
-          if (typeof payload === 'string') { txt = payload; }
-          else if (payload && typeof payload === 'object') {
-            txt = payload.full_text ?? payload.text ?? '';
-            gid = payload.generation_id ?? gid;
-          }
-          if (gid !== generationId) return;
-          if (txt) { buffer = txt; processNow(); }
-        };
-
-        const onEnd = (payload, id) => {
-          let txt = payload, gid = id;
-          if (payload && typeof payload === 'object') {
-            txt = payload.text ?? '';
-            gid = payload.generation_id ?? gid;
-          }
-          if (gid !== generationId) return;
-          finished = true;
-          if (typeof txt === 'string' && txt) { buffer = txt; processNow(); }
-          cleanup();
-        };
-
-        // 旧版 window.postMessage 兜底
-        const messageHandler = (e) => {
-          const d = e?.data || {};
-          if (!d || d.generation_id !== generationId) return;
-          if (d.type === incEvt) {
-            const inc = d.incremental_text ?? d.text ?? '';
-            if (inc) { buffer += inc; processNow(); }
-          } else if (d.type === fullEvt) {
-            const full = d.full_text ?? d.text ?? '';
-            if (full) { buffer = full; processNow(); }
-          } else if (d.type === EVT.GENERATION_ENDED) {
-            finished = true;
-            const finalText = d.text ?? '';
-            if (finalText) { buffer = finalText; processNow(); }
-            cleanup();
-          }
-        };
-
-        const subscribe = () => {
-          if (useBus) {
-            bus.on(incEvt, onInc);
-            bus.on(fullEvt, onFull);
-            bus.on(EVT.GENERATION_ENDED, onEnd);
-          } else {
-            window.addEventListener('message', messageHandler);
-          }
-        };
-        const unsubscribe = () => {
-          if (useBus) {
-            bus.off(incEvt, onInc);
-            bus.off(fullEvt, onFull);
-            bus.off(EVT.GENERATION_ENDED, onEnd);
-          } else {
-            window.removeEventListener('message', messageHandler);
-          }
-        };
-
-        const cleanup = () => {
-          try { clearTimeout(timer); } catch {}
-          try { unsubscribe(); } catch {}
-          hideTypingIndicator();
-          setTimeout(() => syncToSillyTavern(), 50);
-          state.isAiReplying = false;
-          updateAiRequestButtonVisibility();
-        };
-
-        // 超时兜底，防未触发ENDED
-        const timer = setTimeout(() => { if (!finished) cleanup(); }, 120000);
+        let stream;
 
         try {
-          subscribe();
+          // 添加超时处理，3分钟超时
+          const timeoutMs = 180000;
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('AI回复超时')), timeoutMs)
+          );
+
           if (state.jailbreakEnabled && AI_GENERATE_RAW) {
-            const rawCfg = {
-              generation_id: generationId,
+            // 破限模式：使用generateRaw完全绕过SillyTavern预设
+
+
+            const rawRequestData = {
               ordered_prompts: [
                 { role: 'system', content: JAILBREAK_PROMPT_FU },
-                'world_info_before','persona_description','char_description','char_personality','scenario','world_info_after','dialogue_examples','chat_history','user_input'
+                'world_info_before',
+                'persona_description',
+                'char_description',
+                'char_personality',
+                'scenario',
+                'world_info_after',
+                'dialogue_examples',
+                'chat_history',
+                'user_input'
               ],
-              injects: [{ role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }],
-              user_input: userInput,
+              injects: [
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+              ],
               should_stream: true
             };
+
             if (recentMediaMsg) {
-              if (recentMediaMsg.type === 'image') rawCfg.image = recentMediaMsg.imageData;
-              if (recentMediaMsg.type === 'video') rawCfg.video = recentMediaMsg.videoData;
+              if (recentMediaMsg.type === 'image') {
+                rawRequestData.image = recentMediaMsg.imageData;
+              } else if (recentMediaMsg.type === 'video') {
+                rawRequestData.video = recentMediaMsg.videoData;
+              }
             }
-            // 触发生成
-            const __ret_raw = await AI_GENERATE_RAW(rawCfg);
-            // 若事件未触发但函数直接返回最终文本，作为兜底处理
-            if (!finished && typeof __ret_raw === 'string' && __ret_raw) {
-              buffer = cleanGeneratedText(__ret_raw);
-              processNow();
-              cleanup();
-            }
+
+            stream = await Promise.race([
+              AI_GENERATE_RAW(rawRequestData),
+              timeoutPromise
+            ]);
           } else {
-            const cfg = {
-              generation_id: generationId,
-              injects: [{ role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }],
-              user_input: userInput,
+            // 普通模式：使用标准generate函数
+
+
+            const requestData = {
+              injects: [
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+              ],
               should_stream: true
             };
+
             if (recentMediaMsg) {
-              if (recentMediaMsg.type === 'image') cfg.image = recentMediaMsg.imageData;
-              if (recentMediaMsg.type === 'video') cfg.video = recentMediaMsg.videoData;
+              if (recentMediaMsg.type === 'image') {
+                requestData.image = recentMediaMsg.imageData;
+              } else if (recentMediaMsg.type === 'video') {
+                requestData.video = recentMediaMsg.videoData;
+              }
             }
-            const __ret = await AI_GENERATE(cfg);
-            if (!finished && typeof __ret === 'string' && __ret) {
-              buffer = cleanGeneratedText(__ret);
-              processNow();
-              cleanup();
-            }
+
+            stream = await Promise.race([
+              AI_GENERATE(requestData),
+              timeoutPromise
+            ]);
           }
-        } catch (err) {
-          clearTimeout(timer);
-          cleanup();
+          
+          // 检查stream是否有效
+          if (!stream) {
+            throw new Error('AI生成返回空结果');
+          }
+          
+          let buffer = '';
+          let handled = 0;
+
+          const processBuffer = () => {
+            let msgs = [];
+            try {
+              const cleaned = cleanGeneratedText(buffer);
+              msgs = parseShoujiFromBuffer(cleaned);
+            } catch (_) {
+              // 当前片段不完整，先忽略
+            }
+
+            while (handled < msgs.length) {
+              const msg = msgs[handled++];
+
+              // 🎤 语音通话中的消息处理：保持文本格式，模拟真实通话
+              if (state.inVoiceCall) {
+                // 给所有消息添加通话上下文标记（无论是user还是char）
+                if (!msg.callContext) {
+                  msg.callContext = true;
+                }
+                
+                // 语音通话中限制消息类型：只允许文本和通话结束消息
+                if (msg.sender === 'char' && !['text', 'voicecall-end'].includes(msg.type || 'text')) {
+                  continue; // 跳过这个消息
+                }
+                
+                // 确保AI不替用户说话：只处理AI自己的消息
+                if (msg.sender === 'user') {
+                  continue; // 跳过用户消息，AI不应该生成用户消息
+                }
+              }
+
+              state.messageHistory.push(msg);
+              appendMessage(msg, state.messageHistory.length - 1);
+
+              if (state.inVoiceCall && msg.callContext) {
+                state.currentCallTranscript.push(msg);
+                appendMessageToCallView(msg);
+              }
+
+              // AI 主动挂断
+              if (msg.type === 'voicecall-end' && msg.sender === 'char' && state.inVoiceCall) {
+                setTimeout(() => endVoiceCall('char-hangedup'), 1000);
+              }
+            }
+          };
+
+          if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
+            for await (const chunk of stream) {
+              buffer += chunk;
+              processBuffer();
+              // 语音通话中减少延迟，优先响应速度
+              if (!state.inVoiceCall) {
+                await new Promise(r => requestAnimationFrame(r));
+              }
+            }
+          } else if (typeof stream === 'string') {
+            // 部分后端直接返回完整字符串
+            buffer = stream;
+            processBuffer();
+          }
+
+          // 若仍未得到任何消息，再尝试一次性模式
+          if (handled === 0) {
+            buffer = await AI_GENERATE({
+              injects: [
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: false
+            });
+            processBuffer();
+          }
+
+          // 如果没有处理任何消息，尝试一次性模式重试一次
+          if (handled === 0) {
+            buffer = await AI_GENERATE({
+              injects: [
+                { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: false
+            });
+            processBuffer();
+          }
+          
+          // 如果重试后仍然没有有效消息，记录问题并结束
+          if (handled === 0) {
+            throw new Error('AI生成内容无法解析或被过滤');
+          }
+
+          hideTypingIndicator();
+          // 统一使用延迟同步，提升响应速度
+          setTimeout(() => syncToSillyTavern(), 100);
+        } catch (e) {
+          hideTypingIndicator();
+          // 出错时不提供fallback，让用户手动重试或等待下次对话
+        } finally {
+          // 确保在任何情况下都重置AI回复标志
+          state.isAiReplying = false;
+          updateAiRequestButtonVisibility();
         }
       }
 
