@@ -1172,98 +1172,6 @@
         height: 18px;
         color: var(--text-secondary);
       }
-      /* 好友列表按钮样式 */
-      .friends-btn {
-        position: absolute;
-        top: 6px;
-        left: 56px; /* 位于请求AI按钮右侧 */
-        width: 32px;
-        height: 32px;
-        background-color: var(--bg-tertiary);
-        border: none;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 2px 6px var(--shadow-medium);
-        transition: all 0.2s;
-      }
-      .friends-btn:hover { background-color: var(--bg-primary); transform: scale(1.1); }
-      .friends-btn svg { width: 18px; height: 18px; color: var(--text-secondary); }
-      /* 一体化好友面板样式 */
-      .friends-panel {
-        position: absolute;
-        inset: 0;
-        background: var(--bg-secondary);
-        display: none;
-        flex-direction: column;
-        z-index: 50;
-      }
-      .friends-header {
-        height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 10px;
-        border-bottom: 1px solid var(--border-primary);
-        background: var(--bg-header);
-      }
-      .friends-title {
-        font-size: 14px;
-        color: var(--text-primary);
-      }
-      .friends-close,
-      .friends-add {
-        width: 28px;
-        height: 28px;
-        border: none;
-        border-radius: 50%;
-        background: var(--bg-tertiary);
-        color: var(--text-secondary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 2px 6px var(--shadow-medium);
-      }
-      .friends-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 8px;
-        background: var(--bg-secondary);
-      }
-      .friend-item {
-        display: flex;
-        align-items: center;
-        padding: 8px;
-        margin-bottom: 8px;
-        border-radius: 10px;
-        background: var(--bg-primary);
-        border: 1px solid var(--border-primary);
-        cursor: pointer;
-        transition: transform .1s ease;
-      }
-      .friend-item:hover { transform: translateY(-1px); }
-      .friend-avatar {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: var(--accent-primary);
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        margin-right: 8px;
-      }
-      .friend-name {
-        color: var(--text-primary);
-        font-size: 13px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
       #requestAiBtn {
         position: absolute;
         top: 6px;
@@ -2818,13 +2726,8 @@
       .voice-call-header {
         position: relative;
         z-index: 1;
-        /* 居中纵向排布，避免头像偏移 */
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
         text-align: center;
-        padding-top: 60px; /* 适配左上角按钮空间，避免顶到 */
+        padding-top: 80px;
         text-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
       }
       #voiceCallRequestAiBtn {
@@ -2844,7 +2747,6 @@
         transition: transform 0.2s, opacity 0.2s;
         backdrop-filter: blur(10px);
         border: 2px solid rgba(255, 255, 255, 0.3);
-        z-index: 2; /* 确保不与头像层叠造成视觉偏移 */
       }
       #voiceCallRequestAiBtn:hover {
         transform: scale(1.1);
@@ -2861,8 +2763,7 @@
         border-radius: 12px;
         border: 3px solid rgba(255, 255, 255, 0.5);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        margin-bottom: 8px;
-        display: block; /* 防止行内元素基线对齐引起轻微偏移 */
+        margin-bottom: 15px;
         object-fit: cover;
       }
       .voice-call-name {
@@ -5964,33 +5865,6 @@
           transform: translate(-50%, -50%) scale(1);
         }
       }
-      /* 私聊标签栏 */
-      .chat-tabs {
-        display: none;
-        gap: 8px;
-        padding: 6px 10px;
-        background: var(--bg-secondary);
-        border-bottom: 1px solid var(--border-primary);
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-      .chat-tab {
-        flex: 0 0 auto;
-        padding: 4px 10px;
-        border-radius: 12px;
-        background: var(--bg-tertiary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-secondary);
-        cursor: pointer;
-        font-size: 12px;
-        user-select: none;
-        white-space: nowrap;
-      }
-      .chat-tab.active {
-        background: var(--accent-primary);
-        color: #fff;
-        border-color: var(--accent-primary);
-      }
     </style>
   </head>
   <body>
@@ -6006,11 +5880,6 @@
           </svg>
         </button>
         <span id="chatPersonName" class="cute-person-name"></span>
-        <button class="friends-btn" id="friendsBtn" title="好友列表">
-          <svg viewBox="0 0 24 24">
-            <path fill="currentColor" d="M12,12A4,4 0 1,0 12,4A4,4 0 0,0 12,12M12,14C9.33,14 4,15.34 4,18V20H20V18C20,15.34 14.67,14 12,14Z"/>
-          </svg>
-        </button>
         <button class="screenshot-btn" id="screenshotBtn" title="截屏聊天记录">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -6026,7 +5895,6 @@
           </svg>
         </button>
       </div>
-      <div class="chat-tabs" id="privateChatTabs" style="display:none;"></div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-area">
         <button class="action-btn" id="voiceModeBtn">
@@ -6055,15 +5923,6 @@
           </svg>
         </button>
         <button class="send-btn" id="sendBtn">发送</button>
-      </div>
-      <!-- 一体化好友面板（仅私聊） -->
-      <div class="friends-panel" id="friendsPanel" aria-hidden="true">
-        <div class="friends-header">
-          <button class="friends-close" id="friendsCloseBtn" title="关闭">×</button>
-          <div class="friends-title">好友列表</div>
-          <button class="friends-add" id="friendsAddBtn" title="添加">+</button>
-        </div>
-        <div class="friends-list" id="friendsList"></div>
       </div>
       <div class="more-actions-grid" id="moreActionsGrid">
         <div class="actions-grid-container">
@@ -7181,8 +7040,6 @@
       const state = {
         quoteContent: '',
         messageHistory: [],
-        privateConversations: [], // 多会话(<private>)集合
-        currentPrivateIndex: 0,   // 当前激活会话索引
         currentMsgId: null,
         userHasSentNewMessage: false,
         callTimerId: null,
@@ -7213,8 +7070,6 @@
         visionApiKey: '',
         visionModel: '',
         availableVisionModels: [],
-        // For serialization of other conversations without UI switching
-        forceCharNameForSerialization: null,
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -7892,101 +7747,6 @@
 
         console.log('Successfully parsed', parsedMessages.length, 'messages');
         return parsedMessages;
-      }
-
-      // ==================== MULTI-PRIVATE (<private>) SUPPORT ====================
-      // 解析 <shouji> 内的多个 <private> 块，每个块代表一个单独的私聊会话
-      function parsePrivateConversationsFromShouji(text) {
-        const shoujiMatch = text && String(text).match(/<shouji>([\s\S]*?)<\/shouji>/);
-        if (!shoujiMatch) return [];
-        const inner = shoujiMatch[1];
-        const blocks = [...inner.matchAll(/<private>([\s\S]*?)<\/private>/g)];
-        if (!blocks.length) return [];
-        const conversations = blocks.map((m, idx) => {
-          const block = (m[1] || '').trim();
-          const title = block.match(/【和(.+?)的聊天】/);
-          const name = title ? title[1] : `会话${idx + 1}`;
-          const messages = parseShoujiLog(`<shouji>${block}</shouji>`);
-          return { name, messages, raw: block };
-        });
-        return conversations;
-      }
-
-      // 构建/更新顶部会话标签
-      function buildPrivateChatTabs(conversations, activeIndex = 0) {
-        const tabs = document.getElementById('privateChatTabs');
-        if (!tabs) return;
-        if (!conversations || conversations.length <= 1) {
-          tabs.style.display = 'none';
-          tabs.innerHTML = '';
-          return;
-        }
-        tabs.innerHTML = '';
-        conversations.forEach((c, i) => {
-          const el = document.createElement('div');
-          el.className = 'chat-tab' + (i === activeIndex ? ' active' : '');
-          el.textContent = c.name || `会话${i + 1}`;
-          el.dataset.index = i;
-          el.onclick = () => switchPrivateChat(i);
-          tabs.appendChild(el);
-        });
-        tabs.style.display = 'flex';
-      }
-
-      // 切换当前会话
-      function switchPrivateChat(index) {
-        if (!Array.isArray(state.privateConversations)) return;
-        if (index < 0 || index >= state.privateConversations.length) return;
-        state.currentPrivateIndex = index;
-        const conv = state.privateConversations[index];
-        const nameSpan = document.getElementById('chatPersonName');
-        if (nameSpan && conv && conv.name) nameSpan.textContent = conv.name;
-        // 切换消息并重渲染
-        state.messageHistory = (conv && Array.isArray(conv.messages)) ? [...conv.messages] : [];
-        // 更新标签激活态
-        const tabs = document.querySelectorAll('#privateChatTabs .chat-tab');
-        tabs.forEach((t, i) => {
-          if (i === index) t.classList.add('active');
-          else t.classList.remove('active');
-        });
-        // 强制重新渲染
-        lastHistoryCount = 0;
-        renderAllMessages();
-        updateAiRequestButtonVisibility();
-      }
-
-      // 公开方法：打开/创建某个角色的私聊
-      function openConversation(name) {
-        if (!name) return;
-        const nameSpan = document.getElementById('chatPersonName');
-        if (nameSpan) nameSpan.textContent = name;
-
-        // 若已有多会话结构
-        if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
-          let idx = state.privateConversations.findIndex(c => c && c.name === name);
-          if (idx >= 0) {
-            switchPrivateChat(idx);
-            return;
-          }
-          // 新增一个空会话
-          state.privateConversations.push({ name, messages: [] });
-          state.currentPrivateIndex = state.privateConversations.length - 1;
-          state.messageHistory = [];
-          buildPrivateChatTabs(state.privateConversations, state.currentPrivateIndex);
-          lastHistoryCount = 0;
-          renderAllMessages();
-          deferredSync(); // 将新会话以 <private> 追加到 <shouji>
-          return;
-        }
-
-        // 尚未使用<private>结构时，创建为多会话并同步
-        state.privateConversations = [{ name, messages: [] }];
-        state.currentPrivateIndex = 0;
-        state.messageHistory = [];
-        buildPrivateChatTabs(state.privateConversations, 0);
-        lastHistoryCount = 0;
-        renderAllMessages();
-        deferredSync();
       }
 
       // ==================== IMAGE INFO PARSING HELPER ====================
@@ -10992,9 +10752,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               // 当前片段不完整，先忽略
             }
 
-            // Route messages to the correct private conversation to avoid mixing
-            let routedOther = false;
-
             while (handled < msgs.length) {
               const msg = msgs[handled++];
 
@@ -11016,23 +10773,8 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 }
               }
 
-              // Route by charName if provided
-              const currentName = (document.getElementById('chatPersonName')?.textContent || '').trim() || getCurrentCharName();
-              if (msg.sender === 'char' && msg.charName && currentName && msg.charName !== currentName) {
-                if (!Array.isArray(state.privateConversations)) state.privateConversations = [];
-                let idx = state.privateConversations.findIndex(c => c && c.name === msg.charName);
-                if (idx < 0) {
-                  state.privateConversations.push({ name: msg.charName, messages: [] });
-                  idx = state.privateConversations.length - 1;
-                }
-                const conv = state.privateConversations[idx];
-                conv.messages = conv.messages || [];
-                conv.messages.push(msg);
-                routedOther = true;
-              } else {
-                state.messageHistory.push(msg);
-                appendMessage(msg, state.messageHistory.length - 1);
-              }
+              state.messageHistory.push(msg);
+              appendMessage(msg, state.messageHistory.length - 1);
 
               if (state.inVoiceCall && msg.callContext) {
                 state.currentCallTranscript.push(msg);
@@ -11043,11 +10785,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
               if (msg.type === 'voicecall-end' && msg.sender === 'char' && state.inVoiceCall) {
                 setTimeout(() => endVoiceCall('char-hangedup'), 1000);
               }
-            }
-
-            if (routedOther) {
-              buildPrivateChatTabs(state.privateConversations, state.currentPrivateIndex || 0);
-              deferredSync();
             }
           };
 
@@ -12534,8 +12271,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       document.getElementById('sendBtn').onclick = () => sendMessage({});
               document.getElementById('requestAiBtn').onclick = requestAiReply;
         document.getElementById('voiceCallRequestAiBtn').onclick = requestAiReply;
-      // 集成好友列表开关
-      document.getElementById('friendsBtn').onclick = () => toggleFriendsPanel(true);
       document.getElementById('imgBtn').onclick = sendImage;
       document.getElementById('recallBtn').onclick = recallLastUserMsg; // This button is in the action grid, keep it for now.
       document.getElementById('quoteBtn').onclick = quoteLastCharMsg;
@@ -12551,127 +12286,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       // 文件发送弹窗事件绑定
       document.getElementById('fileModalCancel').onclick = hideFileSendModal;
       document.getElementById('fileModalConfirm').onclick = handleFileModalConfirm;
-
-      // ==================== 好友列表（集成版，仅私聊） ====================
-      function getCurrentCharacterInfo() {
-        try {
-          if (typeof parent !== 'undefined' && parent.this_chid !== undefined) {
-            const charId = String(parent.this_chid);
-            let charName = '未知角色';
-            if (parent.characters && parent.characters[charId]) {
-              charName = parent.characters[charId].name || parent.characters[charId].data?.name || `角色${charId}`;
-            } else if (parent.name1) {
-              charName = parent.name1;
-            }
-            return { id: charId, name: charName, source: 'sillytavern_chid' };
-          }
-          if (typeof parent !== 'undefined' && typeof parent.getContext === 'function') {
-            const ctx = parent.getContext();
-            if (ctx && ctx.characterId) {
-              return { id: String(ctx.characterId), name: ctx.name || String(ctx.characterId), source: 'sillytavern_context' };
-            }
-          }
-          const url = new URLSearchParams(location.search);
-          const byUrl = url.get('character') || url.get('char') || url.get('id');
-          if (byUrl) return { id: String(byUrl), name: String(byUrl), source: 'url' };
-          const lastId = localStorage.getItem('lastUsedCharacter');
-          if (lastId) return { id: String(lastId), name: `角色${lastId}`, source: 'localStorage' };
-        } catch (e) {}
-        return { id: 'default', name: '默认角色', source: 'default' };
-      }
-
-      function getFriendsStorageKey() {
-        const c = getCurrentCharacterInfo();
-        return `tavern_friends_${c.source}_${c.id}`;
-      }
-
-      function loadFriendsList() {
-        try {
-          const key = getFriendsStorageKey();
-          if (typeof parent !== 'undefined' && parent.extension_settings) {
-            return parent.extension_settings[key] ? JSON.parse(JSON.stringify(parent.extension_settings[key])) : [];
-          }
-          const raw = localStorage.getItem(key);
-          return raw ? JSON.parse(raw) : [];
-        } catch (e) { console.warn('加载好友失败', e); return []; }
-      }
-
-      function saveFriendsList(list) {
-        try {
-          const key = getFriendsStorageKey();
-          if (typeof parent !== 'undefined' && parent.extension_settings) {
-            parent.extension_settings[key] = JSON.parse(JSON.stringify(list));
-            if (typeof parent.saveSettingsDebounced === 'function') parent.saveSettingsDebounced();
-          }
-          localStorage.setItem(key, JSON.stringify(list));
-        } catch (e) { console.warn('保存好友失败', e); }
-      }
-
-      function displayFriendsInPanel(list) {
-        const box = document.getElementById('friendsList');
-        if (!box) return;
-        if (!Array.isArray(list) || list.length === 0) {
-          box.innerHTML = '<div style="color: var(--text-tertiary); text-align:center; padding: 24px;">暂无好友，点击右上角 + 添加</div>';
-          return;
-        }
-        box.innerHTML = list
-          .filter(f => !f.type || f.type === 'friend')
-          .map(f => {
-            const n = (f && f.name) ? String(f.name) : '';
-            const initial = n ? n.trim().charAt(0) : '友';
-            return `<div class="friend-item" data-name="${encodeURIComponent(n)}">
-                      <div class="friend-avatar">${initial}</div>
-                      <div class="friend-name">${n}</div>
-                    </div>`;
-          })
-          .join('');
-        // 绑定点击事件
-        box.querySelectorAll('.friend-item').forEach(el => {
-          el.addEventListener('click', () => {
-            const name = decodeURIComponent(el.getAttribute('data-name') || '');
-            if (name) {
-              openConversation(name);
-              toggleFriendsPanel(false);
-            }
-          });
-        });
-      }
-
-      function toggleFriendsPanel(show) {
-        const panel = document.getElementById('friendsPanel');
-        if (!panel) return;
-        if (show) {
-          displayFriendsInPanel(loadFriendsList());
-          panel.style.display = 'flex';
-          panel.setAttribute('aria-hidden', 'false');
-        } else {
-          panel.style.display = 'none';
-          panel.setAttribute('aria-hidden', 'true');
-        }
-      }
-
-      function addFriendViaPrompt() {
-        let name = prompt('输入要添加的好友名称（仅私聊）');
-        if (!name) return;
-        name = name.trim();
-        if (!name) return;
-        const list = loadFriendsList();
-        if (list.some(f => (f.name || '') === name)) {
-          alert('该好友已存在');
-          return;
-        }
-        list.unshift({ name, type: 'friend', addTime: new Date().toISOString() });
-        saveFriendsList(list);
-        displayFriendsInPanel(list);
-      }
-
-      // 面板按钮绑定
-      (function initFriendsPanel() {
-        const closeBtn = document.getElementById('friendsCloseBtn');
-        const addBtn = document.getElementById('friendsAddBtn');
-        if (closeBtn) closeBtn.onclick = () => toggleFriendsPanel(false);
-        if (addBtn) addBtn.onclick = addFriendViaPrompt;
-      })();
 
       // 文件类型切换
       document.querySelectorAll('input[name="fileType"]').forEach(radio => {
@@ -14278,92 +13892,54 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         });
       }
 
-      // 发送表情包（改为上传为短URL并按“图片”消息入聊，支持识图）
+      // 发送表情包
       async function sendSticker(sticker) {
-        try {
-          const now = new Date();
-          const timeStr = getTimeStr();
+        // 简化：只发送备注，不发送完整的图片数据
+        let content = sticker.note || '表情包';
+        let aiDescription = null;
 
-          // 1) DataURL 转 File
-          const resp = await fetch(sticker.dataURL);
-          const blob = await resp.blob();
-          const file = new File([blob], 'sticker.png', { type: 'image/png' });
+        // 检查是否启用AI识图功能
+        const enableAIVision = localStorage.getItem('sticker-ai-vision-enabled') !== 'false'; // 默认启用
 
-          // 2) 优先使用插件上传并可选识图，获取短URL
-          let shortUrl = '';
-          let aiDescription = '';
-          const enableAIVision = localStorage.getItem('sticker-ai-vision-enabled') !== 'false';
+        if (enableAIVision && typeof top.window.__uploadImageByPlugin === 'function') {
+          try {
+            // 将DataURL转换为File对象
+            const response = await fetch(sticker.dataURL);
+            const blob = await response.blob();
+            const file = new File([blob], 'sticker.png', { type: 'image/png' });
 
-          if (typeof top.window.__uploadImageByPlugin === 'function') {
-            try {
-              const result = await top.window.__uploadImageByPlugin(file, enableAIVision ? {
-                enableAIVision: true,
-                aiPrompt: '请简单描述这个表情包的内容，用一句话概括即可'
-              } : {});
+            // 调用插件进行图像识别
+            const result = await top.window.__uploadImageByPlugin(file, {
+              enableAIVision: true,
+              aiPrompt: '请简单描述这个表情包的内容，用一句话概括即可'
+            });
 
-              if (result && result.success) {
-                if (result.url) shortUrl = result.url;
-                if (result.aiDescription) aiDescription = result.aiDescription;
+            if (result.success && result.aiDescription) {
+              aiDescription = result.aiDescription;
+              // 如果没有用户备注，使用AI描述作为内容
+              if (!sticker.note || sticker.note.trim() === '') {
+                content = `AI识图: ${aiDescription}`;
               }
-            } catch (_) {}
+            }
+          } catch (error) {
+            console.log('[表情包识图] AI识图失败，使用原始备注:', error.message);
           }
-
-          // 3) 插件不可用或未返回URL，回退到本地上传接口
-          if (!shortUrl) {
-            try {
-              const dataUrl = await convertFileToBase64(file);
-              const comma = dataUrl.indexOf(',');
-              const base64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
-              const body = { image: base64, format: 'png', filename: 'stickers_' + Date.now() + '.png' };
-              const res = await fetch('/api/images/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                cache: 'no-cache',
-              });
-              if (res.ok) {
-                const data = await res.json().catch(()=>null);
-                if (data && data.path) shortUrl = data.path;
-              }
-            } catch (_) {}
-          }
-
-          // 4) 组装消息，按“图片”入聊，并保留识图描述
-          const finalDesc = (sticker.note && sticker.note.trim())
-            ? sticker.note.trim()
-            : (aiDescription ? ('AI识图: ' + aiDescription) : '表情包');
-
-          const msg = {
-            sender: 'user',
-            type: 'image',
-            imageData: shortUrl || sticker.dataURL,
-            fileName: 'sticker.png',
-            imageDescription: finalDesc,
-            // 与本地图片一致：非 direct 模式标记需识图
-            needsVisionAnalysis: (state.visionMode !== 'direct') && !aiDescription,
-            time: timeStr,
-          };
-
-          state.messageHistory.push(msg);
-          appendMessage(msg, state.messageHistory.length - 1);
-          syncToSillyTavern();
-          state.userHasSentNewMessage = true;
-          updateAiRequestButtonVisibility();
-        } catch (e) {
-          // 回退为原先的表情包消息（base64）
-          const msg = {
-            sender: 'user',
-            type: 'sticker',
-            content: sticker.note || '表情包',
-            stickerData: sticker.dataURL,
-            time: getTimeStr(),
-          };
-          state.messageHistory.push(msg);
-          appendMessage(msg, state.messageHistory.length - 1);
-          syncToSillyTavern();
-          state.userHasSentNewMessage = true;
-          updateAiRequestButtonVisibility();
         }
+
+        const newMessage = {
+          sender: 'user',
+          type: 'sticker',
+          content: content,
+          stickerData: sticker.dataURL, // 图片数据单独存储，不放在消息内容中
+          aiDescription: aiDescription, // 保存AI描述
+          time: getTimeStr(),
+        };
+
+        state.messageHistory.push(newMessage);
+        appendMessage(newMessage, state.messageHistory.length - 1);
+        syncToSillyTavern();
+        state.userHasSentNewMessage = true;
+        updateAiRequestButtonVisibility(); // 更新AI请求按钮显示状态
       }
 
       // 添加对方表情包到我的表情包
@@ -14807,114 +14383,10 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // SillyTavern API 交互
       async function syncToSillyTavern() {
-        // 同步前更新本地多会话缓存中当前会话的消息
-        if (Array.isArray(state.privateConversations) &&
-            typeof state.currentPrivateIndex === 'number' &&
-            state.privateConversations[state.currentPrivateIndex]) {
-          state.privateConversations[state.currentPrivateIndex].messages = [...state.messageHistory];
-        }
-        // 优先尝试多会话(<private>)安全更新，仅替换当前会话块
-        if (
-          typeof getCurrentMessageId === 'function' &&
-          typeof setChatMessages === 'function' &&
-          typeof getChatMessages === 'function'
-        ) {
-          if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          const currentId = state.currentMsgId;
-          const msgObj = getChatMessages(currentId)[0];
-          const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
-          const shoujiMatch = raw.match(/<shouji>([\s\S]*?)<\/shouji>/);
-          // Rebuild all <private> blocks from memory to avoid mixing between chats
-          if (shoujiMatch) {
-            const innerEarly = shoujiMatch[1];
-            if (/<private>[\s\S]*?<\/private>/.test(innerEarly)) {
-              let rebuiltAll = '';
-              if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
-                for (const conv of state.privateConversations) {
-                  const prevForceName = state.forceCharNameForSerialization;
-                  try {
-                    state.forceCharNameForSerialization = conv.name || getCurrentCharName() || '对方';
-                    const s = serializeShoujiLog(conv.messages || []);
-                    const m = s.match(/<shouji>([\s\S]*?)<\/shouji>/);
-                    const innerPart = m ? (m[1] || '').trim() : '';
-                    rebuiltAll += `<private>\n${innerPart}\n</private>\n`;
-                  } finally {
-                    state.forceCharNameForSerialization = prevForceName;
-                  }
-                }
-              } else {
-                rebuiltAll = innerEarly;
-              }
-              const updatedAll = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${rebuiltAll}\n</shouji>`);
-              await setChatMessages([{ message_id: currentId, message: updatedAll }], { refresh: 'none' });
-              return;
-            }
-          }
-          if (shoujiMatch) {
-            const inner = shoujiMatch[1];
-            if (/<private>[\s\S]*?<\/private>/.test(inner)) {
-              // 存在多个私聊会话，仅更新当前会话
-              const currentName = (document.getElementById('chatPersonName')?.textContent || '').trim() || getCurrentCharName() || '对方';
-              // 使用现有序列化逻辑生成当前会话的内部文本（包含标题行，但不含<shouji>包裹）
-              const serialized = (function () {
-                const s = serializeShoujiLog(state.messageHistory);
-                const m = s.match(/<shouji>([\s\S]*?)<\/shouji>/);
-                return m ? m[1].trim() : '';
-              })();
-
-              // 拆分为块并定位目标块（优先按标题名匹配，失败则按索引匹配）
-              const blockMatches = [...inner.matchAll(/<private>[\s\S]*?<\/private>/g)];
-              let idxToReplace = blockMatches.findIndex(b => b[0].includes(`【和${currentName}的聊天】`));
-              if (idxToReplace < 0 && typeof state.currentPrivateIndex === 'number') {
-                idxToReplace = state.currentPrivateIndex;
-              }
-
-              if (idxToReplace >= 0 && idxToReplace < blockMatches.length) {
-                let cursor = 0;
-                let rebuilt = '';
-                for (let i = 0; i < blockMatches.length; i++) {
-                  const match = blockMatches[i];
-                  const start = match.index;
-                  const end = start + match[0].length;
-                  // append text before block
-                  rebuilt += inner.slice(cursor, start);
-                  if (i === idxToReplace) {
-                    rebuilt += `<private>\n${serialized}\n</private>`;
-                  } else {
-                    rebuilt += match[0];
-                  }
-                  cursor = end;
-                }
-                // append remaining tail
-                rebuilt += inner.slice(cursor);
-                const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${rebuilt}\n</shouji>`);
-                await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
-                return;
-              } else {
-                // 未能定位则追加一个新会话
-                const finalInner = `${inner.trim()}\n<private>\n${serialized}\n</private>\n`;
-                const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${finalInner}\n</shouji>`);
-                await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
-                return;
-              }
-            }
-          }
-        }
-
-        // 兼容旧格式：整块更新
         if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          const log = serializeShoujiLog(state.messageHistory);
-          let messageToSave = log;
-          try {
-            // 若当前处于多会话语义（或已选择会话），将内容包裹到<private>
-            if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
-              const m = log.match(/<shouji>([\s\S]*?)<\/shouji>/);
-              const inner = m ? (m[1] || '').trim() : '';
-              messageToSave = `<shouji>\n<private>\n${inner}\n</private>\n</shouji>`;
-            }
-          } catch(e) {}
-          await setChatMessages([{ message_id: state.currentMsgId, message: messageToSave }], { refresh: 'none' });
+          const log = serializeShoujiLog(state.messageHistory); // 保留完整的消息历史，包括头像信息
+          await setChatMessages([{ message_id: state.currentMsgId, message: log }], { refresh: 'none' });
         }
       }
 
@@ -14922,13 +14394,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
       function deferredSync(delay = 300) {
         if (syncTimeout) {
           clearTimeout(syncTimeout);
-        }
-
-        // Make sure current conversation cache stays in sync immediately
-        if (Array.isArray(state.privateConversations) &&
-            typeof state.currentPrivateIndex === 'number' &&
-            state.privateConversations[state.currentPrivateIndex]) {
-          state.privateConversations[state.currentPrivateIndex].messages = [...state.messageHistory];
         }
 
         syncTimeout = setTimeout(async () => {
@@ -14950,49 +14415,30 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           state.currentMsgId = getCurrentMessageId();
           const msg = getChatMessages(state.currentMsgId)[0];
           if (msg && msg.message) {
-            // 优先解析多会话(<private>)
-            const conversations = parsePrivateConversationsFromShouji(msg.message);
+            // 新增：自动解析人名
+            const personName = parsePersonNameFromShouji(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
-            if (conversations.length > 0) {
-              state.privateConversations = conversations;
-              // 选择默认激活会话：若标题名与现有显示名或可解析名匹配，则选之
-              let activeIndex = 0;
-              const _titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
-              const wantedName = (nameSpan?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(msg.message)) || '';
-              if (wantedName) {
-                const idx = conversations.findIndex(c => c.name === wantedName);
-                if (idx >= 0) activeIndex = idx;
+            if (nameSpan) {
+              if (personName) {
+                nameSpan.textContent = personName;
+                console.log('Set person name to:', personName);
+              } else {
+                // 如果没有解析到人名，保持当前显示的名字（如果有的话）
+                console.log('No person name found, keeping current name:', nameSpan.textContent);
               }
-              state.currentPrivateIndex = activeIndex;
-              state.messageHistory = conversations[activeIndex].messages || [];
-              if (nameSpan) nameSpan.textContent = conversations[activeIndex].name || wantedName || '';
-              buildPrivateChatTabs(conversations, activeIndex);
-              console.log('Loaded multi-private conversations:', conversations.length, 'active:', activeIndex);
-            } else {
-              // 单会话格式保持兼容
-              const titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
-              const personName = titleMatch ? titleMatch[1] : parsePersonNameFromShouji(msg.message);
-              if (nameSpan) {
-                if (personName) {
-                  nameSpan.textContent = personName;
-                  console.log('Set person name to:', personName);
-                } else {
-                  console.log('No person name found, keeping current name:', nameSpan.textContent);
-                }
-              }
-              state.messageHistory = parseShoujiLog(msg.message);
-              const tabs = document.getElementById('privateChatTabs');
-              if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
-              console.log('Loaded single conversation, messages:', state.messageHistory.length);
             }
+
+            state.messageHistory = parseShoujiLog(msg.message);
+
+            // 调试信息
+            console.log('Loaded message history:', state.messageHistory.length, 'messages');
+            console.log('Current displayed name:', nameSpan ? nameSpan.textContent : 'none');
           } else {
             state.messageHistory = [];
             const nameSpan = document.getElementById('chatPersonName');
             if (nameSpan && !nameSpan.textContent.trim()) {
-              nameSpan.textContent = '';
+              nameSpan.textContent = ''; // 只在没有名字时清空
             }
-            const tabs = document.getElementById('privateChatTabs');
-            if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
             console.log('No message history found');
           }
 
@@ -15004,14 +14450,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
             renderAllMessages();
             updateAiRequestButtonVisibility();
             console.log('Messages rendered, total in DOM:', document.querySelectorAll('#chatMessages .message').length);
-            // 若URL包含 ?char=xxx，则打开/创建该私聊
-            try {
-              const params = new URLSearchParams(window.location.search || '');
-              const requested = params.get('char');
-              if (requested) {
-                openConversation(decodeURIComponent(requested));
-              }
-            } catch (e) {}
           }, 100);
         }
       }
@@ -15285,7 +14723,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
         window.setCharName = setCharacterName;
         window.getCurrentCharName = getCurrentCharName;
         window.forceRerender = renderAllMessages;
-        window.openConversation = openConversation;
 
         console.log('Debug functions available:');
         console.log('- setCharName("角色名") - 手动设置角色名');
@@ -15711,9 +15148,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
 
       // 获取当前角色名称
       function getCurrentCharName() {
-        if (state && state.forceCharNameForSerialization) {
-          return state.forceCharNameForSerialization;
-        }
         // 首先检查页面上显示的人名
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && nameSpan.textContent.trim()) {
@@ -18779,34 +18213,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
                 } else if (shortUrl) {
                   try { img.src = shortUrl; } catch(e){}
                   try { if (navigator.clipboard) navigator.clipboard.writeText(shortUrl); } catch(e){}
-                  try {
-                    const fileName = (shortUrl.split('/').pop() || '').trim() || ('sticker_' + Date.now() + '.png');
-                    const now = new Date();
-                    const hh = String(now.getHours()).padStart(2, '0');
-                    const mm = String(now.getMinutes()).padStart(2, '0');
-                    const timestamp = `${hh}:${mm}`;
-
-                    if (window.state && Array.isArray(window.state.messageHistory) && typeof serializeShoujiLog === 'function' && typeof setChatMessages === 'function' && typeof getCurrentMessageId === 'function') {
-                      const newMsg = { sender: 'user', type: 'image', imageData: shortUrl, fileName: fileName, imageDescription: '表情包', time: timestamp };
-                      window.state.messageHistory.push(newMsg);
-                      if (typeof window.appendMessage === 'function') {
-                        window.appendMessage(newMsg, window.state.messageHistory.length - 1);
-                      }
-                      const currentId = window.state.currentMsgId || getCurrentMessageId();
-                      const log = serializeShoujiLog(window.state.messageHistory);
-                      try { await setChatMessages([{ message_id: currentId, message: log }], { refresh: 'none' }); } catch(e){}
-                    } else if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function' && typeof setChatMessages === 'function') {
-                      const currentId = getCurrentMessageId();
-                      const msg = getChatMessages(currentId)[0];
-                      const raw = msg && msg.message ? String(msg.message) : '<shouji>\n</shouji>';
-                      const line = `[我方消息|图片|表情包|IMGDATA:${shortUrl}|FILENAME:${fileName}|${timestamp}]`;
-                      const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, (m)=>{
-                        const inner = m.slice(8, -9).trim();
-                        return `<shouji>\n${inner ? inner + '\n' : ''}${line}\n</shouji>`;
-                      });
-                      try { await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' }); } catch(e){}
-                    }
-                  } catch(e){}
                 }
               }
             } catch (e) {
@@ -18981,54 +18387,6 @@ GeGe: (Closes the record book, gaze calm and profound) "Mandate received and ful
           }
         });
         mo.observe(chatRoot, {childList:true, subtree:true});
-      })();
-  </script>
-    <script>
-      // 兼容桥接：提供统一的 VisionPlugin.analyzeUrl，转调媒体扩展插件进行 AI 识图
-      (function(){
-        try {
-          window.VisionPlugin = window.VisionPlugin || {};
-          if (typeof window.VisionPlugin.analyzeUrl !== 'function') {
-            window.VisionPlugin.analyzeUrl = async function(imageUrl){
-              try {
-                // 将 URL 转为 File 以复用 __uploadImageByPlugin
-                async function urlToFile(url){
-                  try {
-                    const resp = await fetch(url, { mode: 'cors' });
-                    if (!resp.ok) throw new Error('fetch failed');
-                    const blob = await resp.blob();
-                    const t = (blob.type || '').toLowerCase();
-                    let ext = 'png';
-                    if (t.includes('jpeg') || t.includes('jpg')) ext = 'jpg';
-                    else if (t.includes('png')) ext = 'png';
-                    else if (t.includes('webp')) ext = 'webp';
-                    else if (t.includes('gif')) ext = 'gif';
-                    else if (t.includes('bmp')) ext = 'bmp';
-                    return new File([blob], 'emoji.' + ext, { type: blob.type || ('image/' + ext) });
-                  } catch (e) {
-                    return null;
-                  }
-                }
-
-                const file = await urlToFile(imageUrl);
-                if (file && typeof window.__uploadImageByPlugin === 'function') {
-                  const result = await window.__uploadImageByPlugin(file, {
-                    enableAIVision: true,
-                    aiPrompt: '请你用一两句话描述这张图片的关键信息（中文）。',
-                  });
-                  return (
-                    result && (result.aiDescription || result.description || result.text || result.summary)
-                  ) || '';
-                }
-              } catch (e) {
-                // ignore
-              }
-              return '';
-            };
-          }
-        } catch (e) {
-          // ignore
-        }
       })();
     </script>
   </body>
