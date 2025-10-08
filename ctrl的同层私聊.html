@@ -1146,6 +1146,11 @@
         color: var(--text-secondary);
       }
 
+      /* Hide floating AI debug toggle for cleaner UI */
+      #ai-debug-toggle {
+        display: none !important;
+      }
+
       /* 截屏按钮样式 */
       .screenshot-btn {
         position: absolute;
@@ -6575,6 +6580,17 @@
           <button class="settings-close-btn" id="settingsCloseBtn">×</button>
         </div>
         <div class="settings-content">
+          <!-- 开发与调试 -->
+          <div class="setting-section">
+            <label class="setting-label">开发与调试</label>
+            <div class="setting-preview">
+              <div class="preview-info" style="flex: 1;">
+                <div class="preview-title">AI 调试面板</div>
+                <div class="preview-desc">从这里打开或关闭调试面板（隐藏悬浮按钮）</div>
+              </div>
+              <button class="upload-btn" id="openAIDebugBtn" style="white-space: nowrap;">打开调试</button>
+            </div>
+          </div>
           <!-- 头像设置 -->
           <div class="setting-section">
             <label class="setting-label">我的头像</label>
@@ -17848,6 +17864,24 @@ function toggleFriendsPanel(show) {
       document.getElementById('screenshotBtn').addEventListener('click', (event) => takeScreenshot(event));
       document.getElementById('settingsBtn').addEventListener('click', showSettings);
       document.getElementById('settingsCloseBtn').addEventListener('click', hideSettings);
+
+      // 打开 AI 调试面板（移入设置内）
+      const __openAIDebugBtn = document.getElementById('openAIDebugBtn');
+      if (__openAIDebugBtn) {
+        __openAIDebugBtn.addEventListener('click', () => {
+          const toggle = document.getElementById('ai-debug-toggle');
+          if (toggle && typeof toggle.click === 'function') {
+            toggle.click();
+          } else {
+            const wrap = document.getElementById('ai-debug-panel');
+            if (wrap) {
+              wrap.style.display = 'block';
+              try { localStorage.setItem('ai_debug_visible', '1'); } catch(_){}
+            }
+          }
+          try { hideSettings(); } catch(_){}
+        });
+      }
 
       // 绑定收藏相关事件
       document.getElementById('viewFavoritesBtn').addEventListener('click', showFavorites);
