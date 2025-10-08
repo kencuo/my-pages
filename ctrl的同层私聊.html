@@ -1234,8 +1234,6 @@
         cursor: pointer;
         box-shadow: 0 2px 6px var(--shadow-medium);
       }
-      /* 取消好友列表右上角的小x按钮 */
-      #friendsCloseBtn { display: none !important; }
       .friends-list {
         flex: 1;
         overflow-y: auto;
@@ -6113,126 +6111,11 @@
         border-color: var(--accent-primary);
       }
     </style>
-    <style>
-      /* --- 主屏样式：壁纸与底部图标 --- */
-      .home-overlay {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        background: url('https://files.catbox.moe/juvczm.jpeg') center/cover no-repeat;
-        z-index: 999;
-        padding-top: 22px;
-      }
-      .home-overlay .app-grid {
-        margin: 100px 0 0 0;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-        width: 90%;
-        max-width: 260px;
-      }
-      /* hide header home button and add bottom floating home button */
-      .chat-header .home-btn { display: none; }
-      .home-dock-btn {
-        position: absolute;
-        left: 12px;
-        bottom: 70px; /* above input area */
-        width: 36px;
-        height: 36px;
-        background-color: #f0f0f0;
-        border: none;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-        transition: all 0.2s;
-        z-index: 1100;
-      }
-      .home-dock-btn:hover { background-color: #e0e0e0; transform: scale(1.06); }
-      .home-dock-btn svg { width: 18px; height: 18px; color: #666; }
-      .home-overlay .app-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer;
-        user-select: none;
-      }
-      .home-overlay .app-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.85);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        font-size: 22px;
-        transition: transform 0.15s ease;
-      }
-      .home-overlay .app-item:active .app-icon { transform: scale(0.96); }
-      .home-overlay .app-label {
-        font-size: 12px;
-        color: #ffffff;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.25);
-      }
-      .home-btn {
-        position: absolute;
-        top: 6px;
-        right: 100px;
-        width: 32px;
-        height: 32px;
-        background-color: #f0f0f0;
-        border: none;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        transition: all 0.2s;
-        z-index: 1000;
-      }
-      .home-btn:hover { background-color: #e0e0e0; transform: scale(1.1); }
-      .home-btn svg { width: 18px; height: 18px; color: #666; }
-    </style>
   </head>
   <body>
     <div class="phone-shell"><div class="cute-phone" data-author="ctrl">
-      <!-- 主屏渲染层：默认显示，点击聊天进入好友列表 -->
-      <div class="home-overlay" id="homeOverlay">
-        <div class="app-grid">
-          <div class="app-item" id="appChat">
-            <div class="app-icon">💬</div>
-            <div class="app-label">聊天</div>
-          </div>
-          <div class="app-item" id="appMoments">
-            <div class="app-icon">🧭</div>
-            <div class="app-label">朋友圈</div>
-          </div>
-          <div class="app-item" id="appStore">
-            <div class="app-icon">🛒</div>
-            <div class="app-label">商店</div>
-          </div>
-          <div class="app-item" id="appMusic">
-            <div class="app-icon">🎵</div>
-            <div class="app-label">音乐</div>
-          </div>
-        </div>
-      </div>
       <!-- 聊天界面 -->
       <div class="chat-header">
-        <button class="home-btn" id="homeBtn" title="返回主页" aria-label="返回主页">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 11l9-8 9 8"></path>
-            <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path>
-          </svg>
-        </button>
         <button id="requestAiBtn">
           <svg viewBox="0 0 24 24">
             <path
@@ -6263,13 +6146,7 @@
         </button>
       </div>
       <div class="chat-tabs" id="privateChatTabs" style="display:none;"></div>
-              <!-- 底部返回主页悬浮按钮 -->
-        <button class="home-dock-btn" id="homeDockBtn" title="返回主页" aria-label="返回主页">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 11l9-8 9 8"></path>
-            <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path>
-          </svg>
-        </button><div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-area">
         <button class="action-btn" id="voiceModeBtn">
           <svg viewBox="0 0 24 24">
@@ -13154,11 +13031,7 @@ function toggleFriendsPanel(show) {
       (function initFriendsPanel() {
         const closeBtn = document.getElementById('friendsCloseBtn');
         const addBtn = document.getElementById('friendsAddBtn');
-        // 禁用关闭按钮（小x），仅允许通过选择列表项进入聊天
-        if (closeBtn) {
-          try { closeBtn.style.display = 'none'; } catch(_) {}
-          closeBtn.onclick = null;
-        }
+        if (closeBtn) closeBtn.onclick = () => toggleFriendsPanel(false);
         if (addBtn) addBtn.onclick = addFriendViaPrompt;
       })();
 
@@ -19574,34 +19447,5 @@ function toggleFriendsPanel(show) {
         }
       })();
     </script>
-    <script>
-      // 主屏与应用点击逻辑：进入聊天先展示好友列表
-      document.addEventListener('DOMContentLoaded', function () {
-        const homeOverlay = document.getElementById('homeOverlay');
-        const appChat = document.getElementById('appChat');
-        const appMoments = document.getElementById('appMoments');
-        const appStore = document.getElementById('appStore');
-        const appMusic = document.getElementById('appMusic');
-        const homeBtn = document.getElementById('homeBtn');
-
-        const showHome = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
-        const openChat = () => {
-          if (homeOverlay) homeOverlay.style.display = 'none';
-          try { if (typeof toggleFriendsPanel === 'function') toggleFriendsPanel(true); } catch (_) {}
-        };
-
-        if (appChat) appChat.addEventListener('click', openChat);
-        if (homeBtn) homeBtn.addEventListener('click', showHome);
-        const homeDockBtn = document.getElementById('homeDockBtn');
-        if (homeDockBtn) homeDockBtn.addEventListener('click', showHome);
-
-        const placeholder = (name) => () => { try { alert(name + ' 功能暂未实现'); } catch (_) {} };
-        if (appMoments) appMoments.addEventListener('click', placeholder('朋友圈'));
-        if (appStore) appStore.addEventListener('click', placeholder('商店'));
-        if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
-      });
-    </script>
   </body>
 </html>
-
-
