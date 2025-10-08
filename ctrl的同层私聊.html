@@ -19412,6 +19412,62 @@ function toggleFriendsPanel(show) {
           // ignore
         }
       })();
+  </script>
+    <script>
+      // Smart Media Assistant minimal uploader: TXT -> auto summary
+      (function () {
+        try {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.txt,.md,.json,.csv,.log,.ini,.yaml,.yml';
+          input.id = 'smaTxtFile';
+          input.style.display = 'none';
+
+          const btn = document.createElement('button');
+          btn.id = 'smaUploadBtn';
+          btn.textContent = '上传TXT';
+          btn.style.position = 'fixed';
+          btn.style.bottom = '16px';
+          btn.style.right = '16px';
+          btn.style.zIndex = '99999';
+          btn.style.padding = '8px 12px';
+          btn.style.borderRadius = '8px';
+          btn.style.border = '1px solid rgba(0,0,0,0.15)';
+          btn.style.background = 'linear-gradient(135deg, #f3e8ff 0%, #e0e7ff 100%)';
+          btn.style.color = '#374151';
+          btn.style.cursor = 'pointer';
+          btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+
+          btn.addEventListener('click', () => input.click());
+
+          input.addEventListener('change', async () => {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            try {
+              const text = await file.text();
+              const sma = (window.smartMediaAssistant) || (window.parent && window.parent.smartMediaAssistant) || (window.top && window.top.smartMediaAssistant);
+              if (sma && typeof sma.processText === 'function') {
+                await sma.processText(text, { name: file.name, size: file.size });
+              } else if (typeof triggerSlash === 'function') {
+                const safe = String(text).replaceAll('|', '¦');
+                const header = `请阅读并总结以下文件 ${file.name} 的关键信息：`;
+                triggerSlash(`/send ${header}\n\n${safe}|/trigger`);
+              } else {
+                alert('未找到 smartMediaAssistant 或 triggerSlash 桥接，无法发送到酒馆');
+              }
+            } catch (e) {
+              console.error('[SMA Upload] 读取或发送失败', e);
+            } finally {
+              input.value = '';
+            }
+          });
+
+          document.body.appendChild(input);
+          document.body.appendChild(btn);
+        } catch (e) {
+          // ignore
+        }
+      })();
     </script>
   </body>
 </html>
