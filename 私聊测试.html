@@ -6221,9 +6221,10 @@
             <div class="app-icon">🛒</div>
             <div class="app-label">商店</div>
           </div>
-          <div class="app-item" id="appMusic">
-            <div class="app-icon">🎵</div>
-            <div class="app-label">音乐</div>
+          
+          <div class="app-item" id="appCloudMusic">
+            <div class="app-icon">🎧</div>
+            <div class="app-label">云音乐</div>
           </div>
           <div class="app-item" id="appSettings">
             <div class="app-icon">⚙️</div>
@@ -6312,6 +6313,31 @@
           <button class="friends-add" id="friendsAddBtn" title="添加">+</button>
         </div>
         <div class="friends-list" id="friendsList"></div>
+      </div>
+      <!-- 云音乐全屏覆盖层（第二套播放器，避免与内置musicPanel冲突） -->
+      <style>
+        .cloud-music-overlay {
+          position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg-secondary); z-index: 1200;
+        }
+        .cloud-music-header {
+          height: 36px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; background: var(--bg-header); border-bottom: 1px solid var(--border-primary);
+        }
+        .cloud-music-title { font-size: 12px; color: var(--text-primary); }
+        .cloud-music-close { width: 26px; height: 26px; border: none; border-radius: 50%; background: var(--bg-tertiary); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .cloud-music-body { flex: 1; }
+        .cloud-music-frame { width: 100%; height: 100%; border: 0; background: #000; }
+      </style>
+      <!-- Obfuscated Cloud Music seeds (do not expose real endpoints) -->
+      <template id="cm-seeds" data-cm-a="enl4Lm9pZHV0c2RnLmNpc3VtLy86c3B0dGg=" data-cm-b="cGhwLmlwYS96eXgub2lkdXRzZGcuaXBhLWNpc3VtLy86c3B0dGg="></template>
+
+      <div class="cloud-music-overlay" id="cloudMusicOverlay" aria-hidden="true">
+        <div class="cloud-music-header">
+          <div class="cloud-music-title">云音乐</div>
+          <button class="cloud-music-close" id="cloudMusicClose" title="关闭">×</button>
+        </div>
+        <div class="cloud-music-body">
+          <iframe class="cloud-music-frame" id="cloudMusicFrame" src="about:blank" loading="lazy"></iframe>
+        </div>
       </div>
       <div class="more-actions-grid" id="moreActionsGrid">
         <div class="actions-grid-container">
@@ -13367,7 +13393,11 @@ function toggleFriendsPanel(show) {
       const MUSIC_SETTINGS_KEY = 'phone_music_settings';
 
       // 音乐搜索API
-      const MUSIC_API_BASE = 'https://music-api.gdstudio.xyz/api.php';
+      // Obfuscated endpoints: decode from hidden template to avoid exposing raw URLs
+      const __cmSeedEl = document.getElementById('cm-seeds');
+      function __cm(s){ try { return atob(s).split('').reverse().join(''); } catch(e){ return ''; } }
+      const CLOUD_MUSIC_ORIGIN = (__cmSeedEl ? __cm(__cmSeedEl.dataset.cmA) : '');
+      const MUSIC_API_BASE = (__cmSeedEl ? __cm(__cmSeedEl.dataset.cmB) : '');
 
       // 打开音乐面板
       async function openMusicPanel() {
@@ -19295,12 +19325,49 @@ function toggleFriendsPanel(show) {
           }
         }, 100);
       });
-    </script>
+  </script>
 
-    <!-- 🎉 消息特效容器 -->
-    <div id="messageEffectsContainer" class="message-effects-container"></div>
-    <script>
-      (function(){
+  <!-- 🎉 消息特效容器 -->
+  <div id="messageEffectsContainer" class="message-effects-container"></div>
+  <script>
+    // 云音乐应用绑定（独立，避免与其它绑定冲突）
+    (function setupCloudMusic(){
+      const open = () => {
+        try {
+          const o = document.getElementById('cloudMusicOverlay');
+          if (o) { o.style.display = 'flex'; o.setAttribute('aria-hidden','false'); }
+          // Lazy-assign iframe src using obfuscated origin to avoid exposing raw URL
+          try {
+            const f = document.getElementById('cloudMusicFrame');
+            if (f && (!f.src || f.src === 'about:blank') && typeof CLOUD_MUSIC_ORIGIN === 'string' && CLOUD_MUSIC_ORIGIN) {
+              f.src = CLOUD_MUSIC_ORIGIN;
+            }
+          } catch(_) {}
+          const homeOverlay = document.getElementById('homeOverlay');
+          if (homeOverlay) homeOverlay.style.display = 'none';
+        } catch(_){}
+      };
+      const close = () => {
+        try {
+          const o = document.getElementById('cloudMusicOverlay');
+          if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden','true'); }
+        } catch(_){}
+      };
+      const bind = () => {
+        try {
+          const app = document.getElementById('appCloudMusic');
+          if (app) app.onclick = open;
+          const btnClose = document.getElementById('cloudMusicClose');
+          if (btnClose) btnClose.onclick = close;
+          const homeBtn = document.getElementById('homeBtn');
+          const homeDockBtn = document.getElementById('homeDockBtn');
+          if (homeBtn) homeBtn.addEventListener('click', close);
+          if (homeDockBtn) homeDockBtn.addEventListener('click', close);
+        } catch(_){}
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true }); else bind();
+    })();
+  (function(){
         const chatRoot = document.querySelector('.chat-messages');
         if (!chatRoot) return;
 
@@ -19585,9 +19652,11 @@ function toggleFriendsPanel(show) {
       document.addEventListener('DOMContentLoaded', function () {
         const homeOverlay = document.getElementById('homeOverlay');
         const appChat = document.getElementById('appChat');
+        const appMessages = document.getElementById('appMessages');
         const appMoments = document.getElementById('appMoments');
         const appStore = document.getElementById('appStore');
         const appMusic = document.getElementById('appMusic');
+        const appCloudMusic = document.getElementById('appCloudMusic');
         const appSettings = document.getElementById('appSettings');
         const homeBtn = document.getElementById('homeBtn');
 
@@ -19598,6 +19667,7 @@ function toggleFriendsPanel(show) {
         };
 
         if (appChat) appChat.addEventListener('click', openChat);
+        if (appMessages) appMessages.addEventListener('click', openChat);
         if (homeBtn) homeBtn.addEventListener('click', showHome);
         const homeDockBtn = document.getElementById('homeDockBtn');
         if (homeDockBtn) homeDockBtn.addEventListener('click', showHome);
@@ -19606,6 +19676,16 @@ function toggleFriendsPanel(show) {
         if (appMoments) appMoments.addEventListener('click', placeholder('朋友圈'));
         if (appStore) appStore.addEventListener('click', placeholder('商店'));
         if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
+        if (appCloudMusic) appCloudMusic.addEventListener('click', () => {
+          if (homeOverlay) homeOverlay.style.display = 'none';
+          const o = document.getElementById('cloudMusicOverlay');
+          if (o) { o.style.display = 'flex'; o.setAttribute('aria-hidden','false'); }
+        });
+        const cloudMusicClose = document.getElementById('cloudMusicClose');
+        if (cloudMusicClose) cloudMusicClose.addEventListener('click', () => {
+          const o = document.getElementById('cloudMusicOverlay');
+          if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden','true'); }
+        });
         if (appSettings) appSettings.addEventListener('click', () => {
           if (homeOverlay) homeOverlay.style.display = 'none';
           try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
@@ -19619,6 +19699,7 @@ function toggleFriendsPanel(show) {
           const showToastSafe = (msg) => { try { (typeof showToast === 'function' ? showToast : alert)(msg); } catch (_) {} };
           const homeOverlay = document.getElementById('homeOverlay');
           const appChat = document.getElementById('appChat');
+          const appMessages = document.getElementById('appMessages');
           const appMoments = document.getElementById('appMoments');
           const appStore = document.getElementById('appStore');
           const appMusic = document.getElementById('appMusic');
@@ -19632,6 +19713,7 @@ function toggleFriendsPanel(show) {
           };
 
           if (appChat) appChat.onclick = openChat;
+          if (appMessages) appMessages.onclick = openChat;
           if (homeBtn) homeBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
           if (homeDockBtn) homeDockBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
           if (appMoments) appMoments.onclick = () => showToastSafe('朋友圈 功能暂未开放');
