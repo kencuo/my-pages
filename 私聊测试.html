@@ -6200,6 +6200,8 @@
       }
       .home-btn:hover { background-color: #e0e0e0; transform: scale(1.1); }
       .home-btn svg { width: 18px; height: 18px; color: #666; }
+      /* 将聊天页头部的设置按钮隐藏，改为主屏“设置”应用进入 */
+      .settings-btn { display: none !important; }
     </style>
   </head>
   <body>
@@ -6222,6 +6224,10 @@
           <div class="app-item" id="appMusic">
             <div class="app-icon">🎵</div>
             <div class="app-label">音乐</div>
+          </div>
+          <div class="app-item" id="appSettings">
+            <div class="app-icon">⚙️</div>
+            <div class="app-label">设置</div>
           </div>
         </div>
       </div>
@@ -19582,6 +19588,7 @@ function toggleFriendsPanel(show) {
         const appMoments = document.getElementById('appMoments');
         const appStore = document.getElementById('appStore');
         const appMusic = document.getElementById('appMusic');
+        const appSettings = document.getElementById('appSettings');
         const homeBtn = document.getElementById('homeBtn');
 
         const showHome = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
@@ -19599,6 +19606,10 @@ function toggleFriendsPanel(show) {
         if (appMoments) appMoments.addEventListener('click', placeholder('朋友圈'));
         if (appStore) appStore.addEventListener('click', placeholder('商店'));
         if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
+        if (appSettings) appSettings.addEventListener('click', () => {
+          if (homeOverlay) homeOverlay.style.display = 'none';
+          try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
+        });
       });
     </script>
     <script>
@@ -19611,6 +19622,7 @@ function toggleFriendsPanel(show) {
           const appMoments = document.getElementById('appMoments');
           const appStore = document.getElementById('appStore');
           const appMusic = document.getElementById('appMusic');
+          const appSettings = document.getElementById('appSettings');
           const homeBtn = document.getElementById('homeBtn');
           const homeDockBtn = document.getElementById('homeDockBtn');
 
@@ -19628,6 +19640,10 @@ function toggleFriendsPanel(show) {
             try { if (typeof openMusicPanel === 'function') return openMusicPanel(); } catch(_) {}
             showToastSafe('音乐 功能暂未开放');
           };
+          if (appSettings) appSettings.onclick = () => {
+            if (homeOverlay) homeOverlay.style.display = 'none';
+            try { if (typeof showSettings === 'function') showSettings(); } catch(_) {}
+          };
         };
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', bind, { once: true });
@@ -19638,5 +19654,21 @@ function toggleFriendsPanel(show) {
     </script>
   </body>
 </html>
+
+<script>
+  // 统一绑定主屏“设置”应用的点击行为（冗余保护）
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      const homeOverlay = document.getElementById('homeOverlay');
+      const appSettings = document.getElementById('appSettings');
+      if (appSettings) {
+        appSettings.addEventListener('click', function () {
+          if (homeOverlay) homeOverlay.style.display = 'none';
+          try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
+        });
+      }
+    } catch (_) {}
+  });
+</script>
 
 
