@@ -17644,6 +17644,7 @@
           const appMusic = document.getElementById('appMusic');
           const homeBtn = document.getElementById('homeBtn');
           const homeDockBtn = document.getElementById('homeDockBtn');
+          const appSettings = document.getElementById('appSettings');
 
           const openChat = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
@@ -17658,6 +17659,12 @@
           if (appMusic) appMusic.onclick = () => {
             try { if (typeof openMusicPanel === 'function') return openMusicPanel(); } catch(_) {}
             showToastSafe('网易云 功能暂未开放');
+          };
+          // 打开设置面板
+          if (appSettings) appSettings.onclick = () => {
+            try { if (homeOverlay) homeOverlay.style.display = 'none'; } catch(_) {}
+            try { if (typeof showSettings === 'function') return showSettings(); } catch(_) {}
+            showToastSafe('设置 功能暂未开放');
           };
         };
         if (document.readyState === 'loading') {
