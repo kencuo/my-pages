@@ -40,6 +40,8 @@
         --shadow-light: rgba(251, 237, 181, 0.08);
         --shadow-medium: rgba(251, 237, 181, 0.1);
         --shadow-heavy: rgba(251, 237, 181, 0.2);
+        --phone-shell-width: 280px;
+        --cute-phone-width: 275px;
       }
 
       /* 深色主题 */
@@ -1011,8 +1013,13 @@
         100% { opacity: 1; transform: scale(1); }
       }
 
+      html {
+        background: transparent;
+      }
+
       body {
-        background: var(--bg-primary);
+        background: transparent;
+        background-image: none;
         min-height: 100vh;
         font-family: 'Mi Sans', 'PingFang SC', Arial, sans-serif;
         display: flex;
@@ -1032,14 +1039,14 @@
         display: inline-block;
         transition: all 0.3s ease;
         /* 固定尺寸容器 */
-        width: 280px; /* 275 + 8*2 */
+        width: var(--phone-shell-width); /* 275 + 8*2 */
         height: 645px; /* 640 + 8*2 */
         box-sizing: border-box;
         transform-origin: top center;
         transform: scale(1);
       }
       .cute-phone {
-        width: 275px; /* 固定宽度 - px */
+        width: var(--cute-phone-width); /* 固定宽度 - px */
         height: 640px; 
         background: var(--bg-secondary);
         border-radius: 24px;
@@ -6818,26 +6825,25 @@
           <!-- 主题设置 -->
           <!-- 界面缩放 -->
           <div class="setting-section">
-            <label class="setting-label">界面缩放</label>
+            <label class="setting-label">界面宽度</label>
             <div class="slider-setting">
               <div class="slider-meta">
-                <span class="slider-title">缩放比例</span>
-                <span class="slider-value" id="interfaceScaleLabel">100%</span>
+                <span class="slider-title">宽度比例</span>
+                <span class="slider-value" id="interfaceWidthLabel">275px</span>
               </div>
               <input
                 type="range"
-                id="interfaceScaleSlider"
-                min="90"
-                max="120"
+                id="interfaceWidthSlider"
+                min="240"
+                max="320"
                 step="5"
-                value="100"
+                value="275"
                 class="setting-slider"
               />
               <div class="slider-marks">
-                <span>90%</span>
-                <span>100%</span>
-                <span>110%</span>
-                <span>120%</span>
+                <span>240px</span>
+                <span>275px</span>
+                <span>320px</span>
               </div>
             </div>
           </div>
@@ -7514,6 +7520,16 @@
       // emoji 列表
       const EMOJIS = ['😊', '😂', '🥰', '😳', '😭', '😎', '😡', '👍', '🎉', '💖', '🥺', '🤔', '😏', '😱', '��', '🤗'];
 
+      function addListener(id, event, handler) {
+        const element = document.getElementById(id);
+        if (!element) {
+          console.warn(`[UI] Element #${id} not found, skip binding for ${event}`);
+          return null;
+        }
+        element.addEventListener(event, handler);
+        return element;
+      }
+
       // centralized state management
       const state = {
         quoteContent: '',
@@ -7553,9 +7569,15 @@
         availableVisionModels: [],
         // For serialization of other conversations without UI switching
         forceCharNameForSerialization: null,
-        interfaceScale: 1,
+        interfaceWidth: BASE_CUTE_PHONE_WIDTH,
         typingSpeedLevel: 2,
       };
+
+      const BASE_PHONE_SHELL_WIDTH = 280;
+      const BASE_CUTE_PHONE_WIDTH = 275;
+      const MIN_CUTE_PHONE_WIDTH = 240;
+      const MAX_CUTE_PHONE_WIDTH = 320;
+      const SHELL_WIDTH_OFFSET = BASE_PHONE_SHELL_WIDTH - BASE_CUTE_PHONE_WIDTH;
 
       // 获取 SillyTavern 生成函数（如果可用）
       const AI_GENERATE =
@@ -7582,20 +7604,19 @@ function applyUserAvatar(avatarElement) {
         }
       }
 
-      function applyInterfaceScale(scale) {
-        const clamped = Math.min(1.2, Math.max(0.9, scale));
-        state.interfaceScale = clamped;
-        const phoneShell = document.querySelector('.phone-shell');
-        if (phoneShell) {
-          phoneShell.style.transform = `scale(${clamped})`;
-        }
-        const label = document.getElementById('interfaceScaleLabel');
+      function applyInterfaceWidth(width) {
+        const clamped = Math.min(MAX_CUTE_PHONE_WIDTH, Math.max(MIN_CUTE_PHONE_WIDTH, width));
+        state.interfaceWidth = clamped;
+        const shellWidth = clamped + SHELL_WIDTH_OFFSET;
+        document.documentElement.style.setProperty('--phone-shell-width', `${shellWidth}px`);
+        document.documentElement.style.setProperty('--cute-phone-width', `${clamped}px`);
+        const label = document.getElementById('interfaceWidthLabel');
         if (label) {
-          label.textContent = `${Math.round(clamped * 100)}%`;
+          label.textContent = `${Math.round(clamped)}px`;
         }
-        const slider = document.getElementById('interfaceScaleSlider');
+        const slider = document.getElementById('interfaceWidthSlider');
         if (slider && document.activeElement !== slider) {
-          slider.value = Math.round(clamped * 100);
+          slider.value = Math.round(clamped);
         }
       }
 
@@ -17184,12 +17205,20 @@ function toggleFriendsPanel(show) {
         }
 
         // 加载识图API配置
-        const savedScale = localStorage.getItem('interfaceScale');
-        if (savedScale) {
-          const percent = Math.min(120, Math.max(90, parseInt(savedScale, 10) || 100));
-          state.interfaceScale = percent / 100;
+        const savedWidth = localStorage.getItem('interfaceWidth');
+        if (savedWidth) {
+          const widthValue = parseInt(savedWidth, 10);
+          if (!Number.isNaN(widthValue)) {
+            state.interfaceWidth = widthValue;
+          }
+        } else {
+          const savedScale = localStorage.getItem('interfaceScale');
+          if (savedScale) {
+            const percent = Math.min(120, Math.max(90, parseInt(savedScale, 10) || 100));
+            state.interfaceWidth = Math.round(BASE_CUTE_PHONE_WIDTH * (percent / 100));
+          }
         }
-        applyInterfaceScale(state.interfaceScale);
+        applyInterfaceWidth(state.interfaceWidth);
 
         const savedTypingLevel = localStorage.getItem('typingSpeedLevel');
         if (savedTypingLevel) {
@@ -18024,9 +18053,9 @@ function toggleFriendsPanel(show) {
       }
 
       // 绑定设置相关事件
-      document.getElementById('screenshotBtn').addEventListener('click', (event) => takeScreenshot(event));
-      document.getElementById('settingsBtn').addEventListener('click', showSettings);
-      document.getElementById('settingsCloseBtn').addEventListener('click', hideSettings);
+      addListener('screenshotBtn', 'click', (event) => takeScreenshot(event));
+      addListener('settingsBtn', 'click', showSettings);
+      addListener('settingsCloseBtn', 'click', hideSettings);
 
       // 打开 AI 调试面板（移入设置内）
       const __openAIDebugBtn = document.getElementById('openAIDebugBtn');
@@ -18047,16 +18076,17 @@ function toggleFriendsPanel(show) {
       }
 
       // 绑定收藏相关事件
-      document.getElementById('viewFavoritesBtn').addEventListener('click', showFavorites);
-      document.getElementById('favoritesCloseBtn').addEventListener('click', hideFavorites);
-      document.getElementById('clearAllFavoritesBtn').addEventListener('click', clearAllFavorites);
+      addListener('viewFavoritesBtn', 'click', showFavorites);
+      addListener('favoritesCloseBtn', 'click', hideFavorites);
+      addListener('clearAllFavoritesBtn', 'click', clearAllFavorites);
 
       // 头像上传
-      document.getElementById('avatarUploadBtn').addEventListener('click', () => {
-        document.getElementById('avatarFileInput').click();
+      addListener('avatarUploadBtn', 'click', () => {
+        const input = document.getElementById('avatarFileInput');
+        if (input) input.click();
       });
 
-      document.getElementById('avatarFileInput').addEventListener('change', (e) => {
+      addListener('avatarFileInput', 'change', (e) => {
         const file = e.target.files[0];
         if (file) {
           handleFileUpload(file, 'avatar');
@@ -18064,11 +18094,12 @@ function toggleFriendsPanel(show) {
       });
 
       // 壁纸上传
-      document.getElementById('wallpaperUploadBtn').addEventListener('click', () => {
-        document.getElementById('wallpaperFileInput').click();
+      addListener('wallpaperUploadBtn', 'click', () => {
+        const input = document.getElementById('wallpaperFileInput');
+        if (input) input.click();
       });
 
-      document.getElementById('wallpaperFileInput').addEventListener('change', (e) => {
+      addListener('wallpaperFileInput', 'change', (e) => {
         const file = e.target.files[0];
         if (file) {
           handleFileUpload(file, 'wallpaper');
@@ -18076,20 +18107,16 @@ function toggleFriendsPanel(show) {
       });
 
       // 重置按钮
-      document.getElementById('avatarResetBtn').addEventListener('click', () => {
-        resetSetting('avatar');
-      });
-
-      document.getElementById('wallpaperResetBtn').addEventListener('click', () => {
-        resetSetting('wallpaper');
-      });
+      addListener('avatarResetBtn', 'click', () => resetSetting('avatar'));
+      addListener('wallpaperResetBtn', 'click', () => resetSetting('wallpaper'));
 
       // 角色头像上传
-      document.getElementById('charAvatarUploadBtn').addEventListener('click', () => {
-        document.getElementById('charAvatarFileInput').click();
+      addListener('charAvatarUploadBtn', 'click', () => {
+        const input = document.getElementById('charAvatarFileInput');
+        if (input) input.click();
       });
 
-      document.getElementById('charAvatarFileInput').addEventListener('change', async (e) => {
+      addListener('charAvatarFileInput', 'change', async (e) => {
         const file = e.target.files[0];
         if (file) {
           try {
@@ -18121,41 +18148,35 @@ function toggleFriendsPanel(show) {
         }
       });
 
-      document.getElementById('charAvatarResetBtn').addEventListener('click', () => {
-        resetSetting('charAvatar');
-      });
+      addListener('charAvatarResetBtn', 'click', () => resetSetting('charAvatar'));
 
       // 角色名称输入框变化时更新预览
-      document.getElementById('charNameInput').addEventListener('input', () => {
+      addListener('charNameInput', 'input', () => {
         updateCharAvatarPreview();
       });
 
       // 破限开关
-      document.getElementById('jailbreakToggle').addEventListener('change', (e) => {
+      addListener('jailbreakToggle', 'change', (e) => {
         state.jailbreakEnabled = e.target.checked;
         // 保存到localStorage
         localStorage.setItem('jailbreakEnabled', state.jailbreakEnabled);
       });
 
-      const interfaceScaleSlider = document.getElementById('interfaceScaleSlider');
-      if (interfaceScaleSlider) {
-        interfaceScaleSlider.addEventListener('input', (e) => {
-          const percent = Math.min(120, Math.max(90, parseInt(e.target.value, 10) || 100));
-          const scale = percent / 100;
-          applyInterfaceScale(scale);
-          localStorage.setItem('interfaceScale', String(percent));
-        });
-      }
+      addListener('interfaceWidthSlider', 'input', (e) => {
+        const widthValue = Math.min(
+          MAX_CUTE_PHONE_WIDTH,
+          Math.max(MIN_CUTE_PHONE_WIDTH, parseInt(e.target.value, 10) || BASE_CUTE_PHONE_WIDTH),
+        );
+        applyInterfaceWidth(widthValue);
+        localStorage.setItem('interfaceWidth', String(widthValue));
+      });
 
-      const typingSpeedSlider = document.getElementById('typingSpeedSlider');
-      if (typingSpeedSlider) {
-        typingSpeedSlider.addEventListener('input', (e) => {
-          const level = Math.min(3, Math.max(1, parseInt(e.target.value, 10) || 2));
-          state.typingSpeedLevel = level;
-          updateTypingSpeedUI();
-          localStorage.setItem('typingSpeedLevel', String(level));
-        });
-      }
+      addListener('typingSpeedSlider', 'input', (e) => {
+        const level = Math.min(3, Math.max(1, parseInt(e.target.value, 10) || 2));
+        state.typingSpeedLevel = level;
+        updateTypingSpeedUI();
+        localStorage.setItem('typingSpeedLevel', String(level));
+      });
 
       // 主题切换功能
       function switchTheme(themeName) {
