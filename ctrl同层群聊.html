@@ -1029,7 +1029,7 @@
       /* 外框包裹层 */
       .phone-shell {
         padding: 3px; /* 更薄的外边框 */
-        background: var(--bg-shell);
+        background: transparent;
         border-radius: 10px;
         box-shadow: 0 2px 3px var(--shadow-light);
         display: inline-block;
@@ -6240,6 +6240,32 @@
             </div>
           </div>
 
+          <!-- 界面缩放 -->
+          <div class="setting-section">
+            <label class="setting-label">界面缩放</label>
+            <div class="slider-setting">
+              <div class="slider-meta">
+                <span class="slider-title">缩放比例</span>
+                <span class="slider-value" id="interfaceScaleLabel">100%</span>
+              </div>
+              <input
+                type="range"
+                id="interfaceScaleSlider"
+                min="90"
+                max="120"
+                step="5"
+                value="100"
+                class="setting-slider"
+              />
+              <div class="slider-marks">
+                <span>90%</span>
+                <span>100%</span>
+                <span>110%</span>
+                <span>120%</span>
+              </div>
+            </div>
+          </div>
+
           <!-- 主题设置 -->
           <div class="setting-section">
             <label class="setting-label">🎨 界面主题</label>
@@ -6819,6 +6845,7 @@
         // 时间选择功能
         customTimeEnabled: false, // 是否启用自定义时间
         customTime: null, // 自定义时间字符串 (HH:MM)
+        interfaceScale: 1,
         // 识图API配置
         visionMode: 'direct', // 识图方式：'direct'、'tavern'、'kimi' 或 'custom'
         // Kimi配置
@@ -7546,6 +7573,37 @@
           avatarElement.style.backgroundSize = 'cover';
           avatarElement.style.backgroundPosition = 'center';
           avatarElement.style.backgroundColor = '#fff'; // Add a fallback bg color
+        }
+      }
+
+      function applyInterfaceScale(scale) {
+        const clamped = Math.min(1.2, Math.max(0.9, scale));
+        state.interfaceScale = clamped;
+        const phoneShell = document.querySelector('.phone-shell');
+        if (phoneShell) {
+          if (!phoneShell.dataset.baseWidth) {
+            const computedShellWidth = parseFloat(getComputedStyle(phoneShell).width);
+            phoneShell.dataset.baseWidth = String(!isNaN(computedShellWidth) ? computedShellWidth : 280);
+          }
+          const baseShellWidth = parseFloat(phoneShell.dataset.baseWidth) || 280;
+          phoneShell.style.width = `${baseShellWidth * clamped}px`;
+          const cutePhone = phoneShell.querySelector('.cute-phone');
+          if (cutePhone) {
+            if (!cutePhone.dataset.baseWidth) {
+              const computedCuteWidth = parseFloat(getComputedStyle(cutePhone).width);
+              cutePhone.dataset.baseWidth = String(!isNaN(computedCuteWidth) ? computedCuteWidth : 275);
+            }
+            const baseCuteWidth = parseFloat(cutePhone.dataset.baseWidth) || 275;
+            cutePhone.style.width = `${baseCuteWidth * clamped}px`;
+          }
+        }
+        const label = document.getElementById('interfaceScaleLabel');
+        if (label) {
+          label.textContent = `${Math.round(clamped * 100)}%`;
+        }
+        const slider = document.getElementById('interfaceScaleSlider');
+        if (slider && document.activeElement !== slider) {
+          slider.value = Math.round(clamped * 100);
         }
       }
 
@@ -14710,6 +14768,13 @@
           }
         }
 
+        const savedScale = localStorage.getItem('interfaceScale');
+        if (savedScale) {
+          const percent = Math.min(120, Math.max(90, parseInt(savedScale, 10) || 100));
+          state.interfaceScale = percent / 100;
+        }
+        applyInterfaceScale(state.interfaceScale);
+
         // 加载破限开关状态
         if (savedJailbreak !== null) {
           state.jailbreakEnabled = savedJailbreak === 'true';
@@ -15558,6 +15623,16 @@
       document.getElementById('charNameInput').addEventListener('input', () => {
         updateCharAvatarPreview();
       });
+
+      const interfaceScaleSlider = document.getElementById('interfaceScaleSlider');
+      if (interfaceScaleSlider) {
+        interfaceScaleSlider.addEventListener('input', (e) => {
+          const percent = Math.min(120, Math.max(90, parseInt(e.target.value, 10) || 100));
+          const scale = percent / 100;
+          applyInterfaceScale(scale);
+          localStorage.setItem('interfaceScale', String(percent));
+        });
+      }
 
       // 破限开关
       document.getElementById('jailbreakToggle').addEventListener('change', (e) => {
@@ -17711,7 +17786,6 @@
   })();
 </script>
   
-
 
 
 
