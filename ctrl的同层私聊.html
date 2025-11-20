@@ -1026,7 +1026,7 @@
       /* 外框包裹层 */
       .phone-shell {
         padding: 3px; /* 更薄的外边框 */
-        background: var(--bg-shell);
+        background: transparent;
         border-radius: 10px;
         box-shadow: 0 2px 3px var(--shadow-light);
         display: inline-block;
@@ -7587,7 +7587,21 @@ function applyUserAvatar(avatarElement) {
         state.interfaceScale = clamped;
         const phoneShell = document.querySelector('.phone-shell');
         if (phoneShell) {
-          phoneShell.style.transform = `scale(${clamped})`;
+          if (!phoneShell.dataset.baseWidth) {
+            const computedShellWidth = parseFloat(getComputedStyle(phoneShell).width);
+            phoneShell.dataset.baseWidth = String(!isNaN(computedShellWidth) ? computedShellWidth : 280);
+          }
+          const baseShellWidth = parseFloat(phoneShell.dataset.baseWidth) || 280;
+          phoneShell.style.width = `${baseShellWidth * clamped}px`;
+          const cutePhone = phoneShell.querySelector('.cute-phone');
+          if (cutePhone) {
+            if (!cutePhone.dataset.baseWidth) {
+              const computedCuteWidth = parseFloat(getComputedStyle(cutePhone).width);
+              cutePhone.dataset.baseWidth = String(!isNaN(computedCuteWidth) ? computedCuteWidth : 275);
+            }
+            const baseCuteWidth = parseFloat(cutePhone.dataset.baseWidth) || 275;
+            cutePhone.style.width = `${baseCuteWidth * clamped}px`;
+          }
         }
         const label = document.getElementById('interfaceScaleLabel');
         if (label) {
