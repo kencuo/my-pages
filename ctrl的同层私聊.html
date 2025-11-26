@@ -20252,87 +20252,84 @@ function toggleFriendsPanel(show) {
       })();
     </script>
     <script>
-      // 主屏与应用点击逻辑：进入聊天先展示好友列表
-      document.addEventListener('DOMContentLoaded', function () {
-        const homeOverlay = document.getElementById('homeOverlay');
-        const appChat = document.getElementById('appChat');
-        const appMessages = document.getElementById('appMessages');
-        const appMoments = document.getElementById('appMoments');
-        const appStore = document.getElementById('appStore');
-        const appMusic = document.getElementById('appMusic');
-        const appCloudMusic = document.getElementById('appCloudMusic');
-        const appSettings = document.getElementById('appSettings');
-        const homeBtn = document.getElementById('homeBtn');
-
-        const showHome = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
-        const openChat = () => {
-          if (homeOverlay) homeOverlay.style.display = 'none';
-          try { if (typeof toggleFriendsPanel === 'function') toggleFriendsPanel(true); } catch (_) {}
-        };
-
-        if (appChat) appChat.addEventListener('click', openChat);
-        if (appMessages) appMessages.addEventListener('click', openChat);
-        if (homeBtn) homeBtn.addEventListener('click', showHome);
-        const homeDockBtn = document.getElementById('homeDockBtn');
-        if (homeDockBtn) homeDockBtn.addEventListener('click', showHome);
-
-        const placeholder = (name) => () => { try { alert(name + ' 功能暂未实现'); } catch (_) {} };
-        if (appMoments) appMoments.addEventListener('click', placeholder('朋友圈'));
-        if (appStore) appStore.addEventListener('click', placeholder('商店'));
-        if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
-        if (appCloudMusic) appCloudMusic.addEventListener('click', () => {
-          if (homeOverlay) homeOverlay.style.display = 'none';
-          const o = document.getElementById('cloudMusicOverlay');
-          if (o) { o.style.display = 'flex'; o.setAttribute('aria-hidden','false'); }
-        });
-        const cloudMusicClose = document.getElementById('cloudMusicClose');
-        if (cloudMusicClose) cloudMusicClose.addEventListener('click', () => {
-          const o = document.getElementById('cloudMusicOverlay');
-          if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden','true'); }
-        });
-        if (appSettings) appSettings.addEventListener('click', () => {
-          if (homeOverlay) homeOverlay.style.display = 'none';
-          try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
-        });
-      });
-    </script>
-    <script>
-      // SillyTavern sandbox-safe clicks for home apps (bind immediately if DOM is ready)
-      (function bindHomeApps(){
+      (function setupHomeOverlayBindings() {
         const bind = () => {
-          const showToastSafe = (msg) => { try { (typeof showToast === 'function' ? showToast : alert)(msg); } catch (_) {} };
-          const homeOverlay = document.getElementById('homeOverlay');
-          const appChat = document.getElementById('appChat');
-          const appMessages = document.getElementById('appMessages');
-          const appMoments = document.getElementById('appMoments');
-          const appStore = document.getElementById('appStore');
-          const appMusic = document.getElementById('appMusic');
-          const appSettings = document.getElementById('appSettings');
-          const homeBtn = document.getElementById('homeBtn');
-          const homeDockBtn = document.getElementById('homeDockBtn');
+          if (bind._bound) return;
+          bind._bound = true;
 
+          const byId = (id) => document.getElementById(id);
+          const homeOverlay = byId('homeOverlay');
+          const homeBtn = byId('homeBtn');
+          const homeDockBtn = byId('homeDockBtn');
+          const appChat = byId('appChat');
+          const appMessages = byId('appMessages');
+          const appMoments = byId('appMoments');
+          const appStore = byId('appStore');
+          const appMusic = byId('appMusic');
+          const appCloudMusic = byId('appCloudMusic');
+          const cloudMusicClose = byId('cloudMusicClose');
+          const appSettings = byId('appSettings');
+
+          const showHome = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
+          const hideHome = () => { if (homeOverlay) homeOverlay.style.display = 'none'; };
+          const showToastSafe = (msg) => { try { (typeof showToast === 'function' ? showToast : alert)(msg); } catch (_) {} };
           const openChat = () => {
-            if (homeOverlay) homeOverlay.style.display = 'none';
+            hideHome();
             try { if (typeof toggleFriendsPanel === 'function') toggleFriendsPanel(true); } catch (_) {}
           };
 
-          if (appChat) appChat.onclick = openChat;
-          if (appMessages) appMessages.onclick = openChat;
-          if (homeBtn) homeBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
-          if (homeDockBtn) homeDockBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
-          if (appMoments) appMoments.onclick = () => showToastSafe('朋友圈 功能暂未开放');
-          if (appStore) appStore.onclick = () => showToastSafe('商店 功能暂未开放');
-          if (appMusic) appMusic.onclick = () => {
-            try { if (typeof openMusicPanel === 'function') return openMusicPanel(); } catch(_) {}
-            showToastSafe('音乐 功能暂未开放');
+          if (appChat) appChat.addEventListener('click', openChat);
+          if (appMessages) appMessages.addEventListener('click', openChat);
+          if (homeBtn) homeBtn.addEventListener('click', showHome);
+          if (homeDockBtn) homeDockBtn.addEventListener('click', showHome);
+
+          const bindPlaceholder = (el, label) => {
+            if (!el) return;
+            el.addEventListener('click', () => showToastSafe(label + ' ??????'));
           };
-          if (appSettings) appSettings.onclick = () => {
-            if (homeOverlay) homeOverlay.style.display = 'none';
-            try { if (typeof showSettings === 'function') showSettings(); } catch(_) {}
-          };
+          bindPlaceholder(appMoments, '???');
+          bindPlaceholder(appStore, '??');
+
+          if (appMusic) {
+            appMusic.addEventListener('click', () => {
+              try {
+                if (typeof openMusicPanel === 'function') return openMusicPanel();
+              } catch (_) {}
+              showToastSafe('?? ??????');
+            });
+          }
+
+          if (appCloudMusic) {
+            appCloudMusic.addEventListener('click', () => {
+              hideHome();
+              const overlay = byId('cloudMusicOverlay');
+              if (overlay) {
+                overlay.style.display = 'flex';
+                overlay.setAttribute('aria-hidden', 'false');
+              }
+            });
+          }
+
+          if (cloudMusicClose) {
+            cloudMusicClose.addEventListener('click', () => {
+              const overlay = byId('cloudMusicOverlay');
+              if (overlay) {
+                overlay.style.display = 'none';
+                overlay.setAttribute('aria-hidden', 'true');
+              }
+            });
+          }
+
+          if (appSettings) {
+            appSettings.addEventListener('click', () => {
+              hideHome();
+              try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
+            });
+          }
         };
+
         if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', bind, { once: true });
+          document.addEventListener('DOMContentLoaded', bind);
         } else {
           bind();
         }
@@ -20340,19 +20337,3 @@ function toggleFriendsPanel(show) {
     </script>
   </body>
 </html>
-
-<script>
-  // 统一绑定主屏“设置”应用的点击行为（冗余保护）
-  document.addEventListener('DOMContentLoaded', function () {
-    try {
-      const homeOverlay = document.getElementById('homeOverlay');
-      const appSettings = document.getElementById('appSettings');
-      if (appSettings) {
-        appSettings.addEventListener('click', function () {
-          if (homeOverlay) homeOverlay.style.display = 'none';
-          try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
-        });
-      }
-    } catch (_) {}
-  });
-</script>
