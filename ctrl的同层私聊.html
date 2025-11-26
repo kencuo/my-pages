@@ -1040,7 +1040,7 @@
       }
       .cute-phone {
         width: 275px; /* 固定宽度 - px */
-        height: 640px; 
+        height: 630px; 
         background: var(--bg-secondary);
         border-radius: 24px;
         /* 移除内边框 */
@@ -1068,7 +1068,7 @@
       }
       /* 蝴蝶结 */
       .cute-phone::after {
-        content: '🎀';
+        content: ' ';
         top: -14px;
         right: 28px;
         animation: bow-swing 4s infinite ease-in-out;
@@ -7557,369 +7557,6 @@
         typingSpeedLevel: 2,
       };
 
-      const chatId =
-        (window?.SillyTavern && window.SillyTavern.chatId) ||
-        (window?.parent?.SillyTavern && window.parent.SillyTavern.chatId) ||
-        null;
-      const userAvatarPath =
-        window?.SillyTavern?.ui_user_avatar || 'https://files.catbox.moe/cmegcm.jpeg';
-      const charAvatarPath =
-        window?.SillyTavern?.character_avatar || 'https://files.catbox.moe/e1xk9k.jpeg';
-
-      const defaultProfile = {
-        urls: {
-          userAvatarUrl: userAvatarPath,
-          charAvatarUrl: charAvatarPath,
-          desktopWallpaperUrl: 'https://files.catbox.moe/e1xk9k.jpeg',
-          chatWallpaperUrl: 'https://files.catbox.moe/e1xk9k.jpeg'
-        },
-        phoneLayout: {
-          width: 280,
-          height: 623,
-        },
-        preset: {
-          name: 'aurora'
-        },
-        sleepLock: {
-          status: 'on'
-        },
-        timeSettings: {
-          mode: 'story',
-          flowMode: 'static',
-          flowMultiplier: 1,
-          flowStartRealTime: null,
-          flowStartStoryTime: null,
-          storyTime: {
-            month: null,
-            day: null,
-            hour: null,
-            minute: null
-          }
-        },
-        chatList: [],
-        theme: 'light',
-        bubbleStyle: 'default',
-        interfaceScale: 1,
-        typingSpeedLevel: 2
-      };
-
-      const profileCache = new Map();
-      let activeProfileName = null;
-      let timeFlowInterval = null;
-      let timeFlowIntervalReal = null;
-      let realTimeRefreshInterval = null;
-
-      function getProfileKey(charOverride) {
-        if (charOverride && charOverride.trim()) {
-          return charOverride.trim();
-        }
-        try {
-          if (typeof getCurrentCharacterInfo === 'function') {
-            const info = getCurrentCharacterInfo();
-            if (info && info.name) {
-              return info.name;
-            }
-          }
-          if (window?.parent?.name1) {
-            return window.parent.name1;
-          }
-          if (typeof parent !== 'undefined' && parent.characters && parent.this_chid !== undefined) {
-            const id = String(parent.this_chid);
-            const guessedName = parent.characters[id]?.name || parent.characters[id]?.data?.name;
-            if (guessedName) return guessedName;
-          }
-        } catch (e) {}
-        const spanName = document.getElementById('chatPersonName');
-        if (spanName && spanName.textContent.trim()) {
-          return spanName.textContent.trim();
-        }
-        return '对方';
-      }
-
-      function initializeProfile(targetCharName) {
-        const charKey = getProfileKey(targetCharName);
-        let savedProfile = {};
-        try {
-          savedProfile = JSON.parse(localStorage.getItem(charKey)) || {};
-        } catch (e) {
-          savedProfile = {};
-        }
-
-        const finalProfile = {
-          urls: {
-            ...defaultProfile.urls,
-            ...(savedProfile.urls || {})
-          },
-          phoneLayout: {
-            ...defaultProfile.phoneLayout,
-            ...(savedProfile.phoneLayout || {})
-          },
-          preset: {
-            ...defaultProfile.preset,
-            ...(savedProfile.preset || {})
-          },
-          sleepLock: {
-            ...defaultProfile.sleepLock,
-            ...(savedProfile.sleepLock || {})
-          },
-          timeSettings: {
-            ...defaultProfile.timeSettings,
-            ...(savedProfile.timeSettings || {})
-          },
-          chatList: Array.isArray(savedProfile.chatList) ? savedProfile.chatList : [],
-          theme: savedProfile.theme || defaultProfile.theme,
-          bubbleStyle: savedProfile.bubbleStyle || defaultProfile.bubbleStyle,
-          interfaceScale: typeof savedProfile.interfaceScale === 'number'
-            ? savedProfile.interfaceScale
-            : defaultProfile.interfaceScale,
-          typingSpeedLevel: typeof savedProfile.typingSpeedLevel === 'number'
-            ? savedProfile.typingSpeedLevel
-            : defaultProfile.typingSpeedLevel
-        };
-
-        if (chatId) {
-          const chatTimeSettingsRaw = localStorage.getItem(chatId);
-          if (chatTimeSettingsRaw) {
-            try {
-              const parsed = JSON.parse(chatTimeSettingsRaw);
-              if (parsed && typeof parsed === 'object') {
-                if (parsed.timeSettings) {
-                  finalProfile.timeSettings = {
-                    ...finalProfile.timeSettings,
-                    ...parsed.timeSettings
-                  };
-                } else {
-                  finalProfile.timeSettings = {
-                    ...finalProfile.timeSettings,
-                    ...(parsed || {})
-                  };
-                }
-                if (Array.isArray(parsed.chatList)) {
-                  finalProfile.chatList = parsed.chatList;
-                }
-              }
-            } catch (e) {
-              console.warn('[同层私聊] 解析 chatId 存储失败', e);
-            }
-          }
-        }
-
-        profileCache.set(charKey, finalProfile);
-        activeProfileName = charKey;
-        return finalProfile;
-      }
-
-      function getActiveProfile(charOverride) {
-        const key = getProfileKey(charOverride);
-        if (!profileCache.has(key)) {
-          initializeProfile(key);
-        }
-        activeProfileName = key;
-        return profileCache.get(key);
-      }
-
-      function saveProfile(profile, charKeyParam) {
-        const charKey = getProfileKey(charKeyParam);
-        if (!profile) return;
-        try {
-          if (chatId) {
-            const existing = JSON.parse(localStorage.getItem(chatId) || '{}');
-            if (Array.isArray(profile.chatList)) {
-              existing.chatList = profile.chatList;
-            }
-            if (profile.timeSettings) {
-              existing.timeSettings = profile.timeSettings;
-            }
-            localStorage.setItem(chatId, JSON.stringify(existing));
-          }
-        } catch (e) {
-          console.warn('[同层私聊] 保存 chatId.chatList 失败', e);
-        }
-
-        const characterSpecificProfile = { ...profile };
-        if (Array.isArray(characterSpecificProfile.chatList)) {
-          characterSpecificProfile.chatList = characterSpecificProfile.chatList.map(item => ({
-            name: item?.name,
-            avatar: item?.avatar,
-            isGroup: !!item?.isGroup,
-            members: Array.isArray(item?.members) ? item.members : [],
-            isHidden: !!item?.isHidden,
-            firstAvatarSet: item?.firstAvatarSet
-          }));
-        }
-        delete characterSpecificProfile.timeSettings;
-        delete characterSpecificProfile.phoneLayout;
-        delete characterSpecificProfile.preset;
-
-        try {
-          localStorage.setItem(charKey, JSON.stringify(characterSpecificProfile));
-        } catch (e) {
-          console.warn('[同层私聊] 保存角色配置失败', e);
-        }
-        profileCache.set(charKey, profile);
-      }
-
-      function stopFlowTimer() {
-        if (timeFlowInterval) {
-          clearInterval(timeFlowInterval);
-          timeFlowInterval = null;
-        }
-      }
-
-      function startOrUpdateFlowTimer() {
-        stopFlowTimer();
-        timeFlowInterval = setInterval(() => {
-          const profile = getActiveProfile();
-          if (!profile) return;
-          const ts = profile.timeSettings || {};
-          if (ts.mode !== 'story' || ts.flowMode !== 'flow' || !ts.flowStartRealTime || !ts.flowStartStoryTime) {
-            stopFlowTimer();
-            return;
-          }
-          if (document.hidden) {
-            if (!ts.pausedRealTime) {
-              ts.pausedRealTime = Date.now();
-            }
-            return;
-          } else if (ts.pausedRealTime) {
-            const pausedDelta = Date.now() - ts.pausedRealTime;
-            ts.flowStartRealTime += pausedDelta;
-            delete ts.pausedRealTime;
-            saveProfile(profile, activeProfileName);
-          }
-          updateDateTime();
-        }, 1000);
-      }
-
-      function stopRealFlowTimer() {
-        if (timeFlowIntervalReal) {
-          clearInterval(timeFlowIntervalReal);
-          timeFlowIntervalReal = null;
-        }
-      }
-
-      function startOrUpdateRealFlowTimer() {
-        stopRealFlowTimer();
-        timeFlowIntervalReal = setInterval(() => {
-          const profile = getActiveProfile();
-          if (!profile) return;
-          const ts = profile.timeSettings || {};
-          if (ts.mode !== 'real' || ts.flowMode !== 'flow' || !ts.flowStartRealTime || !ts.flowStartStoryTime) {
-            stopRealFlowTimer();
-            return;
-          }
-          updateDateTime();
-        }, 1000);
-      }
-
-      function startRealTimeRefresh() {
-        stopRealTimeRefresh();
-        realTimeRefreshInterval = setInterval(() => {
-          const profile = getActiveProfile();
-          if (!profile) return;
-          if (profile.timeSettings?.mode === 'real') {
-            updateDateTime();
-          }
-        }, 5000);
-      }
-
-      function stopRealTimeRefresh() {
-        if (realTimeRefreshInterval) {
-          clearInterval(realTimeRefreshInterval);
-          realTimeRefreshInterval = null;
-        }
-      }
-
-      function markFlowPausedIfNeeded() {
-        try {
-          const profile = getActiveProfile();
-          if (!profile) return;
-          const ts = profile.timeSettings || {};
-          if (ts.mode === 'story' && ts.flowMode === 'flow' && ts.flowStartRealTime && ts.flowStartStoryTime && !ts.pausedRealTime) {
-            ts.pausedRealTime = Date.now();
-            saveProfile(profile, activeProfileName);
-          }
-        } catch (e) {}
-      }
-
-      function resumeFlowIfPaused() {
-        try {
-          const profile = getActiveProfile();
-          if (!profile) return;
-          const ts = profile.timeSettings || {};
-          if (ts.mode === 'story' && ts.flowMode === 'flow' && ts.flowStartRealTime && ts.flowStartStoryTime && ts.pausedRealTime) {
-            const pausedDelta = Date.now() - ts.pausedRealTime;
-            ts.flowStartRealTime += pausedDelta;
-            delete ts.pausedRealTime;
-            saveProfile(profile, activeProfileName);
-            updateDateTime();
-          }
-        } catch (e) {}
-      }
-
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          markFlowPausedIfNeeded();
-        } else {
-          resumeFlowIfPaused();
-        }
-      });
-      window.addEventListener('pagehide', markFlowPausedIfNeeded);
-      window.addEventListener('beforeunload', markFlowPausedIfNeeded);
-
-      function getGlobalTime() {
-        const profile = getActiveProfile();
-        if (!profile) return new Date();
-        const ts = profile.timeSettings || defaultProfile.timeSettings;
-        if (ts.flowMode === 'flow') {
-          if (ts.flowStartRealTime && ts.flowStartStoryTime) {
-            if (ts.mode === 'story') {
-              const baseReal = ts.pausedRealTime || Date.now();
-              const realTimeElapsed = baseReal - ts.flowStartRealTime;
-              const storyTimeElapsed = realTimeElapsed * (ts.flowMultiplier || 1);
-              return new Date(ts.flowStartStoryTime + storyTimeElapsed);
-            } else {
-              const realTimeElapsed = Date.now() - ts.flowStartRealTime;
-              const storyTimeElapsed = realTimeElapsed * (ts.flowMultiplier || 1);
-              return new Date(ts.flowStartStoryTime + storyTimeElapsed);
-            }
-          }
-          return null;
-        }
-        if (ts.mode === 'story') {
-          if (
-            ts.storyTime?.month == null ||
-            ts.storyTime?.day == null ||
-            ts.storyTime?.hour == null ||
-            ts.storyTime?.minute == null
-          ) {
-            return null;
-          }
-          const now = new Date();
-          return new Date(
-            now.getFullYear(),
-            ts.storyTime.month - 1,
-            ts.storyTime.day,
-            ts.storyTime.hour,
-            ts.storyTime.minute
-          );
-        }
-        return new Date();
-      }
-
-      function updateDateTime() {
-        const now = getGlobalTime();
-        if (now) {
-          state.customTimeEnabled = (getActiveProfile().timeSettings?.mode === 'story');
-          state.customTime = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        } else {
-          state.customTime = null;
-        }
-        try {
-          updateTimeSelectButton();
-        } catch (e) {}
-      }
-
       // 获取 SillyTavern 生成函数（如果可用）
       const AI_GENERATE =
         typeof generate === 'function' ? generate : null;
@@ -7936,8 +7573,7 @@
       // Helper to apply user avatar from parent frame
 function applyUserAvatar(avatarElement) {
         // 优先使用用户设置的头像，没有则使用默认头像
-        const profile = getActiveProfile();
-        const userAvatarUrl = settingsState.userAvatar || profile.urls.userAvatarUrl || 'https://files.catbox.moe/cmegcm.jpeg';
+        const userAvatarUrl = settingsState.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg';
         if (avatarElement) {
           avatarElement.style.backgroundImage = `url('${userAvatarUrl}')`;
           avatarElement.style.backgroundSize = 'cover';
@@ -8001,29 +7637,43 @@ function applyUserAvatar(avatarElement) {
 
       // 工具函数：获取当前时间字符串（只返回HH:MM格式）
       function getTimeStr() {
-        const now = getGlobalTime();
-        if (!now) return '--:--';
-        return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        // 如果启用了自定义时间，使用自定义时间
+        if (state.customTimeEnabled && state.customTime) {
+          // 如果自定义时间包含日期，只提取时间部分
+          if (state.customTime.includes('/')) {
+            const parts = state.customTime.split(' ');
+            return parts[1] || '00:00';
+          } else {
+            return state.customTime;
+          }
+        }
+
+        const now = new Date();
+        return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
       }
 
       // 工具函数：获取完整时间字符串（包含年月日）
       function getFullTimeStr() {
-        const now = getGlobalTime();
-        if (!now) return '--/-- --:--';
+        // 如果启用了自定义时间，使用自定义时间
+        if (state.customTimeEnabled && state.customTime) {
+          // 如果自定义时间包含日期，直接返回；否则添加当前日期
+          if (state.customTime.includes('/')) {
+            return state.customTime;
+          } else {
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+            return `${dateStr} ${state.customTime}`;
+          }
+        }
+
+        const now = new Date();
         const dateStr = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
-        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
         return `${dateStr} ${timeStr}`;
       }
 
       // 工具函数：解析时间字符串获取日期和时间
       function parseTimeStr(timeStr) {
-        if (!timeStr || timeStr.includes('--')) {
-          const now = new Date();
-          return {
-            date: `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`,
-            time: `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-          };
-        }
         if (timeStr.includes('/')) {
           const parts = timeStr.split(' ');
           return {
@@ -8052,7 +7702,6 @@ function applyUserAvatar(avatarElement) {
 
         // 获取完整的时间信息进行比较
         const lastFullTime = getFullTimeStr(); // 当前完整时间
-        if (!lastFullTime || lastFullTime.includes('--')) return null;
         const lastMsgTime = lastMessage.fullTime || parseTimeStr(lastMessage.time); // 上一条消息的完整时间
         const currentTime = parseTimeStr(lastFullTime); // 当前时间解析
 
@@ -8685,11 +8334,6 @@ function applyUserAvatar(avatarElement) {
         const conv = state.privateConversations[index];
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && conv && conv.name) nameSpan.textContent = conv.name;
-        if (conv && conv.name) {
-          ensureChatListEntry(conv.name, { avatar: settingsState.charAvatars[conv.name] });
-          bringChatToFront(conv.name);
-          clearUnreadCount(conv.name);
-        }
         // 切换消息并重渲染
         state.messageHistory = (conv && Array.isArray(conv.messages)) ? [...conv.messages] : [];
         // 更新标签激活态
@@ -8709,9 +8353,6 @@ function applyUserAvatar(avatarElement) {
         if (!name) return;
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan) nameSpan.textContent = name;
-        ensureChatListEntry(name, { avatar: settingsState.charAvatars[name] });
-        bringChatToFront(name);
-        clearUnreadCount(name);
 
         // 若已有多会话结构
         if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
@@ -10679,14 +10320,6 @@ function applyUserAvatar(avatarElement) {
 
         state.messageHistory.push(parsedMsg);
         appendMessage(parsedMsg, newIndex);
-        const conversationName = getCurrentCharName();
-        updateChatListMetadata(conversationName, {
-          lastMessage: text || parsedMsg.content || parsedMsg.type || '消息',
-          time: currentTime,
-          unread: 0
-        });
-        bringChatToFront(conversationName);
-        clearUnreadCount(conversationName);
 
         // Add to call transcript if in call
         if (state.inVoiceCall) {
@@ -11754,12 +11387,6 @@ function applyUserAvatar(avatarElement) {
                   const conv = state.privateConversations[idx];
                   conv.messages = conv.messages || [];
                   conv.messages.push(msg);
-                  updateChatListMetadata(msg.charName, {
-                    lastMessage: msg.content || msg.type || '消息',
-                    time: msg.time || getTimeStr()
-                  });
-                  incrementUnreadCount(msg.charName);
-                  bringChatToFront(msg.charName);
                   routedOther = true;
                   continue;
                 }
@@ -11769,16 +11396,6 @@ function applyUserAvatar(avatarElement) {
 
               state.messageHistory.push(msg);
               appendMessage(msg, state.messageHistory.length - 1);
-              if (msg.sender === 'char') {
-                const targetName = msg.charName || currentName || getCurrentCharName();
-                updateChatListMetadata(targetName, {
-                  lastMessage: msg.content || msg.type || '消息',
-                  time: msg.time || getTimeStr(),
-                  unread: 0
-                });
-                clearUnreadCount(targetName);
-                bringChatToFront(targetName);
-              }
 
               // 调试：记录解析后的消息
               try { if (state.debugEnabled && window.__aiDebug) {
@@ -13031,8 +12648,6 @@ function applyUserAvatar(avatarElement) {
         console.log('🕐 打开时间选择弹窗');
         const overlay = document.getElementById('timeSelectModalOverlay');
         const currentTimeDisplay = document.getElementById('currentTimeDisplay');
-        const profile = getActiveProfile();
-        const ts = profile.timeSettings || defaultProfile.timeSettings;
 
         if (!overlay) {
           console.error('❌ 未找到时间选择弹窗元素');
@@ -13040,32 +12655,44 @@ function applyUserAvatar(avatarElement) {
           return;
         }
 
+        // 更新当前时间显示
+        const now = new Date();
         const currentTime = getFullTimeStr();
         if (currentTimeDisplay) {
           currentTimeDisplay.textContent = currentTime;
         }
 
+        // 设置默认值
         const yearInput = document.getElementById('customYear');
         const monthInput = document.getElementById('customMonth');
         const dayInput = document.getElementById('customDay');
         const hourInput = document.getElementById('customHour');
         const minuteInput = document.getElementById('customMinute');
 
-        const now = getGlobalTime() || new Date();
-        if (
-          ts.mode === 'story' &&
-          ts.storyTime &&
-          ts.storyTime.month != null &&
-          ts.storyTime.day != null &&
-          ts.storyTime.hour != null &&
-          ts.storyTime.minute != null
-        ) {
-          if (yearInput) yearInput.value = now.getFullYear();
-          if (monthInput) monthInput.value = ts.storyTime.month;
-          if (dayInput) dayInput.value = ts.storyTime.day;
-          if (hourInput) hourInput.value = ts.storyTime.hour;
-          if (minuteInput) minuteInput.value = ts.storyTime.minute;
+        if (state.customTimeEnabled && state.customTime) {
+          // 如果已设置自定义时间，显示当前设置的时间
+          if (state.customTime.includes('/')) {
+            // 包含日期的格式：2024/01/15 12:30
+            const parts = state.customTime.split(' ');
+            const dateParts = parts[0].split('/');
+            const timeParts = parts[1].split(':');
+
+            if (yearInput) yearInput.value = parseInt(dateParts[0]);
+            if (monthInput) monthInput.value = parseInt(dateParts[1]);
+            if (dayInput) dayInput.value = parseInt(dateParts[2]);
+            if (hourInput) hourInput.value = parseInt(timeParts[0]);
+            if (minuteInput) minuteInput.value = parseInt(timeParts[1]);
+          } else {
+            // 只有时间的格式：12:30
+            const timeParts = state.customTime.split(':');
+            if (yearInput) yearInput.value = now.getFullYear();
+            if (monthInput) monthInput.value = now.getMonth() + 1;
+            if (dayInput) dayInput.value = now.getDate();
+            if (hourInput) hourInput.value = parseInt(timeParts[0]);
+            if (minuteInput) minuteInput.value = parseInt(timeParts[1]);
+          }
         } else {
+          // 否则显示当前时间
           if (yearInput) yearInput.value = now.getFullYear();
           if (monthInput) monthInput.value = now.getMonth() + 1;
           if (dayInput) dayInput.value = now.getDate();
@@ -13085,22 +12712,22 @@ function applyUserAvatar(avatarElement) {
       // 更新时间选择按钮状态
       function updateTimeSelectButton() {
         const btn = document.getElementById('timeSelectBtn');
-        if (!btn) return;
-        const profile = getActiveProfile();
-        if (profile.timeSettings?.mode === 'story') {
+        if (state.customTimeEnabled && state.customTime) {
           btn.style.background = '#007bff';
           btn.style.color = 'white';
-          const current = getGlobalTime();
-          const displayTime = current
-            ? `${(current.getMonth() + 1).toString().padStart(2, '0')}/${current.getDate().toString().padStart(2, '0')} ${current.getHours().toString().padStart(2, '0')}:${current.getMinutes().toString().padStart(2, '0')}`
-            : '自定义时间';
-          const label = btn.querySelector('.action-label');
-          if (label) label.textContent = displayTime;
+          // 显示简化的时间格式在按钮上
+          let displayTime = state.customTime;
+          if (state.customTime.includes('/')) {
+            // 如果包含日期，只显示月日和时间
+            const parts = state.customTime.split(' ');
+            const dateParts = parts[0].split('/');
+            displayTime = `${dateParts[1]}/${dateParts[2]} ${parts[1]}`;
+          }
+          btn.querySelector('.action-label').textContent = displayTime;
         } else {
           btn.style.background = '';
           btn.style.color = '';
-          const label = btn.querySelector('.action-label');
-          if (label) label.textContent = '自定义时间';
+          btn.querySelector('.action-label').textContent = '自定义时间';
         }
       }
 
@@ -13143,23 +12770,12 @@ function applyUserAvatar(avatarElement) {
 
         console.log('✅ 设置时间为:', fullTimeStr);
 
-        const profile = getActiveProfile();
-        profile.timeSettings = profile.timeSettings || { ...defaultProfile.timeSettings };
-        profile.timeSettings.mode = 'story';
-        profile.timeSettings.flowMode = 'static';
-        profile.timeSettings.flowStartRealTime = null;
-        profile.timeSettings.flowStartStoryTime = null;
-        profile.timeSettings.storyTime = {
-          month,
-          day,
-          hour,
-          minute
-        };
-        saveProfile(profile, activeProfileName);
-        updateDateTime();
-        startOrUpdateFlowTimer();
-        stopRealFlowTimer();
-        stopRealTimeRefresh();
+        // 设置自定义时间状态
+        state.customTimeEnabled = true;
+        state.customTime = fullTimeStr;
+
+        // 更新按钮状态
+        updateTimeSelectButton();
 
         // 隐藏弹窗
         hideTimeSelectModal();
@@ -13172,23 +12788,12 @@ function applyUserAvatar(avatarElement) {
       function resetToCurrentTime() {
         console.log('🔄 恢复当前时间');
 
-        const profile = getActiveProfile();
-        profile.timeSettings = {
-          ...defaultProfile.timeSettings,
-          mode: 'real',
-          flowMode: 'static',
-          storyTime: {
-            month: null,
-            day: null,
-            hour: null,
-            minute: null
-          }
-        };
-        saveProfile(profile, activeProfileName);
-        updateDateTime();
-        stopFlowTimer();
-        stopRealFlowTimer();
-        startRealTimeRefresh();
+        // 关闭自定义时间
+        state.customTimeEnabled = false;
+        state.customTime = null;
+
+        // 更新按钮状态
+        updateTimeSelectButton();
 
         // 隐藏弹窗
         hideTimeSelectModal();
@@ -15888,18 +15493,7 @@ function toggleFriendsPanel(show) {
             const conversations = parsePrivateConversationsFromShouji(msg.message);
             const nameSpan = document.getElementById('chatPersonName');
             if (conversations.length > 0) {
-              const profile = getActiveProfile();
-              if (Array.isArray(profile?.chatList) && profile.chatList.length > 0) {
-                conversations.sort((a, b) => {
-                  const idxA = profile.chatList.findIndex(entry => entry && entry.name === a.name);
-                  const idxB = profile.chatList.findIndex(entry => entry && entry.name === b.name);
-                  const safeA = idxA === -1 ? Number.MAX_SAFE_INTEGER : idxA;
-                  const safeB = idxB === -1 ? Number.MAX_SAFE_INTEGER : idxB;
-                  return safeA - safeB;
-                });
-              }
               state.privateConversations = conversations;
-              syncChatListWithConversations(conversations);
               // 选择默认激活会话：若标题名与现有显示名或可解析名匹配，则选之
               let activeIndex = 0;
               const _titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
@@ -15911,14 +15505,6 @@ function toggleFriendsPanel(show) {
               state.currentPrivateIndex = activeIndex;
               state.messageHistory = conversations[activeIndex].messages || [];
               if (nameSpan) nameSpan.textContent = conversations[activeIndex].name || wantedName || '';
-              const activeName =
-                (nameSpan && nameSpan.textContent && nameSpan.textContent.trim()) ||
-                conversations[activeIndex].name ||
-                wantedName ||
-                '';
-              if (activeName) {
-                clearUnreadCount(activeName);
-              }
               buildPrivateChatTabs(conversations, activeIndex);
               console.log('Loaded multi-private conversations:', conversations.length, 'active:', activeIndex);
             } else {
@@ -15929,13 +15515,8 @@ function toggleFriendsPanel(show) {
                 if (personName) {
                   nameSpan.textContent = personName;
                   console.log('Set person name to:', personName);
-                  clearUnreadCount(personName);
                 } else {
                   console.log('No person name found, keeping current name:', nameSpan.textContent);
-                  const fallbackName = nameSpan.textContent ? nameSpan.textContent.trim() : '';
-                  if (fallbackName) {
-                    clearUnreadCount(fallbackName);
-                  }
                 }
               }
               state.messageHistory = parseShoujiLog(msg.message);
@@ -15994,9 +15575,6 @@ function toggleFriendsPanel(show) {
 
           // 加载设置
           loadSettings();
-          startRealTimeRefresh();
-          startOrUpdateFlowTimer();
-          startOrUpdateRealFlowTimer();
 
           // 初始化角色头像配置
           initializeCharacterAvatars();
@@ -16990,145 +16568,6 @@ function toggleFriendsPanel(show) {
         charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
 
-      function buildAvatarMapFromProfile(profile) {
-        const map = {};
-        if (profile && Array.isArray(profile.chatList)) {
-          profile.chatList.forEach(item => {
-            if (item && item.name && item.avatar) {
-              map[item.name] = item.avatar;
-            }
-          });
-        }
-        return map;
-      }
-
-      function mergeAvatarMapIntoProfile(profile, avatarMap) {
-        if (!profile) return;
-        if (!Array.isArray(profile.chatList)) {
-          profile.chatList = [];
-        }
-        Object.entries(avatarMap || {}).forEach(([name, avatar]) => {
-          if (!name) return;
-          let entry = profile.chatList.find(c => c && c.name === name);
-          if (!entry) {
-            entry = { name, avatar, isGroup: false, members: [] };
-            profile.chatList.unshift(entry);
-          } else {
-            entry.avatar = avatar;
-          }
-        });
-      }
-
-      function updateProfileCharAvatar(charName, avatarUrl) {
-        if (!charName) return;
-        const profile = getActiveProfile();
-        mergeAvatarMapIntoProfile(profile, { [charName]: avatarUrl });
-        saveProfile(profile, activeProfileName);
-      }
-
-      function removeProfileCharAvatar(charName) {
-        if (!charName) return;
-        const profile = getActiveProfile();
-        if (!Array.isArray(profile.chatList)) return;
-        const entry = profile.chatList.find(c => c && c.name === charName);
-        if (entry) {
-          delete entry.avatar;
-        }
-        saveProfile(profile, activeProfileName);
-      }
-
-      function ensureChatListEntry(name, extra = {}) {
-        if (!name) return null;
-        const profile = getActiveProfile();
-        if (!Array.isArray(profile.chatList)) {
-          profile.chatList = [];
-        }
-        let index = profile.chatList.findIndex(c => c && c.name === name);
-        if (index === -1) {
-          const entry = {
-            name,
-            avatar: extra.avatar || '',
-            isGroup: !!extra.isGroup,
-            members: Array.isArray(extra.members) ? extra.members : []
-          };
-          profile.chatList.unshift(entry);
-          saveProfile(profile, activeProfileName);
-          return entry;
-        }
-        const entry = profile.chatList[index];
-        if (extra.avatar) entry.avatar = extra.avatar;
-        if (Array.isArray(extra.members) && extra.members.length) {
-          entry.members = extra.members;
-        }
-        return entry;
-      }
-
-      function bringChatToFront(name) {
-        if (!name) return;
-        const profile = getActiveProfile();
-        if (!Array.isArray(profile.chatList)) return;
-        const index = profile.chatList.findIndex(c => c && c.name === name);
-        if (index > 0) {
-          const [entry] = profile.chatList.splice(index, 1);
-          profile.chatList.unshift(entry);
-          saveProfile(profile, activeProfileName);
-        }
-      }
-
-      function syncChatListWithConversations(conversations) {
-        if (!Array.isArray(conversations) || conversations.length === 0) return;
-        const profile = getActiveProfile();
-        profile.chatList = Array.isArray(profile.chatList) ? profile.chatList : [];
-        conversations.forEach(conv => {
-          if (!conv || !conv.name) return;
-          ensureChatListEntry(conv.name, { avatar: settingsState.charAvatars[conv.name] });
-        });
-      }
-
-      function updateChatListMetadata(name, data = {}) {
-        if (!name) return;
-        const profile = getActiveProfile();
-        if (!Array.isArray(profile.chatList)) {
-          profile.chatList = [];
-        }
-        let entry = profile.chatList.find(c => c && c.name === name);
-        if (!entry) {
-          entry = ensureChatListEntry(name, {});
-        }
-        if (!entry) return;
-        if (data.lastMessage !== undefined) entry.lastMessage = data.lastMessage;
-        if (data.time !== undefined) entry.time = data.time;
-        if (data.unread !== undefined) entry.unread = data.unread;
-        saveProfile(profile, activeProfileName);
-      }
-
-      function incrementUnreadCount(name) {
-        if (!name) return;
-        const profile = getActiveProfile();
-        if (!Array.isArray(profile.chatList)) {
-          profile.chatList = [];
-        }
-        let entry = profile.chatList.find(c => c && c.name === name);
-        if (!entry) {
-          entry = ensureChatListEntry(name, {});
-        }
-        if (!entry) return;
-        entry.unread = (entry.unread || 0) + 1;
-        saveProfile(profile, activeProfileName);
-      }
-
-      function clearUnreadCount(name) {
-        if (!name) return;
-        const profile = getActiveProfile();
-        if (!Array.isArray(profile.chatList)) return;
-        const entry = profile.chatList.find(c => c && c.name === name);
-        if (!entry) return;
-        if (entry.unread) {
-          entry.unread = 0;
-          saveProfile(profile, activeProfileName);
-        }
-      }
-
       // ==================== 收藏消息功能 ====================
 
       // 获取收藏数据的存储键名
@@ -17708,7 +17147,6 @@ function toggleFriendsPanel(show) {
         profile.avatarUrl = avatarUrl;
         profile.lastUpdated = new Date().toISOString();
         saveCharacterProfile(charName, profile);
-        updateProfileCharAvatar(charName, avatarUrl);
       }
 
       // 初始化角色头像配置
@@ -17724,101 +17162,57 @@ function toggleFriendsPanel(show) {
         }
       }
 
-      function applyProfileState(profile) {
-        if (!profile) return;
-        settingsState.userAvatar = profile.urls.userAvatarUrl;
-        settingsState.wallpaper = profile.urls.chatWallpaperUrl;
-        settingsState.charAvatars = buildAvatarMapFromProfile(profile);
-        updateUserAvatars();
-        updateWallpaper();
-        updateCharAvatars();
-        state.interfaceScale = profile.interfaceScale || state.interfaceScale;
-        applyInterfaceScale(state.interfaceScale);
-        if ([1, 2, 3].includes(profile.typingSpeedLevel)) {
-          state.typingSpeedLevel = profile.typingSpeedLevel;
-        }
-        updateTypingSpeedUI();
-        if (profile.theme) {
-          document.documentElement.setAttribute('data-theme', profile.theme);
-          const themeRadio = document.querySelector(`input[name="theme"][value="${profile.theme}"]`);
-          if (themeRadio) {
-            themeRadio.checked = true;
-          }
-        }
-        if (profile.bubbleStyle) {
-          document.documentElement.setAttribute('data-bubble-style', profile.bubbleStyle);
-          const bubbleRadio = document.querySelector(`input[name="bubbleStyle"][value="${profile.bubbleStyle}"]`);
-          if (bubbleRadio) {
-            bubbleRadio.checked = true;
-          }
-        }
-        updateTimeSelectButton();
-        updateDateTime();
-      }
-
-
       // 从localStorage加载设置
       function loadSettings() {
-        const profile = getActiveProfile();
-        let needSave = false;
-        const legacyAvatar = localStorage.getItem('chatUserAvatar');
-        if (legacyAvatar && legacyAvatar !== profile.urls.userAvatarUrl) {
-          profile.urls.userAvatarUrl = legacyAvatar;
-          localStorage.removeItem('chatUserAvatar');
-          needSave = true;
-        }
-        const legacyWallpaper = localStorage.getItem('chatWallpaper');
-        if (legacyWallpaper && legacyWallpaper !== profile.urls.chatWallpaperUrl) {
-          profile.urls.chatWallpaperUrl = legacyWallpaper;
-          localStorage.removeItem('chatWallpaper');
-          needSave = true;
-        }
-        const legacyCharAvatars = localStorage.getItem('chatCharAvatars');
-        if (legacyCharAvatars) {
-          try {
-            const map = JSON.parse(legacyCharAvatars);
-            mergeAvatarMapIntoProfile(profile, map);
-            localStorage.removeItem('chatCharAvatars');
-            needSave = true;
-          } catch (e) {
-            console.warn('解析旧角色头像失败', e);
-          }
-        }
-        const legacyTheme = localStorage.getItem('chatTheme');
-        if (legacyTheme && !profile.theme) {
-          profile.theme = legacyTheme;
-          needSave = true;
-        }
-        const legacyBubble = localStorage.getItem('chatBubbleStyle');
-        if (legacyBubble && !profile.bubbleStyle) {
-          profile.bubbleStyle = legacyBubble;
-          needSave = true;
-        }
-        const legacyScale = localStorage.getItem('interfaceScale');
-        if (legacyScale && profile.interfaceScale === defaultProfile.interfaceScale) {
-          const percent = Math.min(120, Math.max(90, parseInt(legacyScale, 10) || 100));
-          profile.interfaceScale = percent / 100;
-          needSave = true;
-        }
-        const legacyTyping = localStorage.getItem('typingSpeedLevel');
-        if (legacyTyping && profile.typingSpeedLevel === defaultProfile.typingSpeedLevel) {
-          const level = parseInt(legacyTyping, 10);
-          if ([1, 2, 3].includes(level)) {
-            profile.typingSpeedLevel = level;
-            needSave = true;
-          }
-        }
-        if (needSave) {
-          saveProfile(profile, activeProfileName);
-        }
-
-        applyProfileState(profile);
-
+        const savedAvatar = localStorage.getItem('chatUserAvatar');
+        const savedWallpaper = localStorage.getItem('chatWallpaper');
+        const savedCharAvatars = localStorage.getItem('chatCharAvatars');
         const savedJailbreak = localStorage.getItem('jailbreakEnabled');
+        const savedTheme = localStorage.getItem('chatTheme');
+        const savedBubbleStyle = localStorage.getItem('chatBubbleStyle');
+
+        if (savedAvatar) {
+          settingsState.userAvatar = savedAvatar;
+          updateUserAvatars();
+        }
+
+        if (savedWallpaper) {
+          settingsState.wallpaper = savedWallpaper;
+          updateWallpaper();
+        }
+
+        if (savedCharAvatars) {
+          try {
+            settingsState.charAvatars = JSON.parse(savedCharAvatars);
+            updateCharAvatars();
+          } catch (e) {
+            console.error('Failed to parse char avatars:', e);
+            settingsState.charAvatars = {};
+          }
+        }
+
+        // 加载破限开关状态
         if (savedJailbreak !== null) {
           state.jailbreakEnabled = savedJailbreak === 'true';
           document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
         }
+
+        // 加载识图API配置
+        const savedScale = localStorage.getItem('interfaceScale');
+        if (savedScale) {
+          const percent = Math.min(120, Math.max(90, parseInt(savedScale, 10) || 100));
+          state.interfaceScale = percent / 100;
+        }
+        applyInterfaceScale(state.interfaceScale);
+
+        const savedTypingLevel = localStorage.getItem('typingSpeedLevel');
+        if (savedTypingLevel) {
+          const level = parseInt(savedTypingLevel, 10);
+          if ([1, 2, 3].includes(level)) {
+            state.typingSpeedLevel = level;
+          }
+        }
+        updateTypingSpeedUI();
 
         const savedVisionMode = localStorage.getItem('visionMode');
         const savedVisionApiUrl = localStorage.getItem('visionApiUrl');
@@ -17901,46 +17295,58 @@ function toggleFriendsPanel(show) {
           }
         }
 
-        const savedTheme = profile.theme || localStorage.getItem('chatTheme');
-        if (savedTheme && !profile.theme) {
+        // 加载主题设置
+        if (savedTheme) {
           document.documentElement.setAttribute('data-theme', savedTheme);
+          const themeRadio = document.querySelector(`input[name="theme"][value="${savedTheme}"]`);
+          if (themeRadio) {
+            themeRadio.checked = true;
+          }
         }
 
-        const savedBubbleStyle = profile.bubbleStyle || localStorage.getItem('chatBubbleStyle');
-        if (savedBubbleStyle && !profile.bubbleStyle) {
+        // 加载气泡样式设置
+        if (savedBubbleStyle) {
           document.documentElement.setAttribute('data-bubble-style', savedBubbleStyle);
+          const bubbleRadio = document.querySelector(`input[name="bubbleStyle"][value="${savedBubbleStyle}"]`);
+          if (bubbleRadio) {
+            bubbleRadio.checked = true;
+          }
         }
-
-        updateTimeSelectButton();
-        updateDateTime();
       }
 
       // 保存设置到localStorage
       function saveSettings() {
-        const profile = getActiveProfile();
-        profile.urls.userAvatarUrl = settingsState.userAvatar || defaultProfile.urls.userAvatarUrl;
-        profile.urls.chatWallpaperUrl = settingsState.wallpaper || defaultProfile.urls.chatWallpaperUrl;
-        profile.interfaceScale = state.interfaceScale;
-        profile.typingSpeedLevel = state.typingSpeedLevel;
-        mergeAvatarMapIntoProfile(profile, settingsState.charAvatars);
-        saveProfile(profile, activeProfileName);
+        // 保存用户头像（包括清除的情况）
+        if (settingsState.userAvatar) {
+          localStorage.setItem('chatUserAvatar', settingsState.userAvatar);
+        } else {
+          localStorage.removeItem('chatUserAvatar');
+        }
+
+        // 保存壁纸（包括清除的情况）
+        if (settingsState.wallpaper) {
+          localStorage.setItem('chatWallpaper', settingsState.wallpaper);
+        } else {
+          localStorage.removeItem('chatWallpaper');
+        }
+
+        // 保存角色头像
+        if (settingsState.charAvatars && Object.keys(settingsState.charAvatars).length > 0) {
+          localStorage.setItem('chatCharAvatars', JSON.stringify(settingsState.charAvatars));
+        } else {
+          localStorage.removeItem('chatCharAvatars');
+        }
       }
 
       // 保存主题设置
       function saveTheme(theme) {
         localStorage.setItem('chatTheme', theme);
-        const profile = getActiveProfile();
-        profile.theme = theme;
-        saveProfile(profile, activeProfileName);
         console.log('主题已保存:', theme);
       }
 
       // 保存气泡样式设置
       function saveBubbleStyle(bubbleStyle) {
         localStorage.setItem('chatBubbleStyle', bubbleStyle);
-        const profile = getActiveProfile();
-        profile.bubbleStyle = bubbleStyle;
-        saveProfile(profile, activeProfileName);
         console.log('气泡样式已保存:', bubbleStyle);
       }
 
@@ -17965,18 +17371,24 @@ function toggleFriendsPanel(show) {
       }
       function updateWallpaper() {
         const chatMessages = document.querySelector('.chat-messages');
-        const profile = getActiveProfile();
-        const wallpaperUrl = settingsState.wallpaper || profile.urls.chatWallpaperUrl || "https://files.catbox.moe/e1xk9k.jpeg";
         if (chatMessages) {
-          chatMessages.style.backgroundImage = `url(${wallpaperUrl})`;
-          chatMessages.style.backgroundSize = 'cover';
-          chatMessages.style.backgroundPosition = 'center';
+          if (settingsState.wallpaper) {
+            chatMessages.style.backgroundImage = `url(${settingsState.wallpaper})`;
+            chatMessages.style.backgroundSize = 'cover';
+            chatMessages.style.backgroundPosition = 'center';
+          } else {
+            chatMessages.style.backgroundImage = "url('https://files.catbox.moe/e1xk9k.jpeg')";
+          }
         }
 
         // 更新预览
         const preview = document.getElementById('wallpaperPreview');
         if (preview) {
-          preview.src = wallpaperUrl;
+          if (settingsState.wallpaper) {
+            preview.src = settingsState.wallpaper;
+          } else {
+            preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
+          }
         }
       }
 
@@ -18119,12 +17531,12 @@ function toggleFriendsPanel(show) {
       function resetSetting(type) {
         if (type === 'avatar') {
           settingsState.userAvatar = null;
+          localStorage.removeItem('chatUserAvatar');
           updateUserAvatars();
-          saveSettings();
         } else if (type === 'wallpaper') {
           settingsState.wallpaper = null;
+          localStorage.removeItem('chatWallpaper');
           updateWallpaper();
-          saveSettings();
         } else if (type === 'charAvatar') {
           // 优先使用输入框中的角色名，如果没有则使用当前角色名
           const nameInput = document.getElementById('charNameInput');
@@ -18146,7 +17558,6 @@ function toggleFriendsPanel(show) {
           if (settingsState.charAvatars[charName]) {
             delete settingsState.charAvatars[charName];
           }
-          removeProfileCharAvatar(charName);
 
           // 清除消息历史中的自定义头像
           state.messageHistory.forEach(msg => {
@@ -18746,8 +18157,7 @@ function toggleFriendsPanel(show) {
           const percent = Math.min(120, Math.max(90, parseInt(e.target.value, 10) || 100));
           const scale = percent / 100;
           applyInterfaceScale(scale);
-          state.interfaceScale = scale;
-          saveSettings();
+          localStorage.setItem('interfaceScale', String(percent));
         });
       }
 
@@ -18757,7 +18167,7 @@ function toggleFriendsPanel(show) {
           const level = Math.min(3, Math.max(1, parseInt(e.target.value, 10) || 2));
           state.typingSpeedLevel = level;
           updateTypingSpeedUI();
-          saveSettings();
+          localStorage.setItem('typingSpeedLevel', String(level));
         });
       }
 
@@ -20252,84 +19662,87 @@ function toggleFriendsPanel(show) {
       })();
     </script>
     <script>
-      (function setupHomeOverlayBindings() {
+      // 主屏与应用点击逻辑：进入聊天先展示好友列表
+      document.addEventListener('DOMContentLoaded', function () {
+        const homeOverlay = document.getElementById('homeOverlay');
+        const appChat = document.getElementById('appChat');
+        const appMessages = document.getElementById('appMessages');
+        const appMoments = document.getElementById('appMoments');
+        const appStore = document.getElementById('appStore');
+        const appMusic = document.getElementById('appMusic');
+        const appCloudMusic = document.getElementById('appCloudMusic');
+        const appSettings = document.getElementById('appSettings');
+        const homeBtn = document.getElementById('homeBtn');
+
+        const showHome = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
+        const openChat = () => {
+          if (homeOverlay) homeOverlay.style.display = 'none';
+          try { if (typeof toggleFriendsPanel === 'function') toggleFriendsPanel(true); } catch (_) {}
+        };
+
+        if (appChat) appChat.addEventListener('click', openChat);
+        if (appMessages) appMessages.addEventListener('click', openChat);
+        if (homeBtn) homeBtn.addEventListener('click', showHome);
+        const homeDockBtn = document.getElementById('homeDockBtn');
+        if (homeDockBtn) homeDockBtn.addEventListener('click', showHome);
+
+        const placeholder = (name) => () => { try { alert(name + ' 功能暂未实现'); } catch (_) {} };
+        if (appMoments) appMoments.addEventListener('click', placeholder('朋友圈'));
+        if (appStore) appStore.addEventListener('click', placeholder('商店'));
+        if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
+        if (appCloudMusic) appCloudMusic.addEventListener('click', () => {
+          if (homeOverlay) homeOverlay.style.display = 'none';
+          const o = document.getElementById('cloudMusicOverlay');
+          if (o) { o.style.display = 'flex'; o.setAttribute('aria-hidden','false'); }
+        });
+        const cloudMusicClose = document.getElementById('cloudMusicClose');
+        if (cloudMusicClose) cloudMusicClose.addEventListener('click', () => {
+          const o = document.getElementById('cloudMusicOverlay');
+          if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden','true'); }
+        });
+        if (appSettings) appSettings.addEventListener('click', () => {
+          if (homeOverlay) homeOverlay.style.display = 'none';
+          try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
+        });
+      });
+    </script>
+    <script>
+      // SillyTavern sandbox-safe clicks for home apps (bind immediately if DOM is ready)
+      (function bindHomeApps(){
         const bind = () => {
-          if (bind._bound) return;
-          bind._bound = true;
-
-          const byId = (id) => document.getElementById(id);
-          const homeOverlay = byId('homeOverlay');
-          const homeBtn = byId('homeBtn');
-          const homeDockBtn = byId('homeDockBtn');
-          const appChat = byId('appChat');
-          const appMessages = byId('appMessages');
-          const appMoments = byId('appMoments');
-          const appStore = byId('appStore');
-          const appMusic = byId('appMusic');
-          const appCloudMusic = byId('appCloudMusic');
-          const cloudMusicClose = byId('cloudMusicClose');
-          const appSettings = byId('appSettings');
-
-          const showHome = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
-          const hideHome = () => { if (homeOverlay) homeOverlay.style.display = 'none'; };
           const showToastSafe = (msg) => { try { (typeof showToast === 'function' ? showToast : alert)(msg); } catch (_) {} };
+          const homeOverlay = document.getElementById('homeOverlay');
+          const appChat = document.getElementById('appChat');
+          const appMessages = document.getElementById('appMessages');
+          const appMoments = document.getElementById('appMoments');
+          const appStore = document.getElementById('appStore');
+          const appMusic = document.getElementById('appMusic');
+          const appSettings = document.getElementById('appSettings');
+          const homeBtn = document.getElementById('homeBtn');
+          const homeDockBtn = document.getElementById('homeDockBtn');
+
           const openChat = () => {
-            hideHome();
+            if (homeOverlay) homeOverlay.style.display = 'none';
             try { if (typeof toggleFriendsPanel === 'function') toggleFriendsPanel(true); } catch (_) {}
           };
 
-          if (appChat) appChat.addEventListener('click', openChat);
-          if (appMessages) appMessages.addEventListener('click', openChat);
-          if (homeBtn) homeBtn.addEventListener('click', showHome);
-          if (homeDockBtn) homeDockBtn.addEventListener('click', showHome);
-
-          const bindPlaceholder = (el, label) => {
-            if (!el) return;
-            el.addEventListener('click', () => showToastSafe(label + ' ??????'));
+          if (appChat) appChat.onclick = openChat;
+          if (appMessages) appMessages.onclick = openChat;
+          if (homeBtn) homeBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
+          if (homeDockBtn) homeDockBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
+          if (appMoments) appMoments.onclick = () => showToastSafe('朋友圈 功能暂未开放');
+          if (appStore) appStore.onclick = () => showToastSafe('商店 功能暂未开放');
+          if (appMusic) appMusic.onclick = () => {
+            try { if (typeof openMusicPanel === 'function') return openMusicPanel(); } catch(_) {}
+            showToastSafe('音乐 功能暂未开放');
           };
-          bindPlaceholder(appMoments, '???');
-          bindPlaceholder(appStore, '??');
-
-          if (appMusic) {
-            appMusic.addEventListener('click', () => {
-              try {
-                if (typeof openMusicPanel === 'function') return openMusicPanel();
-              } catch (_) {}
-              showToastSafe('?? ??????');
-            });
-          }
-
-          if (appCloudMusic) {
-            appCloudMusic.addEventListener('click', () => {
-              hideHome();
-              const overlay = byId('cloudMusicOverlay');
-              if (overlay) {
-                overlay.style.display = 'flex';
-                overlay.setAttribute('aria-hidden', 'false');
-              }
-            });
-          }
-
-          if (cloudMusicClose) {
-            cloudMusicClose.addEventListener('click', () => {
-              const overlay = byId('cloudMusicOverlay');
-              if (overlay) {
-                overlay.style.display = 'none';
-                overlay.setAttribute('aria-hidden', 'true');
-              }
-            });
-          }
-
-          if (appSettings) {
-            appSettings.addEventListener('click', () => {
-              hideHome();
-              try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
-            });
-          }
+          if (appSettings) appSettings.onclick = () => {
+            if (homeOverlay) homeOverlay.style.display = 'none';
+            try { if (typeof showSettings === 'function') showSettings(); } catch(_) {}
+          };
         };
-
         if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', bind);
+          document.addEventListener('DOMContentLoaded', bind, { once: true });
         } else {
           bind();
         }
@@ -20337,3 +19750,19 @@ function toggleFriendsPanel(show) {
     </script>
   </body>
 </html>
+
+<script>
+  // 统一绑定主屏“设置”应用的点击行为（冗余保护）
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      const homeOverlay = document.getElementById('homeOverlay');
+      const appSettings = document.getElementById('appSettings');
+      if (appSettings) {
+        appSettings.addEventListener('click', function () {
+          if (homeOverlay) homeOverlay.style.display = 'none';
+          try { if (typeof showSettings === 'function') showSettings(); } catch (_) {}
+        });
+      }
+    } catch (_) {}
+  });
+</script>
