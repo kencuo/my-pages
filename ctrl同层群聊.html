@@ -16934,6 +16934,9 @@
             .trim();
           const msgs = parseQunliaoLog(`<qunliao>\n${content}\n</qunliao>`);
           const key = chatTitle || `会话${Object.keys(result.chats).length+1}`;
+          if (!result.groupName && chatTitle) {
+            result.groupName = chatTitle;
+          }
           result.chats[key] = msgs;
         }
         return result;
@@ -17057,7 +17060,18 @@
       }
 
       // 切换会话 / 新增会话
-      window.switchPrivateChat = function(name){
+      function notifyMissingChatHistory(name) {
+        const message = `未找到群聊「${name}」的记录，已保留当前聊天内容`;
+        if (typeof showToast === 'function') {
+          try {
+            showToast(message, 2500);
+            return;
+          } catch (_) {}
+        }
+        console.warn(message);
+      }
+
+      window.switchPrivateChat = function(name, options = {}){
         if (!name) return;
         // 保存离开群的输入草稿
         saveCurrentDraft();
@@ -17065,7 +17079,15 @@
         multiState.currentChat = name;
         // Persist selected chat for future reloads
         try { if (typeof saveSelectedChat === 'function') saveSelectedChat(name); } catch(_) {}
-        state.messageHistory = multiState.chats[name] || [];
+        if (!multiState.chats[name]) {
+          if (options.createIfMissing) {
+            multiState.chats[name] = [];
+          } else {
+            notifyMissingChatHistory(name);
+            return;
+          }
+        }
+        state.messageHistory = multiState.chats[name];
         lastHistoryCount = 0;
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan) nameSpan.textContent = `和${name}的聊天`;
@@ -17240,27 +17262,34 @@
       }
 
       // 进入（或创建）群聊会话，并同步到 <multi>
-      window.openConversation = function(name){
+      window.openConversation = function(name, options = {}){
         const n = String(name||'').trim(); if (!n) return;
-        // 从存储加载对应群成员
+        // ??????????
         const store = loadFriendsStore();
         const g = (store.groups||[]).find(x => x.name === n);
         if (g){
           multiState.groupName = g.name;
           multiState.groupMembers = Array.isArray(g.members) ? g.members : [];
         }
-        if (!multiState.chats[n]) multiState.chats[n] = [];
+        if (!multiState.chats[n]) {
+          if (options.createIfMissing) {
+            multiState.chats[n] = [];
+          } else {
+            notifyMissingChatHistory(n);
+            return;
+          }
+        }
         if (multiState.currentChat){ multiState.chats[multiState.currentChat] = state.messageHistory.slice(); }
         multiState.currentChat = n;
         // Persist selected chat immediately when opening
         try { if (typeof saveSelectedChat === 'function') saveSelectedChat(n); } catch(_) {}
-        state.messageHistory = multiState.chats[n] || [];
+        state.messageHistory = multiState.chats[n];
         lastHistoryCount = 0;
         const nameSpan = document.getElementById('chatPersonName');
-        if (nameSpan) nameSpan.textContent = `和${n}的聊天`;
+        if (nameSpan) nameSpan.textContent = `?${n}???`;
         renderAllMessages();
         updateAiRequestButtonVisibility();
-        // 写回 qunliao 的 multi 结构
+        // ?? qunliao ? multi ??
         deferredSync(200);
       };
 
@@ -17271,6 +17300,9 @@
         const members = parseMembers(membersStr);
         const group = { id: 'group_'+Date.now(), name: String(name).trim(), members, pinned: false, createdAt: Date.now(), updatedAt: Date.now() };
         upsertGroup(group);
+        if (!multiState.chats[group.name]) {
+          multiState.chats[group.name] = [];
+        }
         buildGroupList();
       }
 
