@@ -17320,14 +17320,25 @@
           multiState.chats[targetName] = existing;
           delete multiState.chats[currentName];
           multiState.currentChat = targetName;
+          state.messageHistory = existing;
         } else if (!currentName) {
           multiState.currentChat = targetName;
           if (!multiState.chats[targetName]) {
             multiState.chats[targetName] = currentMessages;
           }
+          state.messageHistory = multiState.chats[targetName];
         } else if (!multiState.chats[currentName]) {
           multiState.chats[currentName] = currentMessages;
+          state.messageHistory = multiState.chats[currentName];
+        } else {
+          state.messageHistory = multiState.chats[currentName];
         }
+
+        if (multiState.currentChat && !multiState.chats[multiState.currentChat]) {
+          multiState.chats[multiState.currentChat] = state.messageHistory;
+        }
+        lastHistoryCount = 0;
+        renderAllMessages();
 
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && multiState.currentChat) {
