@@ -16913,9 +16913,10 @@
           // 无 multi，整体当作一个会话
           const lines = inner.replace(/^[\s\S]*?\n?/, '').trim();
           const msgs = parseQunliaoLog(`<qunliao>\n${lines}\n</qunliao>`);
-          result.chats['群聊'] = msgs;
           const t = inner.split(/\n/).map(s=>s.trim()).find(s => /^【.+的聊天】$/.test(s));
           if (t) result.groupName = t.replace(/^【|】$/g,'').replace(/的聊天$/,'');
+          const singleKey = result.groupName || '群聊';
+          result.chats[singleKey] = msgs;
           // 尝试解析顶层成员（如存在）
           const memberTop = (inner.match(/<群成员：([^>]+)>/) || [])[1] || '';
           if (memberTop) result.groupMembers = parseMembers(memberTop);
