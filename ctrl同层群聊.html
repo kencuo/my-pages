@@ -17309,6 +17309,31 @@
         // 为每个成员确保存在对应会话
         // (multiState.groupMembers || []).forEach(n => { if (!multiState.chats[n]) multiState.chats[n] = []; }); // 已禁用自动创建成员私聊
         buildPrivateChatsList();
+
+        // 确保当前会话名称与群昵称同步，避免清空已有消息
+        const targetName = multiState.groupName || '群聊';
+        const currentName = multiState.currentChat;
+        const currentMessages = state.messageHistory.slice();
+
+        if (currentName && currentName !== targetName) {
+          const existing = multiState.chats[currentName] || currentMessages;
+          multiState.chats[targetName] = existing;
+          delete multiState.chats[currentName];
+          multiState.currentChat = targetName;
+        } else if (!currentName) {
+          multiState.currentChat = targetName;
+          if (!multiState.chats[targetName]) {
+            multiState.chats[targetName] = currentMessages;
+          }
+        } else if (!multiState.chats[currentName]) {
+          multiState.chats[currentName] = currentMessages;
+        }
+
+        const nameSpan = document.getElementById('chatPersonName');
+        if (nameSpan && multiState.currentChat) {
+          nameSpan.textContent = `和${multiState.currentChat}的聊天`;
+        }
+
         // 写入群聊列表存储，便于下次直接选择
         (function(){
           const name = multiState.groupName || '未命名群';
@@ -17326,12 +17351,6 @@
           buildGroupList();
         })();
         groupInfoHint.textContent = `已保存：${multiState.groupName || '未命名群'}，成员${multiState.groupMembers.length}人`;
-        // 若未选择会话，默认切到第一个成员
-        if (!multiState.currentChat && multiState.groupName){
-          openConversation(multiState.groupName);
-        } else {          const nameSpan = document.getElementById('chatPersonName');
-          if (nameSpan && !multiState.currentChat) nameSpan.textContent = multiState.groupName || '';
-        }
         syncToSillyTavernMulti();
       };
       // 私聊项由群成员自动生成，无需手动添加按钮
