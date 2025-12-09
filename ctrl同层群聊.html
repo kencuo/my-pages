@@ -17015,7 +17015,14 @@
             } catch(_) {}
             multiState.chats = allChats;
             // 将解析到的群聊名称同步到群聊列表存储，便于列表切换
-            try { ensureGroupsFromMulti(Object.keys(allChats)); } catch(_) {}
+            try {
+              const chatNames = Object.keys(allChats);
+              const membersMap = {};
+              if (parsed.groupMembers && parsed.groupMembers.length) {
+                chatNames.forEach(name => { membersMap[name] = parsed.groupMembers; });
+              }
+              ensureGroupsFromMulti(chatNames, { membersMap, sharedMembers: parsed.groupMembers || [] });
+            } catch(_) {}
             // 选择当前会话：优先保持原会话名，其次用 groupName，再次第一个会话
             let chosen = multiState.currentChat && allChats[multiState.currentChat] ? multiState.currentChat : '';
             // 优先使用上次用户选择的会话
@@ -17040,17 +17047,36 @@
       }
 
       // 将解析得到的群聊名称写入群聊列表存储（若不存在则创建占位项）
-      function ensureGroupsFromMulti(names){
+      function ensureGroupsFromMulti(names, options = {}){
         if (!Array.isArray(names) || names.length === 0) return;
+        const membersMap = options.membersMap || {};
+        const sharedMembers = options.sharedMembers || [];
         const store = loadFriendsStore();
         const list = Array.isArray(store.groups) ? store.groups : [];
         let changed = false;
         names.forEach(n => {
           const existing = list.find(g => g && g.name === n);
+          const targetMembers = (membersMap[n] && membersMap[n].length ? membersMap[n] : sharedMembers) || [];
           if (!existing) {
             const now = Date.now();
-            list.push({ id: 'multi_' + n, name: n, members: [], pinned: false, createdAt: now, updatedAt: now });
+            list.push({
+              id: 'multi_' + n,
+              name: n,
+              members: targetMembers.slice(),
+              pinned: false,
+              createdAt: now,
+              updatedAt: now,
+            });
             changed = true;
+          } else if (targetMembers.length) {
+            const currentMembers = Array.isArray(existing.members) ? existing.members : [];
+            const before = currentMembers.join(',');
+            const after = targetMembers.join(',');
+            if (before !== after) {
+              existing.members = targetMembers.slice();
+              existing.updatedAt = Date.now();
+              changed = true;
+            }
           }
         });
         if (changed) {
@@ -17265,7 +17291,6 @@
       // 进入（或创建）群聊会话，并同步到 <multi>
       window.openConversation = function(name, options = {}){
         const n = String(name||'').trim(); if (!n) return;
-        // ??????????
         const store = loadFriendsStore();
         const g = (store.groups||[]).find(x => x.name === n);
         if (g){
@@ -17287,10 +17312,10 @@
         state.messageHistory = multiState.chats[n];
         lastHistoryCount = 0;
         const nameSpan = document.getElementById('chatPersonName');
-        if (nameSpan) nameSpan.textContent = `?${n}???`;
+        if (nameSpan) nameSpan.textContent = `和${n}的聊天`;
         renderAllMessages();
         updateAiRequestButtonVisibility();
-        // ?? qunliao ? multi ??
+      
         deferredSync(200);
       };
 
