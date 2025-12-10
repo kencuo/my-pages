@@ -42,7 +42,7 @@
         --shadow-heavy: rgba(251, 237, 181, 0.2);
 
         /* Layout helpers so height tweaks propagate everywhere */
-        --phone-height: 550px;
+        --phone-height: 600px;
         --phone-shell-height: calc(var(--phone-height) + 15px);
         --input-area-height: 56px;
       }
@@ -501,7 +501,7 @@
 
       /* 悬停效果 */
       [data-bubble-style="dark-diamond"] .message-content:hover {
-        transform: perspective(545px) rotateX(5deg) translateZ(25px);
+        transform: perspective(550px) rotateX(5deg) translateZ(25px);
         box-shadow:
           0 15px 35px rgba(0, 0, 0, 0.7),
           inset 0 -8px 20px rgba(0, 0, 0, 0.4),
@@ -2953,7 +2953,7 @@
         align-items: center;
         gap: 8px;
         text-align: center;
-        padding-top: 60px; /* 适配左上角按钮空间，避免顶到 */
+        padding-top: 50px; /* 适配左上角按钮空间，避免顶到 */
         text-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
       }
       #voiceCallRequestAiBtn {
@@ -3008,7 +3008,7 @@
         position: relative;
         z-index: 1;
         flex-grow: 1;
-        margin: 15px 20px;
+        margin: 5px 20px 15px 20px !important; 
         padding: 10px;
         background: rgba(0, 0, 0, 0.2);
         border-radius: 10px;
@@ -3045,10 +3045,11 @@
       .voice-call-footer {
         position: relative;
         z-index: 1;
-        padding: 0 20px 20px 20px;
+        padding: 0 20px 100px 20px;
         display: flex;
         flex-direction: column;
         gap: 15px;
+        transform: translateY(-10px) !important; /* 新增这一行：整体上移 10px */
       }
       .incall-input-area {
         display: flex;
@@ -3093,10 +3094,16 @@
         justify-content: space-around;
         align-items: center;
         padding: 20px 0;
+        
+        /* 新增：强制向上移动 80像素，你可以改这个数字 */
+        transform: translateY(-30px) !important; 
+        
+        /* 或者使用底部边距撑开 */
+        margin-bottom: 5px !important; 
       }
       .hang-up-btn {
-        width: 70px;
-        height: 70px;
+        width: 60px;
+        height: 60px;
         border-radius: 50%;
         background-color: #e63946;
         border: none;
@@ -15200,7 +15207,7 @@ function toggleFriendsPanel(show) {
 
           // 转换为blob
           const blob = await new Promise(resolve => canvas.toBlob(resolve));
-          const file = new File([blob], 'test.png', { type: 'image/png' });
+          const file = new File([blob], 'test.png', { type: 'image/png' });﻿
 
           // 调用插件测试
           const result = await top.window.__uploadImageByPlugin(file, {
@@ -18609,7 +18616,7 @@ function toggleFriendsPanel(show) {
         yPosition += 8;
         pdf.text(`导出时间: ${chatData.exportTime}`, margin, yPosition);
         yPosition += 8;
-        pdf.text(`消息总数: ${chatData.messages.length} 条`, margin, yPosition);
+        pdf.text(`消息总数: ${chatData.messages.length} 条`, margin, yPosition);﻿
         yPosition += 15;
 
         // 添加分隔线
