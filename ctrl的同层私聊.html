@@ -6345,7 +6345,7 @@
           <button class="cloud-music-close" id="cloudMusicClose" title="关闭">×</button>
         </div>
         <div class="cloud-music-body">
-          <iframe class="cloud-music-frame" id="cloudMusicFrame" src="about:blank" loading="lazy"></iframe>
+          <iframe class="cloud-music-frame" id="cloudMusicFrame" src="https://music.gdstudio.org/" loading="lazy"></iframe>
         </div>
       </div>
       <div class="more-actions-grid" id="moreActionsGrid">
@@ -18181,14 +18181,16 @@ function toggleFriendsPanel(show) {
       }
 
       // 主题切换功能
-      function switchTheme(themeName) {
+      function switchTheme(themeName, options = {}) {
         document.documentElement.setAttribute('data-theme', themeName);
         localStorage.setItem('selectedTheme', themeName);
         saveTheme(themeName); // 同时保存到chatTheme以保持一致性
 
         // 如果切换到自定义主题，需要应用自定义颜色
         if (themeName === 'custom') {
-          loadCustomTheme();
+          if (!options.skipCustomReload) {
+            loadCustomTheme();
+          }
           applyCustomTheme();
         }
 
@@ -18778,7 +18780,7 @@ function toggleFriendsPanel(show) {
           if (previewBtn) {
             previewBtn.addEventListener('click', () => {
               applyCustomTheme();
-              switchTheme('custom');
+              switchTheme('custom', { skipCustomReload: true });
               const customRadio = document.querySelector('input[name="theme"][value="custom"]');
               if (customRadio) {
                 customRadio.checked = true;
