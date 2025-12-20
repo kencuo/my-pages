@@ -453,7 +453,6 @@
           inset 0 -6px 15px rgba(0, 0, 0, 0.4),
           inset 0 6px 15px rgba(255, 255, 255, 0.1) !important;
       }
-
       /* AI回复的黑钻石气泡 */
       [data-bubble-style="dark-diamond"] .message.received .message-content {
         background: linear-gradient(
@@ -1071,14 +1070,7 @@
         left: 28px;
         animation: paw-bounce 3s infinite ease-in-out;
       }
-      /* 蝴蝶结 */
-      .cute-phone::after {
-        content: ' ';
-        top: -14px;
-        right: 28px;
-        animation: bow-swing 4s infinite ease-in-out;
-        transform-origin: top center;
-      }
+      
       @keyframes paw-bounce {
         0%,
         100% {
@@ -7746,15 +7738,7 @@ function applyUserAvatar(avatarElement) {
         return null;
       }
 
-      // ==================== REFACTORED PARSING LOGIC ====================
-      // New approach: A list of parsers. More specific ones come first.
-      // This is more maintainable and easier to extend.
-
-      /**
-       * Parses the inner content of a message to detect special types like transfers, red packets, etc.
-       * @param {string} content - The raw content string from the message.
-       * @returns {object} - An object with the type and relevant data.
-       */
+      
       function parseInlineContentType(content) {
         // Transfer
         const transferMatch = content.match(/^转账(.*?)元(\(已处理\))?$/);
@@ -8221,17 +8205,6 @@ function applyUserAvatar(avatarElement) {
             ...parseInlineContentType(content),
             sender: 'char',
             charName,
-            avatar,
-            time,
-          }),
-        },
-        // 兼容旧格式：[对方消息|头像|内容|时间]
-        {
-          regex: /^\[对方消息\|(.*?)\|(.*?)\|(\d{2}:\d{2})\]$/,
-          handler: ([, avatar, content, time]) => ({
-            ...parseInlineContentType(content),
-            sender: 'char',
-            charName: '对方', // 旧格式使用默认角色名
             avatar,
             time,
           }),
