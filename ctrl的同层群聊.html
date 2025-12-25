@@ -8185,17 +8185,16 @@
         // 作者 ctrl 不许偷ado 喵喵喵喵
         const match = text.match(/<qunliao>([\s\S]*?)<\/qunliao>/);
         if (!match) {
-          console.log('No <qunliao> tags found in message');
+          // console.log('No <qunliao> tags found in message');
           return [];
         }
         const raw = match[1].trim();
-        if (!raw) {
-          console.log('Empty content inside <qunliao> tags');
-          return [];
-        }
+        if (!raw) return [];
 
-        const lines = raw.split(/\n+/).filter(Boolean);
-        console.log('Parsing', lines.length, 'message lines');
+        // 关键修复：使用正则分割换行，兼容 \r\n 和 \n，并去除每行首尾空格
+        const lines = raw.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
+        
+        // console.log('Parsing', lines.length, 'message lines');
 
         const parsedMessages = lines
           .map((line, index) => {
@@ -8203,16 +8202,14 @@
               const match = line.match(parser.regex);
               if (match) {
                 const result = parser.handler(match);
-                console.log(`Line ${index + 1} parsed as:`, result.type, result.content || result.amount);
                 return result;
               }
             }
-            console.log(`Line ${index + 1} not matched:`, line);
-            return null; // No parser matched this line
+            // console.log(`Line ${index + 1} not matched:`, line);
+            return null;
           })
           .filter(Boolean);
 
-        console.log('Successfully parsed', parsedMessages.length, 'messages');
         return parsedMessages;
       }
 
@@ -16896,38 +16893,61 @@
         return unique(String(str).replace(/[\n\r]+/g, ',').replace(/[，、]/g, ',').split(',').map(s => s.trim()).filter(Boolean));
       }
 
-      // 解析 qunliao（支持 multi 分段）
+      // 解析 qunliao（支持 multi 分段）- 修复版
       function parseMultiQunliao(text){
         const result = { groupName: '', groupMembers: [], chats: {} };
         if (!text || typeof text !== 'string') return result;
+        
+        // 提取 <qunliao> 内部内容
         const m = text.match(/<qunliao>([\s\S]*?)<\/qunliao>/);
         if (!m) return result;
         const inner = m[1];
+
+        // 尝试匹配 <multi> 块
         const multiBlocks = Array.from(inner.matchAll(/<multi>([\s\S]*?)<\/multi>/g));
+
         if (multiBlocks.length === 0) {
-          // 无 multi，整体当作一个会话
-          const lines = inner.replace(/^[\s\S]*?\n?/, '').trim();
-          const msgs = parseQunliaoLog(`<qunliao>\n${lines}\n</qunliao>`);
+          // --- 单一会话模式 ---
+          // 清理可能存在的杂乱标签，防止干扰
+          let cleanLines = inner.replace(/<群成员：[^>]*>/g, '').replace(/【.*?的聊天】/g, '').trim();
+          const msgs = parseQunliaoLog(`<qunliao>\n${cleanLines}\n</qunliao>`);
+          
           result.chats['群聊'] = msgs;
+          
+          // 提取标题 (更宽松的正则：允许空格)
           const t = inner.split(/\n/).map(s=>s.trim()).find(s => /^【.+的聊天】$/.test(s));
           if (t) result.groupName = t.replace(/^【|】$/g,'').replace(/的聊天$/,'');
-          // 尝试解析顶层成员（如存在）
-          const memberTop = (inner.match(/<群成员：([^>]+)>/) || [])[1] || '';
-          if (memberTop) result.groupMembers = parseMembers(memberTop);
+          
+          // 提取成员 (修复：使用 * 允许空成员，非贪婪匹配)
+          const memberMatch = inner.match(/<群成员：([^>]*?)>/);
+          if (memberMatch) result.groupMembers = parseMembers(memberMatch[1]);
+          
           return result;
         }
 
+        // --- 多会话模式 ---
         for (const mb of multiBlocks) {
           const body = mb[1].trim();
-          const memberLine = (body.match(/<群成员：([^>]+)>/) || [])[1] || '';
+          
+          // 提取成员 (修复：允许空内容，使用 *?)
+          const memberLine = (body.match(/<群成员：([^>]*?)>/) || [])[1] || '';
           const members = parseMembers(memberLine);
           if (members.length) result.groupMembers = unique(result.groupMembers.concat(members));
-          const chatTitle = (body.match(/【和(.+?)的聊天】/) || [])[1] || '';
+          
+          // 提取标题 (修复：允许【 和 】之间有空格)
+          const chatTitleMatch = body.match(/【\s*和\s*(.+?)\s*的聊天\s*】/);
+          const chatTitle = chatTitleMatch ? chatTitleMatch[1] : '';
+          
+          // 提取消息内容：先移除成员和标题标签，再交给 parseQunliaoLog
+          // 关键修复：确保替换掉标签，避免它们被当作普通文本解析
           const content = body
-            .replace(/<群成员：[^>]+>/, '')
-            .replace(/【和.+?的聊天】/, '')
+            .replace(/<群成员：[^>]*?>/, '') 
+            .replace(/【\s*和.+?的聊天\s*】/, '')
             .trim();
+            
           const msgs = parseQunliaoLog(`<qunliao>\n${content}\n</qunliao>`);
+          
+          // 如果没有标题，自动生成一个key防止覆盖
           const key = chatTitle || `会话${Object.keys(result.chats).length+1}`;
           result.chats[key] = msgs;
         }
@@ -17786,6 +17806,7 @@
   })();
 </script>
   
+
 
 
 
