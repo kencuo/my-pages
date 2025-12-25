@@ -9457,14 +9457,17 @@ function applyUserAvatar(avatarElement) {
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content voice-call-end';
 
-        const senderText = msg.sender === 'user' ? '我方' : '对方';
+        const senderName =
+          msg.sender === 'user'
+            ? NAME_USER
+            : (msg.charName || msg.name || getCurrentCharName() || '对方');
 
         // Create a wrapper for the main text and subtitle
         const wrapper = document.createElement('div');
         wrapper.style.textAlign = 'center';
 
         const mainText = document.createElement('div');
-        mainText.textContent = `${senderText}语音通话已挂断，时长 ${msg.duration}`;
+        mainText.textContent = `${senderName}语音通话已挂断，时长 ${msg.duration}`;
         mainText.style.fontWeight = '500';
 
         // Add a subtitle to indicate it's clickable
@@ -16311,7 +16314,11 @@ function applyUserAvatar(avatarElement) {
           line.className = 'transcript-line ' + (msg.sender === 'user' ? 'user' : 'char');
           const sender = document.createElement('span');
           sender.className = 'sender-label';
-          sender.textContent = msg.sender === 'user' ? '我方:' : '对方:';
+          const senderName =
+            msg.sender === 'user'
+              ? NAME_USER
+              : (msg.charName || msg.name || getCurrentCharName() || '对方');
+          sender.textContent = `${senderName}:`;
 
           // Format content based on message type
           let content = msg.content;
