@@ -2498,6 +2498,23 @@
         display: block;
         margin-top: 6px;
       }
+      /* 群聊：显示发送者名字 */
+      .message-sender-name {
+        font-size: 11px;
+        color: #777;
+        margin: 0 10px 2px 10px; /* 对齐气泡的 margin:10px */
+        max-width: 220px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        user-select: none;
+      }
+      .message.sent .message-sender-name {
+        text-align: right;
+      }
+      .message.received .message-sender-name {
+        text-align: left;
+      }
       .message-content .quote {
         display: block;
         font-size: 12px;
@@ -9768,6 +9785,21 @@ function applyUserAvatar(avatarElement) {
           message.dataset.index = idx;
           const wrapper = document.createElement('div');
           wrapper.className = 'message-wrapper';
+
+          // 群聊模式：显示成员名字
+          try {
+            if (state && state.groupChatMode && msg && msg.sender !== 'system') {
+              const senderName =
+                msg.sender === 'user'
+                  ? NAME_USER
+                  : (msg.charName || msg.name || '群友');
+              const nameLine = document.createElement('div');
+              nameLine.className = 'message-sender-name';
+              nameLine.textContent = senderName;
+              wrapper.appendChild(nameLine);
+            }
+          } catch (_) {}
+
           const contentDiv = document.createElement('div');
           renderVoiceEffectMessage(contentDiv, msg); // This function now just sets innerHTML and adds the class
           wrapper.appendChild(contentDiv);
@@ -9831,6 +9863,20 @@ function applyUserAvatar(avatarElement) {
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
+
+        // 群聊模式：显示成员名字（不显示系统消息）
+        try {
+          if (state && state.groupChatMode && msg && msg.sender !== 'system') {
+            const senderName =
+              msg.sender === 'user'
+                ? NAME_USER
+                : (msg.charName || msg.name || '群友');
+            const nameLine = document.createElement('div');
+            nameLine.className = 'message-sender-name';
+            nameLine.textContent = senderName;
+            wrapper.appendChild(nameLine);
+          }
+        } catch (_) {}
 
         // Add call context indicator
         if (msg.callContext) {
@@ -16646,6 +16692,20 @@ function applyUserAvatar(avatarElement) {
 
         const wrapper = document.createElement('div');
         wrapper.className = 'message-wrapper';
+
+        // 群聊模式：显示成员名字
+        try {
+          if (state && state.groupChatMode && msg && msg.sender !== 'system') {
+            const senderName =
+              msg.sender === 'user'
+                ? NAME_USER
+                : (msg.charName || msg.name || '群友');
+            const nameLine = document.createElement('div');
+            nameLine.className = 'message-sender-name';
+            nameLine.textContent = senderName;
+            wrapper.appendChild(nameLine);
+          }
+        } catch (_) {}
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content sticker-message';
