@@ -1436,8 +1436,8 @@
         flex-direction: row-reverse;
       }
       .avatar {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border-radius: 8px;
         background: #ddd;
         border: none;
@@ -2410,8 +2410,8 @@
         flex-direction: row-reverse;
       }
       .avatar {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border-radius: 6px;
         flex-shrink: 0;
         object-fit: cover;
@@ -7023,113 +7023,91 @@
               </div>
             </div>
             <div class="theme-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
-              <label class="theme-option" data-theme="light">
-                <input type="radio" name="theme" value="light" checked>
-                <div class="theme-preview light-theme">
-                  <div class="theme-name">浅色模式</div>
-                  <div class="theme-colors">
-                    <span style="background: #ffffff;"></span>
-                    <span style="background: #95ec69;"></span>
-                    <span style="background: #dbdbdb;"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="dark">
-                <input type="radio" name="theme" value="dark">
-                <div class="theme-preview dark-theme">
-                  <div class="theme-name">深色模式</div>
-                  <div class="theme-colors">
-                    <span style="background: #2d2d2d;"></span>
-                    <span style="background: #4a9eff;"></span>
-                    <span style="background: #1a1a1a;"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="light-blue">
-                <input type="radio" name="theme" value="light-blue">
-                <div class="theme-preview blue-theme">
-                  <div class="theme-name">浅蓝主题</div>
-                  <div class="theme-colors">
-                    <span style="background: #e3f2fd;"></span>
-                    <span style="background: #64b5f6;"></span>
-                    <span style="background: #bbdefb;"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="cream">
-                <input type="radio" name="theme" value="cream">
-                <div class="theme-preview cream-theme">
-                  <div class="theme-name">米黄主题</div>
-                  <div class="theme-colors">
-                    <span style="background: #fffef7;"></span>
-                    <span style="background: #fff9c4;"></span>
-                    <span style="background: #f4e04d;"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="pink-gradient">
-                <input type="radio" name="theme" value="pink-gradient">
-                <div class="theme-preview pink-theme">
-                  <div class="theme-name">🌸 粉色梦境</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #ffeef8, #ffd6e8);"></span>
-                    <span style="background: linear-gradient(135deg, #ff6b9d, #ff8fab);"></span>
-                    <span style="background: linear-gradient(135deg, #ffb3d1, #ffc4dd);"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="mint-gradient">
-                <input type="radio" name="theme" value="mint-gradient">
-                <div class="theme-preview mint-theme">
-                  <div class="theme-name">🍃 薄荷清香</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #e8f8f5, #c2ebd3);"></span>
-                    <span style="background: linear-gradient(135deg, #34d399, #6ee7b7);"></span>
-                    <span style="background: linear-gradient(135deg, #86efac, #a7f3d0);"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="purple-gradient">
-                <input type="radio" name="theme" value="purple-gradient">
-                <div class="theme-preview purple-theme">
-                  <div class="theme-name">💜 紫色幻想</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #f3e8ff, #ddd6fe);"></span>
-                    <span style="background: linear-gradient(135deg, #a855f7, #c084fc);"></span>
-                    <span style="background: linear-gradient(135deg, #c4b5fd, #ddd6fe);"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="sunset-gradient">
-                <input type="radio" name="theme" value="sunset-gradient">
-                <div class="theme-preview sunset-theme">
-                  <div class="theme-name">🌅 日落黄昏</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #fff7ed, #fed7aa);"></span>
-                    <span style="background: linear-gradient(135deg, #f97316, #fb923c);"></span>
-                    <span style="background: linear-gradient(135deg, #fdba74, #fed7aa);"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="sky-gradient">
-                <input type="radio" name="theme" value="sky-gradient">
-                <div class="theme-preview sky-theme">
-                  <div class="theme-name">☁️ 天空之境</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #f0f9ff, #bae6fd);"></span>
-                    <span style="background: linear-gradient(135deg, #0ea5e9, #38bdf8);"></span>
-                    <span style="background: linear-gradient(135deg, #7dd3fc, #bae6fd);"></span>
-                  </div>
-                </div>
-              </label>
               <label class="theme-option" data-theme="office-minimal">
-                <input type="radio" name="theme" value="office-minimal">
+                <input type="radio" name="theme" value="office-minimal" checked>
                 <div class="theme-preview office-theme">
                   <div class="theme-name">💼 简约办公</div>
                   <div class="theme-colors">
                     <span style="background: #f8f9fa;"></span>
                     <span style="background: #4285f4;"></span>
                     <span style="background: #e8eaed;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="pixel-art">
+                <input type="radio" name="theme" value="pixel-art">
+                <div class="theme-preview pixel-theme">
+                  <div class="theme-name">👾 像素复古</div>
+                  <div class="theme-colors">
+                    <span style="background: #e0e0e0;"></span>
+                    <span style="background: #000000;"></span>
+                    <span style="background: #ffffff;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="chinese-classic">
+                <input type="radio" name="theme" value="chinese-classic">
+                <div class="theme-preview chinese-theme">
+                  <div class="theme-name">🎋 古风典雅</div>
+                  <div class="theme-colors">
+                    <span style="background: #F5F0E8;"></span>
+                    <span style="background: #C9A961;"></span>
+                    <span style="background: #E8DCC6;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="modern-feminine">
+                <input type="radio" name="theme" value="modern-feminine">
+                <div class="theme-preview feminine-theme">
+                  <div class="theme-name">🌸 温柔优雅</div>
+                  <div class="theme-colors">
+                    <span style="background: #FEF7F0;"></span>
+                    <span style="background: #E8B4B8;"></span>
+                    <span style="background: #F5E6D9;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="winter-minimal">
+                <input type="radio" name="theme" value="winter-minimal">
+                <div class="theme-preview winter-theme">
+                  <div class="theme-name">❄️ 冬季极简</div>
+                  <div class="theme-colors">
+                    <span style="background: #F8FAFC;"></span>
+                    <span style="background: #0EA5E9;"></span>
+                    <span style="background: #E2E8F0;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="warm-blanket">
+                <input type="radio" name="theme" value="warm-blanket">
+                <div class="theme-preview warm-theme">
+                  <div class="theme-name">🧣 温暖毛毯</div>
+                  <div class="theme-colors">
+                    <span style="background: #FEF5E7;"></span>
+                    <span style="background: #D97706;"></span>
+                    <span style="background: #F4D03F;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="winter-dusk">
+                <input type="radio" name="theme" value="winter-dusk">
+                <div class="theme-preview dusk-theme">
+                  <div class="theme-name">🌆 暮色冬景</div>
+                  <div class="theme-colors">
+                    <span style="background: #F5F3FF;"></span>
+                    <span style="background: #8B5CF6;"></span>
+                    <span style="background: #DDD6FE;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="mint-snow">
+                <input type="radio" name="theme" value="mint-snow">
+                <div class="theme-preview mint-theme">
+                  <div class="theme-name">🌿 薄荷雪境</div>
+                  <div class="theme-colors">
+                    <span style="background: #F0FDFA;"></span>
+                    <span style="background: #14B8A6;"></span>
+                    <span style="background: #99F6E4;"></span>
                   </div>
                 </div>
               </label>
