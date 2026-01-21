@@ -7,333 +7,44 @@
     <style>
       /* 主题变量定义 */
       :root {
-        /* 默认浅色主题 */
-        --bg-primary: #fbedb5;
-        --bg-secondary: #fff2e9;
-        --bg-tertiary: #f7ede2;
-        --bg-input: #f5e6d6;
-        --bg-input-gradient: linear-gradient(135deg, #f5e6d6 0%, #f9f1e3 100%);
-        --bg-user-bubble: #faf0e4;
-        --bg-char-bubble: #fff2e9;
-        --bg-shell: #f7e6da;
-        --bg-header: #fbedb5;
-        --bg-status: #f7ede2;
+        /* 默认主题 - 简约办公风 */
+        --bg-primary: #f8f9fa;
+        --bg-secondary: #ffffff;
+        --bg-tertiary: #f1f3f4;
+        --bg-input: #ffffff;
+        --bg-input-gradient: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        --bg-user-bubble: #4285f4;
+        --bg-char-bubble: #ffffff;
+        --bg-shell: #e8eaed;
+        --bg-header: #ffffff;
+        --bg-status: #f8f9fa;
 
-        --text-primary: #333333;
-        --text-secondary: #666;
-        --text-tertiary: #999;
-        --text-user: #000;
-        --text-char: #333;
-        --text-status: #333;
+        --text-primary: #202124;
+        --text-secondary: #5f6368;
+        --text-tertiary: #80868b;
+        --text-user: #ffffff;
+        --text-char: #202124;
+        --text-status: #5f6368;
 
-        --border-primary: #f7ede2;
-        --border-secondary: #f5e6d6;
-        --border-bubble-user: #faf0e4;
-        --border-bubble-char: #f7e6da;
-        --border-shell: #f9f1e3;
+        --border-primary: #dadce0;
+        --border-secondary: #e8eaed;
+        --border-bubble-user: #1a73e8;
+        --border-bubble-char: #dadce0;
+        --border-shell: #dadce0;
 
-        --accent-primary: #fbedb5;
-        --accent-secondary: #f7ede2;
-        --accent-danger: #e63946;
-        --accent-warning: #ff9800;
+        --accent-primary: #1a73e8;
+        --accent-secondary: #1557b0;
+        --accent-danger: #ea4335;
+        --accent-warning: #fbbc04;
 
-        --shadow-light: rgba(251, 237, 181, 0.08);
-        --shadow-medium: rgba(251, 237, 181, 0.1);
-        --shadow-heavy: rgba(251, 237, 181, 0.2);
+        --shadow-light: rgba(60, 64, 67, 0.08);
+        --shadow-medium: rgba(60, 64, 67, 0.12);
+        --shadow-heavy: rgba(60, 64, 67, 0.16);
 
         /* Layout helpers so height tweaks propagate everywhere */
         --phone-height: 550px;
         --phone-shell-height: calc(var(--phone-height) + 15px);
         --input-area-height: 56px;
-      }
-
-      /* 深色主题 */
-      [data-theme="dark"] {
-        --bg-primary: #070F2B;
-        --bg-secondary: #1B1A55;
-        --bg-tertiary: #535C91;
-        --bg-input: #1B1A55;
-        --bg-input-gradient: linear-gradient(135deg, #1B1A55 0%, #535C91 100%);
-        --bg-user-bubble: #9290C3;
-        --bg-char-bubble: #535C91;
-        --bg-shell: #1B1A55;
-        --bg-header: #070F2B;
-        --bg-status: #535C91;
-
-        --text-primary: #9290C3;
-        --text-secondary: #cccccc;
-        --text-tertiary: #999999;
-        --text-user: #ffffff;
-        --text-char: #ffffff;
-        --text-status: #ffffff;
-
-        --border-primary: #535C91;
-        --border-secondary: #9290C3;
-        --border-bubble-user: #9290C3;
-        --border-bubble-char: #535C91;
-        --border-shell: #9290C3;
-
-        --accent-primary: #9290C3;
-        --accent-secondary: #535C91;
-        --accent-danger: #ff5555;
-        --accent-warning: #ffaa33;
-
-        --shadow-light: rgba(7, 15, 43, 0.3);
-        --shadow-medium: rgba(7, 15, 43, 0.4);
-        --shadow-heavy: rgba(7, 15, 43, 0.6);
-      }
-
-      /* 浅蓝色主题 */
-      [data-theme="light-blue"] {
-        --bg-primary: #EAEEF7;
-        --bg-secondary: #FFFFFF;
-        --bg-tertiary: #E1EFFA;
-        --bg-input: #DFF3F8;
-        --bg-input-gradient: linear-gradient(135deg, #DFF3F8 0%, #D5E8ED 100%);
-        --bg-user-bubble: #9BB4D3;
-        --bg-char-bubble: #FFFFFF;
-        --bg-shell: #D6E8ED;
-        --bg-header: #BAD3E4;
-        --bg-status: #E1EFFA;
-
-        --text-primary: #1565c0;
-        --text-secondary: #1976d2;
-        --text-tertiary: #42a5f5;
-        --text-user: #ffffff;
-        --text-char: #1565c0;
-        --text-status: #1565c0;
-
-        --border-primary: #BAD3E4;
-        --border-secondary: #9BB4D3;
-        --border-bubble-user: #9BB4D3;
-        --border-bubble-char: #D6E8ED;
-        --border-shell: #D5E8ED;
-
-        --accent-primary: #9BB4D3;
-        --accent-secondary: #D6E8ED;
-        --accent-danger: #f44336;
-        --accent-warning: #ff9800;
-
-        --shadow-light: rgba(155, 180, 211, 0.1);
-        --shadow-medium: rgba(155, 180, 211, 0.15);
-        --shadow-heavy: rgba(155, 180, 211, 0.25);
-      }
-
-      /* 米黄色主题 */
-      [data-theme="cream"] {
-        --bg-primary: #F0E2B1;
-        --bg-secondary: #FFFCD8;
-        --bg-tertiary: #FCF5D2;
-        --bg-input: #FFF2CC;
-        --bg-input-gradient: linear-gradient(135deg, #FFF2CC 0%, #F5E6A4 100%);
-        --bg-user-bubble: #F4CE69;
-        --bg-char-bubble: #FFFCD8;
-        --bg-shell: #FFEC8E;
-        --bg-header: #F0E2B1;
-        --bg-status: #FCF5D2;
-
-        --text-primary: #333333;
-        --text-secondary: #666666;
-        --text-tertiary: #999999;
-        --text-user: #333333;
-        --text-char: #333333;
-        --text-status: #333333;
-
-        --border-primary: #F5E6A4;
-        --border-secondary: #F4CE69;
-        --border-bubble-user: #F4CE69;
-        --border-bubble-char: #FFEC8E;
-        --border-shell: #F5E6A4;
-
-        --accent-primary: #F4CE69;
-        --accent-secondary: #FFEC8E;
-        --accent-danger: #d32f2f;
-        --accent-warning: #F5E6A4;
-
-        --shadow-light: rgba(244, 206, 105, 0.1);
-        --shadow-medium: rgba(244, 206, 105, 0.15);
-        --shadow-heavy: rgba(244, 206, 105, 0.25);
-      }
-
-      /* 粉色渐变主题 - 可爱少女风 */
-      [data-theme="pink-gradient"] {
-        --bg-primary: #FFE1E5;
-        --bg-secondary: #ffffff;
-        --bg-tertiary: #FDB8BB;
-        --bg-input: #FFE1E5;
-        --bg-input-gradient: linear-gradient(135deg, #FFE1E5 0%, #FDB8BB 100%);
-        --bg-user-bubble: #CF91A6;
-        --bg-char-bubble: #ffffff;
-        --bg-shell: #F79FAD;
-        --bg-header: #FFE1E5;
-        --bg-status: #FDB8BB;
-
-        --text-primary: #3F193A;
-        --text-secondary: #a8336b;
-        --text-tertiary: #c44569;
-        --text-user: #ffffff;
-        --text-char: #3F193A;
-        --text-status: #3F193A;
-
-        --border-primary: #FDB8BB;
-        --border-secondary: #CF91A6;
-        --border-bubble-user: #CF91A6;
-        --border-bubble-char: #F79FAD;
-        --border-shell: #3EEB8C3;
-
-        --accent-primary: #CF91A6;
-        --accent-secondary: #F79FAD;
-        --accent-danger: #f44336;
-        --accent-warning: #ff9800;
-
-        --shadow-light: rgba(207, 145, 166, 0.1);
-        --shadow-medium: rgba(207, 145, 166, 0.15);
-        --shadow-heavy: rgba(207, 145, 166, 0.25);
-      }
-
-      /* 薄荷绿渐变主题 - 清新自然风 */
-      [data-theme="mint-gradient"] {
-        --bg-primary: #D3ECCF;
-        --bg-secondary: #ffffff;
-        --bg-tertiary: #C0E1C6;
-        --bg-input: #A9D8B4;
-        --bg-input-gradient: linear-gradient(135deg, #A9D8B4 0%, #A5D58E 100%);
-        --bg-user-bubble: #8BC0A7;
-        --bg-char-bubble: #ffffff;
-        --bg-shell: #5F9E9E;
-        --bg-header: #D3ECCF;
-        --bg-status: #C0E1C6;
-
-        --text-primary: #064e3b;
-        --text-secondary: #5F9E9E;
-        --text-tertiary: #047857;
-        --text-user: #ffffff;
-        --text-char: #064e3b;
-        --text-status: #064e3b;
-
-        --border-primary: #A5D58E;
-        --border-secondary: #8BC0A7;
-        --border-bubble-user: #8BC0A7;
-        --border-bubble-char: #A9D8B4;
-        --border-shell: #5F9E9E;
-
-        --accent-primary: #8BC0A7;
-        --accent-secondary: #5F9E9E;
-        --accent-danger: #ef4444;
-        --accent-warning: #f59e0b;
-
-        --shadow-light: rgba(139, 192, 167, 0.1);
-        --shadow-medium: rgba(139, 192, 167, 0.15);
-        --shadow-heavy: rgba(139, 192, 167, 0.25);
-      }
-
-      /* 紫色梦幻渐变主题 - 梦幻浪漫风 */
-      [data-theme="purple-gradient"] {
-        --bg-primary: #F1E3F0;
-        --bg-secondary: #F8EEE4;
-        --bg-tertiary: #F1E3F0;
-        --bg-input: #F8EEE4;
-        --bg-input-gradient: linear-gradient(135deg, #F8EEE4 0%, #F1E3F0 100%);
-        --bg-user-bubble: #B394BF;
-        --bg-char-bubble: #F8EEE4;
-        --bg-shell: #B394BF;
-        --bg-header: #F1E3F0;
-        --bg-status: #F8EEE4;
-
-        --text-primary: #5F526E;
-        --text-secondary: #6b21a8;
-        --text-tertiary: #7c3aed;
-        --text-user: #ffffff;
-        --text-char: #5F526E;
-        --text-status: #5F526E;
-
-        --border-primary: #B394BF;
-        --border-secondary: #5F526E;
-        --border-bubble-user: #B394BF;
-        --border-bubble-char: #F1E3F0;
-        --border-shell: #5F526E;
-
-        --accent-primary: #B394BF;
-        --accent-secondary: #5F526E;
-        --accent-danger: #ef4444;
-        --accent-warning: #f59e0b;
-
-        --shadow-light: rgba(179, 148, 191, 0.1);
-        --shadow-medium: rgba(179, 148, 191, 0.15);
-        --shadow-heavy: rgba(179, 148, 191, 0.25);
-      }
-
-      /* 橙色日落渐变主题 */
-      [data-theme="sunset-gradient"] {
-        --bg-primary: #ffe87d;
-        --bg-secondary: #ffffff;
-        --bg-tertiary: #ffc77d;
-        --bg-input: #f1b0a7;
-        --bg-input-gradient: linear-gradient(135deg, #f1b0a7 0%, #fdb187 100%);
-        --bg-user-bubble: #e6b2c7;
-        --bg-char-bubble: #ffffff;
-        --bg-shell: #f1d2d7;
-        --bg-header: #ffe87d;
-        --bg-status: #ffc77d;
-
-        --text-primary: #cfacbd;
-        --text-secondary: #c2410c;
-        --text-tertiary: #ea580c;
-        --text-user: #ffffff;
-        --text-char: #f3bdd7;
-        --text-status: #eeb2cf;
-
-        --border-primary: #ffc77d;
-        --border-secondary: #fdb187;
-        --border-bubble-user: #e6b2c7;
-        --border-bubble-char: #fcd8de;
-        --border-shell: #f1b0a7;
-
-        --accent-primary: #e6b2c7;
-        --accent-secondary: #D3A4AC;
-        --accent-danger: #ef4444;
-        --accent-warning: #f59e0b;
-
-        --shadow-light: rgba(230, 178, 199, 0.1);
-        --shadow-medium: rgba(230, 178, 199, 0.15);
-        --shadow-heavy: rgba(230, 178, 199, 0.25);
-      }
-
-
-      /* 天空蓝渐变主题 - 清爽天空风 */
-      [data-theme="sky-gradient"] {
-        --bg-primary: #9ACDD9;
-        --bg-secondary: #ffffff;
-        --bg-tertiary: #9ACDD9;
-        --bg-input: #9ACDD9;
-        --bg-input-gradient: linear-gradient(135deg, #9ACDD9 0%, #ffffff 100%);
-        --bg-user-bubble: #9ACDD9;
-        --bg-char-bubble: #ffffff;
-        --bg-shell: #9ACDD9;
-        --bg-header: #9ACDD9;
-        --bg-status: #9ACDD9;
-
-        --text-primary: #0c4a6e;
-        --text-secondary: #075985;
-        --text-tertiary: #0369a1;
-        --text-user: #ffffff;
-        --text-char: #0c4a6e;
-        --text-status: #0c4a6e;
-
-        --border-primary: #9ACDD9;
-        --border-secondary: #9ACDD9;
-        --border-bubble-user: #9ACDD9;
-        --border-bubble-char: #9ACDD9;
-        --border-shell: #9ACDD9;
-
-        --accent-primary: #9ACDD9;
-        --accent-secondary: #9ACDD9;
-        --accent-danger: #ef4444;
-        --accent-warning: #f59e0b;
-
-        --shadow-light: rgba(154, 205, 217, 0.1);
-        --shadow-medium: rgba(154, 205, 217, 0.15);
-        --shadow-heavy: rgba(154, 205, 217, 0.25);
       }
 
       /* 简约办公风主题 - 专业商务风 */
@@ -370,6 +81,271 @@
         --shadow-light: rgba(60, 64, 67, 0.08);
         --shadow-medium: rgba(60, 64, 67, 0.12);
         --shadow-heavy: rgba(60, 64, 67, 0.16);
+      }
+
+      /* 像素风主题 - 怀旧复古 */
+      [data-theme="pixel-art"] {
+        --bg-primary: #e0e0e0;
+        --bg-secondary: #ffffff;
+        --bg-tertiary: #c0c0c0;
+        --bg-input: #ffffff;
+        --bg-input-gradient: none;
+        --bg-user-bubble: #000000;
+        --bg-char-bubble: #ffffff;
+        --bg-shell: #808080;
+        --bg-header: #e0e0e0;
+        --bg-status: #c0c0c0;
+
+        --text-primary: #000000;
+        --text-secondary: #404040;
+        --text-tertiary: #606060;
+        --text-user: #ffffff;
+        --text-char: #000000;
+        --text-status: #000000;
+
+        --border-primary: #000000;
+        --border-secondary: #404040;
+        --border-bubble-user: #000000;
+        --border-bubble-char: #000000;
+        --border-shell: #000000;
+
+        --accent-primary: #000000;
+        --accent-secondary: #404040;
+        --accent-danger: #ff0000;
+        --accent-warning: #ffa500;
+
+        --shadow-light: 4px 4px 0px rgba(0, 0, 0, 0.2);
+        --shadow-medium: 6px 6px 0px rgba(0, 0, 0, 0.2);
+        --shadow-heavy: 8px 8px 0px rgba(0, 0, 0, 0.3);
+      }
+
+      [data-theme="pixel-art"] .phone-container,
+      [data-theme="pixel-art"] .message-content,
+      [data-theme="pixel-art"] button,
+      [data-theme="pixel-art"] input {
+        font-family: "Courier New", Courier, monospace !important;
+        border-radius: 0 !important;
+      }
+      
+      [data-theme="pixel-art"] .message-content {
+        box-shadow: 4px 4px 0px #000000 !important;
+        border: 2px solid #000000 !important;
+      }
+
+      /* 古风主题 - 典雅中国风 */
+      [data-theme="chinese-classic"] {
+        --bg-primary: #F5F0E8;
+        --bg-secondary: #FFFFFF;
+        --bg-tertiary: #EDE6DC;
+        --bg-input: #FFFFFF;
+        --bg-input-gradient: linear-gradient(135deg, #FFFFFF 0%, #F5F0E8 100%);
+        --bg-user-bubble: #C9A961;
+        --bg-char-bubble: #FDFCF9;
+        --bg-shell: #E8DCC6;
+        --bg-header: #F5F0E8;
+        --bg-status: #EDE6DC;
+
+        --text-primary: #5C4A2A;
+        --text-secondary: #8B7355;
+        --text-tertiary: #A6937A;
+        --text-user: #FFFFFF;
+        --text-char: #5C4A2A;
+        --text-status: #8B7355;
+
+        --border-primary: #D4C4A8;
+        --border-secondary: #E8DCC6;
+        --border-bubble-user: #B8965A;
+        --border-bubble-char: #E8DCC6;
+        --border-shell: #D4C4A8;
+
+        --accent-primary: #C9A961;
+        --accent-secondary: #B8965A;
+        --accent-danger: #D2691E;
+        --accent-warning: #DAA520;
+
+        --shadow-light: rgba(92, 74, 42, 0.08);
+        --shadow-medium: rgba(92, 74, 42, 0.12);
+        --shadow-heavy: rgba(92, 74, 42, 0.2);
+      }
+
+      /* 现代高级女性向主题 - 温柔优雅 */
+      [data-theme="modern-feminine"] {
+        --bg-primary: #FEF7F0;
+        --bg-secondary: #FFFFFF;
+        --bg-tertiary: #FDF0E6;
+        --bg-input: #FFFFFF;
+        --bg-input-gradient: linear-gradient(135deg, #FFFFFF 0%, #FEF7F0 100%);
+        --bg-user-bubble: #E8B4B8;
+        --bg-char-bubble: #FFFEFC;
+        --bg-shell: #F5E6D9;
+        --bg-header: #FEF7F0;
+        --bg-status: #FDF0E6;
+
+        --text-primary: #6B4E5D;
+        --text-secondary: #8B6F7F;
+        --text-tertiary: #A68A9A;
+        --text-user: #FFFFFF;
+        --text-char: #6B4E5D;
+        --text-status: #8B6F7F;
+
+        --border-primary: #EED5D8;
+        --border-secondary: #F5E6D9;
+        --border-bubble-user: #E19FA5;
+        --border-bubble-char: #F5E6D9;
+        --border-shell: #EED5D8;
+
+        --accent-primary: #E8B4B8;
+        --accent-secondary: #E19FA5;
+        --accent-danger: #E899A2;
+        --accent-warning: #F4C2A1;
+
+        --shadow-light: rgba(107, 78, 93, 0.08);
+        --shadow-medium: rgba(107, 78, 93, 0.12);
+        --shadow-heavy: rgba(107, 78, 93, 0.2);
+      }
+
+      /* 冬季极简主题 - 雪白冰蓝（2025极简主义趋势） */
+      [data-theme="winter-minimal"] {
+        --bg-primary: #F8FAFC;
+        --bg-secondary: #FFFFFF;
+        --bg-tertiary: #F1F5F9;
+        --bg-input: #FFFFFF;
+        --bg-input-gradient: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+        --bg-user-bubble: #0EA5E9;
+        --bg-char-bubble: #FFFFFF;
+        --bg-shell: #E2E8F0;
+        --bg-header: #FFFFFF;
+        --bg-status: #F1F5F9;
+
+        --text-primary: #0F172A;
+        --text-secondary: #475569;
+        --text-tertiary: #64748B;
+        --text-user: #FFFFFF;
+        --text-char: #0F172A;
+        --text-status: #475569;
+
+        --border-primary: #E2E8F0;
+        --border-secondary: #F1F5F9;
+        --border-bubble-user: #0284C7;
+        --border-bubble-char: #E2E8F0;
+        --border-shell: #CBD5E1;
+
+        --accent-primary: #0EA5E9;
+        --accent-secondary: #0284C7;
+        --accent-danger: #EF4444;
+        --accent-warning: #F59E0B;
+
+        --shadow-light: rgba(15, 23, 42, 0.06);
+        --shadow-medium: rgba(15, 23, 42, 0.08);
+        --shadow-heavy: rgba(15, 23, 42, 0.12);
+      }
+
+      /* 温暖毛毯主题 - 暖棕米色（冬季温暖感） */
+      [data-theme="warm-blanket"] {
+        --bg-primary: #FEF5E7;
+        --bg-secondary: #FFFFFF;
+        --bg-tertiary: #FDEBD0;
+        --bg-input: #FFFFFF;
+        --bg-input-gradient: linear-gradient(135deg, #FFFFFF 0%, #FEF5E7 100%);
+        --bg-user-bubble: #D97706;
+        --bg-char-bubble: #FFFBF5;
+        --bg-shell: #F4D03F;
+        --bg-header: #FEF5E7;
+        --bg-status: #FDEBD0;
+
+        --text-primary: #78350F;
+        --text-secondary: #92400E;
+        --text-tertiary: #B45309;
+        --text-user: #FFFFFF;
+        --text-char: #78350F;
+        --text-status: #92400E;
+
+        --border-primary: #FCD34D;
+        --border-secondary: #FDE68A;
+        --border-bubble-user: #B45309;
+        --border-bubble-char: #FDE68A;
+        --border-shell: #FCD34D;
+
+        --accent-primary: #D97706;
+        --accent-secondary: #B45309;
+        --accent-danger: #DC2626;
+        --accent-warning: #F59E0B;
+
+        --shadow-light: rgba(120, 53, 15, 0.08);
+        --shadow-medium: rgba(120, 53, 15, 0.12);
+        --shadow-heavy: rgba(120, 53, 15, 0.18);
+      }
+
+      /* 暮色冬景主题 - 深紫粉紫（2025紫色趋势+冬季黄昏） */
+      [data-theme="winter-dusk"] {
+        --bg-primary: #F5F3FF;
+        --bg-secondary: #FFFFFF;
+        --bg-tertiary: #EDE9FE;
+        --bg-input: #FFFFFF;
+        --bg-input-gradient: linear-gradient(135deg, #FFFFFF 0%, #F5F3FF 100%);
+        --bg-user-bubble: #8B5CF6;
+        --bg-char-bubble: #FAF5FF;
+        --bg-shell: #DDD6FE;
+        --bg-header: #FFFFFF;
+        --bg-status: #EDE9FE;
+
+        --text-primary: #4C1D95;
+        --text-secondary: #6D28D9;
+        --text-tertiary: #7C3AED;
+        --text-user: #FFFFFF;
+        --text-char: #4C1D95;
+        --text-status: #6D28D9;
+
+        --border-primary: #DDD6FE;
+        --border-secondary: #EDE9FE;
+        --border-bubble-user: #7C3AED;
+        --border-bubble-char: #EDE9FE;
+        --border-shell: #C4B5FD;
+
+        --accent-primary: #8B5CF6;
+        --accent-secondary: #7C3AED;
+        --accent-danger: #DC2626;
+        --accent-warning: #F59E0B;
+
+        --shadow-light: rgba(76, 29, 149, 0.08);
+        --shadow-medium: rgba(76, 29, 149, 0.12);
+        --shadow-heavy: rgba(76, 29, 149, 0.18);
+      }
+
+      /* 薄荷雪境主题 - 薄荷绿雪白（清新冬季） */
+      [data-theme="mint-snow"] {
+        --bg-primary: #F0FDFA;
+        --bg-secondary: #FFFFFF;
+        --bg-tertiary: #CCFBF1;
+        --bg-input: #FFFFFF;
+        --bg-input-gradient: linear-gradient(135deg, #FFFFFF 0%, #F0FDFA 100%);
+        --bg-user-bubble: #14B8A6;
+        --bg-char-bubble: #FFFFFF;
+        --bg-shell: #99F6E4;
+        --bg-header: #FFFFFF;
+        --bg-status: #CCFBF1;
+
+        --text-primary: #134E4A;
+        --text-secondary: #0D9488;
+        --text-tertiary: #14B8A6;
+        --text-user: #FFFFFF;
+        --text-char: #134E4A;
+        --text-status: #0D9488;
+
+        --border-primary: #99F6E4;
+        --border-secondary: #CCFBF1;
+        --border-bubble-user: #0D9488;
+        --border-bubble-char: #CCFBF1;
+        --border-shell: #5EEAD4;
+
+        --accent-primary: #14B8A6;
+        --accent-secondary: #0D9488;
+        --accent-danger: #EF4444;
+        --accent-warning: #F59E0B;
+
+        --shadow-light: rgba(19, 78, 74, 0.08);
+        --shadow-medium: rgba(19, 78, 74, 0.12);
+        --shadow-heavy: rgba(19, 78, 74, 0.18);
       }
 
       /* 自定义主题 - 用户DIY */
@@ -418,9 +394,80 @@
         --bubble-inset-shadow-dark: rgba(136, 165, 191, 0.25);
       }
 
-      /* 默认气泡样式 */
+      /* 默认气泡样式 - 现代优雅风格 */
       [data-bubble-style="default"] .message-content {
-        /* 保持原有样式 */
+        border-radius: 16px !important;
+        padding: 10px 16px !important;
+        background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%) !important;
+        color: #1F2937 !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        box-shadow: 
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          0 1px 2px rgba(0, 0, 0, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+        position: relative;
+        font-size: 15px !important;
+        line-height: 1.5 !important;
+        transition: all 0.2s ease !important;
+        backdrop-filter: blur(10px);
+      }
+      
+      /* 彻底删除默认气泡的扇形小尾巴 */
+      [data-bubble-style="default"] .message-content::before,
+      [data-bubble-style="default"] .message-content::after {
+        display: none !important;
+        content: none !important;
+      }
+      
+      [data-bubble-style="default"] .message-content:hover {
+        box-shadow: 
+          0 4px 12px rgba(0, 0, 0, 0.06),
+          0 2px 4px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+        transform: translateY(-1px);
+      }
+      
+      /* 用户发送的消息 - 优雅蓝色渐变 */
+      [data-bubble-style="default"] .message.sent .message-content,
+      [data-bubble-style="default"] .message.user .message-content {
+        background: linear-gradient(135deg, #4F46E5 0%, #6366F1 50%, #818CF8 100%) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        box-shadow: 
+          0 4px 12px rgba(79, 70, 229, 0.25),
+          0 2px 4px rgba(79, 70, 229, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+      
+      [data-bubble-style="default"] .message.sent .message-content:hover,
+      [data-bubble-style="default"] .message.user .message-content:hover {
+        box-shadow: 
+          0 6px 16px rgba(79, 70, 229, 0.3),
+          0 3px 6px rgba(79, 70, 229, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+        transform: translateY(-1px);
+      }
+      
+      /* 对方/角色发送的消息 - 柔和灰白色 */
+      [data-bubble-style="default"] .message.received .message-content,
+      [data-bubble-style="default"] .message.char .message-content {
+        background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%) !important;
+        color: #1F2937 !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        box-shadow: 
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          0 1px 2px rgba(0, 0, 0, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+      }
+      
+      [data-bubble-style="default"] .message.received .message-content:hover,
+      [data-bubble-style="default"] .message.char .message-content:hover {
+        box-shadow: 
+          0 4px 12px rgba(0, 0, 0, 0.06),
+          0 2px 4px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+        transform: translateY(-1px);
       }
 
 
@@ -886,13 +933,6 @@
       }
 
 
-
-
-
-
-
-
-
       /* 🎉 关键词特效样式 */
       .message-effects-container {
         position: fixed;
@@ -1336,8 +1376,8 @@
         flex-direction: row-reverse;
       }
       .avatar {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border-radius: 8px;
         background: #ddd;
         border: none;
@@ -2310,8 +2350,8 @@
         flex-direction: row-reverse;
       }
       .avatar {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border-radius: 6px;
         flex-shrink: 0;
         object-fit: cover;
@@ -6885,113 +6925,91 @@
               </div>
             </div>
             <div class="theme-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
-              <label class="theme-option" data-theme="light">
-                <input type="radio" name="theme" value="light" checked>
-                <div class="theme-preview light-theme">
-                  <div class="theme-name">浅色模式</div>
-                  <div class="theme-colors">
-                    <span style="background: #ffffff;"></span>
-                    <span style="background: #95ec69;"></span>
-                    <span style="background: #dbdbdb;"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="dark">
-                <input type="radio" name="theme" value="dark">
-                <div class="theme-preview dark-theme">
-                  <div class="theme-name">深色模式</div>
-                  <div class="theme-colors">
-                    <span style="background: #2d2d2d;"></span>
-                    <span style="background: #4a9eff;"></span>
-                    <span style="background: #1a1a1a;"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="light-blue">
-                <input type="radio" name="theme" value="light-blue">
-                <div class="theme-preview blue-theme">
-                  <div class="theme-name">浅蓝主题</div>
-                  <div class="theme-colors">
-                    <span style="background: #e3f2fd;"></span>
-                    <span style="background: #64b5f6;"></span>
-                    <span style="background: #bbdefb;"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="cream">
-                <input type="radio" name="theme" value="cream">
-                <div class="theme-preview cream-theme">
-                  <div class="theme-name">米黄主题</div>
-                  <div class="theme-colors">
-                    <span style="background: #fffef7;"></span>
-                    <span style="background: #fff9c4;"></span>
-                    <span style="background: #f4e04d;"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="pink-gradient">
-                <input type="radio" name="theme" value="pink-gradient">
-                <div class="theme-preview pink-theme">
-                  <div class="theme-name">🌸 粉色梦境</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #ffeef8, #ffd6e8);"></span>
-                    <span style="background: linear-gradient(135deg, #ff6b9d, #ff8fab);"></span>
-                    <span style="background: linear-gradient(135deg, #ffb3d1, #ffc4dd);"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="mint-gradient">
-                <input type="radio" name="theme" value="mint-gradient">
-                <div class="theme-preview mint-theme">
-                  <div class="theme-name">🍃 薄荷清香</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #e8f8f5, #c2ebd3);"></span>
-                    <span style="background: linear-gradient(135deg, #34d399, #6ee7b7);"></span>
-                    <span style="background: linear-gradient(135deg, #86efac, #a7f3d0);"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="purple-gradient">
-                <input type="radio" name="theme" value="purple-gradient">
-                <div class="theme-preview purple-theme">
-                  <div class="theme-name">💜 紫色幻想</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #f3e8ff, #ddd6fe);"></span>
-                    <span style="background: linear-gradient(135deg, #a855f7, #c084fc);"></span>
-                    <span style="background: linear-gradient(135deg, #c4b5fd, #ddd6fe);"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="sunset-gradient">
-                <input type="radio" name="theme" value="sunset-gradient">
-                <div class="theme-preview sunset-theme">
-                  <div class="theme-name">🌅 日落黄昏</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #fff7ed, #fed7aa);"></span>
-                    <span style="background: linear-gradient(135deg, #f97316, #fb923c);"></span>
-                    <span style="background: linear-gradient(135deg, #fdba74, #fed7aa);"></span>
-                  </div>
-                </div>
-              </label>
-              <label class="theme-option" data-theme="sky-gradient">
-                <input type="radio" name="theme" value="sky-gradient">
-                <div class="theme-preview sky-theme">
-                  <div class="theme-name">☁️ 天空之境</div>
-                  <div class="theme-colors">
-                    <span style="background: linear-gradient(135deg, #f0f9ff, #bae6fd);"></span>
-                    <span style="background: linear-gradient(135deg, #0ea5e9, #38bdf8);"></span>
-                    <span style="background: linear-gradient(135deg, #7dd3fc, #bae6fd);"></span>
-                  </div>
-                </div>
-              </label>
               <label class="theme-option" data-theme="office-minimal">
-                <input type="radio" name="theme" value="office-minimal">
+                <input type="radio" name="theme" value="office-minimal" checked>
                 <div class="theme-preview office-theme">
                   <div class="theme-name">💼 简约办公</div>
                   <div class="theme-colors">
                     <span style="background: #f8f9fa;"></span>
                     <span style="background: #4285f4;"></span>
                     <span style="background: #e8eaed;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="pixel-art">
+                <input type="radio" name="theme" value="pixel-art">
+                <div class="theme-preview pixel-theme">
+                  <div class="theme-name">👾 像素复古</div>
+                  <div class="theme-colors">
+                    <span style="background: #e0e0e0;"></span>
+                    <span style="background: #000000;"></span>
+                    <span style="background: #ffffff;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="chinese-classic">
+                <input type="radio" name="theme" value="chinese-classic">
+                <div class="theme-preview chinese-theme">
+                  <div class="theme-name">🎋 古风典雅</div>
+                  <div class="theme-colors">
+                    <span style="background: #F5F0E8;"></span>
+                    <span style="background: #C9A961;"></span>
+                    <span style="background: #E8DCC6;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="modern-feminine">
+                <input type="radio" name="theme" value="modern-feminine">
+                <div class="theme-preview feminine-theme">
+                  <div class="theme-name">🌸 温柔优雅</div>
+                  <div class="theme-colors">
+                    <span style="background: #FEF7F0;"></span>
+                    <span style="background: #E8B4B8;"></span>
+                    <span style="background: #F5E6D9;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="winter-minimal">
+                <input type="radio" name="theme" value="winter-minimal">
+                <div class="theme-preview winter-theme">
+                  <div class="theme-name">❄️ 冬季极简</div>
+                  <div class="theme-colors">
+                    <span style="background: #F8FAFC;"></span>
+                    <span style="background: #0EA5E9;"></span>
+                    <span style="background: #E2E8F0;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="warm-blanket">
+                <input type="radio" name="theme" value="warm-blanket">
+                <div class="theme-preview warm-theme">
+                  <div class="theme-name">🧣 温暖毛毯</div>
+                  <div class="theme-colors">
+                    <span style="background: #FEF5E7;"></span>
+                    <span style="background: #D97706;"></span>
+                    <span style="background: #F4D03F;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="winter-dusk">
+                <input type="radio" name="theme" value="winter-dusk">
+                <div class="theme-preview dusk-theme">
+                  <div class="theme-name">🌆 暮色冬景</div>
+                  <div class="theme-colors">
+                    <span style="background: #F5F3FF;"></span>
+                    <span style="background: #8B5CF6;"></span>
+                    <span style="background: #DDD6FE;"></span>
+                  </div>
+                </div>
+              </label>
+              <label class="theme-option" data-theme="mint-snow">
+                <input type="radio" name="theme" value="mint-snow">
+                <div class="theme-preview mint-theme">
+                  <div class="theme-name">🌿 薄荷雪境</div>
+                  <div class="theme-colors">
+                    <span style="background: #F0FDFA;"></span>
+                    <span style="background: #14B8A6;"></span>
+                    <span style="background: #99F6E4;"></span>
                   </div>
                 </div>
               </label>
