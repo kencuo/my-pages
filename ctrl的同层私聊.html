@@ -6387,6 +6387,136 @@
           <iframe class="cloud-music-frame" id="cloudMusicFrame" src="https://music.gdstudio.org/" loading="lazy"></iframe>
         </div>
       </div>
+
+      <!-- 朋友圈覆盖层（同层朋友圈 / <pyq>） -->
+      <style>
+        .moments-overlay {
+          position: absolute;
+          inset: 0;
+          display: none;
+          flex-direction: column;
+          background: var(--bg-primary);
+          z-index: 1250;
+        }
+        .moments-header {
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 10px;
+          background: var(--bg-header);
+          border-bottom: 1px solid var(--border-primary);
+        }
+        .moments-title {
+          font-size: 13px;
+          color: var(--text-primary);
+          font-weight: 600;
+        }
+        .moments-btn {
+          height: 28px;
+          min-width: 28px;
+          padding: 0 10px;
+          border: none;
+          border-radius: 14px;
+          background: var(--bg-tertiary);
+          color: var(--text-secondary);
+          cursor: pointer;
+          font-size: 12px;
+        }
+        .moments-btn.primary {
+          background: var(--accent-primary);
+          color: #fff;
+        }
+        .moments-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 10px;
+        }
+        .moment-card {
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-secondary);
+          border-radius: 12px;
+          padding: 10px;
+          margin-bottom: 10px;
+          box-shadow: 0 1px 4px var(--shadow-light);
+        }
+        .moment-head {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .moment-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: var(--bg-tertiary);
+          background-size: cover;
+          background-position: center;
+          flex: 0 0 auto;
+        }
+        .moment-meta {
+          flex: 1;
+          min-width: 0;
+        }
+        .moment-name {
+          font-size: 13px;
+          color: var(--text-primary);
+          font-weight: 600;
+          line-height: 1.2;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .moment-time {
+          font-size: 11px;
+          color: var(--text-tertiary);
+          margin-top: 2px;
+        }
+        .moment-content {
+          margin-top: 8px;
+          font-size: 13px;
+          color: var(--text-primary);
+          white-space: pre-wrap;
+          line-height: 1.4;
+        }
+        .moment-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .moment-comments {
+          margin-top: 10px;
+          background: var(--bg-tertiary);
+          border-radius: 10px;
+          padding: 8px;
+          border: 1px solid var(--border-secondary);
+        }
+        .moment-comment {
+          font-size: 12px;
+          color: var(--text-primary);
+          line-height: 1.35;
+          padding: 4px 0;
+          border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .moment-comment:last-child { border-bottom: none; }
+        .moment-comment .c-name { font-weight: 600; }
+        .moment-comment .c-time { font-size: 11px; color: var(--text-tertiary); margin-left: 6px; }
+        .moment-comment .c-actions { margin-top: 4px; display: flex; gap: 6px; }
+        .moment-empty {
+          padding: 40px 10px;
+          text-align: center;
+          color: var(--text-tertiary);
+          font-size: 13px;
+        }
+      </style>
+      <div class="moments-overlay" id="momentsOverlay" aria-hidden="true">
+        <div class="moments-header">
+          <button class="moments-btn" id="momentsBackBtn" title="返回">←</button>
+          <div class="moments-title">朋友圈</div>
+          <button class="moments-btn primary" id="momentsNewBtn" title="发布">发布</button>
+        </div>
+        <div class="moments-list" id="momentsList"></div>
+      </div>
       <div class="more-actions-grid" id="moreActionsGrid">
         <div class="actions-grid-container">
           <div class="action-grid-item" id="imgBtn" title="图片">
@@ -8267,12 +8397,18 @@ function applyUserAvatar(avatarElement) {
           return [];
         }
         const raw = match[1].trim();
-        if (!raw) {
+        // 兼容：<shouji> 里可能混入 <private> / <pyq> 等结构化块（同层朋友圈/多会话）
+        let cleaned = raw;
+        cleaned = cleaned.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
+        cleaned = cleaned.replace(/^\s*同层朋友圈\s*$/gm, '');
+        cleaned = cleaned.replace(/<private>[\s\S]*?<\/private>/g, '');
+        cleaned = cleaned.trim();
+        if (!cleaned) {
           console.log('Empty content inside <shouji> tags');
           return [];
         }
 
-        const lines = raw.split(/\n+/).filter(Boolean);
+        const lines = cleaned.split(/\n+/).filter(Boolean);
         console.log('Parsing', lines.length, 'message lines');
 
         const parsedMessages = lines
@@ -8310,6 +8446,395 @@ function applyUserAvatar(avatarElement) {
           return { name, messages, raw: block };
         });
         return conversations;
+      }
+
+      // ==================== MOMENTS / PYQ (<pyq>) SUPPORT ====================
+      // 格式（存储在 <shouji> 内、</shouji> 之前）：
+      // 同层朋友圈
+      // <pyq>
+      // <post:1>
+      // [发布者人名|发布者头像后缀|发布的文字内容|时间]
+      // {{
+      // [评论|人名|头像后缀|评论的文字内容|时间]
+      // }}
+      // </post:1>
+      // ...
+      // </pyq>
+      function parseMomentsFromShouji(text) {
+        const shoujiMatch = text && String(text).match(/<shouji>([\s\S]*?)<\/shouji>/);
+        if (!shoujiMatch) return [];
+        const inner = shoujiMatch[1] || '';
+        const pyqMatch = inner.match(/<pyq>([\s\S]*?)<\/pyq>/);
+        if (!pyqMatch) return [];
+        const pyqInner = (pyqMatch[1] || '').trim();
+        if (!pyqInner) return [];
+
+        const posts = [];
+        const postRe = /<post:(\d+)>([\s\S]*?)<\/post:\1>/g;
+        let m;
+        while ((m = postRe.exec(pyqInner))) {
+          const id = Number(m[1]);
+          const block = (m[2] || '').trim();
+          const lines = block.split('\n').map(s => s.trim()).filter(Boolean);
+          const headerLine = lines.find(l => /^\[.*\]$/.test(l)) || '';
+          const headerInner = headerLine.replace(/^\[|\]$/g, '');
+          const parts = headerInner.split('|');
+          const authorName = (parts[0] || '').trim();
+          const authorAvatar = (parts[1] || '').trim();
+          const content = (parts[2] || '').trim();
+          const time = (parts[3] || '').trim();
+
+          const comments = [];
+          // 兼容：评论可能在 {{...}} 内，也可能直接散落为多行 [评论|...]
+          const commentsBlockMatch = block.match(/\{\{([\s\S]*?)\}\}/);
+          const commentLines = (commentsBlockMatch ? commentsBlockMatch[1] : block)
+            .split('\n')
+            .map(s => s.trim())
+            .filter(s => /^\[评论\|/.test(s));
+          for (const cl of commentLines) {
+            const cInner = cl.replace(/^\[|\]$/g, '');
+            const cParts = cInner.split('|');
+            // 支持两种：
+            // 1) [评论|人名|头像后缀|内容|时间]
+            // 2) [评论|人名|内容|时间]
+            const hasAvatar = cParts.length >= 5;
+            const cName = (cParts[1] || '').trim();
+            const cAvatar = hasAvatar ? (cParts[2] || '').trim() : '';
+            const cContent = (hasAvatar ? cParts[3] : cParts[2] || '').trim();
+            const cTime = (hasAvatar ? cParts[4] : cParts[3] || '').trim();
+            comments.push({ name: cName, avatar: cAvatar, content: cContent, time: cTime });
+          }
+
+          posts.push({
+            id: Number.isFinite(id) ? id : Date.now(),
+            authorName,
+            authorAvatar,
+            content,
+            time,
+            comments,
+          });
+        }
+
+        // 保证顺序稳定：按 id 升序
+        return posts.sort((a, b) => (a.id || 0) - (b.id || 0));
+      }
+
+      function getUserDisplayName() {
+        try {
+          if (typeof formatAsDisplayedMessage === 'function') {
+            const html = formatAsDisplayedMessage('{{user}}', { message_id: 'last' });
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const t = (div.textContent || '').trim();
+            if (t) return t;
+          }
+        } catch (_) {}
+        return '我';
+      }
+
+      function getFileNameFromUrl(url) {
+        const s = String(url || '');
+        const m = s.match(/\/([^\/?#]+)$/);
+        return m ? m[1] : '';
+      }
+
+      function getUserAvatarSuffix() {
+        try {
+          const url = (settingsState && settingsState.userAvatar) ? settingsState.userAvatar : '';
+          const file = getFileNameFromUrl(url);
+          // 只存 catbox 的文件名；否则留空
+          if (/^https?:\/\/files\.catbox\.moe\//.test(String(url)) && file) return file;
+        } catch (_) {}
+        return '';
+      }
+
+      function getCurrentCharAvatarSuffix() {
+        try {
+          const lastCharMsg = [...state.messageHistory].reverse().find(m => m && m.sender === 'char' && m.avatar);
+          if (lastCharMsg && lastCharMsg.avatar) return String(lastCharMsg.avatar).trim();
+        } catch (_) {}
+        try {
+          const name = getCurrentCharName();
+          const url = (settingsState && settingsState.charAvatars && settingsState.charAvatars[name]) ? settingsState.charAvatars[name] : '';
+          const file = getFileNameFromUrl(url);
+          if (/^https?:\/\/files\.catbox\.moe\//.test(String(url)) && file) return file;
+        } catch (_) {}
+        return '';
+      }
+
+      function serializeMomentsToPyq(moments) {
+        const list = Array.isArray(moments) ? moments : [];
+        const lines = [];
+        lines.push('同层朋友圈');
+        lines.push('<pyq>');
+        if (list.length > 0) {
+          // 保证 id 稳定且可序列化
+          const sorted = [...list].sort((a, b) => (a.id || 0) - (b.id || 0));
+          for (const post of sorted) {
+            const pid = Number.isFinite(Number(post.id)) ? Number(post.id) : Date.now();
+            const authorName = (post.authorName || '').replace(/\n/g, ' ').trim();
+            const authorAvatar = (post.authorAvatar || '').replace(/\n/g, ' ').trim();
+            const content = (post.content || '').replace(/\n/g, '\\n').trim();
+            const time = (post.time || '').replace(/\n/g, ' ').trim();
+            lines.push(`<post:${pid}>`);
+            lines.push(`[${authorName}|${authorAvatar}|${content}|${time}]`);
+            const comments = Array.isArray(post.comments) ? post.comments : [];
+            if (comments.length > 0) {
+              lines.push('{{');
+              for (const c of comments) {
+                const n = (c.name || '').replace(/\n/g, ' ').trim();
+                const a = (c.avatar || '').replace(/\n/g, ' ').trim();
+                const cc = (c.content || '').replace(/\n/g, '\\n').trim();
+                const ct = (c.time || '').replace(/\n/g, ' ').trim();
+                lines.push(`[评论|${n}|${a}|${cc}|${ct}]`);
+              }
+              lines.push('}}');
+            }
+            lines.push(`</post:${pid}>`);
+          }
+        }
+        lines.push('</pyq>');
+        return lines.join('\n');
+      }
+
+      function upsertPyqIntoShoujiMessage(shoujiMessageText, pyqText) {
+        const msg = String(shoujiMessageText || '<shouji>\n</shouji>');
+        const pyq = String(pyqText || '').trim();
+        return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/, (_m, inner) => {
+          let body = String(inner || '');
+          // 移除旧 pyq（包括前置“同层朋友圈”提示行）
+          body = body.replace(/^\s*同层朋友圈\s*$/gm, '');
+          body = body.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
+          body = body.trim();
+          const merged = [body, pyq].filter(Boolean).join('\n\n');
+          return `<shouji>\n${merged}\n</shouji>`;
+        });
+      }
+
+      // ==================== MOMENTS UI (朋友圈) ====================
+      function unescapeStoredText(s) {
+        return String(s || '').replace(/\\n/g, '\n');
+      }
+
+      function resolveAvatarUrl(avatarSuffixOrUrl, fallbackUrl) {
+        const v = String(avatarSuffixOrUrl || '').trim();
+        if (!v) return fallbackUrl || '';
+        if (/^https?:\/\//i.test(v) || v.startsWith('data:')) return v;
+        return `https://files.catbox.moe/${v}`;
+      }
+
+      function openMomentsPanel() {
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'none';
+        const o = document.getElementById('momentsOverlay');
+        if (o) {
+          o.style.display = 'flex';
+          o.setAttribute('aria-hidden', 'false');
+        }
+        renderMomentsList();
+        // 确保 <pyq> 结构会被写回到同层消息中（即使暂时没有内容）
+        try { if (typeof deferredSync === 'function') deferredSync(0); } catch (_) {}
+      }
+
+      function closeMomentsPanel() {
+        const o = document.getElementById('momentsOverlay');
+        if (o) {
+          o.style.display = 'none';
+          o.setAttribute('aria-hidden', 'true');
+        }
+        // 回到主屏
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'flex';
+      }
+
+      function renderMomentsList() {
+        const list = document.getElementById('momentsList');
+        if (!list) return;
+        list.innerHTML = '';
+        const posts = Array.isArray(state.moments) ? [...state.moments] : [];
+        // 最新在上
+        posts.sort((a, b) => (b.id || 0) - (a.id || 0));
+        if (posts.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'moment-empty';
+          empty.textContent = '还没有朋友圈内容，点右上角“发布”发一条吧。';
+          list.appendChild(empty);
+          return;
+        }
+
+        for (const post of posts) {
+          const card = document.createElement('div');
+          card.className = 'moment-card';
+
+          const head = document.createElement('div');
+          head.className = 'moment-head';
+
+          const avatar = document.createElement('div');
+          avatar.className = 'moment-avatar';
+          avatar.style.backgroundImage = `url('${resolveAvatarUrl(post.authorAvatar, settingsState?.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg')}')`;
+
+          const meta = document.createElement('div');
+          meta.className = 'moment-meta';
+          const name = document.createElement('div');
+          name.className = 'moment-name';
+          name.textContent = post.authorName || '';
+          const time = document.createElement('div');
+          time.className = 'moment-time';
+          time.textContent = post.time || '';
+          meta.appendChild(name);
+          meta.appendChild(time);
+
+          head.appendChild(avatar);
+          head.appendChild(meta);
+          card.appendChild(head);
+
+          const content = document.createElement('div');
+          content.className = 'moment-content';
+          content.textContent = unescapeStoredText(post.content || '');
+          card.appendChild(content);
+
+          const actions = document.createElement('div');
+          actions.className = 'moment-actions';
+          const btnComment = document.createElement('button');
+          btnComment.className = 'moments-btn';
+          btnComment.textContent = '评论';
+          btnComment.onclick = () => commentOnMoment(post.id);
+          const btnAi = document.createElement('button');
+          btnAi.className = 'moments-btn';
+          btnAi.textContent = 'AI回复';
+          btnAi.onclick = () => aiCommentOnMoment(post.id);
+          actions.appendChild(btnComment);
+          actions.appendChild(btnAi);
+          card.appendChild(actions);
+
+          const commentsWrap = document.createElement('div');
+          commentsWrap.className = 'moment-comments';
+          const comments = Array.isArray(post.comments) ? post.comments : [];
+          if (comments.length === 0) {
+            const c = document.createElement('div');
+            c.className = 'moment-comment';
+            c.style.borderBottom = 'none';
+            c.textContent = '暂无评论';
+            commentsWrap.appendChild(c);
+          } else {
+            comments.forEach((cmt, idx) => {
+              const row = document.createElement('div');
+              row.className = 'moment-comment';
+              const line = document.createElement('div');
+              line.innerHTML = `<span class="c-name"></span>: <span class="c-text"></span><span class="c-time"></span>`;
+              line.querySelector('.c-name').textContent = cmt.name || '';
+              line.querySelector('.c-text').textContent = unescapeStoredText(cmt.content || '');
+              line.querySelector('.c-time').textContent = cmt.time ? ` ${cmt.time}` : '';
+              row.appendChild(line);
+
+              const cActions = document.createElement('div');
+              cActions.className = 'c-actions';
+              const r = document.createElement('button');
+              r.className = 'moments-btn';
+              r.textContent = '回复';
+              r.onclick = () => commentOnMoment(post.id, cmt.name, cmt.content);
+              const ai = document.createElement('button');
+              ai.className = 'moments-btn';
+              ai.textContent = 'AI回复';
+              ai.onclick = () => aiCommentOnMoment(post.id, cmt.name, cmt.content);
+              cActions.appendChild(r);
+              cActions.appendChild(ai);
+              row.appendChild(cActions);
+
+              commentsWrap.appendChild(row);
+            });
+          }
+          card.appendChild(commentsWrap);
+
+          list.appendChild(card);
+        }
+      }
+
+      function nextMomentId() {
+        const posts = Array.isArray(state.moments) ? state.moments : [];
+        const maxId = posts.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0);
+        return maxId + 1;
+      }
+
+      function addMomentPost(authorName, authorAvatar, content) {
+        const text = String(content || '').trim();
+        if (!text) return;
+        if (!Array.isArray(state.moments)) state.moments = [];
+        state.moments.push({
+          id: nextMomentId(),
+          authorName: authorName || '',
+          authorAvatar: authorAvatar || '',
+          content: text,
+          time: getFullTimeStr(),
+          comments: [],
+        });
+        deferredSync(0);
+        renderMomentsList();
+      }
+
+      function addMomentComment(postId, name, avatar, content) {
+        const text = String(content || '').trim();
+        if (!text) return;
+        const posts = Array.isArray(state.moments) ? state.moments : [];
+        const post = posts.find(p => Number(p.id) === Number(postId));
+        if (!post) return;
+        if (!Array.isArray(post.comments)) post.comments = [];
+        post.comments.push({
+          name: name || '',
+          avatar: avatar || '',
+          content: text,
+          time: getFullTimeStr(),
+        });
+        deferredSync(0);
+        renderMomentsList();
+      }
+
+      function commentOnMoment(postId, replyToName, replyToContent) {
+        const prefix = replyToName ? `回复 ${replyToName}：` : '';
+        const raw = prompt(replyToName ? `回复 ${replyToName} 的评论：` : '评论这条朋友圈：', '');
+        if (raw === null) return;
+        const text = (prefix + String(raw || '').trim()).trim();
+        if (!text) return;
+        const name = getUserDisplayName();
+        const avatar = getUserAvatarSuffix() || 'cmegcm.jpeg';
+        addMomentComment(postId, name, avatar, text);
+      }
+
+      async function aiCommentOnMoment(postId, replyToName, replyToContent) {
+        if (typeof generate !== 'function') {
+          try { showToast('未找到 generate()，无法让 AI 回复'); } catch (_) {}
+          return;
+        }
+        const posts = Array.isArray(state.moments) ? state.moments : [];
+        const post = posts.find(p => Number(p.id) === Number(postId));
+        if (!post) return;
+
+        const postText = unescapeStoredText(post.content || '');
+        const replyName = replyToName ? String(replyToName) : '';
+        const replyText = replyToContent ? unescapeStoredText(String(replyToContent)) : '';
+        const promptText =
+          [
+            '你正在以“朋友圈评论”的形式回复。',
+            '要求：只输出一条中文评论内容；不要加引号；不要加前缀；不要解释；尽量简短自然。',
+            `朋友圈发布者：${post.authorName || ''}`,
+            `朋友圈内容：${postText}`,
+            replyName ? `你要回复的评论来自：${replyName}` : '',
+            replyText ? `对方评论内容：${replyText}` : '',
+          ]
+            .filter(Boolean)
+            .join('\n');
+
+        try {
+          const result = await generate({ user_input: promptText, should_silence: true });
+          const out = String(result || '').trim();
+          if (!out) return;
+          const name = getCurrentCharName();
+          const avatar = getCurrentCharAvatarSuffix();
+          const text = replyName ? `回复 ${replyName}：${out}` : out;
+          addMomentComment(postId, name, avatar, text);
+        } catch (e) {
+          try { showToast('AI 回复失败'); } catch (_) {}
+        }
       }
 
       // 构建/更新顶部会话标签
@@ -15366,14 +15891,15 @@ function toggleFriendsPanel(show) {
           typeof getChatMessages === 'function'
         ) {
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          const currentId = state.currentMsgId;
-          const msgObj = getChatMessages(currentId)[0];
-          const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
-          const shoujiMatch = raw.match(/<shouji>([\s\S]*?)<\/shouji>/);
-          // Rebuild all <private> blocks from memory to avoid mixing between chats
-          if (shoujiMatch) {
-            const innerEarly = shoujiMatch[1];
-            if (/<private>[\s\S]*?<\/private>/.test(innerEarly)) {
+           const currentId = state.currentMsgId;
+           const msgObj = getChatMessages(currentId)[0];
+           const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
+           const pyqText = serializeMomentsToPyq(state.moments);
+           const shoujiMatch = raw.match(/<shouji>([\s\S]*?)<\/shouji>/);
+           // Rebuild all <private> blocks from memory to avoid mixing between chats
+           if (shoujiMatch) {
+             const innerEarly = shoujiMatch[1];
+             if (/<private>[\s\S]*?<\/private>/.test(innerEarly)) {
               let rebuiltAll = '';
               if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
                 for (const conv of state.privateConversations) {
@@ -15391,12 +15917,14 @@ function toggleFriendsPanel(show) {
               } else {
                 rebuiltAll = innerEarly;
               }
-              const updatedAll = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${rebuiltAll}\n</shouji>`);
+              const rebuiltCore = `<shouji>\n${rebuiltAll}\n</shouji>`;
+              const rebuiltWithPyq = upsertPyqIntoShoujiMessage(rebuiltCore, pyqText);
+              const updatedAll = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, rebuiltWithPyq);
               await setChatMessages([{ message_id: currentId, message: updatedAll }], { refresh: 'none' });
               return;
-            }
-          }
-          if (shoujiMatch) {
+             }
+           }
+           if (shoujiMatch) {
             const inner = shoujiMatch[1];
             if (/<private>[\s\S]*?<\/private>/.test(inner)) {
               // 存在多个私聊会话，仅更新当前会话
@@ -15433,13 +15961,15 @@ function toggleFriendsPanel(show) {
                 }
                 // append remaining tail
                 rebuilt += inner.slice(cursor);
-                const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${rebuilt}\n</shouji>`);
+                let updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${rebuilt}\n</shouji>`);
+                updated = upsertPyqIntoShoujiMessage(updated, pyqText);
                 await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
                 return;
               } else {
                 // 未能定位则追加一个新会话
                 const finalInner = `${inner.trim()}\n<private>\n${serialized}\n</private>\n`;
-                const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${finalInner}\n</shouji>`);
+                let updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${finalInner}\n</shouji>`);
+                updated = upsertPyqIntoShoujiMessage(updated, pyqText);
                 await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
                 return;
               }
@@ -15460,6 +15990,9 @@ function toggleFriendsPanel(show) {
               messageToSave = `<shouji>\n<private>\n${inner}\n</private>\n</shouji>`;
             }
           } catch(e) {}
+          try {
+            messageToSave = upsertPyqIntoShoujiMessage(messageToSave, serializeMomentsToPyq(state.moments));
+          } catch (e) {}
           await setChatMessages([{ message_id: state.currentMsgId, message: messageToSave }], { refresh: 'none' });
         }
       }
@@ -15491,15 +16024,21 @@ function toggleFriendsPanel(show) {
       }
 
       // 初始化加载历史
-      function loadHistoryFromSillyTavern() {
-        if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
-          state.currentMsgId = getCurrentMessageId();
-          const msg = getChatMessages(state.currentMsgId)[0];
-          if (msg && msg.message) {
-            // 优先解析多会话(<private>)
-            const conversations = parsePrivateConversationsFromShouji(msg.message);
-            const nameSpan = document.getElementById('chatPersonName');
-            if (conversations.length > 0) {
+       function loadHistoryFromSillyTavern() {
+         if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
+           state.currentMsgId = getCurrentMessageId();
+           const msg = getChatMessages(state.currentMsgId)[0];
+           if (msg && msg.message) {
+            // 解析同层朋友圈（<pyq>）——独立于私聊会话
+            try {
+              state.moments = parseMomentsFromShouji(msg.message);
+            } catch (e) {
+              state.moments = [];
+            }
+             // 优先解析多会话(<private>)
+             const conversations = parsePrivateConversationsFromShouji(msg.message);
+             const nameSpan = document.getElementById('chatPersonName');
+             if (conversations.length > 0) {
               state.privateConversations = conversations;
               // 选择默认激活会话：若标题名与现有显示名或可解析名匹配，则选之
               let activeIndex = 0;
@@ -15529,14 +16068,15 @@ function toggleFriendsPanel(show) {
               state.messageHistory = parseShoujiLog(msg.message);
               const tabs = document.getElementById('privateChatTabs');
               if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
-              console.log('Loaded single conversation, messages:', state.messageHistory.length);
-            }
-          } else {
-            state.messageHistory = [];
-            const nameSpan = document.getElementById('chatPersonName');
-            if (nameSpan && !nameSpan.textContent.trim()) {
-              nameSpan.textContent = '';
-            }
+             console.log('Loaded single conversation, messages:', state.messageHistory.length);
+             }
+           } else {
+             state.messageHistory = [];
+            state.moments = [];
+             const nameSpan = document.getElementById('chatPersonName');
+             if (nameSpan && !nameSpan.textContent.trim()) {
+               nameSpan.textContent = '';
+             }
             const tabs = document.getElementById('privateChatTabs');
             if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
             console.log('No message history found');
@@ -16242,9 +16782,11 @@ function toggleFriendsPanel(show) {
         // 如果没有标题，尝试从消息中推断角色名
         const shoujiMatch = text.match(/<shouji>([\s\S]*?)<\/shouji>/);
         if (shoujiMatch) {
-          const content = shoujiMatch[1];
+          let content = shoujiMatch[1];
+          // 排除同层朋友圈块，避免误把 [评论|...] 当成角色消息
+          content = String(content || '').replace(/<pyq>[\s\S]*?<\/pyq>/g, '').replace(/^\s*同层朋友圈\s*$/gm, '');
           // 查找第一个角色消息中的角色名
-          const charMsgMatch = content.match(/\[(.+?)\|(.+?)\|.*?\|(\d{2}:\d{2})\]/);
+          const charMsgMatch = content.match(/\[(?!评论\|)(.+?)\|(.+?)\|.*?\|(\d{2}:\d{2})\]/);
           if (charMsgMatch && charMsgMatch[1] !== '我方消息' && charMsgMatch[1] !== '对方消息') {
             console.log('Inferred name from first char message:', charMsgMatch[1]);
             return charMsgMatch[1];
@@ -19425,29 +19967,47 @@ function toggleFriendsPanel(show) {
                     const mm = String(now.getMinutes()).padStart(2, '0');
                     const timestamp = `${hh}:${mm}`;
 
-                    if (window.state && Array.isArray(window.state.messageHistory) && typeof serializeShoujiLog === 'function' && typeof setChatMessages === 'function' && typeof getCurrentMessageId === 'function') {
-                      const newMsg = { sender: 'user', type: 'image', imageData: shortUrl, fileName: fileName, imageDescription: '表情包', time: timestamp };
-                      window.state.messageHistory.push(newMsg);
-                      if (typeof window.appendMessage === 'function') {
-                        window.appendMessage(newMsg, window.state.messageHistory.length - 1);
-                      }
-                      const currentId = window.state.currentMsgId || getCurrentMessageId();
-                      const log = serializeShoujiLog(window.state.messageHistory);
-                      try { await setChatMessages([{ message_id: currentId, message: log }], { refresh: 'none' }); } catch(e){}
-                    } else if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function' && typeof setChatMessages === 'function') {
-                      const currentId = getCurrentMessageId();
-                      const msg = getChatMessages(currentId)[0];
-                      const raw = msg && msg.message ? String(msg.message) : '<shouji>\n</shouji>';
-                      const line = `[我方消息|图片|表情包|IMGDATA:${shortUrl}|FILENAME:${fileName}|${timestamp}]`;
+                     if (window.state && Array.isArray(window.state.messageHistory) && typeof serializeShoujiLog === 'function' && typeof setChatMessages === 'function' && typeof getCurrentMessageId === 'function') {
+                       const newMsg = { sender: 'user', type: 'image', imageData: shortUrl, fileName: fileName, imageDescription: '表情包', time: timestamp };
+                       window.state.messageHistory.push(newMsg);
+                       if (typeof window.appendMessage === 'function') {
+                         window.appendMessage(newMsg, window.state.messageHistory.length - 1);
+                       }
+                      // 统一走同层同步逻辑，避免覆盖 <pyq> / <private> 等结构化块
+                      try {
+                        if (typeof window.deferredSync === 'function') {
+                          window.deferredSync(0);
+                        } else if (typeof window.syncToSillyTavern === 'function') {
+                          await window.syncToSillyTavern();
+                        } else {
+                          const currentId = window.state.currentMsgId || getCurrentMessageId();
+                          const log = serializeShoujiLog(window.state.messageHistory);
+                          await setChatMessages([{ message_id: currentId, message: log }], { refresh: 'none' });
+                        }
+                      } catch(e){}
+                     } else if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function' && typeof setChatMessages === 'function') {
+                       const currentId = getCurrentMessageId();
+                       const msg = getChatMessages(currentId)[0];
+                       const raw = msg && msg.message ? String(msg.message) : '<shouji>\n</shouji>';
+                       const line = `[我方消息|图片|表情包|IMGDATA:${shortUrl}|FILENAME:${fileName}|${timestamp}]`;
                       const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, (m)=>{
-                        const inner = m.slice(8, -9).trim();
+                        let inner = m.slice(8, -9);
+                        // 若存在 <pyq>，把追加的聊天记录插到 <pyq> 之前，避免破坏朋友圈结构
+                        const pyqIndex = inner.search(/^\s*同层朋友圈\s*$/m);
+                        if (pyqIndex >= 0) {
+                          const before = inner.slice(0, pyqIndex).trimEnd();
+                          const after = inner.slice(pyqIndex).trimStart();
+                          const merged = `${before}\n${line}\n${after}`.trim();
+                          return `<shouji>\n${merged}\n</shouji>`;
+                        }
+                        inner = inner.trim();
                         return `<shouji>\n${inner ? inner + '\n' : ''}${line}\n</shouji>`;
                       });
-                      try { await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' }); } catch(e){}
-                    }
-                  } catch(e){}
-                }
-              }
+                       try { await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' }); } catch(e){}
+                     }
+                   } catch(e){}
+                 }
+               }
             } catch (e) {
               showDescription(container, '识别失败');
             } finally {
@@ -19696,7 +20256,12 @@ function toggleFriendsPanel(show) {
         if (homeDockBtn) homeDockBtn.addEventListener('click', showHome);
 
         const placeholder = (name) => () => { try { alert(name + ' 功能暂未实现'); } catch (_) {} };
-        if (appMoments) appMoments.addEventListener('click', placeholder('朋友圈'));
+        if (appMoments) appMoments.addEventListener('click', () => {
+          try {
+            if (typeof openMomentsPanel === 'function') return openMomentsPanel();
+          } catch (_) {}
+          return placeholder('朋友圈')();
+        });
         if (appStore) appStore.addEventListener('click', placeholder('商店'));
         if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
         if (appCloudMusic) appCloudMusic.addEventListener('click', () => {
@@ -19729,6 +20294,8 @@ function toggleFriendsPanel(show) {
           const appSettings = document.getElementById('appSettings');
           const homeBtn = document.getElementById('homeBtn');
           const homeDockBtn = document.getElementById('homeDockBtn');
+          const momentsBackBtn = document.getElementById('momentsBackBtn');
+          const momentsNewBtn = document.getElementById('momentsNewBtn');
 
           const openChat = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
@@ -19739,7 +20306,10 @@ function toggleFriendsPanel(show) {
           if (appMessages) appMessages.onclick = openChat;
           if (homeBtn) homeBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
           if (homeDockBtn) homeDockBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
-          if (appMoments) appMoments.onclick = () => showToastSafe('朋友圈 功能暂未开放');
+          if (appMoments) appMoments.onclick = () => {
+            try { if (typeof openMomentsPanel === 'function') return openMomentsPanel(); } catch(_) {}
+            showToastSafe('朋友圈 功能暂未开放');
+          };
           if (appStore) appStore.onclick = () => showToastSafe('商店 功能暂未开放');
           if (appMusic) appMusic.onclick = () => {
             try { if (typeof openMusicPanel === 'function') return openMusicPanel(); } catch(_) {}
@@ -19748,6 +20318,24 @@ function toggleFriendsPanel(show) {
           if (appSettings) appSettings.onclick = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
             try { if (typeof showSettings === 'function') showSettings(); } catch(_) {}
+          };
+
+          // 朋友圈覆盖层按钮
+          if (momentsBackBtn) momentsBackBtn.onclick = () => {
+            try { if (typeof closeMomentsPanel === 'function') return closeMomentsPanel(); } catch(_) {}
+            const o = document.getElementById('momentsOverlay');
+            if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden','true'); }
+            if (homeOverlay) homeOverlay.style.display = 'flex';
+          };
+          if (momentsNewBtn) momentsNewBtn.onclick = () => {
+            try {
+              const text = prompt('发布一条朋友圈：', '');
+              if (text === null) return;
+              const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
+              const avatar = (typeof getUserAvatarSuffix === 'function') ? (getUserAvatarSuffix() || 'cmegcm.jpeg') : 'cmegcm.jpeg';
+              if (typeof addMomentPost === 'function') return addMomentPost(name, avatar, String(text || '').trim());
+            } catch(_) {}
+            showToastSafe('发布失败');
           };
         };
         if (document.readyState === 'loading') {
