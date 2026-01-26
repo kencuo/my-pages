@@ -7698,13 +7698,39 @@
       // Helper to apply user avatar from parent frame
 function applyUserAvatar(avatarElement) {
         // 优先使用用户设置的头像，没有则使用默认头像
-        const userAvatarUrl = settingsState.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg';
-        if (avatarElement) {
-          avatarElement.style.backgroundImage = `url('${userAvatarUrl}')`;
+        const userAvatarUrl = (settingsState && settingsState.userAvatar) ? settingsState.userAvatar : '';
+        const resolved = userAvatarUrl || (typeof getUserAvatarUrlFromDom === 'function' ? getUserAvatarUrlFromDom() : '') || '';
+        if (!avatarElement) return;
+        if (resolved) {
+          avatarElement.style.backgroundImage = `url('${resolved}')`;
           avatarElement.style.backgroundSize = 'cover';
           avatarElement.style.backgroundPosition = 'center';
-          avatarElement.style.backgroundColor = '#fff'; // Add a fallback bg color
+          avatarElement.style.backgroundColor = '#fff'; // fallback bg when image exists
+        } else {
+          avatarElement.style.backgroundImage = '';
+          avatarElement.style.backgroundColor = '';
         }
+      }
+
+      function getUserAvatarUrlFromDom() {
+        const el = document.querySelector('.message.sent .user_avatar.avatar, .user_avatar.avatar');
+        if (!el) return '';
+        try {
+          const bg = getComputedStyle(el).backgroundImage || '';
+          const m = bg.match(/url\((['"]?)(.*?)\1\)/i);
+          if (m && m[2]) return m[2];
+        } catch (_) {}
+        return '';
+      }
+
+      function getDefaultAvatarDataUrl() {
+        const svg =
+          "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>" +
+          "<rect width='64' height='64' rx='14' fill='#D1D5DB'/>" +
+          "<circle cx='32' cy='26' r='10' fill='#9CA3AF'/>" +
+          "<path d='M14 54c2-10 12-16 18-16s16 6 18 16' fill='#9CA3AF'/>" +
+          "</svg>";
+        return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
       }
 
       function applyInterfaceScale(scale) {
@@ -16403,8 +16429,11 @@ function applyUserAvatar(avatarElement) {
             ? '我'
             : (msg.charName || msg.name || getCurrentCharName() || '群友');
 
-          const defaultAvatar = 'https://files.catbox.moe/cmegcm.jpeg';
-          const userAvatarUrl = (typeof settingsState !== 'undefined' && settingsState.userAvatar) ? settingsState.userAvatar : defaultAvatar;
+          const defaultAvatar = getDefaultAvatarDataUrl();
+          const userAvatarUrl =
+            (typeof settingsState !== 'undefined' && settingsState.userAvatar ? settingsState.userAvatar : '') ||
+            (typeof getUserAvatarUrlFromDom === 'function' ? getUserAvatarUrlFromDom() : '') ||
+            '';
 
           let avatarUrl = defaultAvatar;
           if (msg.sender === 'user') {
@@ -17710,19 +17739,22 @@ function applyUserAvatar(avatarElement) {
       function updateUserAvatars() {
         const avatars = document.querySelectorAll('.user_avatar');
         // 优先使用用户设置的头像，没有则使用默认头像
-        const userAvatarUrl = settingsState.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg';
+        const userAvatarUrl =
+          ((settingsState && settingsState.userAvatar) ? settingsState.userAvatar : '') ||
+          (typeof getUserAvatarUrlFromDom === 'function' ? getUserAvatarUrlFromDom() : '') ||
+          '';
 
         avatars.forEach(avatar => {
-          avatar.style.backgroundImage = `url(${userAvatarUrl})`;
-          avatar.style.backgroundSize = 'cover';
-          avatar.style.backgroundPosition = 'center';
-          avatar.style.backgroundColor = '#fff'; // 添加后备背景色
+          avatar.style.backgroundImage = userAvatarUrl ? `url(${userAvatarUrl})` : '';
+          avatar.style.backgroundSize = userAvatarUrl ? 'cover' : '';
+          avatar.style.backgroundPosition = userAvatarUrl ? 'center' : '';
+          avatar.style.backgroundColor = userAvatarUrl ? '#fff' : ''; // 添加后备背景色
         });
 
         // 更新预览
         const preview = document.getElementById('avatarPreview');
         if (preview) {
-          preview.src = userAvatarUrl;
+          preview.src = userAvatarUrl || getDefaultAvatarDataUrl();
         }
       }
       function updateWallpaper() {
