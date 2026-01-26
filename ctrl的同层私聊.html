@@ -6411,6 +6411,8 @@
           font-size: 13px;
           color: var(--text-primary);
           font-weight: 600;
+          flex: 1;
+          text-align: center;
         }
         .moments-btn {
           height: 28px;
@@ -6427,10 +6429,21 @@
           background: var(--accent-primary);
           color: #fff;
         }
+        /* Header buttons: fixed width so title stays centered */
+        #momentsBackBtn,
+        #momentsAiBtn {
+          display: flex;
+          align-items: center;
+          width: 44px;
+          min-width: 44px;
+          padding: 0;
+          justify-content: center;
+        }
         .moments-list {
           flex: 1;
           overflow-y: auto;
           padding: 10px;
+          padding-bottom: 84px; /* keep content above bottom publish/time buttons */
         }
         .moment-card {
           background: var(--bg-secondary);
@@ -6509,15 +6522,59 @@
           color: var(--text-tertiary);
           font-size: 13px;
         }
+
+        /* Bottom publish/time buttons (WeChat-like) */
+        .moments-publish-fab {
+          position: absolute;
+          left: 50%;
+          bottom: 12px;
+          transform: translateX(-50%);
+          width: 52px;
+          height: 52px;
+          border: none;
+          border-radius: 26px;
+          background: var(--accent-primary);
+          color: #fff;
+          font-size: 28px;
+          line-height: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+          z-index: 1300;
+        }
+        .moments-publish-fab:active { transform: translateX(-50%) scale(0.96); }
+
+        .moments-time-fab {
+          position: absolute;
+          right: 12px;
+          bottom: 18px;
+          width: 40px;
+          height: 40px;
+          border: none;
+          border-radius: 20px;
+          background: var(--bg-tertiary);
+          color: var(--text-secondary);
+          font-size: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+          z-index: 1300;
+        }
+        .moments-time-fab:active { transform: scale(0.96); }
       </style>
       <div class="moments-overlay" id="momentsOverlay" aria-hidden="true">
         <div class="moments-header">
           <button class="moments-btn" id="momentsBackBtn" title="返回">←</button>
-          <button class="moments-btn" id="momentsAiBtn" title="AI回复">AI</button>
           <div class="moments-title">朋友圈</div>
-          <button class="moments-btn primary" id="momentsNewBtn" title="发布">发布</button>
+          <button class="moments-btn" id="momentsAiBtn" title="AI">AI</button>
         </div>
         <div class="moments-list" id="momentsList"></div>
+        <button class="moments-time-fab" id="momentsTimeBtn" title="自定义时间">🕐</button>
+        <button class="moments-publish-fab" id="momentsPublishBtn" title="发布" aria-label="发布">＋</button>
       </div>
       <div class="more-actions-grid" id="moreActionsGrid">
         <div class="actions-grid-container">
@@ -8676,20 +8733,31 @@ function applyUserAvatar(avatarElement) {
             const content = (post.content || '').replace(/\n/g, '\\n').trim();
             const time = (post.time || '').replace(/\n/g, ' ').trim();
             lines.push(`<post:${pid}>`);
-            lines.push(`[${authorName}|${authorAvatar}|${content}|${time}]`);
+            // Avoid bloating the underlying message text with long avatar tokens.
+            // - User's avatar can be inferred at render-time (settings/DOM), so omit it from storage.
+            // - If avatar is empty, also omit it.
+            try {
+              const userName = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '';
+              const isUser = !!(userName && authorName === userName);
+              const isTooLong = authorAvatar && (authorAvatar.length > 180 || /^data:/i.test(authorAvatar));
+              if (!authorAvatar || isUser || isTooLong) {
+                lines.push(`[${authorName}|${content}|${time}]`);
+              } else {
+                lines.push(`[${authorName}|${authorAvatar}|${content}|${time}]`);
+              }
+            } catch (_) {
+              lines.push(authorAvatar ? `[${authorName}|${authorAvatar}|${content}|${time}]` : `[${authorName}|${content}|${time}]`);
+            }
               const comments = Array.isArray(post.comments) ? post.comments : [];
               if (comments.length > 0) {
                 lines.push('{{');
                 for (const c of comments) {
                   const n = (c.name || '').replace(/\n/g, ' ').trim();
-                  const a = (c.avatar || '').replace(/\n/g, ' ').trim();
                   const rt = (c.replyTo || '').replace(/\n/g, ' ').trim();
                   const cc = (c.content || '').replace(/\n/g, '\\n').trim();
                   const ct = (c.time || '').replace(/\n/g, ' ').trim();
-                  // Prefer: [评论|人名|头像后缀|被评论的人名|内容|时间] when replying to a comment.
-                  if (a && rt) lines.push(`[评论|${n}|${a}|${rt}|${cc}|${ct}]`);
-                  else if (a) lines.push(`[评论|${n}|${a}|${cc}|${ct}]`);
-                  else if (rt) lines.push(`[评论|${n}|${rt}|${cc}|${ct}]`);
+                  // Keep comments compact: do not serialize avatar at all (UI also doesn't show it).
+                  if (rt) lines.push(`[评论|${n}|${rt}|${cc}|${ct}]`);
                   else lines.push(`[评论|${n}|${cc}|${ct}]`);
                 }
                 lines.push('}}');
@@ -8767,6 +8835,19 @@ function applyUserAvatar(avatarElement) {
       function resolveAvatarUrl(avatarSuffixOrUrl, fallbackUrl) {
         const v = String(avatarSuffixOrUrl || '').trim();
         if (!v) return fallbackUrl || '';
+        // Support SillyTavern-style IMGDATA tokens: "IMGDATA:/path|FILENAME:xxx"
+        if (/^IMGDATA:/i.test(v) || v.includes('|IMGDATA:') || v.includes('IMGDATA:')) {
+          try {
+            const parts = v.split('|');
+            for (const part of parts) {
+              const p = String(part || '').trim();
+              if (/^IMGDATA:/i.test(p)) {
+                const url = p.substring(8).trim();
+                if (url) return url;
+              }
+            }
+          } catch (_) {}
+        }
         if (/^https?:\/\//i.test(v) || v.startsWith('data:')) return v;
         return `https://files.catbox.moe/${v}`;
       }
@@ -8879,7 +8960,7 @@ function applyUserAvatar(avatarElement) {
         let content = '';
         // If it "looks like an avatar field", treat as avatar.
         const maybeAvatar = String(parts[1] || '').trim();
-        if (maybeAvatar && (/\.(png|jpe?g|gif|webp)$/i.test(maybeAvatar) || /^https?:\/\//i.test(maybeAvatar) || /^data:/i.test(maybeAvatar))) {
+        if (maybeAvatar && (/\.(png|jpe?g|gif|webp)$/i.test(maybeAvatar) || /^https?:\/\//i.test(maybeAvatar) || /^data:/i.test(maybeAvatar) || /^IMGDATA:/i.test(maybeAvatar))) {
           authorAvatar = sanitizeMomentPlainText(maybeAvatar, { singleLine: true });
           content = sanitizeMomentPlainText(parts.slice(2, -1).join('|'), {});
         } else {
@@ -8945,7 +9026,7 @@ function applyUserAvatar(avatarElement) {
         if (posts.length === 0) {
           const empty = document.createElement('div');
           empty.className = 'moment-empty';
-          empty.textContent = '还没有朋友圈内容，点右上角“发布”发一条吧。';
+          empty.textContent = '还没有朋友圈内容，点下方“+”发一条吧。';
           list.appendChild(empty);
           return;
         }
@@ -9009,11 +9090,12 @@ function applyUserAvatar(avatarElement) {
               const row = document.createElement('div');
               row.className = 'moment-comment';
               const line = document.createElement('div');
-              line.innerHTML = `<span class="c-name"></span><span class="c-reply"></span>: <span class="c-text"></span><span class="c-time"></span>`;
+              // Swap: show time before content
+              line.innerHTML = `<span class="c-name"></span><span class="c-reply"></span>: <span class="c-time"></span><span class="c-text"></span>`;
               line.querySelector('.c-name').textContent = cmt.name || '';
               line.querySelector('.c-reply').textContent = cmt.replyTo ? ` 回复 ${cmt.replyTo}` : '';
               line.querySelector('.c-text').textContent = unescapeStoredText(cmt.content || '');
-              line.querySelector('.c-time').textContent = cmt.time ? ` ${cmt.time}` : '';
+              line.querySelector('.c-time').textContent = cmt.time ? `${cmt.time} ` : '';
               row.appendChild(line);
 
               const cActions = document.createElement('div');
@@ -9085,8 +9167,8 @@ function applyUserAvatar(avatarElement) {
         const text = String(raw || '').trim();
         if (!text) return;
         const name = getUserDisplayName();
-        const avatar = (typeof getUserAvatarForStorage === 'function') ? getUserAvatarForStorage() : '';
-        addMomentComment(postId, name, avatar, replyToName, text);
+        // Omit avatar from stored text; we can infer user avatar at render time.
+        addMomentComment(postId, name, '', replyToName, text);
       }
 
       async function momentsQuickAiReply() {
@@ -20815,7 +20897,8 @@ function toggleFriendsPanel(show) {
           const homeDockBtn = document.getElementById('homeDockBtn');
           const momentsBackBtn = document.getElementById('momentsBackBtn');
           const momentsAiBtn = document.getElementById('momentsAiBtn');
-          const momentsNewBtn = document.getElementById('momentsNewBtn');
+          const momentsPublishBtn = document.getElementById('momentsPublishBtn');
+          const momentsTimeBtn = document.getElementById('momentsTimeBtn');
 
           const openChat = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
@@ -20861,15 +20944,21 @@ function toggleFriendsPanel(show) {
             } catch(_) {}
             showToastSafe('AI 不可用');
           };
-          if (momentsNewBtn) momentsNewBtn.onclick = () => {
+          if (momentsPublishBtn) momentsPublishBtn.onclick = () => {
             try {
               const text = prompt('发布一条朋友圈：', '');
               if (text === null) return;
               const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
-              const avatar = (typeof getUserAvatarForStorage === 'function') ? getUserAvatarForStorage() : '';
-              if (typeof addMomentPost === 'function') return addMomentPost(name, avatar, String(text || '').trim());
+              // Omit avatar from stored text; we can infer user avatar at render time.
+              if (typeof addMomentPost === 'function') return addMomentPost(name, '', String(text || '').trim());
             } catch(_) {}
             showToastSafe('发布失败');
+          };
+          if (momentsTimeBtn) momentsTimeBtn.onclick = () => {
+            try {
+              if (typeof showTimeSelectModal === 'function') return showTimeSelectModal();
+            } catch (_) {}
+            showToastSafe('自定义时间不可用');
           };
         };
         if (document.readyState === 'loading') {
