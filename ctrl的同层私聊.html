@@ -7737,13 +7737,19 @@
 
       // Helper to apply user avatar from parent frame
 function applyUserAvatar(avatarElement) {
-        // 优先使用用户设置的头像，没有则使用默认头像
-        const userAvatarUrl = settingsState.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg';
-        if (avatarElement) {
-          avatarElement.style.backgroundImage = `url('${userAvatarUrl}')`;
+        // 优先使用用户设置的头像；否则尝试从页面已渲染的 .user_avatar.avatar 读取（不再硬编码默认图）
+        const userAvatarUrl = (settingsState && settingsState.userAvatar) ? settingsState.userAvatar : '';
+        const resolved = userAvatarUrl || (typeof getUserAvatarUrlFromDom === 'function' ? getUserAvatarUrlFromDom() : '') || '';
+        if (!avatarElement) return;
+        if (resolved) {
+          avatarElement.style.backgroundImage = `url('${resolved}')`;
           avatarElement.style.backgroundSize = 'cover';
           avatarElement.style.backgroundPosition = 'center';
-          avatarElement.style.backgroundColor = '#fff'; // Add a fallback bg color
+          avatarElement.style.backgroundColor = '#fff'; // fallback bg when image exists
+        } else {
+          // Clear inline styles so CSS fallback (.avatar { background: #ddd; }) can take over.
+          avatarElement.style.backgroundImage = '';
+          avatarElement.style.backgroundColor = '';
         }
       }
 
@@ -8792,6 +8798,27 @@ function applyUserAvatar(avatarElement) {
         return '';
       }
 
+      function getDefaultAvatarDataUrl() {
+        // Neutral local fallback (no external dependency)
+        const svg =
+          "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>" +
+          "<rect width='64' height='64' rx='14' fill='#D1D5DB'/>" +
+          "<circle cx='32' cy='26' r='10' fill='#9CA3AF'/>" +
+          "<path d='M14 54c2-10 12-16 18-16s16 6 18 16' fill='#9CA3AF'/>" +
+          "</svg>";
+        return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      }
+
+      function getUserAvatarForStorage() {
+        // Prefer URL (settings / DOM). If it's catbox, store just the suffix for compactness.
+        const url = (settingsState && settingsState.userAvatar) ? String(settingsState.userAvatar || '').trim() : '';
+        const domUrl = (typeof getUserAvatarUrlFromDom === 'function') ? String(getUserAvatarUrlFromDom() || '').trim() : '';
+        const effective = url || domUrl || '';
+        if (!effective) return '';
+        if (/^https?:\/\/files\.catbox\.moe\//i.test(effective)) return getFileNameFromUrl(effective) || '';
+        return effective;
+      }
+
       function inferAvatarSuffixForMomentActor(name, fallbackSuffix = '') {
         // For storage we prefer a catbox suffix when we can infer it.
         const n = String(name || '').trim();
@@ -8864,7 +8891,7 @@ function applyUserAvatar(avatarElement) {
       }
 
       function getAvatarFallbackUrlForName(name) {
-        const fallback = 'https://files.catbox.moe/cmegcm.jpeg';
+        const fallback = getDefaultAvatarDataUrl();
         const n = String(name || '').trim();
         if (!n) return fallback;
         // user avatar (can be URL or data URL)
@@ -8962,7 +8989,7 @@ function applyUserAvatar(avatarElement) {
           btnComment.onclick = () => commentOnMoment(post.id);
           const btnAi = document.createElement('button');
           btnAi.className = 'moments-btn';
-          btnAi.textContent = 'AI回复';
+          btnAi.textContent = '触发回复';
           btnAi.onclick = () => aiCommentOnMoment(post.id);
           actions.appendChild(btnComment);
           actions.appendChild(btnAi);
@@ -8997,7 +9024,7 @@ function applyUserAvatar(avatarElement) {
               r.onclick = () => commentOnMoment(post.id, cmt.name, cmt.content);
               const ai = document.createElement('button');
               ai.className = 'moments-btn';
-              ai.textContent = 'AI回复';
+              ai.textContent = '触发回复';
               ai.onclick = () => aiCommentOnMoment(post.id, cmt.name, cmt.content);
               cActions.appendChild(r);
               cActions.appendChild(ai);
@@ -9058,7 +9085,7 @@ function applyUserAvatar(avatarElement) {
         const text = String(raw || '').trim();
         if (!text) return;
         const name = getUserDisplayName();
-        const avatar = getUserAvatarSuffix() || 'cmegcm.jpeg';
+        const avatar = (typeof getUserAvatarForStorage === 'function') ? getUserAvatarForStorage() : '';
         addMomentComment(postId, name, avatar, replyToName, text);
       }
 
@@ -18374,20 +18401,26 @@ function toggleFriendsPanel(show) {
       // 更新用户头像
       function updateUserAvatars() {
         const avatars = document.querySelectorAll('.user_avatar');
-        // 优先使用用户设置的头像，没有则使用默认头像
-        const userAvatarUrl = settingsState.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg';
+        // 优先使用用户设置的头像；否则从页面已渲染头像读取（不再硬编码默认图）
+        const userAvatarUrl = (settingsState && settingsState.userAvatar) ? settingsState.userAvatar : '';
+        const resolved = userAvatarUrl || (typeof getUserAvatarUrlFromDom === 'function' ? getUserAvatarUrlFromDom() : '') || '';
 
         avatars.forEach(avatar => {
-          avatar.style.backgroundImage = `url(${userAvatarUrl})`;
-          avatar.style.backgroundSize = 'cover';
-          avatar.style.backgroundPosition = 'center';
-          avatar.style.backgroundColor = '#fff'; // 添加后备背景色
+          if (resolved) {
+            avatar.style.backgroundImage = `url(${resolved})`;
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+            avatar.style.backgroundColor = '#fff'; // 添加后备背景色
+          } else {
+            avatar.style.backgroundImage = '';
+            avatar.style.backgroundColor = '';
+          }
         });
 
         // 更新预览
         const preview = document.getElementById('avatarPreview');
         if (preview) {
-          preview.src = userAvatarUrl;
+          preview.src = resolved || getDefaultAvatarDataUrl();
         }
       }
       function updateWallpaper() {
@@ -20833,7 +20866,7 @@ function toggleFriendsPanel(show) {
               const text = prompt('发布一条朋友圈：', '');
               if (text === null) return;
               const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
-              const avatar = (typeof getUserAvatarSuffix === 'function') ? (getUserAvatarSuffix() || 'cmegcm.jpeg') : 'cmegcm.jpeg';
+              const avatar = (typeof getUserAvatarForStorage === 'function') ? getUserAvatarForStorage() : '';
               if (typeof addMomentPost === 'function') return addMomentPost(name, avatar, String(text || '').trim());
             } catch(_) {}
             showToastSafe('发布失败');
