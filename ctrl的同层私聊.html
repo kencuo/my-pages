@@ -6498,10 +6498,24 @@
           padding: 4px 0;
           border-bottom: 1px solid rgba(0,0,0,0.06);
         }
+        .moment-comment .c-line { display: flex; align-items: flex-start; gap: 6px; }
+        .moment-comment .c-avatar {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: var(--bg-secondary);
+          background-size: cover;
+          background-position: center;
+          border: 1px solid rgba(0,0,0,0.08);
+          flex: 0 0 auto;
+          margin-top: 1px;
+        }
+        .moment-comment .c-body { flex: 1; min-width: 0; }
+        .moment-comment .c-text { white-space: pre-wrap; word-break: break-word; }
         .moment-comment:last-child { border-bottom: none; }
         .moment-comment .c-name { font-weight: 600; }
         .moment-comment .c-time { font-size: 11px; color: var(--text-tertiary); margin-left: 6px; }
-        .moment-comment .c-actions { margin-top: 4px; display: flex; gap: 6px; }
+        .moment-comment .c-actions { margin-top: 4px; display: flex; gap: 6px; margin-left: 26px; }
         .moment-empty {
           padding: 40px 10px;
           text-align: center;
@@ -8465,9 +8479,12 @@ function applyUserAvatar(avatarElement) {
         const shoujiMatch = text && String(text).match(/<shouji>([\s\S]*?)<\/shouji>/);
         if (!shoujiMatch) return [];
         const inner = shoujiMatch[1] || '';
-        const pyqMatch = inner.match(/<pyq>([\s\S]*?)<\/pyq>/);
-        if (!pyqMatch) return [];
-        const pyqInner = (pyqMatch[1] || '').trim();
+        // Robustly capture the whole <pyq> block even if content contains stray "</pyq>"
+        const lower = inner.toLowerCase();
+        const startIdx = lower.indexOf('<pyq>');
+        const endIdx = lower.lastIndexOf('</pyq>');
+        if (startIdx < 0 || endIdx < 0 || endIdx <= startIdx) return [];
+        const pyqInner = inner.slice(startIdx + 5, endIdx).trim();
         if (!pyqInner) return [];
 
         // 防止 AI 或用户把结构化块塞进朋友圈文本里，导致 <pyq> 匹配被截断/污染
@@ -8490,6 +8507,14 @@ function applyUserAvatar(avatarElement) {
           return s.trim();
         }
 
+        function looksLikeAvatarField(v) {
+          const s = String(v || '').trim().toLowerCase();
+          if (!s) return false;
+          if (/^https?:\/\//.test(s) || s.startsWith('data:')) return true;
+          // catbox file suffix
+          return /\.(png|jpe?g|gif|webp)$/i.test(s);
+        }
+
         const posts = [];
         const postRe = /<post:(\d+)>([\s\S]*?)<\/post:\1>/g;
         let m;
@@ -8502,10 +8527,18 @@ function applyUserAvatar(avatarElement) {
           const headerInner = headerLine.replace(/^\[|\]$/g, '');
           const parts = headerInner.split('|');
           const authorName = sanitizePyqField((parts[0] || '').trim());
-          const authorAvatar = sanitizePyqField((parts[1] || '').trim());
-          // allow '|' inside content: everything between avatar and time is content
+          // allow '|' inside content: treat last part as time; avatar is optional
           const time = sanitizePyqField((parts[parts.length - 1] || '').trim());
-          const content = sanitizePyqField(parts.slice(2, -1).join('|').trim());
+          let authorAvatar = '';
+          let content = '';
+          if (parts.length >= 4 && looksLikeAvatarField(parts[1])) {
+            authorAvatar = sanitizePyqField((parts[1] || '').trim());
+            content = sanitizePyqField(parts.slice(2, -1).join('|').trim());
+          } else {
+            // [name|content|time] (avatar missing)
+            authorAvatar = '';
+            content = sanitizePyqField(parts.slice(1, -1).join('|').trim());
+          }
 
           const comments = [];
           // 兼容：评论可能在 {{...}} 内，也可能直接散落为多行 [评论|...]
@@ -8517,18 +8550,47 @@ function applyUserAvatar(avatarElement) {
           for (const cl of commentLines) {
             const cInner = cl.replace(/^\[|\]$/g, '');
             const cParts = cInner.split('|');
-            // 支持两种：
-            // 1) [评论|人名|头像后缀|内容|时间]
-            // 2) [评论|人名|内容|时间]
+            // 支持多种：
+            // 1) [评论|人名|内容|时间]
+            // 2) [评论|人名|被评论的人名|内容|时间]
+            // 3) [评论|人名|头像后缀|内容|时间]
+            // 4) [评论|人名|头像后缀|被评论的人名|内容|时间]
             if (cParts.length < 4) continue;
-            const hasAvatar = cParts.length >= 5;
             const cName = sanitizePyqField((cParts[1] || '').trim());
             const cTime = sanitizePyqField((cParts[cParts.length - 1] || '').trim());
-            const cAvatar = hasAvatar ? sanitizePyqField((cParts[2] || '').trim()) : '';
-            const cContent = hasAvatar
-              ? sanitizePyqField(cParts.slice(3, -1).join('|').trim())
-              : sanitizePyqField(cParts.slice(2, -1).join('|').trim());
-            comments.push({ name: cName, avatar: cAvatar, content: cContent, time: cTime });
+
+            let cAvatar = '';
+            let cReplyTo = '';
+            let contentStart = 2;
+
+            // Prefer explicit 6+ fields as "avatar + replyTo" (content may contain extra '|')
+            if (cParts.length >= 6 && looksLikeAvatarField(cParts[2])) {
+              cAvatar = sanitizePyqField((cParts[2] || '').trim());
+              cReplyTo = sanitizePyqField((cParts[3] || '').trim());
+              contentStart = 4;
+            } else if (cParts.length >= 5) {
+              // 5 fields is ambiguous: could be avatar-only or replyTo-only.
+              if (looksLikeAvatarField(cParts[2])) {
+                cAvatar = sanitizePyqField((cParts[2] || '').trim());
+                contentStart = 3;
+              } else {
+                cReplyTo = sanitizePyqField((cParts[2] || '').trim());
+                contentStart = 3;
+              }
+            }
+
+            let cContent = sanitizePyqField(cParts.slice(contentStart, -1).join('|').trim());
+
+            // Back-compat: older data encoded reply as "回复 xxx：..." inside content
+            if (!cReplyTo) {
+              const m2 = String(cContent || '').match(/^回复\s+(.+?)：\s*(.*)$/);
+              if (m2) {
+                cReplyTo = sanitizePyqField(m2[1]);
+                cContent = sanitizePyqField(m2[2]);
+              }
+            }
+
+            comments.push({ name: cName, avatar: cAvatar, replyTo: cReplyTo, content: cContent, time: cTime });
           }
 
           posts.push({
@@ -8571,6 +8633,18 @@ function applyUserAvatar(avatarElement) {
           // 只存 catbox 的文件名；否则留空
           if (/^https?:\/\/files\.catbox\.moe\//.test(String(url)) && file) return file;
         } catch (_) {}
+        // Fallback: try to read SillyTavern's rendered user avatar background-image
+        try {
+          const el = document.querySelector('.user_avatar.avatar');
+          if (el) {
+            const bg = (el.style && el.style.backgroundImage) ? el.style.backgroundImage : '';
+            const computed = (!bg && typeof getComputedStyle === 'function') ? getComputedStyle(el).backgroundImage : bg;
+            const m = String(computed || '').match(/url\\([\"']?(.*?)[\"']?\\)/i);
+            const url = m ? m[1] : '';
+            const file = getFileNameFromUrl(url);
+            if (/^https?:\/\/files\.catbox\.moe\//.test(String(url)) && file) return file;
+          }
+        } catch (_) {}
         return '';
       }
 
@@ -8609,10 +8683,13 @@ function applyUserAvatar(avatarElement) {
                 for (const c of comments) {
                   const n = (c.name || '').replace(/\n/g, ' ').trim();
                   const a = (c.avatar || '').replace(/\n/g, ' ').trim();
+                  const rt = (c.replyTo || '').replace(/\n/g, ' ').trim();
                   const cc = (c.content || '').replace(/\n/g, '\\n').trim();
                   const ct = (c.time || '').replace(/\n/g, ' ').trim();
-                  // avoid "||" noise when avatar is empty; parser supports both forms
-                  if (a) lines.push(`[评论|${n}|${a}|${cc}|${ct}]`);
+                  // Prefer: [评论|人名|头像后缀|被评论的人名|内容|时间] when replying to a comment.
+                  if (a && rt) lines.push(`[评论|${n}|${a}|${rt}|${cc}|${ct}]`);
+                  else if (a) lines.push(`[评论|${n}|${a}|${cc}|${ct}]`);
+                  else if (rt) lines.push(`[评论|${n}|${rt}|${cc}|${ct}]`);
                   else lines.push(`[评论|${n}|${cc}|${ct}]`);
                 }
                 lines.push('}}');
@@ -8631,7 +8708,19 @@ function applyUserAvatar(avatarElement) {
           let body = String(inner || '');
           // 移除旧 pyq（包括前置“同层朋友圈”提示行）
           body = body.replace(/^\s*同层朋友圈\s*$/gm, '');
-          body = body.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
+          // robust removal: drop from first <pyq> to last </pyq> if present (handles corrupted nested markers)
+          try {
+            const lower = body.toLowerCase();
+            const s = lower.indexOf('<pyq>');
+            const e = lower.lastIndexOf('</pyq>');
+            if (s >= 0 && e >= 0 && e > s) {
+              body = body.slice(0, s) + body.slice(e + 6);
+            } else {
+              body = body.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
+            }
+          } catch (_) {
+            body = body.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
+          }
           body = body.trim();
           const merged = [body, pyq].filter(Boolean).join('\n\n');
           return `<shouji>\n${merged}\n</shouji>`;
@@ -8651,6 +8740,7 @@ function applyUserAvatar(avatarElement) {
         // normalize literal "\n" so we can strip injected blocks/labels line-wise
         s = s.replace(/\\n/g, '\n');
         // strip injected structured blocks (AI 偶发会把整段同层结构塞进评论里)
+        const original = s;
         s = s.replace(/<shouji>[\s\S]*?<\/shouji>/gi, '');
         s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
         s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
@@ -8661,6 +8751,15 @@ function applyUserAvatar(avatarElement) {
         s = s.replace(/<[^>\n]+>/g, '');
 
         let lines = s.split('\n').map(l => String(l).trim()).filter(Boolean);
+        // If we stripped everything, try a softer salvage pass (remove only tag markers, not full blocks).
+        if (lines.length === 0 && /<\/?(shouji|private|pyq|post:\d+)>/i.test(original)) {
+          let alt = String(original);
+          alt = alt.replace(/<\/?(shouji|private|pyq)>/gi, '');
+          alt = alt.replace(/<\/?post:\d+>/gi, '');
+          alt = alt.replace(/^\s*同层朋友圈\s*$/gm, '');
+          alt = alt.replace(/<[^>\n]+>/g, '');
+          lines = alt.split('\n').map(l => String(l).trim()).filter(Boolean);
+        }
         if (singleLine) lines = lines.slice(0, 1);
         return lines.join('\n').trim();
       }
@@ -8670,6 +8769,24 @@ function applyUserAvatar(avatarElement) {
         if (!v) return fallbackUrl || '';
         if (/^https?:\/\//i.test(v) || v.startsWith('data:')) return v;
         return `https://files.catbox.moe/${v}`;
+      }
+
+      function getAvatarFallbackUrlForName(name) {
+        const fallback = 'https://files.catbox.moe/cmegcm.jpeg';
+        const n = String(name || '').trim();
+        if (!n) return fallback;
+        // user avatar (can be URL or data URL)
+        const userName = typeof getUserDisplayName === 'function' ? getUserDisplayName() : '';
+        if (userName && n === userName) return (settingsState && settingsState.userAvatar) ? settingsState.userAvatar : fallback;
+        // current character avatar (prefer configured URL if present)
+        const charName = typeof getCurrentCharName === 'function' ? getCurrentCharName() : '';
+        if (charName && n === charName) {
+          const mapped = settingsState?.charAvatars?.[charName];
+          if (mapped) return mapped;
+          const suffix = typeof getCurrentCharAvatarSuffix === 'function' ? getCurrentCharAvatarSuffix() : '';
+          if (suffix) return resolveAvatarUrl(suffix, fallback);
+        }
+        return fallback;
       }
 
       function openMomentsPanel() {
@@ -8720,7 +8837,7 @@ function applyUserAvatar(avatarElement) {
 
           const avatar = document.createElement('div');
           avatar.className = 'moment-avatar';
-          avatar.style.backgroundImage = `url('${resolveAvatarUrl(post.authorAvatar, settingsState?.userAvatar || 'https://files.catbox.moe/cmegcm.jpeg')}')`;
+          avatar.style.backgroundImage = `url('${resolveAvatarUrl(post.authorAvatar, getAvatarFallbackUrlForName(post.authorName))}')`;
 
           const meta = document.createElement('div');
           meta.className = 'moment-meta';
@@ -8770,8 +8887,12 @@ function applyUserAvatar(avatarElement) {
               const row = document.createElement('div');
               row.className = 'moment-comment';
               const line = document.createElement('div');
-              line.innerHTML = `<span class="c-name"></span>: <span class="c-text"></span><span class="c-time"></span>`;
+              line.className = 'c-line';
+              line.innerHTML = `<span class="c-avatar" aria-hidden="true"></span><span class="c-body"><span class="c-name"></span><span class="c-reply"></span>: <span class="c-text"></span><span class="c-time"></span></span>`;
+              const cAvatar = line.querySelector('.c-avatar');
+              cAvatar.style.backgroundImage = `url('${resolveAvatarUrl(cmt.avatar, getAvatarFallbackUrlForName(cmt.name || post.authorName))}')`;
               line.querySelector('.c-name').textContent = cmt.name || '';
+              line.querySelector('.c-reply').textContent = cmt.replyTo ? ` 回复 ${cmt.replyTo}` : '';
               line.querySelector('.c-text').textContent = unescapeStoredText(cmt.content || '');
               line.querySelector('.c-time').textContent = cmt.time ? ` ${cmt.time}` : '';
               row.appendChild(line);
@@ -8821,7 +8942,7 @@ function applyUserAvatar(avatarElement) {
         renderMomentsList();
       }
 
-      function addMomentComment(postId, name, avatar, content) {
+      function addMomentComment(postId, name, avatar, replyToName, content) {
         const text = sanitizeMomentPlainText(content);
         if (!text) return;
         const posts = Array.isArray(state.moments) ? state.moments : [];
@@ -8831,6 +8952,7 @@ function applyUserAvatar(avatarElement) {
         post.comments.push({
           name: name || '',
           avatar: avatar || '',
+          replyTo: replyToName ? String(replyToName) : '',
           content: text,
           time: getFullTimeStr(),
         });
@@ -8839,14 +8961,13 @@ function applyUserAvatar(avatarElement) {
       }
 
       function commentOnMoment(postId, replyToName, replyToContent) {
-        const prefix = replyToName ? `回复 ${replyToName}：` : '';
         const raw = prompt(replyToName ? `回复 ${replyToName} 的评论：` : '评论这条朋友圈：', '');
         if (raw === null) return;
-        const text = (prefix + String(raw || '').trim()).trim();
+        const text = String(raw || '').trim();
         if (!text) return;
         const name = getUserDisplayName();
         const avatar = getUserAvatarSuffix() || 'cmegcm.jpeg';
-        addMomentComment(postId, name, avatar, text);
+        addMomentComment(postId, name, avatar, replyToName, text);
       }
 
       async function momentsQuickAiReply() {
@@ -8864,6 +8985,51 @@ function applyUserAvatar(avatarElement) {
           if (Number.isFinite(n)) postId = n;
         }
         return aiCommentOnMoment(postId);
+      }
+
+      async function momentsQuickAiPost() {
+        // AI 发布朋友圈
+        if (!AI_GENERATE_RAW) {
+          try { showToast('未找到 generateRaw()，无法让 AI 发布'); } catch (_) {}
+          return;
+        }
+        const topic = prompt('让 AI 发一条朋友圈（可选：输入主题/想法，留空=自由发挥）：', '');
+        if (topic === null) return;
+        const topicText = String(topic || '').trim();
+
+        const promptText = [
+          '你正在以“朋友圈动态”的形式发布一条内容。',
+          '要求：只输出动态正文；不要加引号；不要加标题；不要加前缀；不要解释；尽量简短自然。',
+          topicText ? `主题/提示：${topicText}` : '',
+        ].filter(Boolean).join('\n');
+
+        try {
+          const rawRequestData = {
+            ordered_prompts: [
+              ...(state.jailbreakEnabled ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
+              'world_info_before',
+              'persona_description',
+              'char_description',
+              'char_personality',
+              'scenario',
+              'world_info_after',
+              'dialogue_examples',
+              'chat_history',
+              'user_input',
+            ],
+            user_input: promptText,
+            should_silence: true,
+          };
+          const result = await AI_GENERATE_RAW(rawRequestData);
+          const outRaw = String(result || '').trim();
+          const out = sanitizeMomentPlainText(outRaw);
+          if (!out) return;
+          const name = getCurrentCharName();
+          const avatar = getCurrentCharAvatarSuffix();
+          addMomentPost(name, avatar, out);
+        } catch (_) {
+          try { showToast('AI 发布失败'); } catch (_) {}
+        }
       }
 
       async function aiCommentOnMoment(postId, replyToName, replyToContent) {
@@ -8910,12 +9076,16 @@ function applyUserAvatar(avatarElement) {
           };
           const result = await AI_GENERATE_RAW(rawRequestData);
           const outRaw = String(result || '').trim();
-          const out = sanitizeMomentPlainText(outRaw, { singleLine: true });
+          let out = sanitizeMomentPlainText(outRaw, { singleLine: true });
+          // If the model still adds "回复 xxx：" prefix, strip it (reply target is stored separately).
+          if (replyName) {
+            const m = out.match(/^回复\s+(.+?)：\s*(.*)$/);
+            if (m) out = String(m[2] || '').trim();
+          }
           if (!out) return;
           const name = getCurrentCharName();
           const avatar = getCurrentCharAvatarSuffix();
-          const text = replyName ? `回复 ${replyName}：${out}` : out;
-          addMomentComment(postId, name, avatar, text);
+          addMomentComment(postId, name, avatar, replyName, out);
         } catch (e) {
           try { showToast('AI 回复失败'); } catch (_) {}
         }
@@ -20418,8 +20588,18 @@ function toggleFriendsPanel(show) {
             if (homeOverlay) homeOverlay.style.display = 'flex';
           };
           if (momentsAiBtn) momentsAiBtn.onclick = () => {
-            try { if (typeof momentsQuickAiReply === 'function') return momentsQuickAiReply(); } catch(_) {}
-            showToastSafe('AI回复不可用');
+            try {
+              const picked = prompt('AI 功能：\n1 = AI 回复朋友圈/评论\n2 = AI 发布朋友圈', '1');
+              if (picked === null) return;
+              const v = String(picked).trim();
+              if (v.startsWith('2')) {
+                if (typeof momentsQuickAiPost === 'function') return momentsQuickAiPost();
+                return showToastSafe('AI发布不可用');
+              }
+              if (typeof momentsQuickAiReply === 'function') return momentsQuickAiReply();
+              return showToastSafe('AI回复不可用');
+            } catch(_) {}
+            showToastSafe('AI 不可用');
           };
           if (momentsNewBtn) momentsNewBtn.onclick = () => {
             try {
