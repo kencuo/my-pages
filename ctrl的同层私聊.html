@@ -8470,6 +8470,26 @@ function applyUserAvatar(avatarElement) {
         const pyqInner = (pyqMatch[1] || '').trim();
         if (!pyqInner) return [];
 
+        // 防止 AI 或用户把结构化块塞进朋友圈文本里，导致 <pyq> 匹配被截断/污染
+        function sanitizePyqField(raw) {
+          let s = String(raw || '');
+          s = s.replace(/\r/g, '');
+          // treat literal "\n" as newline so we can strip injected blocks/labels reliably
+          s = s.replace(/\\n/g, '\n');
+          // strip nested structured blocks if they appear inside a field (AI 偶发会输出整段同层结构)
+          s = s.replace(/<shouji>[\s\S]*?<\/shouji>/gi, '');
+          s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
+          s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
+          s = s.replace(/<\/?post:\d+>/gi, '');
+          // remove legacy label line if it got injected into content
+          s = s.replace(/^\s*同层朋友圈\s*$/gm, '');
+          // remove any remaining tag-ish fragments
+          s = s.replace(/<[^>\n]+>/g, '');
+          // normalize back to stored style
+          s = s.replace(/\n/g, '\\n');
+          return s.trim();
+        }
+
         const posts = [];
         const postRe = /<post:(\d+)>([\s\S]*?)<\/post:\1>/g;
         let m;
@@ -8477,13 +8497,15 @@ function applyUserAvatar(avatarElement) {
           const id = Number(m[1]);
           const block = (m[2] || '').trim();
           const lines = block.split('\n').map(s => s.trim()).filter(Boolean);
-          const headerLine = lines.find(l => /^\[.*\]$/.test(l)) || '';
+          // avoid accidentally picking a comment line as header
+          const headerLine = lines.find(l => /^\[(?!评论\|).*\]$/.test(l)) || '';
           const headerInner = headerLine.replace(/^\[|\]$/g, '');
           const parts = headerInner.split('|');
-          const authorName = (parts[0] || '').trim();
-          const authorAvatar = (parts[1] || '').trim();
-          const content = (parts[2] || '').trim();
-          const time = (parts[3] || '').trim();
+          const authorName = sanitizePyqField((parts[0] || '').trim());
+          const authorAvatar = sanitizePyqField((parts[1] || '').trim());
+          // allow '|' inside content: everything between avatar and time is content
+          const time = sanitizePyqField((parts[parts.length - 1] || '').trim());
+          const content = sanitizePyqField(parts.slice(2, -1).join('|').trim());
 
           const comments = [];
           // 兼容：评论可能在 {{...}} 内，也可能直接散落为多行 [评论|...]
@@ -8498,11 +8520,14 @@ function applyUserAvatar(avatarElement) {
             // 支持两种：
             // 1) [评论|人名|头像后缀|内容|时间]
             // 2) [评论|人名|内容|时间]
+            if (cParts.length < 4) continue;
             const hasAvatar = cParts.length >= 5;
-            const cName = (cParts[1] || '').trim();
-            const cAvatar = hasAvatar ? (cParts[2] || '').trim() : '';
-            const cContent = (hasAvatar ? cParts[3] : cParts[2] || '').trim();
-            const cTime = (hasAvatar ? cParts[4] : cParts[3] || '').trim();
+            const cName = sanitizePyqField((cParts[1] || '').trim());
+            const cTime = sanitizePyqField((cParts[cParts.length - 1] || '').trim());
+            const cAvatar = hasAvatar ? sanitizePyqField((cParts[2] || '').trim()) : '';
+            const cContent = hasAvatar
+              ? sanitizePyqField(cParts.slice(3, -1).join('|').trim())
+              : sanitizePyqField(cParts.slice(2, -1).join('|').trim());
             comments.push({ name: cName, avatar: cAvatar, content: cContent, time: cTime });
           }
 
@@ -8578,19 +8603,21 @@ function applyUserAvatar(avatarElement) {
             const time = (post.time || '').replace(/\n/g, ' ').trim();
             lines.push(`<post:${pid}>`);
             lines.push(`[${authorName}|${authorAvatar}|${content}|${time}]`);
-            const comments = Array.isArray(post.comments) ? post.comments : [];
-            if (comments.length > 0) {
-              lines.push('{{');
-              for (const c of comments) {
-                const n = (c.name || '').replace(/\n/g, ' ').trim();
-                const a = (c.avatar || '').replace(/\n/g, ' ').trim();
-                const cc = (c.content || '').replace(/\n/g, '\\n').trim();
-                const ct = (c.time || '').replace(/\n/g, ' ').trim();
-                lines.push(`[评论|${n}|${a}|${cc}|${ct}]`);
+              const comments = Array.isArray(post.comments) ? post.comments : [];
+              if (comments.length > 0) {
+                lines.push('{{');
+                for (const c of comments) {
+                  const n = (c.name || '').replace(/\n/g, ' ').trim();
+                  const a = (c.avatar || '').replace(/\n/g, ' ').trim();
+                  const cc = (c.content || '').replace(/\n/g, '\\n').trim();
+                  const ct = (c.time || '').replace(/\n/g, ' ').trim();
+                  // avoid "||" noise when avatar is empty; parser supports both forms
+                  if (a) lines.push(`[评论|${n}|${a}|${cc}|${ct}]`);
+                  else lines.push(`[评论|${n}|${cc}|${ct}]`);
+                }
+                lines.push('}}');
               }
-              lines.push('}}');
-            }
-            lines.push(`</post:${pid}>`);
+              lines.push(`</post:${pid}>`);
           }
         }
         lines.push('</pyq>');
@@ -8614,6 +8641,28 @@ function applyUserAvatar(avatarElement) {
       // ==================== MOMENTS UI (朋友圈) ====================
       function unescapeStoredText(s) {
         return String(s || '').replace(/\\n/g, '\n');
+      }
+
+      // Keep Moments (<pyq>) fields "plain text" so they can't break the outer <pyq> structure.
+      function sanitizeMomentPlainText(raw, opts = {}) {
+        const singleLine = !!opts.singleLine;
+        let s = String(raw || '');
+        s = s.replace(/\r/g, '');
+        // normalize literal "\n" so we can strip injected blocks/labels line-wise
+        s = s.replace(/\\n/g, '\n');
+        // strip injected structured blocks (AI 偶发会把整段同层结构塞进评论里)
+        s = s.replace(/<shouji>[\s\S]*?<\/shouji>/gi, '');
+        s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
+        s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
+        s = s.replace(/<\/?post:\d+>/gi, '');
+        // strip legacy marker line if it appears
+        s = s.replace(/^\s*同层朋友圈\s*$/gm, '');
+        // remove any remaining tag-ish fragments to avoid accidental </pyq> etc.
+        s = s.replace(/<[^>\n]+>/g, '');
+
+        let lines = s.split('\n').map(l => String(l).trim()).filter(Boolean);
+        if (singleLine) lines = lines.slice(0, 1);
+        return lines.join('\n').trim();
       }
 
       function resolveAvatarUrl(avatarSuffixOrUrl, fallbackUrl) {
@@ -8757,7 +8806,7 @@ function applyUserAvatar(avatarElement) {
       }
 
       function addMomentPost(authorName, authorAvatar, content) {
-        const text = String(content || '').trim();
+        const text = sanitizeMomentPlainText(content);
         if (!text) return;
         if (!Array.isArray(state.moments)) state.moments = [];
         state.moments.push({
@@ -8773,7 +8822,7 @@ function applyUserAvatar(avatarElement) {
       }
 
       function addMomentComment(postId, name, avatar, content) {
-        const text = String(content || '').trim();
+        const text = sanitizeMomentPlainText(content);
         if (!text) return;
         const posts = Array.isArray(state.moments) ? state.moments : [];
         const post = posts.find(p => Number(p.id) === Number(postId));
@@ -8860,7 +8909,8 @@ function applyUserAvatar(avatarElement) {
             should_silence: true,
           };
           const result = await AI_GENERATE_RAW(rawRequestData);
-          const out = String(result || '').trim();
+          const outRaw = String(result || '').trim();
+          const out = sanitizeMomentPlainText(outRaw, { singleLine: true });
           if (!out) return;
           const name = getCurrentCharName();
           const avatar = getCurrentCharAvatarSuffix();
