@@ -8452,7 +8452,6 @@ function applyUserAvatar(avatarElement) {
 
       // ==================== MOMENTS / PYQ (<pyq>) SUPPORT ====================
       // 格式（存储在 <shouji> 内、</shouji> 之前）：
-      // 同层朋友圈
       // <pyq>
       // <post:1>
       // [发布者人名|发布者头像后缀|发布的文字内容|时间]
@@ -8567,7 +8566,6 @@ function applyUserAvatar(avatarElement) {
       function serializeMomentsToPyq(moments) {
         const list = Array.isArray(moments) ? moments : [];
         const lines = [];
-        lines.push('同层朋友圈');
         lines.push('<pyq>');
         if (list.length > 0) {
           // 保证 id 稳定且可序列化
@@ -20032,15 +20030,15 @@ function toggleFriendsPanel(show) {
                        const raw = msg && msg.message ? String(msg.message) : '<shouji>\n</shouji>';
                        const line = `[我方消息|图片|表情包|IMGDATA:${shortUrl}|FILENAME:${fileName}|${timestamp}]`;
                       const updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, (m)=>{
-                        let inner = m.slice(8, -9);
-                        // 若存在 <pyq>，把追加的聊天记录插到 <pyq> 之前，避免破坏朋友圈结构
-                        const pyqIndex = inner.search(/^\s*同层朋友圈\s*$/m);
-                        if (pyqIndex >= 0) {
-                          const before = inner.slice(0, pyqIndex).trimEnd();
-                          const after = inner.slice(pyqIndex).trimStart();
-                          const merged = `${before}\n${line}\n${after}`.trim();
-                          return `<shouji>\n${merged}\n</shouji>`;
-                        }
+                         let inner = m.slice(8, -9);
+                         // 若存在 <pyq>，把追加的聊天记录插到 <pyq> 之前，避免破坏朋友圈结构
+                         const pyqIndex = inner.search(/<pyq>/i);
+                         if (pyqIndex >= 0) {
+                           const before = inner.slice(0, pyqIndex).trimEnd();
+                           const after = inner.slice(pyqIndex).trimStart();
+                           const merged = `${before}\n${line}\n${after}`.trim();
+                           return `<shouji>\n${merged}\n</shouji>`;
+                         }
                         inner = inner.trim();
                         return `<shouji>\n${inner ? inner + '\n' : ''}${line}\n</shouji>`;
                       });
