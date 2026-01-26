@@ -6498,24 +6498,11 @@
           padding: 4px 0;
           border-bottom: 1px solid rgba(0,0,0,0.06);
         }
-        .moment-comment .c-line { display: flex; align-items: flex-start; gap: 6px; }
-        .moment-comment .c-avatar {
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          background: var(--bg-secondary);
-          background-size: cover;
-          background-position: center;
-          border: 1px solid rgba(0,0,0,0.08);
-          flex: 0 0 auto;
-          margin-top: 1px;
-        }
-        .moment-comment .c-body { flex: 1; min-width: 0; }
         .moment-comment .c-text { white-space: pre-wrap; word-break: break-word; }
         .moment-comment:last-child { border-bottom: none; }
         .moment-comment .c-name { font-weight: 600; }
         .moment-comment .c-time { font-size: 11px; color: var(--text-tertiary); margin-left: 6px; }
-        .moment-comment .c-actions { margin-top: 4px; display: flex; gap: 6px; margin-left: 26px; }
+        .moment-comment .c-actions { margin-top: 4px; display: flex; gap: 6px; }
         .moment-empty {
           padding: 40px 10px;
           text-align: center;
@@ -8792,6 +8779,19 @@ function applyUserAvatar(avatarElement) {
         return String(stream || '');
       }
 
+      function getUserAvatarUrlFromDom() {
+        // Prefer the actual rendered user avatar element (matches SillyTavern DOM)
+        // Example: <div class="user_avatar avatar" style="background-image: url(...);"></div>
+        const el = document.querySelector('.message.sent .user_avatar.avatar, .user_avatar.avatar');
+        if (!el) return '';
+        try {
+          const bg = getComputedStyle(el).backgroundImage || '';
+          const m = bg.match(/url\((['"]?)(.*?)\1\)/i);
+          if (m && m[2]) return m[2];
+        } catch (_) {}
+        return '';
+      }
+
       function inferAvatarSuffixForMomentActor(name, fallbackSuffix = '') {
         // For storage we prefer a catbox suffix when we can infer it.
         const n = String(name || '').trim();
@@ -8869,7 +8869,10 @@ function applyUserAvatar(avatarElement) {
         if (!n) return fallback;
         // user avatar (can be URL or data URL)
         const userName = typeof getUserDisplayName === 'function' ? getUserDisplayName() : '';
-        if (userName && n === userName) return (settingsState && settingsState.userAvatar) ? settingsState.userAvatar : fallback;
+        if (userName && n === userName) {
+          const url = (settingsState && settingsState.userAvatar) ? settingsState.userAvatar : '';
+          return url || getUserAvatarUrlFromDom() || fallback;
+        }
         // current character avatar (prefer configured URL if present)
         const charName = typeof getCurrentCharName === 'function' ? getCurrentCharName() : '';
         if (charName && n === charName) {
@@ -8979,10 +8982,7 @@ function applyUserAvatar(avatarElement) {
               const row = document.createElement('div');
               row.className = 'moment-comment';
               const line = document.createElement('div');
-              line.className = 'c-line';
-              line.innerHTML = `<span class="c-avatar" aria-hidden="true"></span><span class="c-body"><span class="c-name"></span><span class="c-reply"></span>: <span class="c-text"></span><span class="c-time"></span></span>`;
-              const cAvatar = line.querySelector('.c-avatar');
-              cAvatar.style.backgroundImage = `url('${resolveAvatarUrl(cmt.avatar, getAvatarFallbackUrlForName(cmt.name || post.authorName))}')`;
+              line.innerHTML = `<span class="c-name"></span><span class="c-reply"></span>: <span class="c-text"></span><span class="c-time"></span>`;
               line.querySelector('.c-name').textContent = cmt.name || '';
               line.querySelector('.c-reply').textContent = cmt.replyTo ? ` 回复 ${cmt.replyTo}` : '';
               line.querySelector('.c-text').textContent = unescapeStoredText(cmt.content || '');
