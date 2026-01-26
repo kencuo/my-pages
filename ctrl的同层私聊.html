@@ -6512,6 +6512,7 @@
       <div class="moments-overlay" id="momentsOverlay" aria-hidden="true">
         <div class="moments-header">
           <button class="moments-btn" id="momentsBackBtn" title="返回">←</button>
+          <button class="moments-btn" id="momentsAiBtn" title="AI回复">AI</button>
           <div class="moments-title">朋友圈</div>
           <button class="moments-btn primary" id="momentsNewBtn" title="发布">发布</button>
         </div>
@@ -8800,9 +8801,27 @@ function applyUserAvatar(avatarElement) {
         addMomentComment(postId, name, avatar, text);
       }
 
+      async function momentsQuickAiReply() {
+        const posts = Array.isArray(state.moments) ? state.moments : [];
+        if (!posts.length) {
+          try { showToast('还没有朋友圈内容'); } catch (_) {}
+          return;
+        }
+        // 默认：回复最新一条
+        const latest = [...posts].sort((a, b) => (b.id || 0) - (a.id || 0))[0];
+        const picked = prompt(`AI回复哪条朋友圈？输入 post ID（留空=最新 ${latest.id}）`, '');
+        let postId = latest.id;
+        if (picked !== null && String(picked).trim()) {
+          const n = Number(String(picked).trim());
+          if (Number.isFinite(n)) postId = n;
+        }
+        return aiCommentOnMoment(postId);
+      }
+
       async function aiCommentOnMoment(postId, replyToName, replyToContent) {
-        if (typeof generate !== 'function') {
-          try { showToast('未找到 generate()，无法让 AI 回复'); } catch (_) {}
+        // 必须用 generateRaw（跟私聊破限一样）
+        if (!AI_GENERATE_RAW) {
+          try { showToast('未找到 generateRaw()，无法让 AI 回复'); } catch (_) {}
           return;
         }
         const posts = Array.isArray(state.moments) ? state.moments : [];
@@ -8825,7 +8844,23 @@ function applyUserAvatar(avatarElement) {
             .join('\n');
 
         try {
-          const result = await generate({ user_input: promptText, should_silence: true });
+          const rawRequestData = {
+            ordered_prompts: [
+              ...(state.jailbreakEnabled ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
+              'world_info_before',
+              'persona_description',
+              'char_description',
+              'char_personality',
+              'scenario',
+              'world_info_after',
+              'dialogue_examples',
+              'chat_history',
+              'user_input',
+            ],
+            user_input: promptText,
+            should_silence: true,
+          };
+          const result = await AI_GENERATE_RAW(rawRequestData);
           const out = String(result || '').trim();
           if (!out) return;
           const name = getCurrentCharName();
@@ -20295,6 +20330,7 @@ function toggleFriendsPanel(show) {
           const homeBtn = document.getElementById('homeBtn');
           const homeDockBtn = document.getElementById('homeDockBtn');
           const momentsBackBtn = document.getElementById('momentsBackBtn');
+          const momentsAiBtn = document.getElementById('momentsAiBtn');
           const momentsNewBtn = document.getElementById('momentsNewBtn');
 
           const openChat = () => {
@@ -20326,6 +20362,10 @@ function toggleFriendsPanel(show) {
             const o = document.getElementById('momentsOverlay');
             if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden','true'); }
             if (homeOverlay) homeOverlay.style.display = 'flex';
+          };
+          if (momentsAiBtn) momentsAiBtn.onclick = () => {
+            try { if (typeof momentsQuickAiReply === 'function') return momentsQuickAiReply(); } catch(_) {}
+            showToastSafe('AI回复不可用');
           };
           if (momentsNewBtn) momentsNewBtn.onclick = () => {
             try {
