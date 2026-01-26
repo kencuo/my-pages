@@ -8792,6 +8792,77 @@ function applyUserAvatar(avatarElement) {
         return String(stream || '');
       }
 
+      function inferAvatarSuffixForMomentActor(name, fallbackSuffix = '') {
+        // For storage we prefer a catbox suffix when we can infer it.
+        const n = String(name || '').trim();
+        if (!n) return fallbackSuffix || '';
+        try {
+          const userName = typeof getUserDisplayName === 'function' ? getUserDisplayName() : '';
+          if (userName && n === userName) return getUserAvatarSuffix() || fallbackSuffix || '';
+        } catch (_) {}
+        try {
+          const charName = typeof getCurrentCharName === 'function' ? getCurrentCharName() : '';
+          if (charName && n === charName) return (typeof getCurrentCharAvatarSuffix === 'function' ? getCurrentCharAvatarSuffix() : '') || fallbackSuffix || '';
+        } catch (_) {}
+        return fallbackSuffix || '';
+      }
+
+      function parseAiMomentCommentLine(line, opts = {}) {
+        // Supported:
+        // - [评论|name|content|time]
+        // - [评论|name|replyToName|content|time]
+        // content may contain extra '|' (time is last field)
+        const defaultReplyTo = String(opts.defaultReplyTo || '').trim();
+        const s = String(line || '').trim();
+        if (!/^\[评论\|/.test(s)) return null;
+        const inner = s.replace(/^\[|\]$/g, '');
+        const parts = inner.split('|');
+        if (parts.length < 4) return null;
+        const name = sanitizeMomentPlainText(parts[1] || '', { singleLine: true });
+        const time = sanitizeMomentPlainText(parts[parts.length - 1] || '', { singleLine: true });
+        let replyTo = '';
+        let contentStart = 2;
+        if (parts.length >= 5) {
+          replyTo = sanitizeMomentPlainText(parts[2] || '', { singleLine: true });
+          contentStart = 3;
+        } else if (defaultReplyTo) {
+          replyTo = defaultReplyTo;
+        }
+        const content = sanitizeMomentPlainText(parts.slice(contentStart, -1).join('|'), { singleLine: true });
+        if (!content) return null;
+        return { name, replyTo, content, time };
+      }
+
+      function parseAiMomentPostLine(line) {
+        // Supported (header line only):
+        // - [name|avatarSuffix|content|time]
+        // - [name|content|time]
+        // content may contain extra '|' (time is last field)
+        const s = String(line || '').trim();
+        if (!/^\[/.test(s) || /^\[评论\|/.test(s)) return null;
+        if (!/\]$/.test(s)) return null;
+        const inner = s.replace(/^\[|\]$/g, '');
+        const parts = inner.split('|');
+        if (parts.length < 3) return null;
+
+        // Reuse parser heuristics: second field may be avatar
+        const authorName = sanitizeMomentPlainText(parts[0] || '', { singleLine: true });
+        const time = sanitizeMomentPlainText(parts[parts.length - 1] || '', { singleLine: true });
+        let authorAvatar = '';
+        let content = '';
+        // If it "looks like an avatar field", treat as avatar.
+        const maybeAvatar = String(parts[1] || '').trim();
+        if (maybeAvatar && (/\.(png|jpe?g|gif|webp)$/i.test(maybeAvatar) || /^https?:\/\//i.test(maybeAvatar) || /^data:/i.test(maybeAvatar))) {
+          authorAvatar = sanitizeMomentPlainText(maybeAvatar, { singleLine: true });
+          content = sanitizeMomentPlainText(parts.slice(2, -1).join('|'), {});
+        } else {
+          authorAvatar = '';
+          content = sanitizeMomentPlainText(parts.slice(1, -1).join('|'), {});
+        }
+        if (!content) return null;
+        return { authorName, authorAvatar, content, time };
+      }
+
       function getAvatarFallbackUrlForName(name) {
         const fallback = 'https://files.catbox.moe/cmegcm.jpeg';
         const n = String(name || '').trim();
@@ -9020,7 +9091,10 @@ function applyUserAvatar(avatarElement) {
 
         const promptText = [
           '你正在以“朋友圈动态”的形式发布一条内容。',
-          '要求：只输出动态正文；不要加引号；不要加标题；不要加前缀；不要解释；尽量简短自然。',
+          '要求：只输出 1~N 行，且每一行必须是下面格式之一（使用竖线 | 分隔）：',
+          '1) 发朋友圈： [人名|头像后缀|动态正文|时间]',
+          '2) 或者（不写头像）： [人名|动态正文|时间]',
+          '不要输出任何解释/多余文本/代码块。',
           topicText ? `主题/提示：${topicText}` : '',
         ].filter(Boolean).join('\n');
 
@@ -9040,14 +9114,61 @@ function applyUserAvatar(avatarElement) {
             ],
             user_input: promptText,
             should_silence: true,
+            should_stream: true,
           };
+          // 调试：复用 AI 调试面板
+          try { if (state.debugEnabled) {
+            window.__aiDebug = window.__aiDebug || { stream: '', messages: [] };
+            window.__aiDebug.mode = 'moments(post-generateRaw)';
+            window.__aiDebug.context = promptText;
+            window.__aiDebug.stream = '';
+            window.__aiDebug.messages = [];
+            window.__aiDebug.error = '';
+            window.__aiDebug.request = JSON.parse(JSON.stringify(rawRequestData));
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch (_) {}
+
           const result = await AI_GENERATE_RAW(rawRequestData);
-          const outRaw = String(result || '').trim();
-          const out = sanitizeMomentPlainText(outRaw);
-          if (!out) return;
-          const name = getCurrentCharName();
-          const avatar = getCurrentCharAvatarSuffix();
-          addMomentPost(name, avatar, out);
+          const outRaw = (await consumeTextStream(result, (chunk) => {
+            try { if (state.debugEnabled && window.__aiDebug) {
+              window.__aiDebug.stream = (window.__aiDebug.stream || '') + String(chunk || '');
+              if (window.__aiDebug.stream.length > 12000) {
+                window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+              }
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch (_) {}
+          })).trim();
+          try { if (state.debugEnabled && window.__aiDebug) {
+            if (!window.__aiDebug.stream) window.__aiDebug.stream = String(outRaw || '');
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch (_) {}
+
+          const lines = String(outRaw || '').replace(/\r/g, '').split('\n').map(s => s.trim()).filter(Boolean);
+          if (!lines.length) return;
+          let added = 0;
+          for (const l of lines) {
+            const p = parseAiMomentPostLine(l);
+            if (!p) continue;
+            if (!Array.isArray(state.moments)) state.moments = [];
+            state.moments.push({
+              id: nextMomentId(),
+              authorName: p.authorName || getCurrentCharName() || '',
+              authorAvatar: p.authorAvatar || inferAvatarSuffixForMomentActor(p.authorName, getCurrentCharAvatarSuffix()),
+              content: p.content,
+              time: p.time || getFullTimeStr(),
+              comments: [],
+            });
+            added++;
+          }
+          if (!added) {
+            // fallback: treat as plain body, keep old behavior
+            const out = sanitizeMomentPlainText(outRaw);
+            if (!out) return;
+            addMomentPost(getCurrentCharName(), getCurrentCharAvatarSuffix(), out);
+            return;
+          }
+          deferredSync(0);
+          renderMomentsList();
         } catch (_) {
           try { showToast('AI 发布失败'); } catch (_) {}
         }
@@ -9069,7 +9190,10 @@ function applyUserAvatar(avatarElement) {
         const promptText =
           [
             '你正在以“朋友圈评论”的形式回复。',
-            '要求：只输出 1~N 条中文评论内容（每条一行）；不要加引号；不要加前缀；不要解释；尽量简短自然。',
+            '要求：只输出 1~N 行，且每一行必须严格匹配以下格式之一（使用竖线 | 分隔）：',
+            '1) 评论朋友圈： [评论|人名|评论文字|时间]',
+            '2) 回复某条评论： [评论|人名|被评论的人名|评论文字|时间]',
+            '不要输出任何解释/多余文本/代码块。',
             `朋友圈发布者：${post.authorName || ''}`,
             `朋友圈内容：${postText}`,
             replyName ? `你要回复的评论来自：${replyName}` : '',
@@ -9131,26 +9255,45 @@ function applyUserAvatar(avatarElement) {
           const lines = String(outRaw || '').replace(/\r/g, '').split('\n').map(s => s.trim()).filter(Boolean);
           if (!lines.length) return;
 
-          const name = getCurrentCharName();
-          const avatar = getCurrentCharAvatarSuffix();
           let added = 0;
           if (!Array.isArray(post.comments)) post.comments = [];
-          for (const line of lines) {
-            let out = sanitizeMomentPlainText(line, { singleLine: true });
-            // If the model still adds "回复 xxx：" prefix, strip it (reply target is stored separately).
-            if (replyName) {
-              const m = out.match(/^回复\s+(.+?)：\s*(.*)$/);
-              if (m) out = String(m[2] || '').trim();
+          // Prefer structured comment lines. If none, fallback to treating each line as a comment body.
+          const hasStructured = lines.some(l => /^\[评论\|/.test(l));
+          if (hasStructured) {
+            for (const line of lines) {
+              const parsed = parseAiMomentCommentLine(line, { defaultReplyTo: replyName });
+              if (!parsed) continue;
+              const finalName = parsed.name || getCurrentCharName() || '';
+              const finalAvatar = inferAvatarSuffixForMomentActor(finalName, getCurrentCharAvatarSuffix());
+              post.comments.push({
+                name: finalName,
+                avatar: finalAvatar || '',
+                replyTo: parsed.replyTo || '',
+                content: parsed.content,
+                time: parsed.time || getFullTimeStr(),
+              });
+              added++;
             }
-            if (!out) continue;
-            post.comments.push({
-              name: name || '',
-              avatar: avatar || '',
-              replyTo: replyName ? String(replyName) : '',
-              content: out,
-              time: getFullTimeStr(),
-            });
-            added++;
+          } else {
+            const fallbackName = getCurrentCharName();
+            const fallbackAvatar = getCurrentCharAvatarSuffix();
+            for (const line of lines) {
+              let out = sanitizeMomentPlainText(line, { singleLine: true });
+              // If the model still adds "回复 xxx：" prefix, strip it (reply target is stored separately).
+              if (replyName) {
+                const m = out.match(/^回复\s+(.+?)：\s*(.*)$/);
+                if (m) out = String(m[2] || '').trim();
+              }
+              if (!out) continue;
+              post.comments.push({
+                name: fallbackName || '',
+                avatar: fallbackAvatar || '',
+                replyTo: replyName ? String(replyName) : '',
+                content: out,
+                time: getFullTimeStr(),
+              });
+              added++;
+            }
           }
           if (!added) return;
           deferredSync(0);
