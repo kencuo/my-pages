@@ -8409,7 +8409,8 @@ function applyUserAvatar(avatarElement) {
           return [];
         }
 
-        const lines = cleaned.split(/\n+/).filter(Boolean);
+        // NOTE: AI 流式输出在某些环境会带 \r\n；如果不 trim，会导致行尾残留 \r 让 ^...$ 正则全部匹配失败
+        const lines = cleaned.split(/\n+/).map(s => String(s).trim()).filter(Boolean);
         console.log('Parsing', lines.length, 'message lines');
 
         const parsedMessages = lines
