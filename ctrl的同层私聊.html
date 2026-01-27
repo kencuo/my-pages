@@ -6516,6 +6516,15 @@
           padding: 8px;
           border: 1px solid var(--border-secondary);
         }
+        .moment-likes {
+          font-size: 12px;
+          color: var(--text-secondary);
+          line-height: 1.35;
+          padding: 2px 0 6px;
+          margin-bottom: 6px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+          user-select: none;
+        }
         .moment-comment {
           font-size: 12px;
           color: var(--text-primary);
@@ -8538,6 +8547,7 @@ function applyUserAvatar(avatarElement) {
       // <pyq>
       // <post:1>
       // [发布者人名|发布者头像后缀|发布的文字内容|时间]
+      // [点赞|张三|王五|李四]   // 可选；人名用 | 隔开
       // {{
       // [评论|人名|头像后缀|评论的文字内容|时间]
       // }}
@@ -8591,8 +8601,8 @@ function applyUserAvatar(avatarElement) {
           const id = Number(m[1]);
           const block = (m[2] || '').trim();
           const lines = block.split('\n').map(s => s.trim()).filter(Boolean);
-          // avoid accidentally picking a comment line as header
-          const headerLine = lines.find(l => /^\[(?!评论\|).*\]$/.test(l)) || '';
+          // avoid accidentally picking a comment/like line as header
+          const headerLine = lines.find(l => /^\[(?!(评论|点赞)\|).*\]$/.test(l)) || '';
           const headerInner = headerLine.replace(/^\[|\]$/g, '');
           const parts = headerInner.split('|');
           const authorName = sanitizePyqField((parts[0] || '').trim());
@@ -8608,6 +8618,20 @@ function applyUserAvatar(avatarElement) {
             authorAvatar = '';
             content = sanitizePyqField(parts.slice(1, -1).join('|').trim());
           }
+
+          // Likes line: [点赞|张三|王五|...]
+          const likes = [];
+          try {
+            const likeLine = lines.find(l => /^\[点赞\|/.test(l)) || '';
+            if (likeLine) {
+              const inner = likeLine.replace(/^\[|\]$/g, '');
+              const likeParts = inner.split('|').slice(1);
+              for (const nm of likeParts) {
+                const n = sanitizePyqField(String(nm || '').trim());
+                if (n && !likes.includes(n)) likes.push(n);
+              }
+            }
+          } catch (_) {}
 
           const comments = [];
           // 兼容：评论可能在 {{...}} 内，也可能直接散落为多行 [评论|...]
@@ -8668,6 +8692,7 @@ function applyUserAvatar(avatarElement) {
             authorAvatar,
             content,
             time,
+            likes,
             comments,
           });
         }
@@ -8760,6 +8785,16 @@ function applyUserAvatar(avatarElement) {
             } catch (_) {
               lines.push(authorAvatar ? `[${authorName}|${authorAvatar}|${content}|${time}]` : `[${authorName}|${content}|${time}]`);
             }
+
+            // Likes line: always serialize to keep a stable structure.
+            try {
+              const likes = Array.isArray(post.likes) ? post.likes : [];
+              const likeNames = likes.map(n => String(n || '').replace(/\n/g, ' ').trim()).filter(Boolean);
+              lines.push(`[点赞|${likeNames.join('|')}]`);
+            } catch (_) {
+              lines.push('[点赞|]');
+            }
+
               const comments = Array.isArray(post.comments) ? post.comments : [];
               if (comments.length > 0) {
                 lines.push('{{');
@@ -8953,13 +8988,29 @@ function applyUserAvatar(avatarElement) {
         return { name, replyTo, content, time };
       }
 
+      function parseAiMomentLikeLine(line) {
+        // Supported:
+        // - [点赞|张三|王五|李四]
+        // empty is allowed: [点赞|]
+        const s = String(line || '').trim();
+        if (!/^\[点赞\|/.test(s)) return null;
+        if (!/\]$/.test(s)) return null;
+        const inner = s.replace(/^\[|\]$/g, '');
+        const parts = inner.split('|').slice(1);
+        const names = parts
+          .map(p => sanitizeMomentPlainText(p || '', { singleLine: true }))
+          .map(p => String(p || '').trim())
+          .filter(Boolean);
+        return { names };
+      }
+
       function parseAiMomentPostLine(line) {
         // Supported (header line only):
         // - [name|avatarSuffix|content|time]
         // - [name|content|time]
         // content may contain extra '|' (time is last field)
         const s = String(line || '').trim();
-        if (!/^\[/.test(s) || /^\[评论\|/.test(s)) return null;
+        if (!/^\[/.test(s) || /^\[(评论|点赞)\|/.test(s)) return null;
         if (!/\]$/.test(s)) return null;
         const inner = s.replace(/^\[|\]$/g, '');
         const parts = inner.split('|');
@@ -9090,6 +9141,13 @@ function applyUserAvatar(avatarElement) {
 
           const commentsWrap = document.createElement('div');
           commentsWrap.className = 'moment-comments';
+          const likes = Array.isArray(post.likes) ? post.likes : [];
+          if (likes.length > 0) {
+            const likeRow = document.createElement('div');
+            likeRow.className = 'moment-likes';
+            likeRow.textContent = `♥ ${likes.join(' | ')}`;
+            commentsWrap.appendChild(likeRow);
+          }
           const comments = Array.isArray(post.comments) ? post.comments : [];
           if (comments.length === 0) {
             const c = document.createElement('div');
@@ -9149,6 +9207,7 @@ function applyUserAvatar(avatarElement) {
           authorAvatar: authorAvatar || '',
           content: text,
           time: getFullTimeStr(),
+          likes: [],
           comments: [],
         });
         deferredSync(0);
@@ -9277,6 +9336,7 @@ function applyUserAvatar(avatarElement) {
               authorAvatar: p.authorAvatar || inferAvatarSuffixForMomentActor(p.authorName, getCurrentCharAvatarSuffix()),
               content: p.content,
               time: p.time || getFullTimeStr(),
+              likes: [],
               comments: [],
             });
             added++;
@@ -9312,11 +9372,13 @@ function applyUserAvatar(avatarElement) {
           [
             '你正在以“朋友圈评论”的形式回复。',
             '要求：只输出 1~N 行，且每一行必须严格匹配以下格式之一（使用竖线 | 分隔）：',
-            '1) 评论朋友圈： [评论|人名|评论文字|时间]',
-            '2) 回复某条评论： [评论|人名|被评论的人名|评论文字|时间]',
+            '1) 点赞（可选）： [点赞|张三|王五|李四]  （人名用 | 隔开；会合并到该朋友圈点赞列表）',
+            '2) 评论朋友圈： [评论|人名|评论文字|时间]',
+            '3) 回复某条评论： [评论|人名|被评论的人名|评论文字|时间]',
             '不要输出任何解释/多余文本/代码块。',
             `朋友圈发布者：${post.authorName || ''}`,
             `朋友圈内容：${postText}`,
+            `当前点赞：${Array.isArray(post.likes) ? post.likes.join('|') : ''}`,
             replyName ? `你要回复的评论来自：${replyName}` : '',
             replyText ? `对方评论内容：${replyText}` : '',
           ]
@@ -9372,16 +9434,38 @@ function applyUserAvatar(avatarElement) {
             window.__updateAIDebug && window.__updateAIDebug();
           }} catch (_) {}
 
-          // 多行=多条评论（每行一条），空行忽略
+          // 多行=多条评论/点赞（每行一条），空行忽略
           const lines = String(outRaw || '').replace(/\r/g, '').split('\n').map(s => s.trim()).filter(Boolean);
           if (!lines.length) return;
 
           let added = 0;
+          let likesAdded = 0;
           if (!Array.isArray(post.comments)) post.comments = [];
+          if (!Array.isArray(post.likes)) post.likes = [];
+
+          // Apply likes first (can coexist with comments).
+          for (const line of lines) {
+            const parsedLike = parseAiMomentLikeLine(line);
+            if (!parsedLike) continue;
+            for (const n of parsedLike.names) {
+              const name = String(n || '').trim();
+              if (!name) continue;
+              if (!post.likes.includes(name)) {
+                post.likes.push(name);
+                likesAdded++;
+              }
+            }
+          }
+          if (post.likes.length > 1) {
+            // Ensure deterministic order + no duplicates
+            post.likes = [...new Set(post.likes.map(n => String(n || '').trim()).filter(Boolean))];
+          }
+
           // Prefer structured comment lines. If none, fallback to treating each line as a comment body.
           const hasStructured = lines.some(l => /^\[评论\|/.test(l));
           if (hasStructured) {
             for (const line of lines) {
+              if (/^\[点赞\|/.test(line)) continue;
               const parsed = parseAiMomentCommentLine(line, { defaultReplyTo: replyName });
               if (!parsed) continue;
               const finalName = parsed.name || getCurrentCharName() || '';
@@ -9399,6 +9483,7 @@ function applyUserAvatar(avatarElement) {
             const fallbackName = getCurrentCharName();
             const fallbackAvatar = getCurrentCharAvatarSuffix();
             for (const line of lines) {
+              if (/^\[点赞\|/.test(line)) continue;
               let out = sanitizeMomentPlainText(line, { singleLine: true });
               // If the model still adds "回复 xxx：" prefix, strip it (reply target is stored separately).
               if (replyName) {
@@ -9416,7 +9501,7 @@ function applyUserAvatar(avatarElement) {
               added++;
             }
           }
-          if (!added) return;
+          if (!added && !likesAdded) return;
           deferredSync(0);
           renderMomentsList();
         } catch (e) {
