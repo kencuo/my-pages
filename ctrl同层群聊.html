@@ -7733,6 +7733,56 @@ function applyUserAvatar(avatarElement) {
         return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
       }
 
+      function resolveAvatarUrl(avatarSuffixOrUrl, fallbackUrl) {
+        const v = String(avatarSuffixOrUrl || '').trim();
+        if (!v) return fallbackUrl || '';
+
+        function getSillyTavernBaseUrl() {
+          // Manual override when this page isn't hosted under SillyTavern origin.
+          // Example: localStorage.setItem('stBaseUrl', 'http://127.0.0.1:8000')
+          try {
+            const override = String(localStorage.getItem('stBaseUrl') || '').trim();
+            if (/^https?:\/\/.+/i.test(override)) return override.replace(/\/+$/, '');
+          } catch (_) {}
+
+          const origin = (window.location && window.location.origin) ? String(window.location.origin) : '';
+          if (origin && origin !== 'null') return origin.replace(/\/+$/, '');
+          try {
+            const pOrigin = (window.parent && window.parent.location && window.parent.location.origin) ? String(window.parent.location.origin) : '';
+            if (pOrigin && pOrigin !== 'null') return pOrigin.replace(/\/+$/, '');
+          } catch (_) {}
+          try {
+            const tOrigin = (window.top && window.top.location && window.top.location.origin) ? String(window.top.location.origin) : '';
+            if (tOrigin && tOrigin !== 'null') return tOrigin.replace(/\/+$/, '');
+          } catch (_) {}
+          return 'http://127.0.0.1:8000';
+        }
+
+        function absolutizeMaybe(u) {
+          const s = String(u || '').trim();
+          if (!s) return '';
+          if (/^https?:\/\//i.test(s) || s.startsWith('data:')) return s;
+          if (s.startsWith('/')) return getSillyTavernBaseUrl() + s;
+          return s;
+        }
+
+        // Support SillyTavern-style IMGDATA tokens: "IMGDATA:/path|FILENAME:xxx"
+        if (/^IMGDATA:/i.test(v) || v.includes('IMGDATA:')) {
+          try {
+            const parts = v.split('|');
+            for (const part of parts) {
+              const p = String(part || '').trim();
+              if (/^IMGDATA:/i.test(p)) {
+                const url = p.substring(8).trim();
+                if (url) return absolutizeMaybe(url);
+              }
+            }
+          } catch (_) {}
+        }
+        if (/^https?:\/\//i.test(v) || v.startsWith('data:') || v.startsWith('/')) return absolutizeMaybe(v);
+        return `https://files.catbox.moe/${v}`;
+      }
+
       function applyInterfaceScale(scale) {
         const clamped = Math.min(1.2, Math.max(0.9, scale));
         state.interfaceScale = clamped;
@@ -7960,7 +8010,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|转账(?:给(.+?))?(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|转账(?:给(.+?))?(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, to, amount, time]) => ({
             sender: 'char',
             type: 'transfer',
@@ -7982,7 +8032,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|收账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|收账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, amount, time]) => ({
             sender: 'char',
             type: 'receive',
@@ -8002,7 +8052,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|已退回收账\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|已退回收账\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, time]) => ({
             sender: 'char',
             type: 'refund',
@@ -8022,7 +8072,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|语音消息\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|语音消息\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => ({
             sender: 'char',
             type: 'voice',
@@ -8043,7 +8093,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, amount, time]) => ({
             sender: 'char',
             type: 'redpacket',
@@ -8064,7 +8114,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|领取红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|领取红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, amount, time]) => ({
             sender: 'char',
             type: 'claimed-redpacket',
@@ -8091,7 +8141,7 @@ function applyUserAvatar(avatarElement) {
           },
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|图片\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|图片\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, description, time]) => {
             // 解析图片信息，提取URL和文件名
             const imageData = parseImageInfo(description);
@@ -8122,7 +8172,7 @@ function applyUserAvatar(avatarElement) {
           },
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|视频\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|视频\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, url, time]) => {
             return {
               sender: 'char',
@@ -8146,7 +8196,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|撤回\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|撤回\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, time]) => ({
             sender: 'char',
             type: 'retracted',
@@ -8185,7 +8235,7 @@ function applyUserAvatar(avatarElement) {
           },
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|表情包\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|表情包\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => {
             // 检测是否包含catbox文件名
             const catboxMatch = content.match(/([a-zA-Z0-9]+\.(jpeg|jpg|png|gif|webp))$/i);
@@ -8303,7 +8353,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|变音特效\|(.*?)\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|变音特效\|(.*?)\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, effect, content, time]) => ({
             sender: 'char',
             type: 'voice-effect',
@@ -8325,7 +8375,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\<(.+?)\|(.+?)\|(.*?)\|(.*?)\|(\d{2}:\d{2})\>$/,
+          regex: /^\<(.+?)\|((?:IMGDATA:[^|>]+\|FILENAME:[^|>]+)|[^|>]+)\|(.*?)\|(.*?)\|(\d{2}:\d{2})\>$/,
           handler: ([, charName, avatar, quote, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
@@ -8345,7 +8395,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
@@ -8355,7 +8405,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|表情包\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|表情包\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => {
             // 检测是否包含catbox文件名
             const catboxMatch = content.match(/([a-zA-Z0-9]+\.(jpeg|jpg|png|gif|webp))$/i);
@@ -9824,6 +9874,12 @@ function applyUserAvatar(avatarElement) {
           } else if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
+            // If the IMGDATA file is missing/blocked, fall back to a local placeholder (avoid broken image icon).
+            avatar.onerror = () => {
+              avatar.onerror = null;
+              console.warn('[同层群聊6] avatar load failed', { raw: msg.avatar, resolved: avatar.src });
+              avatar.src = getDefaultAvatarDataUrl();
+            };
 
             // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
@@ -9840,7 +9896,7 @@ function applyUserAvatar(avatarElement) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               // 最低优先级：使用格式中的头像
-              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
             }
 
             // 添加双击戳一戳事件
@@ -10025,6 +10081,12 @@ function applyUserAvatar(avatarElement) {
           if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
+            // If the IMGDATA file is missing/blocked, fall back to a local placeholder (avoid broken image icon).
+            avatar.onerror = () => {
+              avatar.onerror = null;
+              console.warn('[同层群聊6] avatar load failed', { raw: msg.avatar, resolved: avatar.src });
+              avatar.src = getDefaultAvatarDataUrl();
+            };
 
             // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
@@ -10041,7 +10103,7 @@ function applyUserAvatar(avatarElement) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               // 最低优先级：使用格式中的头像
-              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
             }
 
             // 添加双击戳一戳事件
@@ -10065,7 +10127,7 @@ function applyUserAvatar(avatarElement) {
       function getLastCharInfo() {
         const lastCharMsg = [...state.messageHistory].reverse().find(m => m.sender === 'char' && m.avatar);
         return {
-          avatarUrl: lastCharMsg ? 'https://files.catbox.moe/' + lastCharMsg.avatar : '',
+          avatarUrl: lastCharMsg ? resolveAvatarUrl(lastCharMsg.avatar, '') : '',
           avatarId: lastCharMsg ? lastCharMsg.avatar : '',
           name: NAME_CHAR, // Using the constant for now
         };
@@ -16739,6 +16801,11 @@ function applyUserAvatar(avatarElement) {
           if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
+            avatar.onerror = () => {
+              avatar.onerror = null;
+              console.warn('[同层群聊6] avatar load failed', { raw: msg.avatar, resolved: avatar.src });
+              avatar.src = getDefaultAvatarDataUrl();
+            };
 
             // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || msg.name || getCurrentCharName();
@@ -16755,7 +16822,7 @@ function applyUserAvatar(avatarElement) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               // 最低优先级：使用格式中的头像
-              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
             }
 
             message.appendChild(avatar);
@@ -17819,7 +17886,7 @@ function applyUserAvatar(avatarElement) {
                 console.log(`✅ 头像 ${index} 已更新为设置头像`);
               } else if (msg.avatar) {
                 // 最低优先级：使用格式中的头像
-                avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+                avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
                 console.log(`✅ 头像 ${index} 使用格式头像`);
               }
             }
