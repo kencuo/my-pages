@@ -8884,6 +8884,28 @@ function applyUserAvatar(avatarElement) {
       function resolveAvatarUrl(avatarSuffixOrUrl, fallbackUrl) {
         const v = String(avatarSuffixOrUrl || '').trim();
         if (!v) return fallbackUrl || '';
+
+        function getSillyTavernBaseUrl() {
+          // When running inside SillyTavern (http/https), this is the correct origin.
+          const origin = (window.location && window.location.origin) ? String(window.location.origin) : '';
+          if (origin && origin !== 'null') return origin.replace(/\/+$/, '');
+          // If embedded and same-origin access is allowed, try parent origin.
+          try {
+            const pOrigin = (window.parent && window.parent.location && window.parent.location.origin) ? String(window.parent.location.origin) : '';
+            if (pOrigin && pOrigin !== 'null') return pOrigin.replace(/\/+$/, '');
+          } catch (_) {}
+          // Fallback for opening this HTML via file:// (preview mode). Adjust if your ST runs elsewhere.
+          return 'http://127.0.0.1:8000';
+        }
+
+        function absolutizeMaybe(u) {
+          const s = String(u || '').trim();
+          if (!s) return '';
+          if (/^https?:\/\//i.test(s) || s.startsWith('data:')) return s;
+          if (s.startsWith('/')) return getSillyTavernBaseUrl() + s;
+          return s;
+        }
+
         // Support SillyTavern-style IMGDATA tokens: "IMGDATA:/path|FILENAME:xxx"
         if (/^IMGDATA:/i.test(v) || v.includes('|IMGDATA:') || v.includes('IMGDATA:')) {
           try {
@@ -8892,12 +8914,13 @@ function applyUserAvatar(avatarElement) {
               const p = String(part || '').trim();
               if (/^IMGDATA:/i.test(p)) {
                 const url = p.substring(8).trim();
-                if (url) return url;
+                if (url) return absolutizeMaybe(url);
               }
             }
           } catch (_) {}
         }
-        if (/^https?:\/\//i.test(v) || v.startsWith('data:')) return v;
+        // Absolute/relative URLs (SillyTavern serves /user/images/... under same origin)
+        if (/^https?:\/\//i.test(v) || v.startsWith('data:') || v.startsWith('/')) return absolutizeMaybe(v);
         return `https://files.catbox.moe/${v}`;
       }
 
@@ -10823,7 +10846,7 @@ function applyUserAvatar(avatarElement) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               // 最低优先级：使用格式中的头像
-              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
             }
 
             // 添加双击戳一戳事件
@@ -11024,7 +11047,7 @@ function applyUserAvatar(avatarElement) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               // 最低优先级：使用格式中的头像
-              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
             }
 
             // 添加双击戳一戳事件
@@ -11048,7 +11071,7 @@ function applyUserAvatar(avatarElement) {
       function getLastCharInfo() {
         const lastCharMsg = [...state.messageHistory].reverse().find(m => m.sender === 'char' && m.avatar);
         return {
-          avatarUrl: lastCharMsg ? 'https://files.catbox.moe/' + lastCharMsg.avatar : '',
+          avatarUrl: lastCharMsg ? resolveAvatarUrl(lastCharMsg.avatar, '') : '',
           avatarId: lastCharMsg ? lastCharMsg.avatar : '',
           name: NAME_CHAR, // Using the constant for now
         };
@@ -17627,7 +17650,7 @@ function toggleFriendsPanel(show) {
               avatar.src = settingsState.charAvatars[charName];
             } else {
               // 最低优先级：使用格式中的头像
-              avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
             }
 
             message.appendChild(avatar);
@@ -18694,7 +18717,7 @@ function toggleFriendsPanel(show) {
                 console.log(`✅ 头像 ${index} 已更新为设置头像`);
               } else if (msg.avatar) {
                 // 最低优先级：使用格式中的头像
-                avatar.src = 'https://files.catbox.moe/' + msg.avatar;
+                avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
                 console.log(`✅ 头像 ${index} 使用格式头像`);
               }
             }
