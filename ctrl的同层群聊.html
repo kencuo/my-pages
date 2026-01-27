@@ -7738,11 +7738,22 @@ function applyUserAvatar(avatarElement) {
         if (!v) return fallbackUrl || '';
 
         function getSillyTavernBaseUrl() {
+          // Manual override when this page isn't hosted under SillyTavern origin.
+          // Example: localStorage.setItem('stBaseUrl', 'http://127.0.0.1:8000')
+          try {
+            const override = String(localStorage.getItem('stBaseUrl') || '').trim();
+            if (/^https?:\/\/.+/i.test(override)) return override.replace(/\/+$/, '');
+          } catch (_) {}
+
           const origin = (window.location && window.location.origin) ? String(window.location.origin) : '';
           if (origin && origin !== 'null') return origin.replace(/\/+$/, '');
           try {
             const pOrigin = (window.parent && window.parent.location && window.parent.location.origin) ? String(window.parent.location.origin) : '';
             if (pOrigin && pOrigin !== 'null') return pOrigin.replace(/\/+$/, '');
+          } catch (_) {}
+          try {
+            const tOrigin = (window.top && window.top.location && window.top.location.origin) ? String(window.top.location.origin) : '';
+            if (tOrigin && tOrigin !== 'null') return tOrigin.replace(/\/+$/, '');
           } catch (_) {}
           return 'http://127.0.0.1:8000';
         }
@@ -9863,6 +9874,12 @@ function applyUserAvatar(avatarElement) {
           } else if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
+            // If the IMGDATA file is missing/blocked, fall back to a local placeholder (avoid broken image icon).
+            avatar.onerror = () => {
+              avatar.onerror = null;
+              console.warn('[同层群聊6] avatar load failed', { raw: msg.avatar, resolved: avatar.src });
+              avatar.src = getDefaultAvatarDataUrl();
+            };
 
             // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
@@ -10064,6 +10081,12 @@ function applyUserAvatar(avatarElement) {
           if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
+            // If the IMGDATA file is missing/blocked, fall back to a local placeholder (avoid broken image icon).
+            avatar.onerror = () => {
+              avatar.onerror = null;
+              console.warn('[同层群聊6] avatar load failed', { raw: msg.avatar, resolved: avatar.src });
+              avatar.src = getDefaultAvatarDataUrl();
+            };
 
             // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || '对方'; // 获取角色名称
@@ -16778,6 +16801,11 @@ function applyUserAvatar(avatarElement) {
           if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar';
+            avatar.onerror = () => {
+              avatar.onerror = null;
+              console.warn('[同层群聊6] avatar load failed', { raw: msg.avatar, resolved: avatar.src });
+              avatar.src = getDefaultAvatarDataUrl();
+            };
 
             // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
             const charName = msg.charName || msg.name || getCurrentCharName();
