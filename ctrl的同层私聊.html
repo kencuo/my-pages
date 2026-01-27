@@ -16116,7 +16116,8 @@ function toggleFriendsPanel(show) {
               const dataUrl = await convertFileToBase64(file);
               const comma = dataUrl.indexOf(',');
               const base64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
-              const body = { image: base64, format: 'png', filename: 'stickers_' + Date.now() + '.png' };
+              // Store uploads under /user/images/user/... (folder auto-created server-side)
+              const body = { image: base64, format: 'png', filename: 'stickers_' + Date.now() + '.png', ch_name: 'user' };
               const res = await fetch('/api/images/upload', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -20830,7 +20831,8 @@ function toggleFriendsPanel(show) {
             if (!base64 || !format) return { ok: false, message: '不支持的图片格式' };
 
             const filename = `${folder}_` + Date.now() + '.' + format;
-            const body = { image: base64, format, filename };
+            // Store uploads under /user/images/user/... (folder auto-created server-side)
+            const body = { image: base64, format, filename, ch_name: 'user' };
             const res = await fetch('/api/images/upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
