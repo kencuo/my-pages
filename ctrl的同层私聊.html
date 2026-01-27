@@ -9131,11 +9131,17 @@ function applyUserAvatar(avatarElement) {
           btnComment.className = 'moments-btn';
           btnComment.textContent = '评论';
           btnComment.onclick = () => commentOnMoment(post.id);
+          const btnLike = document.createElement('button');
+          btnLike.className = 'moments-btn';
+          const userName = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
+          btnLike.textContent = (Array.isArray(post.likes) && post.likes.includes(userName)) ? '取消赞' : '点赞';
+          btnLike.onclick = () => toggleLikeOnMoment(post.id);
           const btnAi = document.createElement('button');
           btnAi.className = 'moments-btn';
           btnAi.textContent = '触发回复';
           btnAi.onclick = () => aiCommentOnMoment(post.id);
           actions.appendChild(btnComment);
+          actions.appendChild(btnLike);
           actions.appendChild(btnAi);
           card.appendChild(actions);
 
@@ -9240,6 +9246,28 @@ function applyUserAvatar(avatarElement) {
         const name = getUserDisplayName();
         // Omit avatar from stored text; we can infer user avatar at render time.
         addMomentComment(postId, name, '', replyToName, text);
+      }
+
+      function toggleLikeOnMoment(postId) {
+        const posts = Array.isArray(state.moments) ? state.moments : [];
+        const post = posts.find(p => Number(p.id) === Number(postId));
+        if (!post) return;
+
+        const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
+        if (!Array.isArray(post.likes)) post.likes = [];
+
+        const idx = post.likes.indexOf(name);
+        if (idx >= 0) {
+          post.likes.splice(idx, 1);
+          try { showToast('已取消赞'); } catch (_) {}
+        } else {
+          post.likes.push(name);
+          post.likes = [...new Set(post.likes.map(n => String(n || '').trim()).filter(Boolean))];
+          try { showToast('已点赞'); } catch (_) {}
+        }
+
+        deferredSync(0);
+        renderMomentsList();
       }
 
       async function momentsQuickAiReply() {
