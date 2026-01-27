@@ -8057,7 +8057,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, amount, time]) => ({
             sender: 'char',
             type: 'transfer',
@@ -8078,7 +8078,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|收账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|收账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, amount, time]) => ({
             sender: 'char',
             type: 'receive',
@@ -8098,7 +8098,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|已退回收账\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|已退回收账\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, time]) => ({
             sender: 'char',
             type: 'refund',
@@ -8118,7 +8118,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|语音消息\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|语音消息\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => ({
             sender: 'char',
             type: 'voice',
@@ -8139,7 +8139,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, amount, time]) => ({
             sender: 'char',
             type: 'redpacket',
@@ -8160,7 +8160,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|领取红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|领取红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, amount, time]) => ({
             sender: 'char',
             type: 'claimed-redpacket',
@@ -8187,7 +8187,7 @@ function applyUserAvatar(avatarElement) {
           },
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|图片\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|图片\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, description, time]) => {
             // 解析图片信息，提取URL和文件名
             const imageData = parseImageInfo(description);
@@ -8218,7 +8218,7 @@ function applyUserAvatar(avatarElement) {
           },
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|视频\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|视频\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, url, time]) => {
             return {
               sender: 'char',
@@ -8242,7 +8242,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|撤回\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|撤回\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, time]) => ({
             sender: 'char',
             type: 'retracted',
@@ -8281,7 +8281,7 @@ function applyUserAvatar(avatarElement) {
           },
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|表情包\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|表情包\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => {
             // 检测是否包含catbox文件名
             const catboxMatch = content.match(/([a-zA-Z0-9]+\.(jpeg|jpg|png|gif|webp))$/i);
@@ -8399,7 +8399,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|变音特效\|(.*?)\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|变音特效\|(.*?)\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, effect, content, time]) => ({
             sender: 'char',
             type: 'voice-effect',
@@ -8421,7 +8421,8 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\<(.+?)\|(.+?)\|(.*?)\|(.*?)\|(\d{2}:\d{2})\>$/,
+          // Avatar supports SillyTavern IMGDATA tokens: "IMGDATA:/path|FILENAME:xxx" (note the extra '|')
+          regex: /^\<(.+?)\|((?:IMGDATA:[^|>]+\|FILENAME:[^|>]+)|[^|>]+)\|(.*?)\|(.*?)\|(\d{2}:\d{2})\>$/,
           handler: ([, charName, avatar, quote, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
@@ -8441,7 +8442,8 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|(.*?)\|(\d{2}:\d{2})\]$/,
+          // Avatar supports SillyTavern IMGDATA tokens: "IMGDATA:/path|FILENAME:xxx" (note the extra '|')
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
@@ -8451,7 +8453,7 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
-          regex: /^\[(.+?)\|(.+?)\|表情包\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|表情包\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => {
             // 检测是否包含catbox文件名
             const catboxMatch = content.match(/([a-zA-Z0-9]+\.(jpeg|jpg|png|gif|webp))$/i);
@@ -9138,7 +9140,7 @@ function applyUserAvatar(avatarElement) {
           btnLike.onclick = () => toggleLikeOnMoment(post.id);
           const btnAi = document.createElement('button');
           btnAi.className = 'moments-btn';
-          btnAi.textContent = '触发回复';
+          btnAi.textContent = '等待评论';
           btnAi.onclick = () => aiCommentOnMoment(post.id);
           actions.appendChild(btnComment);
           actions.appendChild(btnLike);
@@ -9182,7 +9184,7 @@ function applyUserAvatar(avatarElement) {
               r.onclick = () => commentOnMoment(post.id, cmt.name, cmt.content);
               const ai = document.createElement('button');
               ai.className = 'moments-btn';
-              ai.textContent = '触发回复';
+              ai.textContent = '等待评论';
               ai.onclick = () => aiCommentOnMoment(post.id, cmt.name, cmt.content);
               cActions.appendChild(r);
               cActions.appendChild(ai);
@@ -20758,7 +20760,7 @@ function toggleFriendsPanel(show) {
           if (!el) {
             el = document.createElement('span');
             el.className = 'vision-analysis-indicator';
-            el.textContent = 'AI';
+            el.textContent = '等待评论';
             el.style.opacity = '0';
             container.appendChild(el);
           }
