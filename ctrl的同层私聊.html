@@ -8706,7 +8706,7 @@ function applyUserAvatar(avatarElement) {
       function getUserDisplayName() {
         try {
           if (typeof formatAsDisplayedMessage === 'function') {
-            const html = formatAsDisplayedMessage('{{user}}', { message_id: 'last' });
+            const html = formatAsDisplayedMessage('我', { message_id: 'last' });
             const div = document.createElement('div');
             div.innerHTML = html;
             const t = (div.textContent || '').trim();
