@@ -6296,10 +6296,113 @@
         justify-content: flex-start;
         background: url('https://files.catbox.moe/juvczm.jpeg') center/cover no-repeat;
         z-index: 999;
-        padding-top: 22px;
+        padding-top: 16px;
+      }
+
+      /* iOS16-ish home widgets + dynamic island (glassmorphism) */
+      .ios-statusbar {
+        width: 92%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: rgba(255, 255, 255, 0.92);
+        font-weight: 600;
+        font-size: 12px;
+        letter-spacing: 0.2px;
+        margin-top: 2px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        user-select: none;
+      }
+      .ios-statusbar .ios-time {
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .ios-statusbar .ios-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        opacity: 0.95;
+      }
+      .ios-pill {
+        position: relative;
+        margin-top: 8px;
+        width: 132px;
+        height: 30px;
+        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.55);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        user-select: none;
+        transition: all 0.25s ease;
+      }
+      .ios-pill:hover { transform: translateY(-1px); }
+      .ios-pill .di-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.2) 55%, rgba(0,0,0,0) 70%);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.18);
+        opacity: 0.9;
+      }
+      .ios-pill .di-text {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .ios-widgets {
+        width: 92%;
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ios-widget {
+        border-radius: 18px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        box-shadow:
+          0 10px 25px rgba(0, 0, 0, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        color: rgba(255, 255, 255, 0.92);
+        overflow: hidden;
+      }
+      .ios-widgets-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .ios-widget.square {
+        height: 76px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .ios-widget.square .sq-title {
+        font-size: 11px;
+        font-weight: 700;
+        opacity: 0.95;
+      }
+      .ios-widget.square .sq-big {
+        font-size: 28px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+      .ios-widget.square .sq-sub {
+        font-size: 10px;
+        opacity: 0.9;
       }
       .home-overlay .app-grid {
-        margin: 100px 0 0 0;
+        margin: 12px 0 0 0;
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 14px;
@@ -6353,6 +6456,39 @@
         color: #ffffff;
         text-shadow: 0 1px 2px rgba(0,0,0,0.25);
       }
+
+      .ios-dock {
+        margin-top: auto;
+        margin-bottom: 10px;
+        width: 92%;
+        height: 58px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.14);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 10px;
+      }
+      .ios-dock .dock-item {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        user-select: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        transition: transform 0.12s ease;
+      }
+      .ios-dock .dock-item:active { transform: scale(0.96); }
       .home-btn {
         position: absolute;
         top: 6px;
@@ -6380,6 +6516,34 @@
     <div class="phone-shell"><div class="cute-phone" data-author="ctrl">
       <!-- 主屏渲染层：默认显示，点击聊天进入好友列表 -->
       <div class="home-overlay" id="homeOverlay">
+        <div class="ios-statusbar">
+          <div class="ios-time" id="homeClockTime">--:--</div>
+          <div class="ios-right" aria-hidden="true">
+            <span style="font-size: 11px; opacity: 0.92;">5G</span>
+            <span style="font-size: 12px; opacity: 0.92;">▮▮▮▯</span>
+            <span style="font-size: 12px; opacity: 0.92;">🔋</span>
+          </div>
+        </div>
+        <div class="ios-pill" id="dynamicIsland" title="灵动岛（示意）">
+          <span class="di-dot"></span>
+          <span class="di-text" id="dynamicIslandText">Tavern Helper</span>
+        </div>
+
+        <div class="ios-widgets">
+          <div class="ios-widgets-row">
+            <div class="ios-widget square" id="homeWidgetClock">
+              <div class="sq-title">时钟</div>
+              <div class="sq-big" id="homeClockBig">--:--</div>
+              <div class="sq-sub" id="homeClockSub">--月--日</div>
+            </div>
+            <div class="ios-widget square" id="homeWidgetCalendar">
+              <div class="sq-title">日历</div>
+              <div class="sq-big" id="homeCalendarDay">--</div>
+              <div class="sq-sub" id="homeCalendarWeek">星期--</div>
+            </div>
+          </div>
+        </div>
+
         <div class="app-grid">
           <div class="app-item" id="appChat">
             <div class="app-icon">💬</div>
@@ -6402,6 +6566,13 @@
             <div class="app-icon">⚙️</div>
             <div class="app-label">设置</div>
           </div>
+        </div>
+
+        <div class="ios-dock" aria-label="Dock">
+          <div class="dock-item" id="dockChat" title="聊天">💬</div>
+          <div class="dock-item" id="dockMoments" title="朋友圈">🧭</div>
+          <div class="dock-item" id="dockMusic" title="云音乐">🎧</div>
+          <div class="dock-item" id="dockSettings" title="设置">⚙️</div>
         </div>
       </div>
       <!-- 聊天界面 -->
@@ -6950,6 +7121,23 @@
               <button class="reset-btn" id="wallpaperResetBtn">重置</button>
             </div>
             <input type="file" class="file-input" id="wallpaperFileInput" accept="image/*">
+          </div>
+
+          <!-- 主屏壁纸设置 -->
+          <div class="setting-section">
+            <label class="setting-label">主屏壁纸</label>
+            <div class="setting-preview">
+              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://files.catbox.moe/juvczm.jpeg" alt="主屏壁纸预览">
+              <div class="preview-info">
+                <div class="preview-title">自定义主屏壁纸</div>
+                <div class="preview-desc">上传本地图片作为主屏背景</div>
+              </div>
+            </div>
+            <div class="setting-buttons">
+              <button class="upload-btn" id="homeWallpaperUploadBtn">上传壁纸</button>
+              <button class="reset-btn" id="homeWallpaperResetBtn">重置</button>
+            </div>
+            <input type="file" class="file-input" id="homeWallpaperFileInput" accept="image/*">
           </div>
 
           <!-- 角色头像设置 -->
@@ -16008,6 +16196,9 @@ function applyUserAvatar(avatarElement) {
           // 绑定所有事件监听器
           bindEventListeners();
 
+          // iOS风主屏：时间/日历渲染 + Dock快捷入口 + 主屏壁纸
+          initIosHomeScreen();
+
           // 显示长按提示（延迟3秒，让用户先熟悉界面）
           setTimeout(() => {
             showLongPressHint();
@@ -17067,6 +17258,7 @@ function applyUserAvatar(avatarElement) {
       const settingsState = {
         userAvatar: null,
         wallpaper: null,
+        homeWallpaper: null,
         charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
 
@@ -17668,6 +17860,7 @@ function applyUserAvatar(avatarElement) {
       function loadSettings() {
         const savedAvatar = localStorage.getItem('chatUserAvatar');
         const savedWallpaper = localStorage.getItem('chatWallpaper');
+        const savedHomeWallpaper = localStorage.getItem('homeWallpaper');
         const savedCharAvatars = localStorage.getItem('chatCharAvatars');
         const savedJailbreak = localStorage.getItem('jailbreakEnabled');
         const savedTheme = localStorage.getItem('chatTheme');
@@ -17681,6 +17874,11 @@ function applyUserAvatar(avatarElement) {
         if (savedWallpaper) {
           settingsState.wallpaper = savedWallpaper;
           updateWallpaper();
+        }
+
+        if (savedHomeWallpaper) {
+          settingsState.homeWallpaper = savedHomeWallpaper;
+          updateHomeWallpaper();
         }
 
         if (savedCharAvatars) {
@@ -17832,6 +18030,13 @@ function applyUserAvatar(avatarElement) {
           localStorage.removeItem('chatWallpaper');
         }
 
+        // 保存主屏壁纸（包括清除的情况）
+        if (settingsState.homeWallpaper) {
+          localStorage.setItem('homeWallpaper', settingsState.homeWallpaper);
+        } else {
+          localStorage.removeItem('homeWallpaper');
+        }
+
         // 保存角色头像
         if (settingsState.charAvatars && Object.keys(settingsState.charAvatars).length > 0) {
           localStorage.setItem('chatCharAvatars', JSON.stringify(settingsState.charAvatars));
@@ -17895,6 +18100,61 @@ function applyUserAvatar(avatarElement) {
             preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
           }
         }
+      }
+
+      function updateHomeWallpaper() {
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) {
+          const url = settingsState.homeWallpaper || 'https://files.catbox.moe/juvczm.jpeg';
+          homeOverlay.style.backgroundImage = `url(${url})`;
+          homeOverlay.style.backgroundSize = 'cover';
+          homeOverlay.style.backgroundPosition = 'center';
+        }
+
+        const preview = document.getElementById('homeWallpaperPreview');
+        if (preview) {
+          preview.src = settingsState.homeWallpaper || 'https://files.catbox.moe/juvczm.jpeg';
+        }
+      }
+
+      function initIosHomeScreen() {
+        const weekMap = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const safeText = (id, text) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = text;
+        };
+
+        const tick = () => {
+          const now = new Date();
+          const hhmm = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+          safeText('homeClockTime', hhmm);
+          safeText('homeClockBig', hhmm);
+          safeText('homeClockSub', `${now.getMonth() + 1}月${now.getDate()}日`);
+          safeText('homeCalendarDay', String(now.getDate()));
+          safeText('homeCalendarWeek', weekMap[now.getDay()] || '星期--');
+
+          const chatName = (document.getElementById('chatPersonName')?.textContent || '').trim();
+          safeText('dynamicIslandText', chatName || 'Tavern Helper');
+        };
+
+        tick();
+        setInterval(tick, 15000);
+
+        updateHomeWallpaper();
+
+        // Dock shortcuts reuse existing app handlers (click the app icons).
+        const bindDock = (dockId, appId) => {
+          const dockEl = document.getElementById(dockId);
+          if (!dockEl) return;
+          dockEl.addEventListener('click', () => {
+            const appEl = document.getElementById(appId);
+            if (appEl) appEl.click();
+          });
+        };
+        bindDock('dockChat', 'appChat');
+        bindDock('dockMoments', 'appMoments');
+        bindDock('dockMusic', 'appCloudMusic');
+        bindDock('dockSettings', 'appSettings');
       }
 
       // 更新角色头像
@@ -18009,6 +18269,11 @@ function applyUserAvatar(avatarElement) {
             settingsState.wallpaper = dataUrl;
             updateWallpaper();
             alert('壁纸已更新！');
+          } else if (type === 'homeWallpaper') {
+            console.log('🖼️ 设置主屏壁纸');
+            settingsState.homeWallpaper = dataUrl;
+            updateHomeWallpaper();
+            alert('主屏壁纸已更新！');
           } else if (type === 'charAvatar') {
             // 优先使用输入框中的角色名，如果没有则使用当前角色名
             const nameInput = document.getElementById('charNameInput');
@@ -18042,6 +18307,10 @@ function applyUserAvatar(avatarElement) {
           settingsState.wallpaper = null;
           localStorage.removeItem('chatWallpaper');
           updateWallpaper();
+        } else if (type === 'homeWallpaper') {
+          settingsState.homeWallpaper = null;
+          localStorage.removeItem('homeWallpaper');
+          updateHomeWallpaper();
         } else if (type === 'charAvatar') {
           // 优先使用输入框中的角色名，如果没有则使用当前角色名
           const nameInput = document.getElementById('charNameInput');
@@ -18083,6 +18352,7 @@ function applyUserAvatar(avatarElement) {
         overlay.style.display = 'flex';
         updateUserAvatars();
         updateWallpaper();
+        updateHomeWallpaper();
         updateCharAvatarPreview();
         // 更新破限开关显示状态
         document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
@@ -18594,6 +18864,18 @@ function applyUserAvatar(avatarElement) {
         }
       });
 
+      // 主屏壁纸上传
+      document.getElementById('homeWallpaperUploadBtn').addEventListener('click', () => {
+        document.getElementById('homeWallpaperFileInput').click();
+      });
+
+      document.getElementById('homeWallpaperFileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleFileUpload(file, 'homeWallpaper');
+        }
+      });
+
       // 重置按钮
       document.getElementById('avatarResetBtn').addEventListener('click', () => {
         resetSetting('avatar');
@@ -18601,6 +18883,10 @@ function applyUserAvatar(avatarElement) {
 
       document.getElementById('wallpaperResetBtn').addEventListener('click', () => {
         resetSetting('wallpaper');
+      });
+
+      document.getElementById('homeWallpaperResetBtn').addEventListener('click', () => {
+        resetSetting('homeWallpaper');
       });
 
       // 角色头像上传
