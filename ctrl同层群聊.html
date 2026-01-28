@@ -2418,6 +2418,32 @@
         background: #ddd;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
+
+      /* Private chat: show nickname above avatar */
+      .avatar-stack {
+        width: 32px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+      .avatar-name {
+        max-width: 72px;
+        padding: 1px 4px;
+        border-radius: 6px;
+        font-size: 10px;
+        line-height: 1.1;
+        color: #666;
+        background: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .message.sent .avatar-name {
+        color: #07c160;
+      }
       .message-wrapper {
         position: relative;
         display: flex;
@@ -9852,6 +9878,30 @@ function applyUserAvatar(avatarElement) {
         if (msg.type === 'sticker') {
           return createStickerMessageElement(msg, idx);
         }
+
+        // Private chat: show nickname above avatars (role name).
+        const showAvatarNicknames = (() => {
+          const conv = getActiveConversation();
+          return !!(conv && (!Array.isArray(conv.members) || conv.members.length === 0));
+        })();
+        const getAvatarNicknameForMessage = (m) => {
+          if (!m) return '';
+          if (m.sender === 'user') return NAME_USER || '我';
+          const conv = getActiveConversation();
+          return (m.charName || (conv && conv.name) || NAME_CHAR || '对方');
+        };
+        const wrapAvatarWithNickname = (avatarEl, nickname) => {
+          const stack = document.createElement('div');
+          stack.className = 'avatar-stack';
+          if (nickname) {
+            const label = document.createElement('div');
+            label.className = 'avatar-name';
+            label.textContent = nickname;
+            stack.appendChild(label);
+          }
+          stack.appendChild(avatarEl);
+          return stack;
+        };
         // 变音特效气泡特殊处理
         if (msg.type === 'voice-effect') {
           const message = document.createElement('div');
@@ -9870,7 +9920,7 @@ function applyUserAvatar(avatarElement) {
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'avatar user_avatar';
             applyUserAvatar(avatarDiv);
-            message.appendChild(avatarDiv);
+            message.appendChild(showAvatarNicknames ? wrapAvatarWithNickname(avatarDiv, getAvatarNicknameForMessage(msg)) : avatarDiv);
           } else if (msg.avatar) {
             const avatar = document.createElement('img');
             avatar.className = 'avatar char-avatar';
@@ -9908,7 +9958,7 @@ function applyUserAvatar(avatarElement) {
             avatar.style.cursor = 'pointer';
             avatar.title = '双击戳一戳';
 
-            message.appendChild(avatar);
+            message.appendChild(showAvatarNicknames ? wrapAvatarWithNickname(avatar, getAvatarNicknameForMessage(msg)) : avatar);
           }
           message.appendChild(wrapper);
           return message;
@@ -10075,7 +10125,7 @@ function applyUserAvatar(avatarElement) {
           const avatarDiv = document.createElement('div');
           avatarDiv.className = 'avatar user_avatar';
           applyUserAvatar(avatarDiv);
-          message.appendChild(avatarDiv);
+          message.appendChild(showAvatarNicknames ? wrapAvatarWithNickname(avatarDiv, getAvatarNicknameForMessage(msg)) : avatarDiv);
           message.appendChild(wrapper);
         } else {
           if (msg.avatar) {
@@ -10115,7 +10165,7 @@ function applyUserAvatar(avatarElement) {
             avatar.style.cursor = 'pointer';
             avatar.title = '双击戳一戳';
 
-            message.appendChild(avatar);
+            message.appendChild(showAvatarNicknames ? wrapAvatarWithNickname(avatar, getAvatarNicknameForMessage(msg)) : avatar);
           }
           message.appendChild(wrapper);
         }
@@ -20178,7 +20228,7 @@ function applyUserAvatar(avatarElement) {
           if (appMessages) appMessages.onclick = openChat;
           if (homeBtn) homeBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
           if (homeDockBtn) homeDockBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
-          if (appMoments) appMoments.onclick = () => showToastSafe('朋友圈 功能暂未开放');
+          if (appMoments) appMoments.onclick = () => showToastSafe('朋友圈 功能在私聊界面');
           if (appStore) appStore.onclick = () => showToastSafe('商店 功能暂未开放');
           if (appMusic) appMusic.onclick = () => {
             try { if (typeof openMusicPanel === 'function') return openMusicPanel(); } catch(_) {}
