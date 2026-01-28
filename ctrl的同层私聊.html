@@ -6184,10 +6184,113 @@
         justify-content: flex-start;
         background: url('https://files.catbox.moe/juvczm.jpeg') center/cover no-repeat;
         z-index: 999;
-        padding-top: 22px;
+        padding-top: 16px;
+      }
+
+      /* iOS16-ish home widgets + dynamic island (glassmorphism) */
+      .ios-statusbar {
+        width: 92%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: rgba(255, 255, 255, 0.92);
+        font-weight: 600;
+        font-size: 12px;
+        letter-spacing: 0.2px;
+        margin-top: 2px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        user-select: none;
+      }
+      .ios-statusbar .ios-time {
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .ios-statusbar .ios-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        opacity: 0.95;
+      }
+      .ios-pill {
+        position: relative;
+        margin-top: 8px;
+        width: 132px;
+        height: 30px;
+        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.55);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        user-select: none;
+        transition: all 0.25s ease;
+      }
+      .ios-pill:hover { transform: translateY(-1px); }
+      .ios-pill .di-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.2) 55%, rgba(0,0,0,0) 70%);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.18);
+        opacity: 0.9;
+      }
+      .ios-pill .di-text {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .ios-widgets {
+        width: 92%;
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ios-widget {
+        border-radius: 18px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        box-shadow:
+          0 10px 25px rgba(0, 0, 0, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        color: rgba(255, 255, 255, 0.92);
+        overflow: hidden;
+      }
+      .ios-widgets-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .ios-widget.square {
+        height: 76px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .ios-widget.square .sq-title {
+        font-size: 11px;
+        font-weight: 700;
+        opacity: 0.95;
+      }
+      .ios-widget.square .sq-big {
+        font-size: 28px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+      .ios-widget.square .sq-sub {
+        font-size: 10px;
+        opacity: 0.9;
       }
       .home-overlay .app-grid {
-        margin: 100px 0 0 0;
+        margin: 12px 0 0 0;
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 14px;
@@ -6241,6 +6344,39 @@
         color: #ffffff;
         text-shadow: 0 1px 2px rgba(0,0,0,0.25);
       }
+
+      .ios-dock {
+        margin-top: auto;
+        margin-bottom: 10px;
+        width: 92%;
+        height: 58px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.14);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 10px;
+      }
+      .ios-dock .dock-item {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        user-select: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        transition: transform 0.12s ease;
+      }
+      .ios-dock .dock-item:active { transform: scale(0.96); }
       .home-btn {
         position: absolute;
         top: 6px;
@@ -6268,6 +6404,34 @@
     <div class="phone-shell"><div class="cute-phone" data-author="ctrl">
       <!-- 主屏渲染层：默认显示，点击聊天进入好友列表 -->
       <div class="home-overlay" id="homeOverlay">
+        <div class="ios-statusbar">
+          <div class="ios-time" id="homeClockTime">--:--</div>
+          <div class="ios-right" aria-hidden="true">
+            <span style="font-size: 11px; opacity: 0.92;">5G</span>
+            <span style="font-size: 12px; opacity: 0.92;">▮▮▮▯</span>
+            <span style="font-size: 12px; opacity: 0.92;">🔋</span>
+          </div>
+        </div>
+        <div class="ios-pill" id="dynamicIsland" title="灵动岛（示意）">
+          <span class="di-dot"></span>
+          <span class="di-text" id="dynamicIslandText">Tavern Helper</span>
+        </div>
+
+        <div class="ios-widgets">
+          <div class="ios-widgets-row">
+            <div class="ios-widget square" id="homeWidgetClock">
+              <div class="sq-title">时钟</div>
+              <div class="sq-big" id="homeClockBig">--:--</div>
+              <div class="sq-sub" id="homeClockSub">--月--日</div>
+            </div>
+            <div class="ios-widget square" id="homeWidgetCalendar">
+              <div class="sq-title">日历</div>
+              <div class="sq-big" id="homeCalendarDay">--</div>
+              <div class="sq-sub" id="homeCalendarWeek">星期--</div>
+            </div>
+          </div>
+        </div>
+
         <div class="app-grid">
           <div class="app-item" id="appChat">
             <div class="app-icon">💬</div>
@@ -6290,6 +6454,13 @@
             <div class="app-icon">⚙️</div>
             <div class="app-label">设置</div>
           </div>
+        </div>
+
+        <div class="ios-dock" aria-label="Dock">
+          <div class="dock-item" id="dockChat" title="聊天">💬</div>
+          <div class="dock-item" id="dockMoments" title="朋友圈">🧭</div>
+          <div class="dock-item" id="dockMusic" title="云音乐">🎧</div>
+          <div class="dock-item" id="dockSettings" title="设置">⚙️</div>
         </div>
       </div>
       <!-- 聊天界面 -->
@@ -6454,8 +6625,58 @@
         .moments-list {
           flex: 1;
           overflow-y: auto;
-          padding: 10px;
+          padding: 0;
           padding-bottom: 84px; /* keep content above bottom publish/time buttons */
+        }
+        /* WeChat-like cover */
+        .moments-cover {
+          position: relative;
+          height: 170px;
+          background: #111;
+          overflow: hidden;
+        }
+        .moments-cover-bg {
+          position: absolute;
+          inset: 0;
+          background-position: center;
+          background-size: cover;
+          transform: scale(1.02);
+          filter: saturate(1.05) contrast(1.05);
+        }
+        .moments-cover-shade {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.30) 55%, rgba(0,0,0,0.55) 100%);
+        }
+        .moments-cover-name {
+          position: absolute;
+          right: 82px;
+          bottom: 16px;
+          color: #fff;
+          font-size: 14px;
+          font-weight: 700;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+          max-width: 160px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          pointer-events: none;
+        }
+        .moments-cover-avatar {
+          position: absolute;
+          right: 12px;
+          bottom: -18px;
+          width: 62px;
+          height: 62px;
+          border-radius: 10px;
+          background: var(--bg-tertiary);
+          background-position: center;
+          background-size: cover;
+          border: 2px solid #fff;
+          box-shadow: 0 8px 22px rgba(0,0,0,0.22);
+        }
+        .moments-feed {
+          padding: 30px 10px 10px; /* leave space for avatar overlap */
         }
         .moment-card {
           background: var(--bg-secondary);
@@ -7043,6 +7264,40 @@
               <button class="reset-btn" id="wallpaperResetBtn">重置</button>
             </div>
             <input type="file" class="file-input" id="wallpaperFileInput" accept="image/*">
+          </div>
+
+          <!-- 主屏壁纸设置 -->
+          <div class="setting-section">
+            <label class="setting-label">主屏壁纸</label>
+            <div class="setting-preview">
+              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://files.catbox.moe/juvczm.jpeg" alt="主屏壁纸预览">
+              <div class="preview-info">
+                <div class="preview-title">自定义主屏壁纸</div>
+                <div class="preview-desc">上传本地图片作为主屏背景</div>
+              </div>
+            </div>
+            <div class="setting-buttons">
+              <button class="upload-btn" id="homeWallpaperUploadBtn">上传壁纸</button>
+              <button class="reset-btn" id="homeWallpaperResetBtn">重置</button>
+            </div>
+            <input type="file" class="file-input" id="homeWallpaperFileInput" accept="image/*">
+          </div>
+
+          <!-- 朋友圈封面设置 -->
+          <div class="setting-section">
+            <label class="setting-label">朋友圈封面</label>
+            <div class="setting-preview">
+              <img class="wallpaper-preview" id="momentsCoverPreview" src="https://files.catbox.moe/juvczm.jpeg" alt="朋友圈封面预览">
+              <div class="preview-info">
+                <div class="preview-title">自定义朋友圈封面</div>
+                <div class="preview-desc">上传本地图片作为朋友圈背景（也可在朋友圈封面处直接点击更换）</div>
+              </div>
+            </div>
+            <div class="setting-buttons">
+              <button class="upload-btn" id="momentsCoverUploadBtn">上传封面</button>
+              <button class="reset-btn" id="momentsCoverResetBtn">重置</button>
+            </div>
+            <input type="file" class="file-input" id="momentsCoverFileInput" accept="image/*">
           </div>
 
           <!-- 角色头像设置 -->
@@ -8777,11 +9032,27 @@ function applyUserAvatar(avatarElement) {
             // - If avatar is empty, also omit it.
             try {
               const userName = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '';
-              const isUser = !!(userName && authorName === userName);
+              const isUser = !!(
+                (userName && authorName === userName) ||
+                authorName === '我' ||
+                /^me$/i.test(authorName) ||
+                /^user$/i.test(authorName)
+              );
               const isTooLong = authorAvatar && (authorAvatar.length > 180 || /^data:/i.test(authorAvatar));
-              if (!authorAvatar || isUser || isTooLong) {
-                lines.push(`[${authorName}|${content}|${time}]`);
+              // If it's a user post, try hard to keep a *compact* avatar reference so re-render doesn't lose it
+              // after editing/rebuilding the underlying shouji message.
+              if (!authorAvatar || isTooLong) {
+                if (isUser) {
+                  const auto = (typeof getUserAvatarForStorage === 'function') ? String(getUserAvatarForStorage() || '').trim() : '';
+                  const autoTooLong = auto && (auto.length > 180 || /^data:/i.test(auto));
+                  if (auto && !autoTooLong) lines.push(`[${authorName}|${auto}|${content}|${time}]`);
+                  else lines.push(`[${authorName}|${content}|${time}]`);
+                } else {
+                  lines.push(`[${authorName}|${content}|${time}]`);
+                }
               } else {
+                // For non-user posts, store avatar as-is (usually a catbox suffix).
+                // For user posts, allow a compact stored avatar too (when present).
                 lines.push(`[${authorName}|${authorAvatar}|${content}|${time}]`);
               }
             } catch (_) {
@@ -9065,7 +9336,12 @@ function applyUserAvatar(avatarElement) {
         if (!n) return fallback;
         // user avatar (can be URL or data URL)
         const userName = typeof getUserDisplayName === 'function' ? getUserDisplayName() : '';
-        if (userName && n === userName) {
+        const isUserAlias =
+          (userName && n === userName) ||
+          n === '我' ||
+          /^me$/i.test(n) ||
+          /^user$/i.test(n);
+        if (isUserAlias) {
           const url = (settingsState && settingsState.userAvatar) ? settingsState.userAvatar : '';
           return url || getUserAvatarUrlFromDom() || fallback;
         }
@@ -9078,6 +9354,68 @@ function applyUserAvatar(avatarElement) {
           if (suffix) return resolveAvatarUrl(suffix, fallback);
         }
         return fallback;
+      }
+
+      const MOMENTS_COVER_LS_KEY = 'moments_cover_url_v1';
+      const DEFAULT_MOMENTS_COVER_URL = 'https://files.catbox.moe/juvczm.jpeg';
+
+      function getMomentsCoverUrl() {
+        try {
+          const v = localStorage.getItem(MOMENTS_COVER_LS_KEY);
+          const s = String(v || '').trim();
+          if (!s) return DEFAULT_MOMENTS_COVER_URL;
+          return sanitizeMomentPlainText(s, { singleLine: true }) || DEFAULT_MOMENTS_COVER_URL;
+        } catch (_) {
+          return DEFAULT_MOMENTS_COVER_URL;
+        }
+      }
+
+      function setMomentsCoverUrl(url) {
+        try {
+          const s = sanitizeMomentPlainText(String(url || ''), { singleLine: true });
+          if (!s) localStorage.removeItem(MOMENTS_COVER_LS_KEY);
+          else localStorage.setItem(MOMENTS_COVER_LS_KEY, s);
+        } catch (_) {}
+      }
+
+      function buildMomentsCoverElement() {
+        const cover = document.createElement('div');
+        cover.className = 'moments-cover';
+
+        const bg = document.createElement('div');
+        bg.className = 'moments-cover-bg';
+        bg.style.backgroundImage = `url('${resolveAvatarUrl(getMomentsCoverUrl(), DEFAULT_MOMENTS_COVER_URL)}')`;
+        bg.style.cursor = 'pointer';
+        bg.title = '点击更换朋友圈封面';
+
+        const shade = document.createElement('div');
+        shade.className = 'moments-cover-shade';
+        shade.style.cursor = 'pointer';
+
+        const userName = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
+        const name = document.createElement('div');
+        name.className = 'moments-cover-name';
+        name.textContent = userName || '我';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'moments-cover-avatar';
+        const avatarToken = (typeof getUserAvatarForStorage === 'function') ? getUserAvatarForStorage() : '';
+        avatar.style.backgroundImage = `url('${resolveAvatarUrl(avatarToken, getAvatarFallbackUrlForName(userName))}')`;
+
+        function openPicker() {
+          try {
+            const input = document.getElementById('momentsCoverFileInput');
+            if (input) input.click();
+          } catch (_) {}
+        }
+        bg.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openPicker(); });
+        shade.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openPicker(); });
+
+        cover.appendChild(bg);
+        cover.appendChild(shade);
+        cover.appendChild(name);
+        cover.appendChild(avatar);
+        return cover;
       }
 
       function openMomentsPanel() {
@@ -9111,11 +9449,18 @@ function applyUserAvatar(avatarElement) {
         const posts = Array.isArray(state.moments) ? [...state.moments] : [];
         // 最新在上
         posts.sort((a, b) => (b.id || 0) - (a.id || 0));
+        // Always render the WeChat-like cover.
+        list.appendChild(buildMomentsCoverElement());
+
+        const feed = document.createElement('div');
+        feed.className = 'moments-feed';
+        list.appendChild(feed);
+
         if (posts.length === 0) {
           const empty = document.createElement('div');
           empty.className = 'moment-empty';
           empty.textContent = '还没有朋友圈内容，点下方“+”发一条吧。';
-          list.appendChild(empty);
+          feed.appendChild(empty);
           return;
         }
 
@@ -9218,7 +9563,7 @@ function applyUserAvatar(avatarElement) {
           }
           card.appendChild(commentsWrap);
 
-          list.appendChild(card);
+          feed.appendChild(card);
         }
       }
 
@@ -16860,6 +17205,9 @@ function toggleFriendsPanel(show) {
           // 绑定所有事件监听器
           bindEventListeners();
 
+          // iOS-like home overlay (clock/dock)
+          try { if (typeof initIosHomeScreen === 'function') initIosHomeScreen(); } catch (_) {}
+
           // 显示长按提示（延迟3秒，让用户先熟悉界面）
           setTimeout(() => {
             showLongPressHint();
@@ -17845,6 +18193,7 @@ function toggleFriendsPanel(show) {
       const settingsState = {
         userAvatar: null,
         wallpaper: null,
+        homeWallpaper: null,
         charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
 
@@ -18446,6 +18795,7 @@ function toggleFriendsPanel(show) {
       function loadSettings() {
         const savedAvatar = localStorage.getItem('chatUserAvatar');
         const savedWallpaper = localStorage.getItem('chatWallpaper');
+        const savedHomeWallpaper = localStorage.getItem('homeWallpaper');
         const savedCharAvatars = localStorage.getItem('chatCharAvatars');
         const savedJailbreak = localStorage.getItem('jailbreakEnabled');
         const savedTheme = localStorage.getItem('chatTheme');
@@ -18459,6 +18809,11 @@ function toggleFriendsPanel(show) {
         if (savedWallpaper) {
           settingsState.wallpaper = savedWallpaper;
           updateWallpaper();
+        }
+
+        if (savedHomeWallpaper) {
+          settingsState.homeWallpaper = savedHomeWallpaper;
+          updateHomeWallpaper();
         }
 
         if (savedCharAvatars) {
@@ -18592,6 +18947,9 @@ function toggleFriendsPanel(show) {
             bubbleRadio.checked = true;
           }
         }
+
+        // 朋友圈封面预览（封面本身使用 localStorage:moments_cover_url_v1）
+        try { updateMomentsCoverPreview(); } catch (_) {}
       }
 
       // 保存设置到localStorage
@@ -18608,6 +18966,13 @@ function toggleFriendsPanel(show) {
           localStorage.setItem('chatWallpaper', settingsState.wallpaper);
         } else {
           localStorage.removeItem('chatWallpaper');
+        }
+
+        // 保存主屏壁纸（包括清除的情况）
+        if (settingsState.homeWallpaper) {
+          localStorage.setItem('homeWallpaper', settingsState.homeWallpaper);
+        } else {
+          localStorage.removeItem('homeWallpaper');
         }
 
         // 保存角色头像
@@ -18675,6 +19040,90 @@ function toggleFriendsPanel(show) {
           } else {
             preview.src = 'https://files.catbox.moe/e1xk9k.jpeg';
           }
+        }
+      }
+
+      function updateHomeWallpaper() {
+        const home = document.getElementById('homeOverlay');
+        if (home) {
+          if (settingsState.homeWallpaper) {
+            home.style.backgroundImage = `url(${settingsState.homeWallpaper})`;
+            home.style.backgroundSize = 'cover';
+            home.style.backgroundPosition = 'center';
+          } else {
+            home.style.backgroundImage = "url('https://files.catbox.moe/juvczm.jpeg')";
+            home.style.backgroundSize = 'cover';
+            home.style.backgroundPosition = 'center';
+          }
+        }
+
+        const preview = document.getElementById('homeWallpaperPreview');
+        if (preview) {
+          preview.src = settingsState.homeWallpaper || 'https://files.catbox.moe/juvczm.jpeg';
+        }
+      }
+
+      function initIosHomeScreen() {
+        // Live clock/date for the iOS-like home overlay.
+        try { if (typeof updateHomeWallpaper === 'function') updateHomeWallpaper(); } catch (_) {}
+        function pad2(n) { return String(n).padStart(2, '0'); }
+        function weekZh(d) {
+          const map = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+          return map[d.getDay()] || '星期--';
+        }
+        function update() {
+          const d = new Date();
+          const hh = pad2(d.getHours());
+          const mm = pad2(d.getMinutes());
+          const time = `${hh}:${mm}`;
+
+          const elTop = document.getElementById('homeClockTime');
+          const elBig = document.getElementById('homeClockBig');
+          const elSub = document.getElementById('homeClockSub');
+          const elDay = document.getElementById('homeCalendarDay');
+          const elWeek = document.getElementById('homeCalendarWeek');
+          if (elTop) elTop.textContent = time;
+          if (elBig) elBig.textContent = time;
+          if (elSub) elSub.textContent = `${d.getMonth() + 1}月${d.getDate()}日`;
+          if (elDay) elDay.textContent = String(d.getDate());
+          if (elWeek) elWeek.textContent = weekZh(d);
+
+          const di = document.getElementById('dynamicIslandText');
+          if (di) {
+            try {
+              const n = (typeof getCurrentCharName === 'function') ? String(getCurrentCharName() || '').trim() : '';
+              di.textContent = n ? (`正在聊天：${n}`) : 'Tavern Helper';
+            } catch (_) {
+              di.textContent = 'Tavern Helper';
+            }
+          }
+        }
+
+        update();
+        // Update once per 15s so the minute flips quickly (and still cheap).
+        try { if (window.__homeClockTimer) clearInterval(window.__homeClockTimer); } catch (_) {}
+        window.__homeClockTimer = setInterval(update, 15000);
+
+        // Dock shortcuts map to existing app icons.
+        function hookDock(dockId, appId) {
+          const d = document.getElementById(dockId);
+          const a = document.getElementById(appId);
+          if (d && a) d.onclick = () => a.click();
+        }
+        hookDock('dockChat', 'appChat');
+        hookDock('dockMoments', 'appMoments');
+        hookDock('dockMusic', 'appCloudMusic');
+        hookDock('dockSettings', 'appSettings');
+      }
+
+      function updateMomentsCoverPreview() {
+        const preview = document.getElementById('momentsCoverPreview');
+        if (!preview) return;
+        try {
+          const url = (typeof getMomentsCoverUrl === 'function') ? getMomentsCoverUrl() : 'https://files.catbox.moe/juvczm.jpeg';
+          preview.src = resolveAvatarUrl(url, 'https://files.catbox.moe/juvczm.jpeg');
+        } catch (_) {
+          preview.src = 'https://files.catbox.moe/juvczm.jpeg';
         }
       }
 
@@ -18780,16 +19229,66 @@ function toggleFriendsPanel(show) {
             reader.readAsDataURL(file);
           });
 
+          // Prefer storing images in SillyTavern's local user images folder, and keep only a short URL here.
+          async function tryUploadToSillyTavern(prefix, chName) {
+            try {
+              let ext = (String(file.name || '').split('.').pop() || '').toLowerCase();
+              if (!ext || ext === String(file.name || '').toLowerCase()) {
+                const t = String(file.type || '').toLowerCase();
+                if (t.includes('png')) ext = 'png';
+                else if (t.includes('jpeg') || t.includes('jpg')) ext = 'jpg';
+                else if (t.includes('webp')) ext = 'webp';
+                else if (t.includes('gif')) ext = 'gif';
+                else if (t.includes('bmp')) ext = 'bmp';
+              }
+              const ok = ['png','jpg','jpeg','webp','gif','bmp'].includes(ext);
+              if (!ok) return '';
+              const format = (ext === 'jpg') ? 'jpeg' : ext;
+              const comma = String(dataUrl || '').indexOf(',');
+              const base64 = comma >= 0 ? String(dataUrl || '').slice(comma + 1) : String(dataUrl || '');
+              const filename = `${prefix}_` + Date.now() + '.' + ext;
+              const body = { image: base64, format, filename };
+              if (chName) body.ch_name = chName;
+              const res = await fetch('/api/images/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                cache: 'no-cache',
+              });
+              if (!res.ok) return '';
+              const data = await res.json().catch(()=>null);
+              return (data && data.path) ? String(data.path) : '';
+            } catch (_) {
+              return '';
+            }
+          }
+
           if (type === 'avatar') {
             console.log('👤 设置用户头像');
-            settingsState.userAvatar = dataUrl;
+            const uploaded = await tryUploadToSillyTavern('phone_avatar', 'phone_avatar');
+            settingsState.userAvatar = uploaded || dataUrl;
             updateUserAvatars();
             alert('用户头像已更新！');
           } else if (type === 'wallpaper') {
             console.log('🖼️ 设置壁纸');
-            settingsState.wallpaper = dataUrl;
+            const uploaded = await tryUploadToSillyTavern('chat_wallpaper', 'phone_wallpapers');
+            settingsState.wallpaper = uploaded || dataUrl;
             updateWallpaper();
             alert('壁纸已更新！');
+          } else if (type === 'homeWallpaper') {
+            console.log('🏠 设置主屏壁纸');
+            const uploaded = await tryUploadToSillyTavern('home_wallpaper', 'phone_home_wallpapers');
+            settingsState.homeWallpaper = uploaded || dataUrl;
+            updateHomeWallpaper();
+            alert('主屏壁纸已更新！');
+          } else if (type === 'momentsCover') {
+            console.log('🧭 设置朋友圈封面');
+            const uploaded = await tryUploadToSillyTavern('moments_cover', 'phone_moments_covers');
+            // Store as a short URL/path; cover rendering already resolves it.
+            if (typeof setMomentsCoverUrl === 'function') setMomentsCoverUrl(uploaded || dataUrl);
+            updateMomentsCoverPreview();
+            try { if (typeof renderMomentsList === 'function') renderMomentsList(); } catch (_) {}
+            alert('朋友圈封面已更新！');
           } else if (type === 'charAvatar') {
             // 优先使用输入框中的角色名，如果没有则使用当前角色名
             const nameInput = document.getElementById('charNameInput');
@@ -18823,6 +19322,14 @@ function toggleFriendsPanel(show) {
           settingsState.wallpaper = null;
           localStorage.removeItem('chatWallpaper');
           updateWallpaper();
+        } else if (type === 'homeWallpaper') {
+          settingsState.homeWallpaper = null;
+          localStorage.removeItem('homeWallpaper');
+          updateHomeWallpaper();
+        } else if (type === 'momentsCover') {
+          try { if (typeof setMomentsCoverUrl === 'function') setMomentsCoverUrl(''); } catch (_) {}
+          updateMomentsCoverPreview();
+          try { if (typeof renderMomentsList === 'function') renderMomentsList(); } catch (_) {}
         } else if (type === 'charAvatar') {
           // 优先使用输入框中的角色名，如果没有则使用当前角色名
           const nameInput = document.getElementById('charNameInput');
@@ -18864,6 +19371,8 @@ function toggleFriendsPanel(show) {
         overlay.style.display = 'flex';
         updateUserAvatars();
         updateWallpaper();
+        updateHomeWallpaper();
+        try { updateMomentsCoverPreview(); } catch (_) {}
         updateCharAvatarPreview();
         // 更新破限开关显示状态
         document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
@@ -19396,6 +19905,34 @@ function toggleFriendsPanel(show) {
 
       document.getElementById('wallpaperResetBtn').addEventListener('click', () => {
         resetSetting('wallpaper');
+      });
+
+      // 主屏壁纸上传
+      document.getElementById('homeWallpaperUploadBtn').addEventListener('click', () => {
+        document.getElementById('homeWallpaperFileInput').click();
+      });
+      document.getElementById('homeWallpaperFileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleFileUpload(file, 'homeWallpaper');
+        }
+      });
+      document.getElementById('homeWallpaperResetBtn').addEventListener('click', () => {
+        resetSetting('homeWallpaper');
+      });
+
+      // 朋友圈封面上传
+      document.getElementById('momentsCoverUploadBtn').addEventListener('click', () => {
+        document.getElementById('momentsCoverFileInput').click();
+      });
+      document.getElementById('momentsCoverFileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleFileUpload(file, 'momentsCover');
+        }
+      });
+      document.getElementById('momentsCoverResetBtn').addEventListener('click', () => {
+        resetSetting('momentsCover');
       });
 
       // 角色头像上传
@@ -21082,15 +21619,9 @@ function toggleFriendsPanel(show) {
           };
           if (momentsAiBtn) momentsAiBtn.onclick = () => {
             try {
-              const picked = prompt('AI 功能：\n1 = AI 回复朋友圈/评论\n2 = AI 发布朋友圈', '1');
-              if (picked === null) return;
-              const v = String(picked).trim();
-              if (v.startsWith('2')) {
-                if (typeof momentsQuickAiPost === 'function') return momentsQuickAiPost();
-                return showToastSafe('AI发布不可用');
-              }
-              if (typeof momentsQuickAiReply === 'function') return momentsQuickAiReply();
-              return showToastSafe('AI回复不可用');
+              // Default: let AI publish a new moment. (AI reply is on each post's "AI" button.)
+              if (typeof momentsQuickAiPost === 'function') return momentsQuickAiPost();
+              return showToastSafe('AI发布不可用');
             } catch(_) {}
             showToastSafe('AI 不可用');
           };
@@ -21098,9 +21629,11 @@ function toggleFriendsPanel(show) {
             try {
               const text = prompt('发布一条朋友圈：', '');
               if (text === null) return;
+              const content = String(text || '').trim();
+              if (!content) return;
               const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
-              // Omit avatar from stored text; we can infer user avatar at render time.
-              if (typeof addMomentPost === 'function') return addMomentPost(name, '', String(text || '').trim());
+              // Keep avatar empty here; serialize will store a compact user avatar token when possible.
+              if (typeof addMomentPost === 'function') return addMomentPost(name || '我', '', content);
             } catch(_) {}
             showToastSafe('发布失败');
           };
