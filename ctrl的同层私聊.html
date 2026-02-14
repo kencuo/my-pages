@@ -6725,6 +6725,16 @@
           white-space: pre-wrap;
           line-height: 1.4;
         }
+        .moment-media {
+          margin-top: 8px;
+        }
+        .moment-image {
+          max-width: 100%;
+          border-radius: 8px;
+          display: block;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
         .moment-actions {
           display: flex;
           gap: 8px;
@@ -6758,6 +6768,16 @@
         .moment-comment .c-name { font-weight: 600; }
         .moment-comment .c-time { font-size: 11px; color: var(--text-tertiary); margin-left: 6px; }
         .moment-comment .c-actions { margin-top: 4px; display: flex; gap: 6px; }
+        .moment-comment-image {
+          margin-top: 6px;
+        }
+        .moment-comment-image img {
+          max-width: 140px;
+          border-radius: 6px;
+          display: block;
+          cursor: pointer;
+          box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+        }
         .moment-empty {
           padding: 40px 10px;
           text-align: center;
@@ -8803,10 +8823,12 @@ function applyUserAvatar(avatarElement) {
       // 格式（存储在 <shouji> 内、</shouji> 之前）：
       // <pyq>
       // <post:1>
-      // [发布者人名|发布者头像后缀|发布的文字内容|时间]
+      // [发布者人名|发布者头像后缀|发布的文字内容|发布的图片短链接|时间]
+      // （无头像可省略头像字段；无图片可省略图片字段）
       // [点赞|张三|王五|李四]   // 可选；人名用 | 隔开
       // {{
-      // [评论|人名|头像后缀|评论的文字内容|时间]
+      // [评论|人名|评论的文字内容|发布的图片短链接|时间]
+      // 或 [评论|人名|被评论的人名|评论的文字内容|发布的图片短链接|时间]
       // }}
       // </post:1>
       // ...
@@ -8865,16 +8887,27 @@ function applyUserAvatar(avatarElement) {
           const authorName = sanitizePyqField((parts[0] || '').trim());
           // allow '|' inside content: treat last part as time; avatar is optional
           const time = sanitizePyqField((parts[parts.length - 1] || '').trim());
+          // optional image short link is usually placed before time
+          let image = '';
+          let contentEndIdx = parts.length - 1;
+          if (parts.length >= 4 && looksLikeMomentImageField(parts[parts.length - 2])) {
+            image = sanitizePyqField((parts[parts.length - 2] || '').trim());
+            contentEndIdx = parts.length - 2;
+          }
           let authorAvatar = '';
           let content = '';
           if (parts.length >= 4 && looksLikeAvatarField(parts[1])) {
             authorAvatar = sanitizePyqField((parts[1] || '').trim());
-            content = sanitizePyqField(parts.slice(2, -1).join('|').trim());
+            content = sanitizePyqField(parts.slice(2, contentEndIdx).join('|').trim());
           } else {
             // [name|content|time] (avatar missing)
             authorAvatar = '';
-            content = sanitizePyqField(parts.slice(1, -1).join('|').trim());
+            content = sanitizePyqField(parts.slice(1, contentEndIdx).join('|').trim());
           }
+          if (!content && image) {
+            content = '图片';
+          }
+          if (!content && !image) continue;
 
           // Likes line: [点赞|张三|王五|...]
           const likes = [];
@@ -8912,14 +8945,21 @@ function applyUserAvatar(avatarElement) {
             let cAvatar = '';
             let cReplyTo = '';
             let contentStart = 2;
+            let cImage = '';
+            let contentEndIdx = cParts.length - 1;
+            if (cParts.length >= 5 && looksLikeMomentImageField(cParts[cParts.length - 2])) {
+              cImage = sanitizePyqField((cParts[cParts.length - 2] || '').trim());
+              contentEndIdx = cParts.length - 2;
+            }
+            const midCount = Math.max(0, contentEndIdx - 2);
 
             // Prefer explicit 6+ fields as "avatar + replyTo" (content may contain extra '|')
-            if (cParts.length >= 6 && looksLikeAvatarField(cParts[2])) {
+            if (midCount >= 3 && looksLikeAvatarField(cParts[2])) {
               cAvatar = sanitizePyqField((cParts[2] || '').trim());
               cReplyTo = sanitizePyqField((cParts[3] || '').trim());
               contentStart = 4;
-            } else if (cParts.length >= 5) {
-              // 5 fields is ambiguous: could be avatar-only or replyTo-only.
+            } else if (midCount >= 2) {
+              // ambiguous: could be avatar-only or replyTo-only.
               if (looksLikeAvatarField(cParts[2])) {
                 cAvatar = sanitizePyqField((cParts[2] || '').trim());
                 contentStart = 3;
@@ -8929,7 +8969,7 @@ function applyUserAvatar(avatarElement) {
               }
             }
 
-            let cContent = sanitizePyqField(cParts.slice(contentStart, -1).join('|').trim());
+            let cContent = sanitizePyqField(cParts.slice(contentStart, contentEndIdx).join('|').trim());
 
             // Back-compat: older data encoded reply as "回复 xxx：..." inside content
             if (!cReplyTo) {
@@ -8940,7 +8980,11 @@ function applyUserAvatar(avatarElement) {
               }
             }
 
-            comments.push({ name: cName, avatar: cAvatar, replyTo: cReplyTo, content: cContent, time: cTime });
+            if (!cContent && cImage) {
+              cContent = '图片';
+            }
+            if (!cContent && !cImage) continue;
+            comments.push({ name: cName, avatar: cAvatar, replyTo: cReplyTo, content: cContent, image: cImage, time: cTime });
           }
 
           posts.push({
@@ -8948,6 +8992,7 @@ function applyUserAvatar(avatarElement) {
             authorName,
             authorAvatar,
             content,
+            image,
             time,
             likes,
             comments,
@@ -9025,6 +9070,8 @@ function applyUserAvatar(avatarElement) {
             const authorName = (post.authorName || '').replace(/\n/g, ' ').trim();
             const authorAvatar = (post.authorAvatar || '').replace(/\n/g, ' ').trim();
             const content = (post.content || '').replace(/\n/g, '\\n').trim();
+            const image = sanitizeMomentImageField(post.image || '');
+            const contentForLine = content || (image ? '图片' : '');
             const time = (post.time || '').replace(/\n/g, ' ').trim();
             lines.push(`<post:${pid}>`);
             // Avoid bloating the underlying message text with long avatar tokens.
@@ -9045,18 +9092,31 @@ function applyUserAvatar(avatarElement) {
                 if (isUser) {
                   const auto = (typeof getUserAvatarForStorage === 'function') ? String(getUserAvatarForStorage() || '').trim() : '';
                   const autoTooLong = auto && (auto.length > 180 || /^data:/i.test(auto));
-                  if (auto && !autoTooLong) lines.push(`[${authorName}|${auto}|${content}|${time}]`);
-                  else lines.push(`[${authorName}|${content}|${time}]`);
+                  if (auto && !autoTooLong) {
+                    if (image) lines.push(`[${authorName}|${auto}|${contentForLine}|${image}|${time}]`);
+                    else lines.push(`[${authorName}|${auto}|${contentForLine}|${time}]`);
+                  } else {
+                    if (image) lines.push(`[${authorName}|${contentForLine}|${image}|${time}]`);
+                    else lines.push(`[${authorName}|${contentForLine}|${time}]`);
+                  }
                 } else {
-                  lines.push(`[${authorName}|${content}|${time}]`);
+                  if (image) lines.push(`[${authorName}|${contentForLine}|${image}|${time}]`);
+                  else lines.push(`[${authorName}|${contentForLine}|${time}]`);
                 }
               } else {
                 // For non-user posts, store avatar as-is (usually a catbox suffix).
                 // For user posts, allow a compact stored avatar too (when present).
-                lines.push(`[${authorName}|${authorAvatar}|${content}|${time}]`);
+                if (image) lines.push(`[${authorName}|${authorAvatar}|${contentForLine}|${image}|${time}]`);
+                else lines.push(`[${authorName}|${authorAvatar}|${contentForLine}|${time}]`);
               }
             } catch (_) {
-              lines.push(authorAvatar ? `[${authorName}|${authorAvatar}|${content}|${time}]` : `[${authorName}|${content}|${time}]`);
+              if (authorAvatar) {
+                if (image) lines.push(`[${authorName}|${authorAvatar}|${contentForLine}|${image}|${time}]`);
+                else lines.push(`[${authorName}|${authorAvatar}|${contentForLine}|${time}]`);
+              } else {
+                if (image) lines.push(`[${authorName}|${contentForLine}|${image}|${time}]`);
+                else lines.push(`[${authorName}|${contentForLine}|${time}]`);
+              }
             }
 
             // Likes line: always serialize to keep a stable structure.
@@ -9075,10 +9135,17 @@ function applyUserAvatar(avatarElement) {
                   const n = (c.name || '').replace(/\n/g, ' ').trim();
                   const rt = (c.replyTo || '').replace(/\n/g, ' ').trim();
                   const cc = (c.content || '').replace(/\n/g, '\\n').trim();
+                  const cImage = sanitizeMomentImageField(c.image || '');
+                  const ccFinal = cc || (cImage ? '图片' : '');
                   const ct = (c.time || '').replace(/\n/g, ' ').trim();
                   // Keep comments compact: do not serialize avatar at all (UI also doesn't show it).
-                  if (rt) lines.push(`[评论|${n}|${rt}|${cc}|${ct}]`);
-                  else lines.push(`[评论|${n}|${cc}|${ct}]`);
+                  if (rt) {
+                    if (cImage) lines.push(`[评论|${n}|${rt}|${ccFinal}|${cImage}|${ct}]`);
+                    else lines.push(`[评论|${n}|${rt}|${ccFinal}|${ct}]`);
+                  } else {
+                    if (cImage) lines.push(`[评论|${n}|${ccFinal}|${cImage}|${ct}]`);
+                    else lines.push(`[评论|${n}|${ccFinal}|${ct}]`);
+                  }
                 }
                 lines.push('}}');
               }
@@ -9150,6 +9217,25 @@ function applyUserAvatar(avatarElement) {
         }
         if (singleLine) lines = lines.slice(0, 1);
         return lines.join('\n').trim();
+      }
+
+      function sanitizeMomentImageField(raw) {
+        let s = String(raw || '').trim();
+        if (!s) return '';
+        s = s.replace(/\r|\n/g, '');
+        // Avoid breaking the "|" structured format.
+        s = s.replace(/\|/g, '');
+        return s.trim();
+      }
+
+      function looksLikeMomentImageField(v) {
+        const s = String(v || '').trim();
+        if (!s) return false;
+        if (/^IMGDATA:/i.test(s) || /^data:image\//i.test(s)) return true;
+        const imgExt = /\.(png|jpe?g|gif|webp|bmp)(\?|#|$)/i;
+        if (imgExt.test(s)) return true;
+        if (/\/user\/images\//i.test(s)) return true;
+        return false;
       }
 
       function resolveAvatarUrl(avatarSuffixOrUrl, fallbackUrl) {
@@ -9262,6 +9348,8 @@ function applyUserAvatar(avatarElement) {
         // Supported:
         // - [评论|name|content|time]
         // - [评论|name|replyToName|content|time]
+        // - [评论|name|content|image|time]
+        // - [评论|name|replyToName|content|image|time]
         // content may contain extra '|' (time is last field)
         const defaultReplyTo = String(opts.defaultReplyTo || '').trim();
         const s = String(line || '').trim();
@@ -9271,17 +9359,24 @@ function applyUserAvatar(avatarElement) {
         if (parts.length < 4) return null;
         const name = sanitizeMomentPlainText(parts[1] || '', { singleLine: true });
         const time = sanitizeMomentPlainText(parts[parts.length - 1] || '', { singleLine: true });
+        let image = '';
+        let contentEndIdx = parts.length - 1;
+        if (parts.length >= 5 && looksLikeMomentImageField(parts[parts.length - 2])) {
+          image = sanitizeMomentImageField(parts[parts.length - 2] || '');
+          contentEndIdx = parts.length - 2;
+        }
         let replyTo = '';
         let contentStart = 2;
-        if (parts.length >= 5) {
+        const canHaveReply = (image && parts.length >= 6) || (!image && parts.length >= 5);
+        if (canHaveReply) {
           replyTo = sanitizeMomentPlainText(parts[2] || '', { singleLine: true });
           contentStart = 3;
         } else if (defaultReplyTo) {
           replyTo = defaultReplyTo;
         }
-        const content = sanitizeMomentPlainText(parts.slice(contentStart, -1).join('|'), { singleLine: true });
-        if (!content) return null;
-        return { name, replyTo, content, time };
+        const content = sanitizeMomentPlainText(parts.slice(contentStart, contentEndIdx).join('|'), { singleLine: true });
+        if (!content && !image) return null;
+        return { name, replyTo, content: content || (image ? '图片' : ''), image, time };
       }
 
       function parseAiMomentLikeLine(line) {
@@ -9304,6 +9399,8 @@ function applyUserAvatar(avatarElement) {
         // Supported (header line only):
         // - [name|avatarSuffix|content|time]
         // - [name|content|time]
+        // - [name|avatarSuffix|content|image|time]
+        // - [name|content|image|time]
         // content may contain extra '|' (time is last field)
         const s = String(line || '').trim();
         if (!/^\[/.test(s) || /^\[(评论|点赞)\|/.test(s)) return null;
@@ -9315,19 +9412,25 @@ function applyUserAvatar(avatarElement) {
         // Reuse parser heuristics: second field may be avatar
         const authorName = sanitizeMomentPlainText(parts[0] || '', { singleLine: true });
         const time = sanitizeMomentPlainText(parts[parts.length - 1] || '', { singleLine: true });
+        let image = '';
+        let contentEndIdx = parts.length - 1;
+        if (parts.length >= 4 && looksLikeMomentImageField(parts[parts.length - 2])) {
+          image = sanitizeMomentImageField(parts[parts.length - 2] || '');
+          contentEndIdx = parts.length - 2;
+        }
         let authorAvatar = '';
         let content = '';
         // If it "looks like an avatar field", treat as avatar.
         const maybeAvatar = String(parts[1] || '').trim();
         if (maybeAvatar && (/\.(png|jpe?g|gif|webp)$/i.test(maybeAvatar) || /^https?:\/\//i.test(maybeAvatar) || /^data:/i.test(maybeAvatar) || /^IMGDATA:/i.test(maybeAvatar))) {
           authorAvatar = sanitizeMomentPlainText(maybeAvatar, { singleLine: true });
-          content = sanitizeMomentPlainText(parts.slice(2, -1).join('|'), {});
+          content = sanitizeMomentPlainText(parts.slice(2, contentEndIdx).join('|'), {});
         } else {
           authorAvatar = '';
-          content = sanitizeMomentPlainText(parts.slice(1, -1).join('|'), {});
+          content = sanitizeMomentPlainText(parts.slice(1, contentEndIdx).join('|'), {});
         }
-        if (!content) return null;
-        return { authorName, authorAvatar, content, time };
+        if (!content && !image) return null;
+        return { authorName, authorAvatar, content: content || (image ? '图片' : ''), image, time };
       }
 
       function getAvatarFallbackUrlForName(name) {
@@ -9495,6 +9598,25 @@ function applyUserAvatar(avatarElement) {
           content.textContent = unescapeStoredText(post.content || '');
           card.appendChild(content);
 
+          if (post.image) {
+            const media = document.createElement('div');
+            media.className = 'moment-media';
+            const img = document.createElement('img');
+            img.className = 'moment-image';
+            const resolved = resolveAvatarUrl(post.image);
+            img.src = resolved;
+            img.alt = '朋友圈图片';
+            img.onclick = () => {
+              try { if (typeof showImageModal === 'function') showImageModal(resolved); } catch (_) {}
+            };
+            img.onerror = () => {
+              img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+';
+              img.alt = '图片加载失败';
+            };
+            media.appendChild(img);
+            card.appendChild(media);
+          }
+
           const actions = document.createElement('div');
           actions.className = 'moment-actions';
           const btnComment = document.createElement('button');
@@ -9544,6 +9666,24 @@ function applyUserAvatar(avatarElement) {
               line.querySelector('.c-time').textContent = cmt.time ? `${cmt.time} ` : '';
               row.appendChild(line);
 
+              if (cmt.image) {
+                const imgWrap = document.createElement('div');
+                imgWrap.className = 'moment-comment-image';
+                const img = document.createElement('img');
+                const resolved = resolveAvatarUrl(cmt.image);
+                img.src = resolved;
+                img.alt = '评论图片';
+                img.onclick = () => {
+                  try { if (typeof showImageModal === 'function') showImageModal(resolved); } catch (_) {}
+                };
+                img.onerror = () => {
+                  img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+';
+                  img.alt = '图片加载失败';
+                };
+                imgWrap.appendChild(img);
+                row.appendChild(imgWrap);
+              }
+
               const cActions = document.createElement('div');
               cActions.className = 'c-actions';
               const r = document.createElement('button');
@@ -9567,21 +9707,386 @@ function applyUserAvatar(avatarElement) {
         }
       }
 
+      function ensureMomentsComposerModal() {
+        let modal = document.getElementById('momentsComposeModal');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'momentsComposeModal';
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.45);
+          z-index: 9999;
+          display: none;
+          align-items: center;
+          justify-content: center;
+        `;
+
+        modal.innerHTML = `
+          <div style="background: #fff; border-radius: 12px; width: 92%; max-width: 320px; padding: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div id="momentsComposeTitle" style="font-size: 16px; font-weight: 600; color: #333;">发布朋友圈</div>
+              <button id="momentsComposeClose" style="background: none; border: none; font-size: 22px; color: #666; cursor: pointer;">×</button>
+            </div>
+
+            <textarea id="momentsComposeText" placeholder="说点什么..." style="width: 100%; min-height: 70px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; resize: vertical;"></textarea>
+
+            <div id="momentsComposeImageWrap" style="display: none; margin-top: 10px;">
+              <img id="momentsComposeImagePreview" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #ddd; display: block;">
+              <div id="momentsComposeImageInfo" style="margin-top: 6px; font-size: 11px; color: #666;"></div>
+              <button id="momentsComposeRemoveImage" style="margin-top: 6px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; background: #f8f8f8; font-size: 12px; cursor: pointer;">移除图片</button>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <button id="momentsComposeUploadBtn" style="flex: 1; padding: 8px 10px; border: 1px dashed #07c160; background: #f7fff9; color: #07c160; border-radius: 8px; font-size: 12px; cursor: pointer;">📁 上传图片</button>
+            </div>
+
+            <div id="momentsComposeStatus" style="margin-top: 8px; font-size: 12px; color: #888; min-height: 16px;"></div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+              <button id="momentsComposeCancel" style="padding: 6px 16px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 6px; cursor: pointer;">取消</button>
+              <button id="momentsComposeConfirm" style="padding: 6px 16px; border: none; background: #07c160; color: white; border-radius: 6px; cursor: pointer;">确定</button>
+            </div>
+          </div>
+          <input type="file" id="momentsComposeFileInput" accept="image/*" style="display: none;">
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeBtn = modal.querySelector('#momentsComposeClose');
+        const cancelBtn = modal.querySelector('#momentsComposeCancel');
+        const confirmBtn = modal.querySelector('#momentsComposeConfirm');
+        const uploadBtn = modal.querySelector('#momentsComposeUploadBtn');
+        const fileInput = modal.querySelector('#momentsComposeFileInput');
+        const removeImageBtn = modal.querySelector('#momentsComposeRemoveImage');
+
+        const closeModal = () => {
+          modal.style.display = 'none';
+          resetMomentsComposer(modal);
+        };
+
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+
+        modal.onclick = (e) => {
+          if (e.target === modal) closeModal();
+        };
+
+        uploadBtn.onclick = () => fileInput.click();
+
+        fileInput.onchange = async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          await handleMomentsImageSelect(modal, file);
+        };
+
+        removeImageBtn.onclick = () => {
+          modal.dataset.imageUrl = '';
+          delete modal._imageDataUrl;
+          updateMomentsComposerImage(modal, null, '');
+        };
+
+        confirmBtn.onclick = () => {
+          const mode = modal.dataset.mode || 'post';
+          const textArea = modal.querySelector('#momentsComposeText');
+          const text = String(textArea.value || '').trim();
+          const imageUrl = modal.dataset.imageUrl || '';
+
+          if (!text && !imageUrl) {
+            const status = modal.querySelector('#momentsComposeStatus');
+            status.textContent = '请填写文字或上传图片';
+            status.style.color = '#dc3545';
+            return;
+          }
+
+          if (mode === 'comment') {
+            const postId = Number(modal.dataset.postId || 0);
+            const replyTo = modal.dataset.replyToName || '';
+            const name = getUserDisplayName();
+            addMomentComment(postId, name, '', replyTo, text, imageUrl);
+          } else {
+            const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
+            addMomentPost(name || '我', '', text, imageUrl);
+          }
+
+          closeModal();
+        };
+
+        return modal;
+      }
+
+      function resetMomentsComposer(modal) {
+        if (!modal) return;
+        const textArea = modal.querySelector('#momentsComposeText');
+        const status = modal.querySelector('#momentsComposeStatus');
+        const fileInput = modal.querySelector('#momentsComposeFileInput');
+        if (textArea) textArea.value = '';
+        if (status) {
+          status.textContent = '';
+          status.style.color = '#888';
+        }
+        if (fileInput) fileInput.value = '';
+        modal.dataset.mode = '';
+        modal.dataset.postId = '';
+        modal.dataset.replyToName = '';
+        modal.dataset.imageUrl = '';
+        delete modal._imageDataUrl;
+        updateMomentsComposerImage(modal, null, '');
+      }
+
+      function updateMomentsComposerImage(modal, previewUrl, infoText) {
+        const wrap = modal.querySelector('#momentsComposeImageWrap');
+        const img = modal.querySelector('#momentsComposeImagePreview');
+        const info = modal.querySelector('#momentsComposeImageInfo');
+        if (!wrap || !img || !info) return;
+        if (!previewUrl) {
+          wrap.style.display = 'none';
+          img.src = '';
+          info.textContent = '';
+          return;
+        }
+        wrap.style.display = 'block';
+        img.src = previewUrl;
+        info.textContent = infoText || '';
+      }
+
+      async function handleMomentsImageSelect(modal, file) {
+        const status = modal.querySelector('#momentsComposeStatus');
+        if (!file || !modal) return;
+        if (!file.type.startsWith('image/')) {
+          status.textContent = '请选择图片文件';
+          status.style.color = '#dc3545';
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          status.textContent = '图片不能超过10MB';
+          status.style.color = '#dc3545';
+          return;
+        }
+
+        status.textContent = '上传中...';
+        status.style.color = '#666';
+
+        try {
+          const previewData = await convertFileToBase64(file);
+          modal._imageDataUrl = previewData;
+          updateMomentsComposerImage(modal, previewData, `${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+
+          const uploadImagePlugin = window.__uploadImageByPlugin ||
+                                   window.parent?.__uploadImageByPlugin ||
+                                   window.top?.__uploadImageByPlugin;
+
+          if (typeof uploadImagePlugin !== 'function') {
+            throw new Error('智能媒体助手插件未加载，无法上传图片');
+          }
+
+          const result = await uploadImagePlugin(file);
+          if (!result || !result.success || !result.url) {
+            throw new Error(result && result.error ? result.error : '图片上传失败');
+          }
+
+          modal.dataset.imageUrl = sanitizeMomentImageField(result.url || '');
+          status.textContent = '✅ 图片已上传';
+          status.style.color = '#28a745';
+        } catch (err) {
+          console.error('朋友圈图片上传失败:', err);
+          status.textContent = err && err.message ? `上传失败: ${err.message}` : '上传失败';
+          status.style.color = '#dc3545';
+          modal.dataset.imageUrl = '';
+        }
+      }
+
+      async function requestMomentVisionDescription(imageData, statusEl) {
+        const prompt = '请详细描述这张图片的内容，包括图片中的物体、人物、场景、文字、颜色、情感等所有可见的元素。请用客观、详细的语言描述，不要加入主观评价。';
+        const setStatus = (msg, color) => {
+          if (!statusEl) return;
+          statusEl.textContent = msg;
+          if (color) statusEl.style.color = color;
+        };
+
+        const imageInput = String(imageData || '').trim();
+        if (!imageInput) throw new Error('图片数据为空');
+
+        if (state.visionMode === 'custom' && state.visionApiUrl && state.visionApiKey && state.visionModel) {
+          setStatus('自定义识图中...', '#666');
+          const visionMessages = [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: imageInput } }
+              ]
+            }
+          ];
+          const visionResponse = await fetch(`${state.visionApiUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.visionApiKey}`
+            },
+            body: JSON.stringify({
+              model: state.visionModel,
+              messages: visionMessages,
+              max_tokens: 800,
+              temperature: 0.3
+            })
+          });
+          if (!visionResponse.ok) {
+            throw new Error(`识图API请求失败: ${visionResponse.status} ${visionResponse.statusText}`);
+          }
+          const visionData = await visionResponse.json();
+          const desc = visionData?.choices?.[0]?.message?.content?.trim();
+          return desc || '';
+        }
+
+        if (state.visionMode === 'kimi' && state.kimiApiKey && state.kimiModel) {
+          setStatus('Kimi识图中...', '#666');
+          const kimiResponse = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.kimiApiKey}`
+            },
+            body: JSON.stringify({
+              model: state.kimiModel,
+              messages: [
+                { role: 'user', content: prompt }
+              ],
+              temperature: 0.3,
+              max_tokens: 800,
+              files: [{ type: 'image', url: imageInput }]
+            })
+          });
+          if (!kimiResponse.ok) {
+            const fallbackResponse = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.kimiApiKey}`
+              },
+              body: JSON.stringify({
+                model: state.kimiModel,
+                messages: [
+                  {
+                    role: 'user',
+                    content: [
+                      { type: 'text', text: prompt },
+                      { type: 'image_url', image_url: { url: imageInput } }
+                    ]
+                  }
+                ],
+                temperature: 0.3,
+                max_tokens: 800
+              })
+            });
+            if (!fallbackResponse.ok) {
+              throw new Error(`Kimi API请求失败: ${kimiResponse.status} ${kimiResponse.statusText}`);
+            }
+            const fallbackData = await fallbackResponse.json();
+            return fallbackData?.choices?.[0]?.message?.content?.trim() || '';
+          }
+          const kimiData = await kimiResponse.json();
+          return kimiData?.choices?.[0]?.message?.content?.trim() || '';
+        }
+
+        if (!AI_GENERATE && !AI_GENERATE_RAW) {
+          throw new Error('未找到可用的识图能力');
+        }
+
+        setStatus('酒馆识图中...', '#666');
+
+        if (state.jailbreakEnabled && AI_GENERATE_RAW) {
+          const rawRequestData = {
+            ordered_prompts: [
+              { role: 'system', content: JAILBREAK_PROMPT },
+              'world_info_before',
+              'persona_description',
+              'char_description',
+              'char_personality',
+              'scenario',
+              'world_info_after',
+              'dialogue_examples',
+              'chat_history',
+              'user_input'
+            ],
+            injects: [
+              { role: 'system', content: prompt, position: 'in_chat', depth: 0, should_scan: true }
+            ],
+            should_stream: false,
+            image: imageInput
+          };
+          const result = await AI_GENERATE_RAW(rawRequestData);
+          const out = (await consumeTextStream(result)).trim();
+          return out;
+        }
+
+        const requestData = {
+          injects: [
+            { role: 'system', content: prompt, position: 'in_chat', depth: 0, should_scan: true }
+          ],
+          should_stream: false,
+          image: imageInput
+        };
+        const res = await AI_GENERATE(requestData);
+        return String(res || '').trim();
+      }
+
+      function openMomentsComposer(options = {}) {
+        const modal = ensureMomentsComposerModal();
+        const title = modal.querySelector('#momentsComposeTitle');
+        const textArea = modal.querySelector('#momentsComposeText');
+        const status = modal.querySelector('#momentsComposeStatus');
+        resetMomentsComposer(modal);
+
+        const mode = options.mode || 'post';
+        modal.dataset.mode = mode;
+        modal.dataset.postId = options.postId != null ? String(options.postId) : '';
+        modal.dataset.replyToName = options.replyToName ? String(options.replyToName) : '';
+
+        if (title) {
+          if (mode === 'comment') {
+            title.textContent = options.replyToName ? `回复 ${options.replyToName}` : '评论朋友圈';
+          } else {
+            title.textContent = '发布朋友圈';
+          }
+        }
+        if (textArea) {
+          textArea.placeholder = mode === 'comment'
+            ? (options.replyToName ? `回复 ${options.replyToName}...` : '评论这条朋友圈...')
+            : '说点什么...';
+        }
+        if (textArea && options.prefillText) {
+          textArea.value = String(options.prefillText || '');
+        }
+        if (status) {
+          status.textContent = '';
+          status.style.color = '#888';
+        }
+
+        modal.style.display = 'flex';
+      }
+
       function nextMomentId() {
         const posts = Array.isArray(state.moments) ? state.moments : [];
         const maxId = posts.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0);
         return maxId + 1;
       }
 
-      function addMomentPost(authorName, authorAvatar, content) {
+      function addMomentPost(authorName, authorAvatar, content, imageUrl) {
         const text = sanitizeMomentPlainText(content);
-        if (!text) return;
+        const image = sanitizeMomentImageField(imageUrl);
+        if (!text && !image) return;
         if (!Array.isArray(state.moments)) state.moments = [];
         state.moments.push({
           id: nextMomentId(),
           authorName: authorName || '',
           authorAvatar: authorAvatar || '',
-          content: text,
+          content: text || (image ? '图片' : ''),
+          image: image || '',
           time: getFullTimeStr(),
           likes: [],
           comments: [],
@@ -9590,9 +10095,10 @@ function applyUserAvatar(avatarElement) {
         renderMomentsList();
       }
 
-      function addMomentComment(postId, name, avatar, replyToName, content) {
+      function addMomentComment(postId, name, avatar, replyToName, content, imageUrl) {
         const text = sanitizeMomentPlainText(content);
-        if (!text) return;
+        const image = sanitizeMomentImageField(imageUrl);
+        if (!text && !image) return;
         const posts = Array.isArray(state.moments) ? state.moments : [];
         const post = posts.find(p => Number(p.id) === Number(postId));
         if (!post) return;
@@ -9601,7 +10107,8 @@ function applyUserAvatar(avatarElement) {
           name: name || '',
           avatar: avatar || '',
           replyTo: replyToName ? String(replyToName) : '',
-          content: text,
+          content: text || (image ? '图片' : ''),
+          image: image || '',
           time: getFullTimeStr(),
         });
         deferredSync(0);
@@ -9609,13 +10116,13 @@ function applyUserAvatar(avatarElement) {
       }
 
       function commentOnMoment(postId, replyToName, replyToContent) {
-        const raw = prompt(replyToName ? `回复 ${replyToName} 的评论：` : '评论这条朋友圈：', '');
-        if (raw === null) return;
-        const text = String(raw || '').trim();
-        if (!text) return;
-        const name = getUserDisplayName();
-        // Omit avatar from stored text; we can infer user avatar at render time.
-        addMomentComment(postId, name, '', replyToName, text);
+        try {
+          return openMomentsComposer({
+            mode: 'comment',
+            postId,
+            replyToName: replyToName || '',
+          });
+        } catch (_) {}
       }
 
       function toggleLikeOnMoment(postId) {
@@ -9670,8 +10177,9 @@ function applyUserAvatar(avatarElement) {
         const promptText = [
           '你正在以“朋友圈动态”的形式发布一条内容。',
           '要求：只输出 1~N 行，且每一行必须是下面格式之一（使用竖线 | 分隔）：',
-          '1) 发朋友圈： [人名|头像后缀|动态正文|时间]',
-          '2) 或者（不写头像）： [人名|动态正文|时间]',
+          '1) 发朋友圈： [人名|头像后缀|动态正文|图片短链接|时间]',
+          '2) 或者（不写头像）： [人名|动态正文|图片短链接|时间]',
+          '3) 若没有图片，可省略图片短链接： [人名|头像后缀|动态正文|时间] 或 [人名|动态正文|时间]',
           '不要输出任何解释/多余文本/代码块。',
           topicText ? `主题/提示：${topicText}` : '',
         ].filter(Boolean).join('\n');
@@ -9733,6 +10241,7 @@ function applyUserAvatar(avatarElement) {
               authorName: p.authorName || getCurrentCharName() || '',
               authorAvatar: p.authorAvatar || inferAvatarSuffixForMomentActor(p.authorName, getCurrentCharAvatarSuffix()),
               content: p.content,
+              image: p.image || '',
               time: p.time || getFullTimeStr(),
               likes: [],
               comments: [],
@@ -9766,19 +10275,56 @@ function applyUserAvatar(avatarElement) {
         const postText = unescapeStoredText(post.content || '');
         const replyName = replyToName ? String(replyToName) : '';
         const replyText = replyToContent ? unescapeStoredText(String(replyToContent)) : '';
+        let postImageDesc = '';
+        let replyImageDesc = '';
+
+        // If the moment (or replied comment) has an image, run vision first using the same config as private chat.
+        try {
+          const postImage = sanitizeMomentImageField(post.image || '');
+          if (postImage) {
+            const resolved = resolveAvatarUrl(postImage);
+            if (resolved) {
+              try { showToast('检测到朋友圈图片，识图中...'); } catch (_) {}
+              postImageDesc = await requestMomentVisionDescription(resolved, null);
+              if (postImageDesc) post.imageDescription = postImageDesc;
+            }
+          }
+        } catch (_) {}
+        try {
+          if (replyName) {
+            const list = Array.isArray(post.comments) ? post.comments : [];
+            let target = list.find(c => c && String(c.name || '') === replyName && (!replyText || unescapeStoredText(c.content || '') === replyText));
+            if (!target && replyText) {
+              target = list.find(c => c && (!replyName || String(c.name || '') === replyName) && unescapeStoredText(c.content || '') === replyText);
+            }
+            const replyImage = target ? sanitizeMomentImageField(target.image || '') : '';
+            if (replyImage) {
+              const resolvedReply = resolveAvatarUrl(replyImage);
+              if (resolvedReply) {
+                try { showToast('检测到评论图片，识图中...'); } catch (_) {}
+                replyImageDesc = await requestMomentVisionDescription(resolvedReply, null);
+                if (replyImageDesc) target.imageDescription = replyImageDesc;
+              }
+            }
+          }
+        } catch (_) {}
         const promptText =
           [
             '你正在以“朋友圈评论”的形式回复。',
             '要求：只输出 1~N 行，且每一行必须严格匹配以下格式之一（使用竖线 | 分隔）：',
             '1) 点赞（可选）： [点赞|张三|王五|李四]  （人名用 | 隔开；会合并到该朋友圈点赞列表）',
-            '2) 评论朋友圈： [评论|人名|评论文字|时间]',
-            '3) 回复某条评论： [评论|人名|被评论的人名|评论文字|时间]',
+            '2) 评论朋友圈： [评论|人名|评论文字|图片短链接|时间]',
+            '3) 回复某条评论： [评论|人名|被评论的人名|评论文字|图片短链接|时间]',
+            '4) 若没有图片，可省略图片短链接： [评论|人名|评论文字|时间] 或 [评论|人名|被评论的人名|评论文字|时间]',
             '不要输出任何解释/多余文本/代码块。',
             `朋友圈发布者：${post.authorName || ''}`,
             `朋友圈内容：${postText}`,
+            post.image ? `朋友圈图片链接：${post.image}` : '',
+            postImageDesc ? `朋友圈图片描述：${postImageDesc}` : '',
             `当前点赞：${Array.isArray(post.likes) ? post.likes.join('|') : ''}`,
             replyName ? `你要回复的评论来自：${replyName}` : '',
             replyText ? `对方评论内容：${replyText}` : '',
+            replyImageDesc ? `被回复评论图片描述：${replyImageDesc}` : '',
           ]
             .filter(Boolean)
             .join('\n');
@@ -9873,6 +10419,7 @@ function applyUserAvatar(avatarElement) {
                 avatar: finalAvatar || '',
                 replyTo: parsed.replyTo || '',
                 content: parsed.content,
+                image: parsed.image || '',
                 time: parsed.time || getFullTimeStr(),
               });
               added++;
@@ -21627,13 +22174,9 @@ function toggleFriendsPanel(show) {
           };
           if (momentsPublishBtn) momentsPublishBtn.onclick = () => {
             try {
-              const text = prompt('发布一条朋友圈：', '');
-              if (text === null) return;
-              const content = String(text || '').trim();
-              if (!content) return;
-              const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
-              // Keep avatar empty here; serialize will store a compact user avatar token when possible.
-              if (typeof addMomentPost === 'function') return addMomentPost(name || '我', '', content);
+              if (typeof openMomentsComposer === 'function') {
+                return openMomentsComposer({ mode: 'post' });
+              }
             } catch(_) {}
             showToastSafe('发布失败');
           };
