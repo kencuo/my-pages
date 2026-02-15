@@ -10970,7 +10970,6 @@ function applyUserAvatar(avatarElement) {
         if (list.length > 0) {
           let idx = list.findIndex(c => c && c.name === name);
           if (idx >= 0) {
-            state.currentPrivateIndex = idx;
             switchPrivateChat(idx, 'private');
             return;
           }
@@ -16594,11 +16593,14 @@ function applyUserAvatar(avatarElement) {
             renderAllMessages();
           }
         } else {
-          if (state.currentGroupIndex >= list.length) {
-            state.currentGroupIndex = list.length - 1;
+          let targetIndex = state.currentGroupIndex;
+          if (targetIndex >= list.length) {
+            targetIndex = Math.max(0, list.length - 1);
           }
           if (state.groupChatMode) {
-            switchPrivateChat(state.currentGroupIndex, 'group');
+            switchPrivateChat(targetIndex, 'group');
+          } else {
+            state.currentGroupIndex = targetIndex;
           }
         }
 
@@ -16699,11 +16701,9 @@ function applyUserAvatar(avatarElement) {
             const existing = groups[existingIndex];
             const merged = splitGroupMembers([...(existing.members || []), ...members].join(','));
             existing.members = merged;
-            state.currentGroupIndex = existingIndex;
             switchPrivateChat(existingIndex, 'group');
           } else {
             groups.unshift({ name: groupName, members, messages: [] });
-            state.currentGroupIndex = 0;
             switchPrivateChat(0, 'group');
           }
 
