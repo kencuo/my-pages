@@ -1256,6 +1256,30 @@
       .friends-title {
         font-size: 14px;
         color: var(--text-primary);
+        font-weight: 600;
+      }
+      .friends-tabs {
+        display: flex;
+        gap: 8px;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--border-primary);
+        background: var(--bg-secondary);
+      }
+      .friends-tab {
+        flex: 0 0 auto;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        user-select: none;
+      }
+      .friends-tab.active {
+        background: var(--accent-primary);
+        color: #fff;
+        border-color: var(--accent-primary);
       }
       .friends-close,
       .friends-add {
@@ -1309,10 +1333,70 @@
         font-size: 13px;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
+        white-space: normal;
         flex: 1;
         margin-right: 4px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
       }
+      .friend-name .group-title {
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .friend-name .group-members {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .group-member-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 6px 2px;
+      }
+      .group-member-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-primary);
+      }
+      .group-member-chip input {
+        width: 92px;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--text-primary);
+        font-size: 12px;
+      }
+      .group-member-chip button {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0,0,0,0.06);
+        color: var(--text-secondary);
+        cursor: pointer;
+      }
+      .group-member-chip button:hover { background: rgba(0,0,0,0.1); }
+      .group-member-add {
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1px dashed var(--border-secondary);
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .group-member-add:hover { background: rgba(0,0,0,0.04); }
       .friend-delete {
         margin-left: auto;
         width: 28px;
@@ -2366,6 +2450,8 @@
         min-width: 32px;
         max-width: 60px;
         flex-shrink: 0;
+        position: relative;
+        z-index: 2;
       }
       .avatar-name {
         font-size: 10px;
@@ -6499,7 +6585,7 @@
           </svg>
         </button>
         <span id="chatPersonName" class="cute-person-name"></span>
-        <button class="friends-btn" id="friendsBtn" title="好友列表">
+        <button class="friends-btn" id="friendsBtn" title="联系人/群聊">
           <svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M12,12A4,4 0 1,0 12,4A4,4 0 0,0 12,12M12,14C9.33,14 4,15.34 4,18V20H20V18C20,15.34 14.67,14 12,14Z"/>
           </svg>
@@ -6555,12 +6641,16 @@
         </button>
         <button class="send-btn" id="sendBtn">发送</button>
       </div>
-      <!-- 一体化好友面板（仅私聊） -->
+      <!-- 联系人 / 群聊 面板 -->
       <div class="friends-panel" id="friendsPanel" aria-hidden="true">
         <div class="friends-header">
           <button class="friends-close" id="friendsCloseBtn" title="关闭">×</button>
-          <div class="friends-title">好友列表</div>
+          <div class="friends-title" id="friendsTitle">联系人</div>
           <button class="friends-add" id="friendsAddBtn" title="添加">+</button>
+        </div>
+        <div class="friends-tabs" id="friendsTabs">
+          <button class="friends-tab active" data-mode="friend" type="button">私聊好友</button>
+          <button class="friends-tab" data-mode="group" type="button">群聊</button>
         </div>
         <div class="friends-list" id="friendsList"></div>
       </div>
@@ -8041,6 +8131,7 @@
       // User: [我方消息|消息内容|消息时间]
       // Char: [角色昵称|对方头像文件名|消息内容|消息时间]
       // All content stored in <shouji>...</shouji> tag
+      // Group chat blocks stored as <qunliao><multi>...</multi></qunliao>
 
 
 
@@ -8055,8 +8146,10 @@
       const state = {
         quoteContent: '',
         messageHistory: [],
-        privateConversations: [], // 多会话(<private>)集合
-        currentPrivateIndex: 0,   // 当前激活会话索引
+        privateConversations: [], // 私聊多会话(<private>)集合
+        currentPrivateIndex: 0,   // 当前激活私聊索引
+        groupConversations: [],   // 群聊多会话(<qunliao>/<multi>)集合
+        currentGroupIndex: 0,     // 当前激活群聊索引
         currentMsgId: null,
         userHasSentNewMessage: false,
         callTimerId: null,
@@ -8092,6 +8185,8 @@
         forceCharNameForSerialization: null,
         interfaceScale: 1,
         typingSpeedLevel: 2,
+        groupChatMode: false,
+        friendsPanelMode: 'friend',
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -8126,7 +8221,7 @@ function applyUserAvatar(avatarElement) {
       }
 
       function createCharAvatarBlock(msg, options = {}) {
-        if (!msg || !msg.avatar) return null;
+        if (!msg) return null;
         const rawName = options.name || msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
         const name = String(rawName || '').trim();
         const resolvedName = name || '对方';
@@ -8166,6 +8261,20 @@ function applyUserAvatar(avatarElement) {
         nameEl.textContent = resolvedName;
         wrapper.appendChild(nameEl);
         wrapper.appendChild(avatar);
+        return wrapper;
+      }
+
+      function createUserAvatarBlock(options = {}) {
+        const wrapper = document.createElement('div');
+        wrapper.className = options.wrapperClassName || 'avatar-wrap user-avatar-wrap';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'avatar-name';
+        nameEl.textContent = options.name || NAME_USER;
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = options.avatarClassName || 'avatar user_avatar';
+        applyUserAvatar(avatarDiv);
+        wrapper.appendChild(nameEl);
+        wrapper.appendChild(avatarDiv);
         return wrapper;
       }
 
@@ -8835,6 +8944,8 @@ function applyUserAvatar(avatarElement) {
         cleaned = cleaned.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
         cleaned = cleaned.replace(/^\s*同层朋友圈\s*$/gm, '');
         cleaned = cleaned.replace(/<private>[\s\S]*?<\/private>/g, '');
+        cleaned = cleaned.replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '');
+        cleaned = cleaned.replace(/<multi>[\s\S]*?<\/multi>/g, '');
         cleaned = cleaned.trim();
         if (!cleaned) {
           console.log('Empty content inside <shouji> tags');
@@ -8880,6 +8991,94 @@ function applyUserAvatar(avatarElement) {
           return { name, messages, raw: block };
         });
         return conversations;
+      }
+
+      // ==================== GROUP CHAT (<qunliao>/<multi>) SUPPORT ====================
+      function splitGroupMembers(raw) {
+        const input = (raw || '').trim();
+        if (!input) return [];
+        const parts = input
+          .split(/[，,]/g)
+          .map(s => String(s || '').trim())
+          .filter(Boolean);
+        // de-dup while preserving order
+        const seen = new Set();
+        const out = [];
+        for (const p of parts) {
+          if (seen.has(p)) continue;
+          seen.add(p);
+          out.push(p);
+        }
+        return out;
+      }
+
+      function parseGroupConversationsFromQunliao(text) {
+        const raw = text == null ? '' : String(text);
+        const qunliaoMatch = raw.match(/<qunliao>([\s\S]*?)<\/qunliao>/);
+        const shoujiMatch = qunliaoMatch ? null : raw.match(/<shouji>([\s\S]*?)<\/shouji>/);
+        const inner = qunliaoMatch ? qunliaoMatch[1] : (shoujiMatch ? shoujiMatch[1] : raw);
+        const blocks = [...inner.matchAll(/<multi>([\s\S]*?)<\/multi>/g)];
+        if (!blocks.length) return [];
+        const conversations = blocks.map((m, idx) => {
+          const block = (m[1] || '').trim();
+          const title = block.match(/【和(.+?)的聊天】/);
+          const name = title ? String(title[1] || '').trim() : `群聊${idx + 1}`;
+          const membersMatch = block.match(/\[群成员[:：]([^\]]*)\]/);
+          const members = membersMatch ? splitGroupMembers(membersMatch[1]) : [];
+          const messages = parseShoujiLog(`<shouji>${block}</shouji>`);
+          return { name, members, messages, raw: block };
+        });
+        return conversations;
+      }
+
+      function getPrivateConversations() {
+        if (!Array.isArray(state.privateConversations)) state.privateConversations = [];
+        return state.privateConversations;
+      }
+
+      function getGroupConversations() {
+        if (!Array.isArray(state.groupConversations)) state.groupConversations = [];
+        return state.groupConversations;
+      }
+
+      function getActiveConversations() {
+        return state.groupChatMode ? getGroupConversations() : getPrivateConversations();
+      }
+
+      function getActiveConversationIndex() {
+        return state.groupChatMode ? (state.currentGroupIndex || 0) : (state.currentPrivateIndex || 0);
+      }
+
+      function setActiveConversationIndex(index) {
+        if (state.groupChatMode) state.currentGroupIndex = index;
+        else state.currentPrivateIndex = index;
+      }
+
+      function syncActiveConversationCache() {
+        const list = getActiveConversations();
+        const idx = getActiveConversationIndex();
+        if (Array.isArray(list) && list[idx]) {
+          list[idx].messages = [...state.messageHistory];
+        }
+      }
+
+      function getActiveConversation() {
+        const list = getActiveConversations();
+        if (!list.length) return null;
+        const idx = Math.max(0, Math.min(getActiveConversationIndex(), list.length - 1));
+        return list[idx] || null;
+      }
+
+      function getActiveGroupConversation() {
+        const list = getGroupConversations();
+        if (!list.length) return null;
+        const idx = Math.max(0, Math.min(state.currentGroupIndex || 0, list.length - 1));
+        return list[idx] || null;
+      }
+
+      function getActiveGroupMembers() {
+        const conv = getActiveGroupConversation();
+        return conv && Array.isArray(conv.members) ? conv.members : [];
       }
 
       // ==================== MOMENTS / PYQ (<pyq>) SUPPORT ====================
@@ -10540,11 +10739,22 @@ function applyUserAvatar(avatarElement) {
       }
 
       // 切换当前会话
-      function switchPrivateChat(index) {
-        if (!Array.isArray(state.privateConversations)) return;
-        if (index < 0 || index >= state.privateConversations.length) return;
-        state.currentPrivateIndex = index;
-        const conv = state.privateConversations[index];
+      function switchPrivateChat(index, mode = null) {
+        syncActiveConversationCache();
+        const targetMode = mode === 'group' ? 'group' : (mode === 'private' ? 'private' : (state.groupChatMode ? 'group' : 'private'));
+        const willBeGroup = targetMode === 'group';
+        if (state.groupChatMode !== willBeGroup) {
+          syncActiveConversationCache();
+          state.groupChatMode = willBeGroup;
+          state.friendsPanelMode = willBeGroup ? 'group' : 'friend';
+          try { localStorage.setItem('tavern_chat_mode', willBeGroup ? 'group' : 'private'); } catch (_) {}
+        }
+        const list = willBeGroup ? getGroupConversations() : getPrivateConversations();
+        if (!list.length) return;
+        if (index < 0 || index >= list.length) index = 0;
+        if (willBeGroup) state.currentGroupIndex = index;
+        else state.currentPrivateIndex = index;
+        const conv = list[index];
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && conv && conv.name) nameSpan.textContent = conv.name;
         // 切换消息并重渲染
@@ -10564,28 +10774,33 @@ function applyUserAvatar(avatarElement) {
       // 公开方法：打开/创建某个角色的私聊
       function openConversation(name) {
         if (!name) return;
+        syncActiveConversationCache();
+        if (state.groupChatMode) {
+          state.groupChatMode = false;
+          state.friendsPanelMode = 'friend';
+          try { localStorage.setItem('tavern_chat_mode', 'private'); } catch (_) {}
+        }
+        const list = getPrivateConversations();
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan) nameSpan.textContent = name;
 
-        // 若已有多会话结构
-        if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
-          let idx = state.privateConversations.findIndex(c => c && c.name === name);
+        if (list.length > 0) {
+          let idx = list.findIndex(c => c && c.name === name);
           if (idx >= 0) {
-            switchPrivateChat(idx);
+            state.currentPrivateIndex = idx;
+            switchPrivateChat(idx, 'private');
             return;
           }
-          // 新增一个空会话
-          state.privateConversations.push({ name, messages: [] });
-          state.currentPrivateIndex = state.privateConversations.length - 1;
+          list.push({ name, messages: [] });
+          state.currentPrivateIndex = list.length - 1;
           state.messageHistory = [];
-          buildPrivateChatTabs(state.privateConversations, state.currentPrivateIndex);
+          buildPrivateChatTabs(list, state.currentPrivateIndex);
           lastHistoryCount = 0;
           renderAllMessages();
-          deferredSync(); // 将新会话以 <private> 追加到 <shouji>
+          deferredSync();
           return;
         }
 
-        // 尚未使用<private>结构时，创建为多会话并同步
         state.privateConversations = [{ name, messages: [] }];
         state.currentPrivateIndex = 0;
         state.messageHistory = [];
@@ -10633,48 +10848,49 @@ function applyUserAvatar(avatarElement) {
         const lines = msgArr.map(m => {
           // 🔄 新格式：直接返回格式化字符串，不依赖content重构
           const currentCharName = getCurrentCharName();
+          const nameForOther = (m && (m.charName || m.name)) ? String(m.charName || m.name).trim() : currentCharName;
 
           // 转账消息
           if (m.type === 'transfer') {
             return m.sender === 'user'
               ? `[我方消息|转账${m.amount}元|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|转账${m.amount}元|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|转账${m.amount}元|${m.time}]`;
           }
           // 收账消息
           else if (m.type === 'receive') {
             return m.sender === 'user'
               ? `[我方消息|收账${m.amount}元|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|收账${m.amount}元|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|收账${m.amount}元|${m.time}]`;
           }
           // 退回收账
           else if (m.type === 'refund') {
             return m.sender === 'user'
               ? `[我方消息|已退回收账|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|已退回收账|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|已退回收账|${m.time}]`;
           }
           // 红包消息
           else if (m.type === 'redpacket') {
             return m.sender === 'user'
               ? `[我方消息|红包${m.amount}元|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|红包${m.amount}元|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|红包${m.amount}元|${m.time}]`;
           }
           // 领取红包
           else if (m.type === 'claimed-redpacket') {
             return m.sender === 'user'
               ? `[我方消息|领取红包${m.amount}元|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|领取红包${m.amount}元|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|领取红包${m.amount}元|${m.time}]`;
           }
           // 语音消息
           else if (m.type === 'voice') {
             return m.sender === 'user'
               ? `[我方消息|语音消息|${m.voiceText || ''}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|语音消息|${m.voiceText || ''}|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|语音消息|${m.voiceText || ''}|${m.time}]`;
           }
           // 文件消息
           else if (m.type === 'file') {
             return m.sender === 'user'
               ? `[我方消息|${m.fileFormat}|${m.fileContent}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|${m.fileFormat}|${m.fileContent}|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|${m.fileFormat}|${m.fileContent}|${m.time}]`;
           }
           // 文档消息
           else if (m.type === 'document') {
@@ -10684,24 +10900,24 @@ function applyUserAvatar(avatarElement) {
 
             return m.sender === 'user'
               ? `[我方消息|文档|${docInfo}|${content}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|文档|${docInfo}|${content}|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|文档|${docInfo}|${content}|${m.time}]`;
           }
           // 位置消息
           else if (m.type === 'location') {
             return m.sender === 'user'
               ? `[我方消息|${m.locationText}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|${m.locationText}|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|${m.locationText}|${m.time}]`;
           }
 
           // 撤回消息
           else if (m.type === 'retracted') {
             return m.sender === 'user'
               ? `[我方消息|撤回|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|撤回|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|撤回|${m.time}]`;
           }
           // 语音未接听
           else if (m.type === 'voice-unanswered') {
-            return `[${currentCharName}|语音未接听|${m.content}|${m.time}]`;
+            return `[${nameForOther}|语音未接听|${m.content}|${m.time}]`;
           } else if (m.type === 'system-time') {
             return m.content; // 系统时间消息直接返回内容，格式已经是 [系统消息|日期]
           } else if (m.type === 'poke') {
@@ -10724,19 +10940,19 @@ function applyUserAvatar(avatarElement) {
             
             return m.sender === 'user'
               ? `[我方消息|表情包|${stickerContent}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|表情包|${stickerContent}|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|表情包|${stickerContent}|${m.time}]`;
           } else if (m.type === 'voicecall-end') {
             // Voice call end format: [sender|语音通话已挂断|duration|transcript|time]
             const transcriptJson = JSON.stringify(m.transcript || []);
             if (m.sender === 'user') {
               return `[我方消息|语音通话已挂断|${m.duration}|${transcriptJson}|${m.time}]`;
             } else {
-              return `[${currentCharName}|语音通话已挂断|${m.duration}|${transcriptJson}|${m.time}]`;
+              return `[${nameForOther}|语音通话已挂断|${m.duration}|${transcriptJson}|${m.time}]`;
             }
           } else if (m.type === 'voice-effect') {
             return m.sender === 'user'
               ? `[我方消息|变音特效|${m.voiceEffect}|${m.voiceEffectContent}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|变音特效|${m.voiceEffect}|${m.voiceEffectContent}|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|变音特效|${m.voiceEffect}|${m.voiceEffectContent}|${m.time}]`;
           } else if (m.type === 'image') {
             // 图片消息处理 - 保存图片URL和描述信息
             let imageInfo = m.imageDescription || '图片';
@@ -10747,14 +10963,14 @@ function applyUserAvatar(avatarElement) {
 
             return m.sender === 'user'
               ? `[我方消息|图片|${imageInfo}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|图片|${imageInfo}|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|图片|${imageInfo}|${m.time}]`;
           } else if (m.type === 'video') {
             // 视频消息处理 - 直接保存视频URL
             const videoUrl = m.videoData || '';
 
             return m.sender === 'user'
               ? `[我方消息|视频|${videoUrl}|${m.time}]`
-              : `[${currentCharName}|${m.avatar || ''}|视频|${videoUrl}|${m.time}]`;
+              : `[${nameForOther}|${m.avatar || ''}|视频|${videoUrl}|${m.time}]`;
           }
 
           // 其他消息类型的通用逻辑
@@ -10771,15 +10987,107 @@ function applyUserAvatar(avatarElement) {
             // char
             if (m.callContext) {
 
-              return `[${currentCharName}|语音通话|${content}|${m.time}]`;
+              return `[${nameForOther}|语音通话|${content}|${m.time}]`;
             }
-            if (m.quote) return `<${currentCharName}|${m.avatar || ''}|${m.quote}|${content}|${m.time}>`;
-            return `[${currentCharName}|${m.avatar || ''}|${content}|${m.time}]`;
+            if (m.quote) return `<${nameForOther}|${m.avatar || ''}|${m.quote}|${content}|${m.time}>`;
+            return `[${nameForOther}|${m.avatar || ''}|${content}|${m.time}]`;
           }
         });
         
         // ▼▼▼ 修改之处：在拼接时，把标题行加在最前面 ▼▼▼
         return '<shouji>\n' + titleLine + lines.join('\n') + '\n</shouji>';
+      }
+
+      // ==================== GROUP CHAT SERIALIZATION (<qunliao>/<multi>) ====================
+      function serializeMultiBlock(conversation, msgArrOverride = null) {
+        const conv = conversation || {};
+        const groupName = String(conv.name || getCurrentCharName() || '群聊').trim() || '群聊';
+        const members = Array.isArray(conv.members) ? conv.members : [];
+        const msgArr = Array.isArray(msgArrOverride) ? msgArrOverride : (Array.isArray(conv.messages) ? conv.messages : []);
+
+        const prevForceName = state.forceCharNameForSerialization;
+        try {
+          state.forceCharNameForSerialization = groupName;
+          const shouji = serializeShoujiLog(msgArr);
+          const m = shouji.match(/<shouji>([\s\S]*?)<\/shouji>/);
+          const inner = m ? (m[1] || '').trim() : '';
+          let lines = inner.split(/\n+/).filter(Boolean);
+
+          // Ensure title line exists and matches the group name
+          const titleLine = `【和${groupName}的聊天】`;
+          lines = lines.filter(l => !/^【和.+?的聊天】$/.test(String(l || '').trim()));
+          lines.unshift(titleLine);
+
+          // Ensure members line exists (always right after title)
+          const membersLine = `[群成员：${members.join(',')}]`;
+          lines = lines.filter(l => !String(l || '').trim().startsWith('[群成员：'));
+          lines.splice(1, 0, membersLine);
+
+          return `<multi>\n${lines.join('\n')}\n</multi>`;
+        } finally {
+          state.forceCharNameForSerialization = prevForceName;
+        }
+      }
+
+      function serializeQunliao(conversations, msgArrOverrideForActive = null) {
+        const list = Array.isArray(conversations) ? conversations : [];
+        if (!list.length) {
+          const fallback = {
+            name: getCurrentCharName() || '群聊',
+            members: Array.isArray(state.groupConversations?.[0]?.members) ? state.groupConversations[0].members : [],
+            messages: Array.isArray(state.messageHistory) ? state.messageHistory : [],
+          };
+          return `<qunliao>\n${serializeMultiBlock(fallback)}\n</qunliao>`;
+        }
+        return `<qunliao>\n${list.map((c, idx) => {
+          if (msgArrOverrideForActive && idx === (state.currentGroupIndex || 0)) return serializeMultiBlock(c, msgArrOverrideForActive);
+          return serializeMultiBlock(c);
+        }).join('\n')}\n</qunliao>`;
+      }
+
+      function serializeCurrentGroupContext(messages) {
+        const active = getActiveGroupConversation() || { name: getCurrentCharName() || '群聊', members: getActiveGroupMembers(), messages: [] };
+        return `<qunliao>\n${serializeMultiBlock(active, messages)}\n</qunliao>`;
+      }
+
+      function buildPrivateBlocksFromConversations(conversations) {
+        const list = Array.isArray(conversations) ? conversations : [];
+        if (!list.length) return '';
+        let rebuiltAll = '';
+        for (const conv of list) {
+          const prevForceName = state.forceCharNameForSerialization;
+          try {
+            state.forceCharNameForSerialization = conv.name || getCurrentCharName() || '对方';
+            const s = serializeShoujiLog(conv.messages || []);
+            const m = s.match(/<shouji>([\s\S]*?)<\/shouji>/);
+            const innerPart = m ? (m[1] || '').trim() : '';
+            rebuiltAll += `<private>\n${innerPart}\n</private>\n`;
+          } finally {
+            state.forceCharNameForSerialization = prevForceName;
+          }
+        }
+        return rebuiltAll.trim();
+      }
+
+      function ensureShoujiWrapper(raw) {
+        const msg = String(raw || '');
+        if (/<shouji>[\s\S]*?<\/shouji>/.test(msg)) return msg;
+        const trimmed = msg.trim();
+        return `<shouji>\n${trimmed}\n</shouji>`;
+      }
+
+      function upsertPrivateAndGroupIntoShoujiMessage(shoujiMessageText, privateBlocksText, qunliaoText) {
+        const msg = ensureShoujiWrapper(shoujiMessageText);
+        const privateBlocks = String(privateBlocksText || '').trim();
+        const qunliao = String(qunliaoText || '').trim();
+        return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/, (_m, inner) => {
+          let body = String(inner || '');
+          body = body.replace(/<private>[\s\S]*?<\/private>/g, '');
+          body = body.replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '');
+          body = body.trim();
+          const merged = [privateBlocks, qunliao, body].filter(Boolean).join('\n\n');
+          return `<shouji>\n${merged}\n</shouji>`;
+        });
       }
 
       // ==================== OPTIMIZED RENDERING LOGIC ====================
@@ -11778,11 +12086,9 @@ function applyUserAvatar(avatarElement) {
           timeSpan.textContent = msg.time;
           wrapper.appendChild(timeSpan);
           if (msg.sender === 'user') {
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'avatar user_avatar';
-            applyUserAvatar(avatarDiv);
-            message.appendChild(avatarDiv);
-          } else if (msg.avatar) {
+            const avatarBlock = createUserAvatarBlock({ name: NAME_USER, avatarClassName: 'avatar user_avatar' });
+            if (avatarBlock) message.appendChild(avatarBlock);
+          } else {
             const charName = msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
             const avatarBlock = createCharAvatarBlock(msg, {
               name: charName,
@@ -11953,21 +12259,17 @@ function applyUserAvatar(avatarElement) {
         wrapper.appendChild(timeSpan);
 
         if (msg.sender === 'user') {
-          const avatarDiv = document.createElement('div');
-          avatarDiv.className = 'avatar user_avatar';
-          applyUserAvatar(avatarDiv);
-          message.appendChild(avatarDiv);
+          const avatarBlock = createUserAvatarBlock({ name: NAME_USER, avatarClassName: 'avatar user_avatar' });
+          if (avatarBlock) message.appendChild(avatarBlock);
           message.appendChild(wrapper);
         } else {
-          if (msg.avatar) {
-            const charName = msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
-            const avatarBlock = createCharAvatarBlock(msg, {
-              name: charName,
-              avatarClassName: 'avatar char-avatar',
-              addPoke: true,
-            });
-            if (avatarBlock) message.appendChild(avatarBlock);
-          }
+          const charName = msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
+          const avatarBlock = createCharAvatarBlock(msg, {
+            name: charName,
+            avatarClassName: 'avatar char-avatar',
+            addPoke: true,
+          });
+          if (avatarBlock) message.appendChild(avatarBlock);
           message.appendChild(wrapper);
         }
 
@@ -13518,7 +13820,9 @@ function applyUserAvatar(avatarElement) {
               // 这里先把包裹标签去掉，只保留“行协议”本体，再交给统一解析器。
               const normalized = String(buffer || '')
                 .replace(/<\/?shouji>/g, '')
-                .replace(/<\/?private>/g, '');
+                .replace(/<\/?private>/g, '')
+                .replace(/<\/?qunliao>/g, '')
+                .replace(/<\/?multi>/g, '');
               msgs = parseShoujiLog(`<shouji>${normalized}</shouji>`);
             } catch (_) {
               // 当前片段不完整，先忽略
@@ -13549,19 +13853,21 @@ function applyUserAvatar(avatarElement) {
               }
 
               // Route by charName if provided
-              const currentName = (document.getElementById('chatPersonName')?.textContent || '').trim() || getCurrentCharName();
-              if (msg.sender === 'char' && msg.charName && currentName && msg.charName !== currentName) {
-                if (!Array.isArray(state.privateConversations)) state.privateConversations = [];
-                const idx = state.privateConversations.findIndex(c => c && c.name === msg.charName);
-                if (idx >= 0) {
-                  const conv = state.privateConversations[idx];
-                  conv.messages = conv.messages || [];
-                  conv.messages.push(msg);
-                  routedOther = true;
-                  continue;
+              if (!state.groupChatMode) {
+                const currentName = (document.getElementById('chatPersonName')?.textContent || '').trim() || getCurrentCharName();
+                if (msg.sender === 'char' && msg.charName && currentName && msg.charName !== currentName) {
+                  if (!Array.isArray(state.privateConversations)) state.privateConversations = [];
+                  const idx = state.privateConversations.findIndex(c => c && c.name === msg.charName);
+                  if (idx >= 0) {
+                    const conv = state.privateConversations[idx];
+                    conv.messages = conv.messages || [];
+                    conv.messages.push(msg);
+                    routedOther = true;
+                    continue;
+                  }
+                  msg.originalCharName = msg.charName;
+                  msg.charName = currentName;
                 }
-                msg.originalCharName = msg.charName;
-                msg.charName = currentName;
               }
 
               state.messageHistory.push(msg);
@@ -15215,7 +15521,7 @@ function applyUserAvatar(avatarElement) {
       document.getElementById('sendBtn').onclick = () => sendMessage({});
               document.getElementById('requestAiBtn').onclick = requestAiReply;
         document.getElementById('voiceCallRequestAiBtn').onclick = requestAiReply;
-      // 集成好友列表开关
+      // 集成群聊列表开关
       document.getElementById('friendsBtn').onclick = () => toggleFriendsPanel(true);
       document.getElementById('imgBtn').onclick = sendImage;
       document.getElementById('recallBtn').onclick = recallLastUserMsg; // This button is in the action grid, keep it for now.
@@ -15233,7 +15539,7 @@ function applyUserAvatar(avatarElement) {
       document.getElementById('fileModalCancel').onclick = hideFileSendModal;
       document.getElementById('fileModalConfirm').onclick = handleFileModalConfirm;
 
-      // ==================== 好友列表（集成版，仅私聊） ====================
+      // ==================== 群聊列表（集成版） ====================
       function getCurrentCharacterInfo() {
         try {
           if (typeof parent !== 'undefined' && parent.this_chid !== undefined) {
@@ -15288,61 +15594,193 @@ function applyUserAvatar(avatarElement) {
         } catch (e) { console.warn('保存好友失败', e); }
       }
 
-      function displayFriendsInPanel(list) {
+      function getGroupsList() {
+        return getGroupConversations();
+      }
+
+      function normalizeFriendEntry(entry) {
+        if (typeof entry === 'string') return { name: entry };
+        if (entry && typeof entry === 'object') {
+          const name = entry.name || entry.title || entry.nickname || '';
+          return { ...entry, name };
+        }
+        return { name: '' };
+      }
+
+      function displayFriendsListInPanel() {
+        const list = loadFriendsList().map(normalizeFriendEntry).filter(f => f.name);
         const box = document.getElementById('friendsList');
         if (!box) return;
-        if (!Array.isArray(list) || list.length === 0) {
-          box.innerHTML = '<div style="color: var(--text-tertiary); text-align:center; padding: 24px;">暂无好友，点击右上角 + 添加</div>';
+
+        if (!list.length) {
+          box.innerHTML = '<div style="color: var(--text-tertiary); text-align:center; padding: 24px;">暂无私聊好友，点击右上角 + 添加</div>';
           return;
         }
+
         box.innerHTML = list
-          .filter(f => !f.type || f.type === 'friend')
-          .map(f => {
-            const n = (f && f.name) ? String(f.name) : '';
-            const initial = n ? n.trim().charAt(0) : '友';
-            return `<div class="friend-item" data-name="${encodeURIComponent(n)}">
+          .map((f, i) => {
+            const name = String(f.name || '').trim() || `好友${i + 1}`;
+            const initial = name ? name.charAt(0) : '友';
+            return `<div class="friend-item" data-index="${i}" data-name="${encodeURIComponent(name)}">
                       <div class="friend-avatar">${initial}</div>
-                      <div class="friend-name">${n}</div>
-                      <button class="friend-delete" data-name="${encodeURIComponent(n)}" title="删除好友">×</button>
+                      <div class="friend-name">${name}</div>
+                      <button class="friend-delete" data-index="${i}" title="删除好友">×</button>
                     </div>`;
           })
           .join('');
+
         box.querySelectorAll('.friend-delete').forEach(btn => {
           btn.addEventListener('click', e => {
             e.stopPropagation();
-            const encoded = btn.getAttribute('data-name') || '';
-            const name = decodeURIComponent(encoded);
-            if (!name) return;
-            if (!confirm(`确认删除好友「${name}」吗？`)) return;
-            removeFriend(name);
+            const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
+            if (isNaN(idx) || idx < 0) return;
+            removeFriendAtIndex(idx);
           });
         });
-        // 绑定点击事件
+
         box.querySelectorAll('.friend-item').forEach(el => {
           el.addEventListener('click', () => {
             const name = decodeURIComponent(el.getAttribute('data-name') || '');
-            if (name) {
-              openConversation(name);
-              toggleFriendsPanel(false);
-            }
+            if (!name) return;
+            openConversation(name);
+            toggleFriendsPanel(false);
           });
         });
       }
 
-function removeFriend(name) {
-        const trimmed = (name || '').trim();
-        if (!trimmed) return;
-        const list = loadFriendsList();
-        const filtered = list.filter(f => (f && (f.name || '') !== trimmed));
-        if (filtered.length === list.length) return;
-        saveFriendsList(filtered);
-        displayFriendsInPanel(filtered);
+      function displayGroupsInPanel() {
+        const list = getGroupsList();
+        const box = document.getElementById('friendsList');
+        if (!box) return;
+
+        if (!list.length) {
+          box.innerHTML = '<div style="color: var(--text-tertiary); text-align:center; padding: 24px;">暂无群聊，点击右上角 + 创建</div>';
+          return;
+        }
+
+        box.innerHTML = list
+          .map((c, i) => {
+            const name = (c && c.name) ? String(c.name) : `群聊${i + 1}`;
+            const members = (c && Array.isArray(c.members)) ? c.members : [];
+            const initial = name ? name.trim().charAt(0) : '群';
+            const memberText = members.length ? members.join(',') : '未设置成员';
+            return `<div class="friend-item" data-index="${i}" data-name="${encodeURIComponent(name)}">
+                      <div class="friend-avatar">${initial}</div>
+                      <div class="friend-name">
+                        <div class="group-title">${name}</div>
+                        <div class="group-members">成员：${memberText}</div>
+                      </div>
+                      <button class="friend-delete" data-index="${i}" title="删除群聊">×</button>
+                    </div>`;
+          })
+          .join('');
+
+        box.querySelectorAll('.friend-delete').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
+            if (isNaN(idx) || idx < 0) return;
+            const list = getGroupsList();
+            const groupName = list[idx] && list[idx].name ? String(list[idx].name) : '';
+            if (!confirm(`确认删除群聊「${groupName || ('群聊' + (idx + 1))}」吗？`)) return;
+            removeGroupAtIndex(idx);
+          });
+        });
+
+        box.querySelectorAll('.friend-item').forEach(el => {
+          el.addEventListener('click', () => {
+            const idx = parseInt(el.getAttribute('data-index') || '-1', 10);
+            if (isNaN(idx) || idx < 0) return;
+            switchPrivateChat(idx, 'group');
+            toggleFriendsPanel(false);
+          });
+        });
       }
-function toggleFriendsPanel(show) {
+
+      function renderFriendsPanelList() {
+        if (state.friendsPanelMode === 'group') displayGroupsInPanel();
+        else displayFriendsListInPanel();
+      }
+
+      function setFriendsPanelMode(mode) {
+        const nextMode = mode === 'group' ? 'group' : 'friend';
+        state.friendsPanelMode = nextMode;
+        const title = document.getElementById('friendsTitle');
+        if (title) title.textContent = nextMode === 'group' ? '群聊' : '私聊好友';
+        const addBtn = document.getElementById('friendsAddBtn');
+        if (addBtn) addBtn.title = nextMode === 'group' ? '创建群聊' : '添加好友';
+        document.querySelectorAll('#friendsTabs .friends-tab').forEach(btn => {
+          const isActive = btn.getAttribute('data-mode') === nextMode;
+          btn.classList.toggle('active', isActive);
+        });
+        renderFriendsPanelList();
+      }
+
+      function removeFriendAtIndex(index) {
+        const list = loadFriendsList().map(normalizeFriendEntry);
+        if (index < 0 || index >= list.length) return;
+        const name = list[index] && list[index].name ? String(list[index].name) : '';
+        if (!confirm(`确认删除好友「${name || ('好友' + (index + 1))}」吗？`)) return;
+        list.splice(index, 1);
+        saveFriendsList(list);
+        renderFriendsPanelList();
+      }
+
+      function addFriendViaPrompt() {
+        const raw = prompt('请输入好友名字');
+        if (!raw) return;
+        const name = String(raw || '').trim();
+        if (!name) return;
+        const list = loadFriendsList().map(normalizeFriendEntry);
+        const exists = list.some(f => String(f.name || '').trim() === name);
+        if (!exists) {
+          list.push({ name });
+          saveFriendsList(list);
+        }
+        setFriendsPanelMode('friend');
+        openConversation(name);
+        toggleFriendsPanel(false);
+      }
+
+      function removeGroupAtIndex(index) {
+        const list = getGroupsList();
+        if (index < 0 || index >= list.length) return;
+
+        // Sync current messages before removing
+        syncActiveConversationCache();
+
+        list.splice(index, 1);
+
+        if (!list.length) {
+          state.groupConversations = [{ name: '群聊', members: [], messages: [] }];
+          state.currentGroupIndex = 0;
+          if (state.groupChatMode) {
+            state.messageHistory = [];
+            const nameSpan = document.getElementById('chatPersonName');
+            if (nameSpan) nameSpan.textContent = state.groupConversations[0].name || '群聊';
+            lastHistoryCount = 0;
+            renderAllMessages();
+          }
+        } else {
+          if (state.currentGroupIndex >= list.length) {
+            state.currentGroupIndex = list.length - 1;
+          }
+          if (state.groupChatMode) {
+            switchPrivateChat(state.currentGroupIndex, 'group');
+          }
+        }
+
+        if (state.groupChatMode) {
+          buildPrivateChatTabs(getGroupsList(), state.currentGroupIndex || 0);
+        }
+        deferredSync();
+      }
+
+      function toggleFriendsPanel(show) {
         const panel = document.getElementById('friendsPanel');
         if (!panel) return;
         if (show) {
-          displayFriendsInPanel(loadFriendsList());
+          setFriendsPanelMode(state.groupChatMode ? 'group' : 'friend');
           panel.style.display = 'flex';
           panel.setAttribute('aria-hidden', 'false');
         } else {
@@ -15351,31 +15789,190 @@ function toggleFriendsPanel(show) {
         }
       }
 
-      function addFriendViaPrompt() {
-        let name = prompt('输入要添加的好友名称（仅私聊）');
-        if (!name) return;
-        name = name.trim();
-        if (!name) return;
-        const list = loadFriendsList();
-        if (list.some(f => (f.name || '') === name)) {
-          alert('该好友已存在');
-          return;
+      function ensureGroupCreateModal() {
+        let overlay = document.getElementById('groupCreateOverlay');
+        if (overlay) return overlay;
+
+        overlay = document.createElement('div');
+        overlay.id = 'groupCreateOverlay';
+        overlay.className = 'settings-overlay';
+        overlay.style.display = 'none';
+        overlay.innerHTML = `
+          <div class="settings-modal" style="max-width: 520px;">
+            <div class="settings-header">
+              <div class="settings-title">创建群聊</div>
+              <button class="settings-close-btn" id="groupCreateCloseBtn">×</button>
+            </div>
+            <div class="settings-content">
+              <div class="form-group">
+                <label>群名称</label>
+                <input id="groupCreateNameInput" type="text" placeholder="例如：冒险小队" />
+              </div>
+              <div class="form-group">
+                <label>群成员</label>
+                <div class="group-member-grid" id="groupMembersGrid"></div>
+                <button class="group-member-add" id="groupMemberAddBtn" type="button">+ 添加一个格子</button>
+                <div style="margin-top: 6px; color: var(--text-tertiary); font-size: 12px;">支持中文/英文逗号分隔</div>
+              </div>
+              <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 14px;">
+                <button class="modal-btn cancel-btn" id="groupCreateCancelBtn" type="button">取消</button>
+                <button class="modal-btn confirm-btn" id="groupCreateConfirmBtn" type="button">创建</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const close = () => { overlay.style.display = 'none'; };
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('#groupCreateCloseBtn')?.addEventListener('click', close);
+        overlay.querySelector('#groupCreateCancelBtn')?.addEventListener('click', close);
+
+        const grid = overlay.querySelector('#groupMembersGrid');
+        const addChip = (value = '') => {
+          if (!grid) return;
+          const chip = document.createElement('div');
+          chip.className = 'group-member-chip';
+          chip.innerHTML = `<input type="text" placeholder="成员" value="${String(value).replace(/\"/g, '&quot;')}" />
+                            <button type="button" title="移除">×</button>`;
+          chip.querySelector('button')?.addEventListener('click', () => chip.remove());
+          grid.appendChild(chip);
+          chip.querySelector('input')?.focus();
+        };
+
+        const addBtn = overlay.querySelector('#groupMemberAddBtn');
+        if (addBtn) addBtn.addEventListener('click', () => addChip(''));
+
+        const confirmBtn = overlay.querySelector('#groupCreateConfirmBtn');
+        if (confirmBtn) confirmBtn.addEventListener('click', () => {
+          const nameInput = overlay.querySelector('#groupCreateNameInput');
+          const groupName = nameInput ? String(nameInput.value || '').trim() : '';
+          if (!groupName) {
+            alert('请输入群名称');
+            return;
+          }
+
+          const inputs = [...overlay.querySelectorAll('#groupMembersGrid input')];
+          const rawMembers = inputs.map(i => String(i.value || '')).join(',');
+          const members = splitGroupMembers(rawMembers);
+
+          const groups = getGroupsList();
+          // Sync current messages before changing conversations
+          syncActiveConversationCache();
+          state.groupChatMode = true;
+          try { localStorage.setItem('tavern_chat_mode', 'group'); } catch (_) {}
+
+          const existingIndex = groups.findIndex(c => c && String(c.name || '').trim() === groupName);
+          if (existingIndex >= 0) {
+            const existing = groups[existingIndex];
+            const merged = splitGroupMembers([...(existing.members || []), ...members].join(','));
+            existing.members = merged;
+            state.currentGroupIndex = existingIndex;
+            switchPrivateChat(existingIndex, 'group');
+          } else {
+            groups.unshift({ name: groupName, members, messages: [] });
+            state.currentGroupIndex = 0;
+            switchPrivateChat(0, 'group');
+          }
+
+          buildPrivateChatTabs(getGroupsList(), state.currentGroupIndex || 0);
+          state.friendsPanelMode = 'group';
+          deferredSync();
+          close();
+          toggleFriendsPanel(false);
+        });
+
+        // Default chips
+        overlay.addEventListener('show', () => {
+          const g = overlay.querySelector('#groupMembersGrid');
+          if (g) g.innerHTML = '';
+          addChip('');
+          addChip('');
+          addChip('');
+        });
+
+        return overlay;
+      }
+
+      function openGroupCreateModal() {
+        const overlay = ensureGroupCreateModal();
+        const nameInput = overlay.querySelector('#groupCreateNameInput');
+        if (nameInput) nameInput.value = '';
+        const grid = overlay.querySelector('#groupMembersGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        // add a few empty slots
+        for (let i = 0; i < 3; i++) {
+          const chip = document.createElement('div');
+          chip.className = 'group-member-chip';
+          chip.innerHTML = `<input type="text" placeholder="成员" value="" /><button type="button" title="移除">×</button>`;
+          chip.querySelector('button')?.addEventListener('click', () => chip.remove());
+          grid.appendChild(chip);
         }
-        list.unshift({ name, type: 'friend', addTime: new Date().toISOString() });
-        saveFriendsList(list);
-        displayFriendsInPanel(list);
+        overlay.style.display = 'flex';
+        overlay.setAttribute('aria-hidden', 'false');
+        setTimeout(() => { overlay.querySelector('#groupCreateNameInput')?.focus(); }, 0);
+      }
+
+      function ensureAddChoiceModal() {
+        let overlay = document.getElementById('addChoiceOverlay');
+        if (overlay) return overlay;
+        overlay = document.createElement('div');
+        overlay.id = 'addChoiceOverlay';
+        overlay.className = 'settings-overlay';
+        overlay.style.display = 'none';
+        overlay.innerHTML = `
+          <div class="settings-modal" style="max-width: 420px;">
+            <div class="settings-header">
+              <div class="settings-title">添加</div>
+              <button class="settings-close-btn" id="addChoiceCloseBtn">×</button>
+            </div>
+            <div class="settings-content" style="display:flex; gap:10px; flex-direction:column;">
+              <button class="modal-btn confirm-btn" id="addChoiceFriendBtn" type="button">添加私聊好友</button>
+              <button class="modal-btn confirm-btn" id="addChoiceGroupBtn" type="button">创建群聊</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        const close = () => { overlay.style.display = 'none'; };
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('#addChoiceCloseBtn')?.addEventListener('click', close);
+        overlay.querySelector('#addChoiceFriendBtn')?.addEventListener('click', () => {
+          close();
+          addFriendViaPrompt();
+        });
+        overlay.querySelector('#addChoiceGroupBtn')?.addEventListener('click', () => {
+          close();
+          openGroupCreateModal();
+        });
+        return overlay;
+      }
+
+      function openAddChoiceModal() {
+        const overlay = ensureAddChoiceModal();
+        overlay.style.display = 'flex';
+        overlay.setAttribute('aria-hidden', 'false');
       }
 
       // 面板按钮绑定
       (function initFriendsPanel() {
         const closeBtn = document.getElementById('friendsCloseBtn');
         const addBtn = document.getElementById('friendsAddBtn');
+        const tabs = document.querySelectorAll('#friendsTabs .friends-tab');
         // 禁用关闭按钮（小x），仅允许通过选择列表项进入聊天
         if (closeBtn) {
           try { closeBtn.style.display = 'none'; } catch(_) {}
           closeBtn.onclick = null;
         }
-        if (addBtn) addBtn.onclick = addFriendViaPrompt;
+        if (addBtn) addBtn.onclick = openAddChoiceModal;
+        if (tabs && tabs.length) {
+          tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+              const mode = btn.getAttribute('data-mode') || 'friend';
+              setFriendsPanelMode(mode);
+            });
+          });
+        }
       })();
 
       // 文件类型切换
@@ -17517,120 +18114,52 @@ function toggleFriendsPanel(show) {
       // SillyTavern API 交互
       async function syncToSillyTavern() {
         // 同步前更新本地多会话缓存中当前会话的消息
-        if (Array.isArray(state.privateConversations) &&
-            typeof state.currentPrivateIndex === 'number' &&
-            state.privateConversations[state.currentPrivateIndex]) {
-          state.privateConversations[state.currentPrivateIndex].messages = [...state.messageHistory];
+        syncActiveConversationCache();
+
+        const privateList = getPrivateConversations();
+        const groupList = getGroupConversations();
+        const hasPrivate = privateList.length > 0;
+        const hasGroup = groupList.length > 0;
+        const pyqText = serializeMomentsToPyq(state.moments);
+
+        // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
+        if (!hasPrivate && !hasGroup) {
+          if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
+            if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
+            const log = serializeShoujiLog(state.messageHistory);
+            let messageToSave = log;
+            try {
+              messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
+            } catch (_) {}
+            await setChatMessages([{ message_id: state.currentMsgId, message: messageToSave }], { refresh: 'none' });
+          }
+          return;
         }
-        // 优先尝试多会话(<private>)安全更新，仅替换当前会话块
+
+        const privateBlocks = buildPrivateBlocksFromConversations(privateList);
+        const qunliaoLog = hasGroup ? serializeQunliao(groupList) : '';
+
         if (
           typeof getCurrentMessageId === 'function' &&
           typeof setChatMessages === 'function' &&
           typeof getChatMessages === 'function'
         ) {
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-           const currentId = state.currentMsgId;
-           const msgObj = getChatMessages(currentId)[0];
-           const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
-           const pyqText = serializeMomentsToPyq(state.moments);
-           const shoujiMatch = raw.match(/<shouji>([\s\S]*?)<\/shouji>/);
-           // Rebuild all <private> blocks from memory to avoid mixing between chats
-           if (shoujiMatch) {
-             const innerEarly = shoujiMatch[1];
-             if (/<private>[\s\S]*?<\/private>/.test(innerEarly)) {
-              let rebuiltAll = '';
-              if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
-                for (const conv of state.privateConversations) {
-                  const prevForceName = state.forceCharNameForSerialization;
-                  try {
-                    state.forceCharNameForSerialization = conv.name || getCurrentCharName() || '对方';
-                    const s = serializeShoujiLog(conv.messages || []);
-                    const m = s.match(/<shouji>([\s\S]*?)<\/shouji>/);
-                    const innerPart = m ? (m[1] || '').trim() : '';
-                    rebuiltAll += `<private>\n${innerPart}\n</private>\n`;
-                  } finally {
-                    state.forceCharNameForSerialization = prevForceName;
-                  }
-                }
-              } else {
-                rebuiltAll = innerEarly;
-              }
-              const rebuiltCore = `<shouji>\n${rebuiltAll}\n</shouji>`;
-              const rebuiltWithPyq = upsertPyqIntoShoujiMessage(rebuiltCore, pyqText);
-              const updatedAll = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, rebuiltWithPyq);
-              await setChatMessages([{ message_id: currentId, message: updatedAll }], { refresh: 'none' });
-              return;
-             }
-           }
-           if (shoujiMatch) {
-            const inner = shoujiMatch[1];
-            if (/<private>[\s\S]*?<\/private>/.test(inner)) {
-              // 存在多个私聊会话，仅更新当前会话
-              const currentName = (document.getElementById('chatPersonName')?.textContent || '').trim() || getCurrentCharName() || '对方';
-              // 使用现有序列化逻辑生成当前会话的内部文本（包含标题行，但不含<shouji>包裹）
-              const serialized = (function () {
-                const s = serializeShoujiLog(state.messageHistory);
-                const m = s.match(/<shouji>([\s\S]*?)<\/shouji>/);
-                return m ? m[1].trim() : '';
-              })();
-
-              // 拆分为块并定位目标块（优先按标题名匹配，失败则按索引匹配）
-              const blockMatches = [...inner.matchAll(/<private>[\s\S]*?<\/private>/g)];
-              let idxToReplace = blockMatches.findIndex(b => b[0].includes(`【和${currentName}的聊天】`));
-              if (idxToReplace < 0 && typeof state.currentPrivateIndex === 'number') {
-                idxToReplace = state.currentPrivateIndex;
-              }
-
-              if (idxToReplace >= 0 && idxToReplace < blockMatches.length) {
-                let cursor = 0;
-                let rebuilt = '';
-                for (let i = 0; i < blockMatches.length; i++) {
-                  const match = blockMatches[i];
-                  const start = match.index;
-                  const end = start + match[0].length;
-                  // append text before block
-                  rebuilt += inner.slice(cursor, start);
-                  if (i === idxToReplace) {
-                    rebuilt += `<private>\n${serialized}\n</private>`;
-                  } else {
-                    rebuilt += match[0];
-                  }
-                  cursor = end;
-                }
-                // append remaining tail
-                rebuilt += inner.slice(cursor);
-                let updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${rebuilt}\n</shouji>`);
-                updated = upsertPyqIntoShoujiMessage(updated, pyqText);
-                await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
-                return;
-              } else {
-                // 未能定位则追加一个新会话
-                const finalInner = `${inner.trim()}\n<private>\n${serialized}\n</private>\n`;
-                let updated = raw.replace(/<shouji>[\s\S]*?<\/shouji>/, `<shouji>\n${finalInner}\n</shouji>`);
-                updated = upsertPyqIntoShoujiMessage(updated, pyqText);
-                await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
-                return;
-              }
-            }
-          }
+          const currentId = state.currentMsgId;
+          const msgObj = getChatMessages(currentId)[0];
+          const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
+          const updatedCore = upsertPrivateAndGroupIntoShoujiMessage(raw, privateBlocks, qunliaoLog);
+          const updated = upsertPyqIntoShoujiMessage(updatedCore, pyqText);
+          await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
+          return;
         }
 
-        // 兼容旧格式：整块更新
         if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          const log = serializeShoujiLog(state.messageHistory);
-          let messageToSave = log;
+          let messageToSave = upsertPrivateAndGroupIntoShoujiMessage('<shouji>\n</shouji>', privateBlocks, qunliaoLog);
           try {
-            // 若当前处于多会话语义（或已选择会话），将内容包裹到<private>
-            if (Array.isArray(state.privateConversations) && state.privateConversations.length > 0) {
-              const m = log.match(/<shouji>([\s\S]*?)<\/shouji>/);
-              const inner = m ? (m[1] || '').trim() : '';
-              messageToSave = `<shouji>\n<private>\n${inner}\n</private>\n</shouji>`;
-            }
-          } catch(e) {}
-          try {
-            messageToSave = upsertPyqIntoShoujiMessage(messageToSave, serializeMomentsToPyq(state.moments));
-          } catch (e) {}
+            messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
+          } catch (_) {}
           await setChatMessages([{ message_id: state.currentMsgId, message: messageToSave }], { refresh: 'none' });
         }
       }
@@ -17642,11 +18171,7 @@ function toggleFriendsPanel(show) {
         }
 
         // Make sure current conversation cache stays in sync immediately
-        if (Array.isArray(state.privateConversations) &&
-            typeof state.currentPrivateIndex === 'number' &&
-            state.privateConversations[state.currentPrivateIndex]) {
-          state.privateConversations[state.currentPrivateIndex].messages = [...state.messageHistory];
-        }
+        syncActiveConversationCache();
 
         syncTimeout = setTimeout(async () => {
           if (!pendingSync) {
@@ -17673,45 +18198,77 @@ function toggleFriendsPanel(show) {
             } catch (e) {
               state.moments = [];
             }
-             // 优先解析多会话(<private>)
-             const conversations = parsePrivateConversationsFromShouji(msg.message);
+             // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
+             const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
+             const privateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
              const nameSpan = document.getElementById('chatPersonName');
-             if (conversations.length > 0) {
-              state.privateConversations = conversations;
-              // 选择默认激活会话：若标题名与现有显示名或可解析名匹配，则选之
-              let activeIndex = 0;
-              const _titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
-              const wantedName = (nameSpan?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(msg.message)) || '';
-              if (wantedName) {
-                const idx = conversations.findIndex(c => c.name === wantedName);
-                if (idx >= 0) activeIndex = idx;
-              }
-              state.currentPrivateIndex = activeIndex;
-              state.messageHistory = conversations[activeIndex].messages || [];
-              if (nameSpan) nameSpan.textContent = conversations[activeIndex].name || wantedName || '';
-              buildPrivateChatTabs(conversations, activeIndex);
-              console.log('Loaded multi-private conversations:', conversations.length, 'active:', activeIndex);
-            } else {
-              // 单会话格式保持兼容
-              const titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
-              const personName = titleMatch ? titleMatch[1] : parsePersonNameFromShouji(msg.message);
-              if (nameSpan) {
-                if (personName) {
-                  nameSpan.textContent = personName;
-                  console.log('Set person name to:', personName);
-                } else {
-                  console.log('No person name found, keeping current name:', nameSpan.textContent);
-                }
-              }
-              state.messageHistory = parseShoujiLog(msg.message);
-              const tabs = document.getElementById('privateChatTabs');
-              if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
-             console.log('Loaded single conversation, messages:', state.messageHistory.length);
+
+             state.groupConversations = groupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
+             state.privateConversations = privateConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
+
+             const hasPrivate = state.privateConversations.length > 0;
+             const hasGroup = state.groupConversations.length > 0;
+
+             // 决定默认模式（优先使用上次选择）
+             let preferred = '';
+             try { preferred = String(localStorage.getItem('tavern_chat_mode') || ''); } catch (_) {}
+             if (preferred === 'group' && hasGroup) state.groupChatMode = true;
+             else if (preferred === 'private' && hasPrivate) state.groupChatMode = false;
+             else if (!hasPrivate && hasGroup) state.groupChatMode = true;
+             else state.groupChatMode = false;
+             state.friendsPanelMode = state.groupChatMode ? 'group' : 'friend';
+
+             if (hasPrivate || hasGroup) {
+               // 选择默认激活会话：若标题名与现有显示名或可解析名匹配，则选之
+               let activePrivateIndex = 0;
+               let activeGroupIndex = 0;
+               const _titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
+               const wantedName = (nameSpan?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(msg.message)) || '';
+               if (wantedName && hasPrivate) {
+                 const idx = state.privateConversations.findIndex(c => c && c.name === wantedName);
+                 if (idx >= 0) activePrivateIndex = idx;
+               }
+               if (wantedName && hasGroup) {
+                 const idx = state.groupConversations.findIndex(c => c && c.name === wantedName);
+                 if (idx >= 0) activeGroupIndex = idx;
+               }
+               state.currentPrivateIndex = activePrivateIndex;
+               state.currentGroupIndex = activeGroupIndex;
+
+               const activeList = state.groupChatMode ? state.groupConversations : state.privateConversations;
+               const activeIndex = state.groupChatMode ? state.currentGroupIndex : state.currentPrivateIndex;
+               state.messageHistory = activeList[activeIndex]?.messages || [];
+               if (nameSpan) nameSpan.textContent = activeList[activeIndex]?.name || wantedName || '';
+               buildPrivateChatTabs(activeList, activeIndex);
+               console.log('Loaded conversations - private:', state.privateConversations.length, 'group:', state.groupConversations.length);
+             } else {
+               state.groupChatMode = false;
+               // 单会话格式保持兼容
+               const titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
+               const personName = titleMatch ? titleMatch[1] : parsePersonNameFromShouji(msg.message);
+               if (nameSpan) {
+                 if (personName) {
+                   nameSpan.textContent = personName;
+                   console.log('Set person name to:', personName);
+                 } else {
+                   console.log('No person name found, keeping current name:', nameSpan.textContent);
+                 }
+               }
+               state.messageHistory = parseShoujiLog(msg.message);
+               const tabs = document.getElementById('privateChatTabs');
+               if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
+               console.log('Loaded single conversation, messages:', state.messageHistory.length);
              }
-           } else {
-             state.messageHistory = [];
+          } else {
+            state.messageHistory = [];
             state.moments = [];
-             const nameSpan = document.getElementById('chatPersonName');
+            state.groupChatMode = false;
+            state.friendsPanelMode = 'friend';
+            state.privateConversations = [];
+            state.groupConversations = [];
+            state.currentPrivateIndex = 0;
+            state.currentGroupIndex = 0;
+            const nameSpan = document.getElementById('chatPersonName');
              if (nameSpan && !nameSpan.textContent.trim()) {
                nameSpan.textContent = '';
              }
@@ -18425,7 +18982,11 @@ function toggleFriendsPanel(show) {
         if (shoujiMatch) {
           let content = shoujiMatch[1];
           // 排除同层朋友圈块，避免误把 [评论|...] 当成角色消息
-          content = String(content || '').replace(/<pyq>[\s\S]*?<\/pyq>/g, '').replace(/^\s*同层朋友圈\s*$/gm, '');
+          content = String(content || '')
+            .replace(/<pyq>[\s\S]*?<\/pyq>/g, '')
+            .replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '')
+            .replace(/<multi>[\s\S]*?<\/multi>/g, '')
+            .replace(/^\s*同层朋友圈\s*$/gm, '');
           // 查找第一个角色消息中的角色名
           const charMsgMatch = content.match(/\[(?!评论\|)(.+?)\|(.+?)\|.*?\|(\d{2}:\d{2})\]/);
           if (charMsgMatch && charMsgMatch[1] !== '我方消息' && charMsgMatch[1] !== '对方消息') {
@@ -18447,6 +19008,9 @@ function toggleFriendsPanel(show) {
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && nameSpan.textContent.trim()) {
           return nameSpan.textContent.trim();
+        }
+        if (state && state.groupChatMode) {
+          return '群聊';
         }
 
         // 尝试从最近的角色消息中获取角色名
@@ -18535,21 +19099,17 @@ function toggleFriendsPanel(show) {
         wrapper.appendChild(timeSpan);
 
         if (msg.sender === 'user') {
-          const avatarDiv = document.createElement('div');
-          avatarDiv.className = 'avatar user_avatar';
-          applyUserAvatar(avatarDiv);
-          message.appendChild(avatarDiv);
+          const avatarBlock = createUserAvatarBlock({ name: NAME_USER, avatarClassName: 'avatar user_avatar' });
+          if (avatarBlock) message.appendChild(avatarBlock);
           message.appendChild(wrapper);
         } else {
-          if (msg.avatar) {
-            const charName = msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
-            const avatarBlock = createCharAvatarBlock(msg, {
-              name: charName,
-              avatarClassName: 'avatar',
-              addPoke: false,
-            });
-            if (avatarBlock) message.appendChild(avatarBlock);
-          }
+          const charName = msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
+          const avatarBlock = createCharAvatarBlock(msg, {
+            name: charName,
+            avatarClassName: 'avatar',
+            addPoke: false,
+          });
+          if (avatarBlock) message.appendChild(avatarBlock);
           message.appendChild(wrapper);
         }
 
