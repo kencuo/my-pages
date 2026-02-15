@@ -1854,6 +1854,51 @@
         margin-bottom: 0;
       }
 
+      /* 导入/导出面板样式 */
+      .import-export-section {
+        margin-bottom: 12px;
+        padding: 12px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background: #fafafa;
+      }
+
+      .import-export-section h3 {
+        margin: 0 0 8px 0;
+        color: #444;
+        font-size: 14px;
+      }
+
+      .import-export-section p {
+        margin: 0 0 10px 0;
+        color: #666;
+        font-size: 12px;
+      }
+
+      .import-export-divider {
+        height: 1px;
+        background: linear-gradient(to right, transparent, #cccccc, transparent);
+        margin: 12px 0;
+      }
+
+      #importSelectedFileName {
+        min-height: 16px;
+        font-size: 12px;
+        color: #666;
+        text-align: center;
+      }
+
+      #importSelectedFileName:empty::before {
+        content: '未选择文件';
+        color: #999;
+      }
+
+      #jsonPreview {
+        resize: vertical;
+        min-height: 100px;
+        max-height: 260px;
+      }
+
       .setting-label {
         font-size: 16px;
         font-weight: 500;
@@ -5095,6 +5140,11 @@
         font-weight: bold;
         color: #ff6b35;
       }
+      .wechat-transfer .transfer-target {
+        font-size: 11px;
+        color: #666;
+        margin-top: 2px;
+      }
 
       /* 红包样式 */
       .wechat-redpacket-card {
@@ -5170,6 +5220,11 @@
       .redpacket-status {
         font-size: 13px;
         opacity: 0.8;
+      }
+      .redpacket-target {
+        font-size: 11px;
+        opacity: 0.9;
+        margin-top: 2px;
       }
 
       .redpacket-footer {
@@ -7860,6 +7915,20 @@
             </div>
           </div>
 
+          <!-- 好友/世界书导入导出 -->
+          <div class="setting-section">
+            <label class="setting-label">📁 好友 / 世界书</label>
+            <div class="setting-preview">
+              <div class="preview-info" style="flex: 1;">
+                <div class="preview-title">导入/导出好友列表</div>
+                <div class="preview-desc">支持好友JSON导入导出与一键远程世界书导入</div>
+              </div>
+              <button class="upload-btn" id="openImportExportBtn" style="white-space: nowrap;">
+                📁 打开面板
+              </button>
+            </div>
+          </div>
+
           <!-- 导出功能 -->
           <div class="setting-section">
             <label class="setting-label">📄 导出聊天记录</label>
@@ -7951,6 +8020,104 @@
       </div>
     </div>
     </div></div>
+
+    <!-- 导入/导出好友列表 & 远程世界书 -->
+    <div class="settings-overlay" id="importExportOverlay" style="display: none;">
+      <div class="settings-modal" style="max-width: 520px; max-height: 85vh;">
+        <div class="settings-header">
+          <div class="settings-title">📁 导入/导出好友列表</div>
+          <button class="settings-close-btn" id="importExportCloseBtn">×</button>
+        </div>
+        <div class="settings-content">
+          <!-- 导出区域 -->
+          <div class="import-export-section">
+            <h3>📤 导出好友列表</h3>
+            <p>将当前角色的好友列表导出为JSON文件（不包含聊天记录）</p>
+            <div style="margin: 10px 0;">
+              <button class="upload-btn" id="exportFriendsBtn" style="width: 100%;">📥 导出为JSON文件</button>
+            </div>
+          </div>
+
+          <div class="import-export-divider"></div>
+
+          <!-- 远程世界书导入区域 -->
+          <div class="import-export-section">
+            <h3>🌐 远程世界书导入</h3>
+            <p>使用预设地址导入世界书到当前角色主世界书</p>
+
+            <div style="margin: 10px 0;">
+              <button class="upload-btn" id="importRemoteWorldbookBtn" style="width: 100%; margin-bottom: 8px;">
+                🌐 导入远程世界书
+              </button>
+              <div style="font-size: 12px; color: #666; text-align: center;">链接已隐藏（仅本地保存，可随时更改）。</div>
+              <div id="worldbookDetectInfo" style="font-size: 12px; color: #666; text-align: center; margin-top: 6px;"></div>
+            </div>
+
+            <div style="margin: 10px 0;">
+              <label style="display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; color: #333;">
+                <input type="checkbox" id="autoUpdateWorldbook" style="margin-right: 8px" />
+                <span>启用自动更新（每24小时检查一次）</span>
+              </label>
+              <div style="font-size: 12px; color: #666;">启用后会定期检查远程世界书更新并自动合并到主世界书</div>
+            </div>
+          </div>
+
+          <div class="import-export-divider"></div>
+
+          <!-- 导入区域 -->
+          <div class="import-export-section">
+            <h3>📥 导入好友列表</h3>
+            <p>从JSON文件导入好友列表到当前角色（群聊仅追加，不覆盖已有记录）</p>
+
+            <div style="margin: 10px 0;">
+              <input
+                type="file"
+                id="importFileInput"
+                accept=".json"
+                style="display: none"
+              />
+              <button class="upload-btn" id="selectImportFileBtn" style="width: 100%; margin-bottom: 8px;">
+                📁 选择JSON文件
+              </button>
+              <div id="importSelectedFileName"></div>
+            </div>
+
+            <div style="margin: 10px 0;">
+              <label style="display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; color: #333;">
+                <input type="radio" name="importMode" value="replace" checked style="margin-right: 8px" />
+                <span>替换现有好友列表</span>
+              </label>
+              <label style="display: flex; align-items: center; font-size: 12px; color: #333;">
+                <input type="radio" name="importMode" value="merge" style="margin-right: 8px" />
+                <span>合并到现有好友列表（跳过重复）</span>
+              </label>
+            </div>
+
+            <div style="margin: 10px 0;">
+              <button class="upload-btn" id="importFriendsBtn" style="width: 100%;" disabled>📥 导入好友列表</button>
+            </div>
+          </div>
+
+          <div class="import-export-section" id="jsonPreviewSection" style="display: none;">
+            <h3>📋 JSON预览</h3>
+            <textarea
+              id="jsonPreview"
+              readonly
+              style="
+                width: 100%;
+                height: 150px;
+                font-family: monospace;
+                font-size: 12px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 8px;
+                background: #f9f9f9;
+              "
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 文件发送弹窗 -->
     <div class="simple-modal-overlay" id="fileModalOverlay" style="display: none;">
@@ -8429,9 +8596,15 @@ function applyUserAvatar(avatarElement) {
       
       function parseInlineContentType(content) {
         // Transfer
-        const transferMatch = content.match(/^转账(.*?)元(\(已处理\))?$/);
+        const transferMatch = content.match(/^转账(\d+(?:\.\d+)?)元(?:\(给([^)]+)\))?(\(已处理\))?$/);
         if (transferMatch) {
-          return { type: 'transfer', amount: transferMatch[1], claimed: !!transferMatch[2], content };
+          return {
+            type: 'transfer',
+            amount: transferMatch[1],
+            targetName: transferMatch[2] ? String(transferMatch[2]).trim() : '',
+            claimed: !!transferMatch[3],
+            content,
+          };
         }
         // Receive
         const receiveMatch = content.match(/^收账(.*?)元$/);
@@ -8439,9 +8612,15 @@ function applyUserAvatar(avatarElement) {
           return { type: 'receive', amount: receiveMatch[1], content };
         }
         // Red Packet
-        const redpacketMatch = content.match(/^红包(.*?)元(\(已领取\))?$/);
+        const redpacketMatch = content.match(/^红包(\d+(?:\.\d+)?)元(?:\(给([^)]+)\))?(\(已领取\))?$/);
         if (redpacketMatch) {
-          return { type: 'redpacket', amount: redpacketMatch[1], claimed: !!redpacketMatch[2], content };
+          return {
+            type: 'redpacket',
+            amount: redpacketMatch[1],
+            targetName: redpacketMatch[2] ? String(redpacketMatch[2]).trim() : '',
+            claimed: !!redpacketMatch[3],
+            content,
+          };
         }
         // Claimed Red Packet
         const claimedRedpacketMatch = content.match(/^领取红包(.*?)元$/);
@@ -8495,22 +8674,24 @@ function applyUserAvatar(avatarElement) {
         },
         // 🔄 新格式：转账消息
         {
-          regex: /^\[我方消息\|转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
-          handler: ([, amount, time]) => ({
+          regex: /^\[我方消息\|转账(\d+(?:\.\d+)?)元(?:\(给([^)]+)\))?\|(\d{2}:\d{2})\]$/,
+          handler: ([, amount, targetName, time]) => ({
             sender: 'user',
             type: 'transfer',
             amount: parseFloat(amount),
+            targetName: targetName ? String(targetName).trim() : '',
             time,
           }),
         },
         {
-          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|转账(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
-          handler: ([, charName, avatar, amount, time]) => ({
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|转账(\d+(?:\.\d+)?)元(?:\(给([^)]+)\))?\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, avatar, amount, targetName, time]) => ({
             sender: 'char',
             type: 'transfer',
             charName,
             avatar,
             amount: parseFloat(amount),
+            targetName: targetName ? String(targetName).trim() : '',
             time,
           }),
         },
@@ -8577,22 +8758,24 @@ function applyUserAvatar(avatarElement) {
         },
         // 🔄 新格式：红包消息
         {
-          regex: /^\[我方消息\|红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
-          handler: ([, amount, time]) => ({
+          regex: /^\[我方消息\|红包(\d+(?:\.\d+)?)元(?:\(给([^)]+)\))?\|(\d{2}:\d{2})\]$/,
+          handler: ([, amount, targetName, time]) => ({
             sender: 'user',
             type: 'redpacket',
             amount: parseFloat(amount),
+            targetName: targetName ? String(targetName).trim() : '',
             time,
           }),
         },
         {
-          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|红包(\d+(?:\.\d+)?)元\|(\d{2}:\d{2})\]$/,
-          handler: ([, charName, avatar, amount, time]) => ({
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|红包(\d+(?:\.\d+)?)元(?:\(给([^)]+)\))?\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, avatar, amount, targetName, time]) => ({
             sender: 'char',
             type: 'redpacket',
             charName,
             avatar,
             amount: parseFloat(amount),
+            targetName: targetName ? String(targetName).trim() : '',
             time,
           }),
         },
@@ -10849,12 +11032,13 @@ function applyUserAvatar(avatarElement) {
           // 🔄 新格式：直接返回格式化字符串，不依赖content重构
           const currentCharName = getCurrentCharName();
           const nameForOther = (m && (m.charName || m.name)) ? String(m.charName || m.name).trim() : currentCharName;
+          const targetSuffix = (m && m.targetName) ? `(给${String(m.targetName).trim()})` : '';
 
           // 转账消息
           if (m.type === 'transfer') {
             return m.sender === 'user'
-              ? `[我方消息|转账${m.amount}元|${m.time}]`
-              : `[${nameForOther}|${m.avatar || ''}|转账${m.amount}元|${m.time}]`;
+              ? `[我方消息|转账${m.amount}元${targetSuffix}|${m.time}]`
+              : `[${nameForOther}|${m.avatar || ''}|转账${m.amount}元${targetSuffix}|${m.time}]`;
           }
           // 收账消息
           else if (m.type === 'receive') {
@@ -10871,8 +11055,8 @@ function applyUserAvatar(avatarElement) {
           // 红包消息
           else if (m.type === 'redpacket') {
             return m.sender === 'user'
-              ? `[我方消息|红包${m.amount}元|${m.time}]`
-              : `[${nameForOther}|${m.avatar || ''}|红包${m.amount}元|${m.time}]`;
+              ? `[我方消息|红包${m.amount}元${targetSuffix}|${m.time}]`
+              : `[${nameForOther}|${m.avatar || ''}|红包${m.amount}元${targetSuffix}|${m.time}]`;
           }
           // 领取红包
           else if (m.type === 'claimed-redpacket') {
@@ -11571,6 +11755,7 @@ function applyUserAvatar(avatarElement) {
 
       function renderTransferMessage(contentDiv, msg, idx) {
         contentDiv.classList.add('wechat-transfer');
+        const targetLine = msg.targetName ? `<div class="transfer-target">给 ${msg.targetName}</div>` : '';
 
         // 💰 微信风格转账样式
         contentDiv.innerHTML = `
@@ -11580,6 +11765,7 @@ function applyUserAvatar(avatarElement) {
               <div class="transfer-info">
                 <div class="transfer-title">转账</div>
                 <div class="transfer-amount">¥${msg.amount}</div>
+                ${targetLine}
               </div>
             </div>
             ${msg.sender === 'char' && !msg.claimed ? '<div class="wechat-card-footer">点击查看详情</div>' : ''}
@@ -11629,6 +11815,7 @@ function applyUserAvatar(avatarElement) {
       }
       function renderRedPacketMessage(contentDiv, msg, idx) {
         contentDiv.classList.add('wechat-redpacket');
+        const targetLine = msg.targetName ? `<div class="redpacket-target">给 ${msg.targetName}</div>` : '';
 
         // 🧧 微信风格红包样式
         if (msg.claimed) {
@@ -11639,6 +11826,7 @@ function applyUserAvatar(avatarElement) {
                 <div class="redpacket-info">
                   <div class="redpacket-title">红包</div>
                   <div class="redpacket-status">红包已被领取</div>
+                  ${targetLine}
                 </div>
               </div>
             </div>
@@ -11651,6 +11839,7 @@ function applyUserAvatar(avatarElement) {
                 <div class="redpacket-info">
                   <div class="redpacket-title">微信红包</div>
                   <div class="redpacket-amount">¥${msg.amount}</div>
+                  ${targetLine}
                 </div>
               </div>
               ${msg.sender === 'char' ? '<div class="redpacket-footer">点击领取红包</div>' : ''}
@@ -12664,7 +12853,13 @@ function applyUserAvatar(avatarElement) {
             alert('红包金额必须大于0元！');
             return;
           }
-          sendMessage({ type: 'redpacket', amount: numAmount.toFixed(2) });
+          let targetName = '';
+          if (state.groupChatMode) {
+            const picked = selectGroupMemberForAction('红包');
+            if (!picked) return;
+            targetName = picked;
+          }
+          sendMessage({ type: 'redpacket', amount: numAmount.toFixed(2), targetName });
         } else if (amount) {
           alert('请输入有效的数字金额！');
         }
@@ -12706,7 +12901,7 @@ function applyUserAvatar(avatarElement) {
               text = `[变音特效|${extra.voiceEffect}|${extra.voiceEffectContent}]`;
               break;
             case 'transfer':
-              text = `转账${extra.amount}元`;
+              text = `转账${extra.amount}元${extra.targetName ? `(给${extra.targetName})` : ''}`;
               break;
             case 'receive':
               text = `收账${extra.amount}元`;
@@ -12715,7 +12910,7 @@ function applyUserAvatar(avatarElement) {
               text = `已退回收账`;
               break;
             case 'redpacket':
-              text = `红包${extra.amount}元`;
+              text = `红包${extra.amount}元${extra.targetName ? `(给${extra.targetName})` : ''}`;
               break;
             case 'claimed-redpacket':
               text = `领取红包${extra.amount}元`;
@@ -15086,11 +15281,39 @@ function applyUserAvatar(avatarElement) {
         }
       }
 
+      function selectGroupMemberForAction(actionLabel) {
+        if (!state.groupChatMode) return '';
+        const members = getActiveGroupMembers();
+        if (!members.length) {
+          alert('请先在群聊创建时设置成员');
+          return null;
+        }
+        const listText = members.map((m, i) => `${i + 1}. ${m}`).join('\n');
+        const input = prompt(`${actionLabel}：请选择成员（输入序号或名字）\n${listText}`);
+        if (!input) return null;
+        const trimmed = String(input).trim();
+        if (!trimmed) return null;
+        const idx = parseInt(trimmed, 10);
+        if (!isNaN(idx) && idx >= 1 && idx <= members.length) return members[idx - 1];
+        const exact = members.find(m => m === trimmed);
+        if (exact) return exact;
+        const fuzzy = members.find(m => m.includes(trimmed));
+        if (fuzzy) return fuzzy;
+        alert('未找到该成员，请重新选择');
+        return null;
+      }
+
       // 发送转账
       function sendTransfer() {
         const amount = prompt('请输入转账金额:');
         if (amount && !isNaN(parseFloat(amount))) {
-          sendMessage({ type: 'transfer', amount: parseFloat(amount).toFixed(2) });
+          let targetName = '';
+          if (state.groupChatMode) {
+            const picked = selectGroupMemberForAction('转账');
+            if (!picked) return;
+            targetName = picked;
+          }
+          sendMessage({ type: 'transfer', amount: parseFloat(amount).toFixed(2), targetName });
         } else if (amount) {
           alert('请输入有效的数字金额！');
         }
@@ -15592,6 +15815,615 @@ function applyUserAvatar(avatarElement) {
           }
           localStorage.setItem(key, JSON.stringify(list));
         } catch (e) { console.warn('保存好友失败', e); }
+      }
+
+      // ==================== 导入/导出与远程世界书 ====================
+      let selectedImportFile = null;
+      let autoUpdateInterval = null;
+
+      function showImportExportModal() {
+        const overlay = document.getElementById('importExportOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+
+        selectedImportFile = null;
+        const fileInput = document.getElementById('importFileInput');
+        if (fileInput) fileInput.value = '';
+        const nameEl = document.getElementById('importSelectedFileName');
+        if (nameEl) nameEl.textContent = '';
+        const importBtn = document.getElementById('importFriendsBtn');
+        if (importBtn) importBtn.disabled = true;
+        const previewSection = document.getElementById('jsonPreviewSection');
+        if (previewSection) previewSection.style.display = 'none';
+        const preview = document.getElementById('jsonPreview');
+        if (preview) preview.value = '';
+
+        const replaceRadio = document.querySelector('input[name="importMode"][value="replace"]');
+        if (replaceRadio) replaceRadio.checked = true;
+
+        loadAutoUpdateSetting();
+      }
+
+      function closeImportExportModal() {
+        const overlay = document.getElementById('importExportOverlay');
+        if (overlay) overlay.style.display = 'none';
+      }
+
+      function exportFriends() {
+        try {
+          const charInfo = getCurrentCharacterInfo();
+          const friends = loadFriendsList().map(normalizeFriendEntry).filter(f => f.name);
+          const friendEntries = friends.map(f => ({
+            type: 'friend',
+            name: String(f.name || '').trim(),
+            addTime: f.addTime || new Date().toISOString(),
+          })).filter(f => f.name);
+
+          const groups = getGroupConversations().map((g, i) => {
+            const name = g && g.name ? String(g.name).trim() : `群聊${i + 1}`;
+            const members = (g && Array.isArray(g.members)) ? g.members.filter(Boolean) : [];
+            return {
+              type: 'group',
+              name,
+              members,
+              addTime: g && g.addTime ? g.addTime : new Date().toISOString(),
+            };
+          }).filter(g => g.name);
+
+          const exportData = {
+            version: '1.1',
+            exportTime: new Date().toISOString(),
+            character: {
+              id: charInfo.id,
+              name: charInfo.name,
+              source: charInfo.source,
+            },
+            friendsCount: friendEntries.length,
+            groupCount: groups.length,
+            friends: [...friendEntries, ...groups],
+          };
+
+          const jsonString = JSON.stringify(exportData, null, 2);
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+
+          const safeName = String(charInfo.name || '角色').replace(/[\\/:*?"<>|]/g, '_');
+          const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+          const fileName = `好友列表_${safeName}_${timestamp}.json`;
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          alert(`✅ 导出成功！\n\n文件名: ${fileName}\n好友数量: ${friendEntries.length}\n群聊数量: ${groups.length}\n角色: ${charInfo.name}`);
+        } catch (error) {
+          console.error('导出好友列表失败:', error);
+          alert('❌ 导出失败: ' + error.message);
+        }
+      }
+
+      function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) {
+          selectedImportFile = null;
+          const nameEl = document.getElementById('importSelectedFileName');
+          if (nameEl) nameEl.textContent = '';
+          const importBtn = document.getElementById('importFriendsBtn');
+          if (importBtn) importBtn.disabled = true;
+          const previewSection = document.getElementById('jsonPreviewSection');
+          if (previewSection) previewSection.style.display = 'none';
+          return;
+        }
+
+        if (!file.name.toLowerCase().endsWith('.json')) {
+          alert('请选择JSON格式的文件');
+          event.target.value = '';
+          return;
+        }
+
+        selectedImportFile = file;
+        const nameEl = document.getElementById('importSelectedFileName');
+        if (nameEl) nameEl.textContent = file.name;
+        const importBtn = document.getElementById('importFriendsBtn');
+        if (importBtn) importBtn.disabled = false;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const jsonData = JSON.parse(e.target.result);
+            const preview = document.getElementById('jsonPreview');
+            if (preview) preview.value = JSON.stringify(jsonData, null, 2);
+            const previewSection = document.getElementById('jsonPreviewSection');
+            if (previewSection) previewSection.style.display = 'block';
+          } catch (error) {
+            console.error('JSON解析失败:', error);
+            const preview = document.getElementById('jsonPreview');
+            if (preview) preview.value = '文件格式错误，无法预览';
+            const previewSection = document.getElementById('jsonPreviewSection');
+            if (previewSection) previewSection.style.display = 'block';
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function buildNormalizedImportEntries(data) {
+        if (!data || typeof data !== 'object') {
+          alert('❌ 导入失败: 文件格式不正确');
+          return null;
+        }
+
+        const rawList = Array.isArray(data) ? data : data.friends;
+        if (!Array.isArray(rawList)) {
+          alert('❌ 导入失败: 文件中缺少好友数据');
+          return null;
+        }
+
+        const normalized = [];
+        for (let i = 0; i < rawList.length; i++) {
+          const friend = rawList[i];
+          if (typeof friend === 'string') {
+            const name = friend.trim();
+            if (!name) {
+              alert(`❌ 导入失败: 第${i + 1}个好友名称为空`);
+              return null;
+            }
+            normalized.push({ type: 'friend', name, members: [], addTime: null });
+            continue;
+          }
+          if (!friend || typeof friend !== 'object') {
+            alert(`❌ 导入失败: 第${i + 1}个好友格式无效`);
+            return null;
+          }
+          const name = String(friend.name || friend.title || friend.nickname || '').trim();
+          if (!name) {
+            alert(`❌ 导入失败: 第${i + 1}个好友缺少有效的名称`);
+            return null;
+          }
+          const type = friend.type === 'group' ? 'group' : 'friend';
+          const members = Array.isArray(friend.members) ? friend.members.map(m => String(m).trim()).filter(Boolean) : [];
+          normalized.push({ type, name, members, addTime: friend.addTime });
+        }
+        return normalized;
+      }
+
+      function validateImportData(data) {
+        try {
+          const normalized = buildNormalizedImportEntries(data);
+          if (!normalized) return null;
+
+          const friendCount = normalized.filter(f => f.type !== 'group').length;
+          const groupCount = normalized.filter(f => f.type === 'group').length;
+
+          const previewMessage =
+            `📋 导入预览\n\n` +
+            `文件版本: ${data.version || '未知'}\n` +
+            `导出时间: ${data.exportTime ? new Date(data.exportTime).toLocaleString('zh-CN') : '未知'}\n` +
+            `原角色: ${data.character?.name || '未知'}\n` +
+            `好友数量: ${friendCount} 个\n` +
+            `群聊数量: ${groupCount} 个\n` +
+            `总计: ${normalized.length} 个\n\n` +
+            `群聊仅追加空白会话，不会覆盖已有记录。\n` +
+            `确定要导入这些数据吗？`;
+
+          return confirm(previewMessage) ? normalized : null;
+        } catch (error) {
+          console.error('验证导入数据失败:', error);
+          alert('❌ 导入失败: 数据验证出错');
+          return null;
+        }
+      }
+
+      function importFriends() {
+        if (!selectedImportFile) {
+          alert('请先选择要导入的JSON文件');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const importData = JSON.parse(e.target.result);
+            const normalized = validateImportData(importData);
+            if (!normalized) return;
+
+            const importFriendsList = normalized.filter(f => f.type !== 'group');
+            const importGroups = normalized.filter(f => f.type === 'group');
+
+            const importMode = document.querySelector('input[name="importMode"]:checked').value;
+            const charInfo = getCurrentCharacterInfo();
+
+            const currentFriends = loadFriendsList().map(normalizeFriendEntry).filter(f => f.name);
+            let finalFriends = [];
+            let importedCount = 0;
+            let skippedCount = 0;
+
+            if (importMode === 'replace') {
+              finalFriends = importFriendsList.map(friend => ({
+                name: friend.name,
+                addTime: friend.addTime || new Date().toISOString(),
+              }));
+              importedCount = finalFriends.length;
+            } else {
+              finalFriends = [...currentFriends];
+              for (const importFriend of importFriendsList) {
+                const exists = finalFriends.some(existing => String(existing.name || '').trim() === importFriend.name);
+                if (!exists) {
+                  finalFriends.push({
+                    name: importFriend.name,
+                    addTime: importFriend.addTime || new Date().toISOString(),
+                  });
+                  importedCount++;
+                } else {
+                  skippedCount++;
+                }
+              }
+            }
+
+            saveFriendsList(finalFriends);
+
+            // 群聊仅追加，不覆盖已有记录
+            let groupImportedCount = 0;
+            let groupSkippedCount = 0;
+            const groupsList = getGroupConversations();
+            for (const group of importGroups) {
+              const exists = groupsList.some(g => String(g.name || '').trim() === group.name);
+              if (!exists) {
+                groupsList.push({
+                  name: group.name,
+                  members: Array.isArray(group.members) ? group.members : [],
+                  messages: [],
+                });
+                groupImportedCount++;
+              } else {
+                // 如果已有群聊但成员为空，尝试补全成员
+                const target = groupsList.find(g => String(g.name || '').trim() === group.name);
+                if (target && (!Array.isArray(target.members) || target.members.length === 0) && group.members.length) {
+                  target.members = group.members;
+                }
+                groupSkippedCount++;
+              }
+            }
+
+            renderFriendsPanelList();
+            syncToSillyTavern();
+
+            closeImportExportModal();
+
+            let resultMessage = `✅ 导入完成！\n\n`;
+            resultMessage += `角色: ${charInfo.name}\n`;
+            resultMessage += `导入模式: ${importMode === 'replace' ? '替换' : '合并'}\n`;
+            resultMessage += `成功导入好友: ${importedCount} 个\n`;
+            if (skippedCount > 0) resultMessage += `跳过重复好友: ${skippedCount} 个\n`;
+            if (groupImportedCount > 0 || groupSkippedCount > 0) {
+              resultMessage += `新增群聊: ${groupImportedCount} 个\n`;
+              if (groupSkippedCount > 0) resultMessage += `已存在群聊: ${groupSkippedCount} 个\n`;
+            }
+            resultMessage += `当前好友总数: ${finalFriends.length} 个`;
+
+            alert(resultMessage);
+          } catch (error) {
+            console.error('导入好友列表失败:', error);
+            alert('❌ 导入失败: ' + error.message);
+          }
+        };
+
+        reader.readAsText(selectedImportFile);
+      }
+
+      // ==================== 远程世界书导入功能 ====================
+      async function importRemoteWorldbook() {
+        const url = getDefaultRemoteWorldbookUrl();
+        if (!url) {
+          alert('未配置远程世界书地址');
+          return;
+        }
+
+        try {
+          console.log('开始导入远程世界书');
+
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const worldbookData = await response.json();
+          console.log('远程世界书数据:', worldbookData);
+
+          if (!worldbookData.entries || typeof worldbookData.entries !== 'object') {
+            throw new Error('无效的世界书格式：缺少entries字段');
+          }
+
+          await processWorldbookImport(worldbookData, url);
+          saveRemoteWorldbookInfo(url, worldbookData);
+          if (worldbookData.version) {
+            const versionKey = getFriendsStorageKey() + '_remote_worldbook_version';
+            localStorage.setItem(versionKey, JSON.stringify({ version: worldbookData.version, updatedAt: Date.now() }));
+          }
+        } catch (error) {
+          console.error('远程世界书导入失败');
+          alert('❌ 导入失败');
+        }
+      }
+
+      async function processWorldbookImport(worldbookData, sourceUrl) {
+        try {
+          const TH = parent?.TavernHelper;
+          const ST = parent?.SillyTavern?.getContext?.();
+
+          if (!TH || !ST) {
+            throw new Error('未检测到 TavernHelper 或 SillyTavern 上下文（需要JS-Slash-Runner扩展）');
+          }
+
+          let allWorldbooks = [];
+          try {
+            const fromTH = TH?.getWorldbookNames?.() || [];
+            const fromGlobal = typeof getWorldbookNames === 'function' ? getWorldbookNames() : [];
+            const fromParentGlobal = typeof parent?.getWorldbookNames === 'function' ? parent.getWorldbookNames() : [];
+            const fromParentTH = parent?.TavernHelper?.getWorldbookNames?.() || [];
+            allWorldbooks = [...fromTH, ...fromGlobal, ...fromParentGlobal, ...fromParentTH];
+          } catch (e) {
+            console.warn('获取世界书列表失败，回退为空列表');
+            allWorldbooks = [];
+          }
+
+          allWorldbooks = [...new Set(allWorldbooks)].map(n => (typeof n === 'string' ? n.trim() : n)).filter(Boolean);
+
+          try {
+            const infoEl = document.getElementById('worldbookDetectInfo');
+            if (infoEl) {
+              const list = (allWorldbooks || []).slice(0, 5).join('、') || '（无）';
+              infoEl.textContent = `检测到世界书（前5个）：${list}`;
+            }
+          } catch (e) {}
+
+          const exactCandidates = ['同层手机喵喵', '同层手机世界书', '同层手机喵喵世界书'];
+          let existingPhoneWorldbook = allWorldbooks.find(name => exactCandidates.includes(name));
+
+          if (!existingPhoneWorldbook) {
+            const phoneWorldbookPattern = /同层手机喵喵|同层手机世界书|手机喵喵|手机世界书/i;
+            existingPhoneWorldbook = allWorldbooks.find(name => phoneWorldbookPattern.test(String(name)));
+          }
+
+          try {
+            const infoEl = document.getElementById('worldbookDetectInfo');
+            if (infoEl) {
+              infoEl.textContent += existingPhoneWorldbook
+                ? `；匹配到：${existingPhoneWorldbook}`
+                : '；未匹配到相关世界书';
+            }
+          } catch (e) {}
+
+          let targetWorldbook = null;
+          const TARGET_NAME = '同层手机喵喵';
+
+          if (!allWorldbooks.includes(TARGET_NAME)) {
+            if (typeof TH.createOrReplaceWorldbook === 'function') {
+              await TH.createOrReplaceWorldbook(TARGET_NAME, [], { render: 'debounced' });
+            } else {
+              await TH.createWorldbook(TARGET_NAME);
+            }
+          }
+
+          await TH.rebindChatWorldbook('current', TARGET_NAME);
+          await new Promise(r => setTimeout(r, 200));
+          let bound = TH.getChatWorldbookName('current');
+          if (bound !== TARGET_NAME) {
+            if (typeof TH.getOrCreateChatWorldbook === 'function') {
+              const ensured = await TH.getOrCreateChatWorldbook('current', TARGET_NAME);
+              await TH.rebindChatWorldbook('current', ensured || TARGET_NAME);
+              await new Promise(r => setTimeout(r, 200));
+              bound = TH.getChatWorldbookName('current');
+            }
+          }
+          targetWorldbook = bound || TARGET_NAME;
+
+          const rawEntries = worldbookData?.entries || {};
+          const entriesList = Array.isArray(rawEntries)
+            ? rawEntries
+            : Object.keys(rawEntries)
+                .sort((a, b) => (Number(a) || 0) - (Number(b) || 0))
+                .map(k => rawEntries[k]);
+
+          const normalized = (entriesList || []).map((src, idx) => {
+            const e = src || {};
+            const primaryKeys = Array.isArray(e.keys) ? e.keys : Array.isArray(e.key) ? e.key : [];
+            const secondaryKeys = Array.isArray(e.secondary_keys)
+              ? e.secondary_keys
+              : Array.isArray(e.keysecondary)
+              ? e.keysecondary
+              : [];
+
+            const nameByComment =
+              typeof e.comment === 'string' && e.comment.trim() ? e.comment.trim().slice(0, 80) : '';
+            const name =
+              typeof e.name === 'string' && e.name.trim() ? e.name.trim() : nameByComment || `条目${e.uid ?? idx}`;
+
+            const hasAnyKeys = (primaryKeys && primaryKeys.length > 0) || (secondaryKeys && secondaryKeys.length > 0);
+            const strategy = hasAnyKeys
+              ? {
+                  type: 'selective',
+                  keys: primaryKeys,
+                  keys_secondary: { logic: 'and_any', keys: secondaryKeys },
+                  scan_depth: 'same_as_global',
+                }
+              : {
+                  type: 'constant',
+                  keys: [],
+                  keys_secondary: { logic: 'and_any', keys: [] },
+                  scan_depth: 'same_as_global',
+                };
+
+            return {
+              uid: typeof e.uid === 'number' ? e.uid : idx,
+              name,
+              enabled: e.disable === true ? false : e.enabled !== false,
+              strategy,
+              content: typeof e.content === 'string' ? e.content : '',
+              probability: typeof e.probability === 'number' ? e.probability : 100,
+            };
+          });
+
+          const entryCount = normalized.length;
+
+          if (entryCount > 0) {
+            if (typeof TH.createOrReplaceWorldbook === 'function') {
+              await TH.createOrReplaceWorldbook(targetWorldbook, normalized, { render: 'debounced' });
+            } else if (typeof TH.replaceWorldbook === 'function') {
+              await TH.replaceWorldbook(targetWorldbook, normalized, { render: 'debounced' });
+            } else {
+              await TH.createWorldbookEntries(targetWorldbook, normalized, { render: 'debounced' });
+            }
+          }
+
+          const versionInfo = worldbookData.version ? ` (版本: ${worldbookData.version})` : '';
+
+          alert(
+            `✅ 远程世界书导入成功！\n\n` +
+              `来源: ${worldbookData.name || '未知'}${versionInfo}\n` +
+              `导入条目: ${entryCount} 个\n` +
+              `目标世界书: ${targetWorldbook}`,
+          );
+        } catch (error) {
+          console.error('世界书处理失败');
+          throw error;
+        }
+      }
+
+      function saveRemoteWorldbookInfo(url, data) {
+        const key = getFriendsStorageKey() + '_remote_worldbook';
+
+        const info = {
+          url: url,
+          lastUpdated: new Date().toISOString(),
+          version: data.version || '1.0.0',
+          name: data.name || '远程世界书',
+          author: data.author || '未知',
+          entryCount: Object.keys(data.entries || {}).length,
+        };
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          parent.extension_settings[key] = info;
+          if (typeof parent.saveSettingsDebounced === 'function') {
+            parent.saveSettingsDebounced();
+          }
+        }
+        localStorage.setItem(key, JSON.stringify(info));
+      }
+
+      function getDefaultRemoteWorldbookUrl() {
+        const key = getFriendsStorageKey() + '_remote_worldbook';
+        let info = null;
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          info = parent.extension_settings[key] || null;
+        } else {
+          info = JSON.parse(localStorage.getItem(key) || 'null');
+        }
+        return info?.url || 'https://raw.githubusercontent.com/kencuo/lorebook/main/同层手机世界书.json';
+      }
+
+      function getRemoteWorldbookInfo() {
+        const key = getFriendsStorageKey() + '_remote_worldbook';
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          return parent.extension_settings[key] || null;
+        }
+        return JSON.parse(localStorage.getItem(key) || 'null');
+      }
+
+      async function checkRemoteWorldbookUpdate() {
+        const url = getDefaultRemoteWorldbookUrl();
+        if (!url) return;
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) return;
+
+          const remoteData = await response.json();
+          const remoteVersion = remoteData.version || '1.0.0';
+
+          const versionKey = getFriendsStorageKey() + '_remote_worldbook_version';
+          const stored = JSON.parse(localStorage.getItem(versionKey) || 'null');
+          const localVersion = stored?.version || '0.0.0';
+
+          if (compareVersions(remoteVersion, localVersion) > 0) {
+            const shouldUpdate = confirm(
+              `🔄 发现远程世界书更新\n\n` +
+                `远程版本: ${remoteVersion}\n` +
+                `本地版本: ${localVersion}\n` +
+                `更新时间: ${remoteData.lastUpdated || '未知'}\n\n` +
+                `是否立即更新？`,
+            );
+
+            if (shouldUpdate) {
+              await processWorldbookImport(remoteData, url);
+              localStorage.setItem(versionKey, JSON.stringify({ version: remoteVersion, updatedAt: Date.now() }));
+            }
+          }
+        } catch {}
+      }
+
+      function compareVersions(version1, version2) {
+        const v1parts = String(version1 || '0').split('.').map(Number);
+        const v2parts = String(version2 || '0').split('.').map(Number);
+
+        for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
+          const v1 = v1parts[i] || 0;
+          const v2 = v2parts[i] || 0;
+
+          if (v1 > v2) return 1;
+          if (v1 < v2) return -1;
+        }
+        return 0;
+      }
+
+      function toggleAutoUpdate() {
+        const checkbox = document.getElementById('autoUpdateWorldbook');
+        const isEnabled = checkbox ? checkbox.checked : false;
+
+        if (isEnabled) {
+          if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+          autoUpdateInterval = setInterval(checkRemoteWorldbookUpdate, 24 * 60 * 60 * 1000);
+          console.log('已启动远程世界书自动更新检查');
+          setTimeout(checkRemoteWorldbookUpdate, 5000);
+        } else {
+          if (autoUpdateInterval) {
+            clearInterval(autoUpdateInterval);
+            autoUpdateInterval = null;
+            console.log('已停止远程世界书自动更新检查');
+          }
+        }
+
+        const key = getFriendsStorageKey() + '_auto_update';
+        const setting = { enabled: isEnabled };
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          parent.extension_settings[key] = setting;
+          if (typeof parent.saveSettingsDebounced === 'function') {
+            parent.saveSettingsDebounced();
+          }
+        }
+        localStorage.setItem(key, JSON.stringify(setting));
+      }
+
+      function loadAutoUpdateSetting() {
+        const key = getFriendsStorageKey() + '_auto_update';
+        let setting = null;
+
+        if (typeof parent !== 'undefined' && parent.extension_settings) {
+          setting = parent.extension_settings[key];
+        } else {
+          setting = JSON.parse(localStorage.getItem(key) || 'null');
+        }
+
+        if (setting && setting.enabled) {
+          const checkbox = document.getElementById('autoUpdateWorldbook');
+          if (checkbox) checkbox.checked = true;
+          toggleAutoUpdate();
+        }
       }
 
       function getGroupsList() {
@@ -20980,6 +21812,35 @@ function applyUserAvatar(avatarElement) {
       document.getElementById('viewFavoritesBtn').addEventListener('click', showFavorites);
       document.getElementById('favoritesCloseBtn').addEventListener('click', hideFavorites);
       document.getElementById('clearAllFavoritesBtn').addEventListener('click', clearAllFavorites);
+
+      // 导入/导出好友列表 & 远程世界书
+      const openImportExportBtn = document.getElementById('openImportExportBtn');
+      if (openImportExportBtn) openImportExportBtn.addEventListener('click', showImportExportModal);
+      const importExportCloseBtn = document.getElementById('importExportCloseBtn');
+      if (importExportCloseBtn) importExportCloseBtn.addEventListener('click', closeImportExportModal);
+      const exportFriendsBtn = document.getElementById('exportFriendsBtn');
+      if (exportFriendsBtn) exportFriendsBtn.addEventListener('click', exportFriends);
+      const importFriendsBtn = document.getElementById('importFriendsBtn');
+      if (importFriendsBtn) importFriendsBtn.addEventListener('click', importFriends);
+      const selectImportFileBtn = document.getElementById('selectImportFileBtn');
+      if (selectImportFileBtn) {
+        selectImportFileBtn.addEventListener('click', () => {
+          const input = document.getElementById('importFileInput');
+          if (input) input.click();
+        });
+      }
+      const importFileInput = document.getElementById('importFileInput');
+      if (importFileInput) importFileInput.addEventListener('change', handleFileSelect);
+      const importRemoteWorldbookBtn = document.getElementById('importRemoteWorldbookBtn');
+      if (importRemoteWorldbookBtn) importRemoteWorldbookBtn.addEventListener('click', importRemoteWorldbook);
+      const autoUpdateWorldbook = document.getElementById('autoUpdateWorldbook');
+      if (autoUpdateWorldbook) autoUpdateWorldbook.addEventListener('change', toggleAutoUpdate);
+      const importExportOverlay = document.getElementById('importExportOverlay');
+      if (importExportOverlay) {
+        importExportOverlay.addEventListener('click', (e) => {
+          if (e.target && e.target.id === 'importExportOverlay') closeImportExportModal();
+        });
+      }
 
       // 头像上传
       document.getElementById('avatarUploadBtn').addEventListener('click', () => {
