@@ -8354,6 +8354,8 @@
         typingSpeedLevel: 2,
         groupChatMode: false,
         friendsPanelMode: 'friend',
+        activeConversationMode: 'private',
+        activeConversationIndex: 0,
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -9237,11 +9239,18 @@ function applyUserAvatar(avatarElement) {
         else state.currentPrivateIndex = index;
       }
 
+      function setActiveConversationPointer(mode, index) {
+        const nextMode = mode === 'group' ? 'group' : 'private';
+        state.activeConversationMode = nextMode;
+        state.activeConversationIndex = Number.isInteger(index) ? index : 0;
+      }
+
       function syncActiveConversationCache() {
-        const list = getActiveConversations();
-        const idx = getActiveConversationIndex();
+        const mode = state.activeConversationMode || (state.groupChatMode ? 'group' : 'private');
+        const list = mode === 'group' ? getGroupConversations() : getPrivateConversations();
+        const idx = Number.isInteger(state.activeConversationIndex) ? state.activeConversationIndex : getActiveConversationIndex();
         if (Array.isArray(list) && list[idx]) {
-          list[idx].messages = [...state.messageHistory];
+          list[idx].messages = Array.isArray(state.messageHistory) ? [...state.messageHistory] : [];
         }
       }
 
@@ -10942,6 +10951,7 @@ function applyUserAvatar(avatarElement) {
         if (nameSpan && conv && conv.name) nameSpan.textContent = conv.name;
         // 切换消息并重渲染
         state.messageHistory = (conv && Array.isArray(conv.messages)) ? [...conv.messages] : [];
+        setActiveConversationPointer(willBeGroup ? 'group' : 'private', index);
         // 更新标签激活态
         const tabs = document.querySelectorAll('#privateChatTabs .chat-tab');
         tabs.forEach((t, i) => {
@@ -10976,6 +10986,7 @@ function applyUserAvatar(avatarElement) {
           list.push({ name, messages: [] });
           state.currentPrivateIndex = list.length - 1;
           state.messageHistory = [];
+          setActiveConversationPointer('private', state.currentPrivateIndex);
           buildPrivateChatTabs(list, state.currentPrivateIndex);
           lastHistoryCount = 0;
           renderAllMessages();
@@ -10986,6 +10997,7 @@ function applyUserAvatar(avatarElement) {
         state.privateConversations = [{ name, messages: [] }];
         state.currentPrivateIndex = 0;
         state.messageHistory = [];
+        setActiveConversationPointer('private', 0);
         buildPrivateChatTabs(state.privateConversations, 0);
         lastHistoryCount = 0;
         renderAllMessages();
@@ -16582,15 +16594,16 @@ function applyUserAvatar(avatarElement) {
 
         list.splice(index, 1);
 
-        if (!list.length) {
-          state.groupConversations = [{ name: '群聊', members: [], messages: [] }];
-          state.currentGroupIndex = 0;
-          if (state.groupChatMode) {
-            state.messageHistory = [];
-            const nameSpan = document.getElementById('chatPersonName');
-            if (nameSpan) nameSpan.textContent = state.groupConversations[0].name || '群聊';
-            lastHistoryCount = 0;
-            renderAllMessages();
+          if (!list.length) {
+            state.groupConversations = [{ name: '群聊', members: [], messages: [] }];
+            state.currentGroupIndex = 0;
+            if (state.groupChatMode) {
+              state.messageHistory = [];
+              setActiveConversationPointer('group', state.currentGroupIndex);
+              const nameSpan = document.getElementById('chatPersonName');
+              if (nameSpan) nameSpan.textContent = state.groupConversations[0].name || '群聊';
+              lastHistoryCount = 0;
+              renderAllMessages();
           }
         } else {
           let targetIndex = state.currentGroupIndex;
@@ -19069,7 +19082,8 @@ function applyUserAvatar(avatarElement) {
 
                const activeList = state.groupChatMode ? state.groupConversations : state.privateConversations;
                const activeIndex = state.groupChatMode ? state.currentGroupIndex : state.currentPrivateIndex;
-               state.messageHistory = activeList[activeIndex]?.messages || [];
+               state.messageHistory = Array.isArray(activeList[activeIndex]?.messages) ? [...activeList[activeIndex].messages] : [];
+               setActiveConversationPointer(state.groupChatMode ? 'group' : 'private', activeIndex);
                if (nameSpan) nameSpan.textContent = activeList[activeIndex]?.name || wantedName || '';
                buildPrivateChatTabs(activeList, activeIndex);
                console.log('Loaded conversations - private:', state.privateConversations.length, 'group:', state.groupConversations.length);
@@ -19087,6 +19101,7 @@ function applyUserAvatar(avatarElement) {
                  }
                }
                state.messageHistory = parseShoujiLog(msg.message);
+               setActiveConversationPointer('private', 0);
                const tabs = document.getElementById('privateChatTabs');
                if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
                console.log('Loaded single conversation, messages:', state.messageHistory.length);
@@ -19100,6 +19115,7 @@ function applyUserAvatar(avatarElement) {
             state.groupConversations = [];
             state.currentPrivateIndex = 0;
             state.currentGroupIndex = 0;
+            setActiveConversationPointer('private', 0);
             const nameSpan = document.getElementById('chatPersonName');
              if (nameSpan && !nameSpan.textContent.trim()) {
                nameSpan.textContent = '';
