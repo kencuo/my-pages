@@ -2358,6 +2358,25 @@
         background: #ddd;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
+      .avatar-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-width: 32px;
+        max-width: 60px;
+        flex-shrink: 0;
+      }
+      .avatar-name {
+        font-size: 10px;
+        color: #888;
+        line-height: 1.2;
+        max-width: 60px;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       .message-wrapper {
         position: relative;
         display: flex;
@@ -7176,8 +7195,8 @@
               ></path>
             </svg>
           </button>
-          <img id="voiceCallAvatar" class="voice-call-avatar" src="" />
           <div id="voiceCallName" class="voice-call-name">...</div>
+          <img id="voiceCallAvatar" class="voice-call-avatar" src="" />
           <div id="voiceCallStatus" class="voice-call-status">正在连接...</div>
         </div>
         <div class="voice-call-chat-view" id="voiceCallChatView"></div>
@@ -8104,6 +8123,50 @@ function applyUserAvatar(avatarElement) {
           avatarElement.style.backgroundImage = '';
           avatarElement.style.backgroundColor = '';
         }
+      }
+
+      function createCharAvatarBlock(msg, options = {}) {
+        if (!msg || !msg.avatar) return null;
+        const rawName = options.name || msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
+        const name = String(rawName || '').trim();
+        const resolvedName = name || '对方';
+        const avatar = document.createElement('img');
+        avatar.className = options.avatarClassName || 'avatar char-avatar';
+
+        // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+        const characterAvatarUrl = getCharacterAvatarUrl(resolvedName);
+        if (characterAvatarUrl) {
+          // 最高优先级：使用角色配置中的头像（类似SillyTavern）
+          avatar.src = characterAvatarUrl;
+        } else if (msg.customAvatarUrl) {
+          // 次高优先级：使用消息中保存的自定义头像
+          avatar.src = msg.customAvatarUrl;
+        } else if (settingsState.charAvatars[resolvedName]) {
+          // 中等优先级：使用设置中的角色头像
+          avatar.src = settingsState.charAvatars[resolvedName];
+        } else {
+          // 最低优先级：使用格式中的头像
+          avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
+        }
+
+        if (options.addPoke) {
+          // 添加双击戳一戳事件
+          avatar.addEventListener('dblclick', () => {
+            showPokeModal();
+          });
+          // 添加戳一戳提示样式
+          avatar.style.cursor = 'pointer';
+          avatar.title = '双击戳一戳';
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = options.wrapperClassName || 'avatar-wrap char-avatar-wrap';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'avatar-name';
+        nameEl.textContent = resolvedName;
+        wrapper.appendChild(nameEl);
+        wrapper.appendChild(avatar);
+        return wrapper;
       }
 
       function applyInterfaceScale(scale) {
@@ -11720,37 +11783,13 @@ function applyUserAvatar(avatarElement) {
             applyUserAvatar(avatarDiv);
             message.appendChild(avatarDiv);
           } else if (msg.avatar) {
-            const avatar = document.createElement('img');
-            avatar.className = 'avatar char-avatar';
-
-            // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
-            const charName = msg.charName || '对方'; // 获取角色名称
-            const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
-
-            if (characterAvatarUrl) {
-              // 最高优先级：使用角色配置中的头像（类似SillyTavern）
-              avatar.src = characterAvatarUrl;
-            } else if (msg.customAvatarUrl) {
-              // 次高优先级：使用消息中保存的自定义头像
-              avatar.src = msg.customAvatarUrl;
-            } else if (settingsState.charAvatars[charName]) {
-              // 中等优先级：使用设置中的角色头像
-              avatar.src = settingsState.charAvatars[charName];
-            } else {
-              // 最低优先级：使用格式中的头像
-              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
-            }
-
-            // 添加双击戳一戳事件
-            avatar.addEventListener('dblclick', () => {
-              showPokeModal();
+            const charName = msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
+            const avatarBlock = createCharAvatarBlock(msg, {
+              name: charName,
+              avatarClassName: 'avatar char-avatar',
+              addPoke: true,
             });
-
-            // 添加戳一戳提示样式
-            avatar.style.cursor = 'pointer';
-            avatar.title = '双击戳一戳';
-
-            message.appendChild(avatar);
+            if (avatarBlock) message.appendChild(avatarBlock);
           }
           message.appendChild(wrapper);
           return message;
@@ -11921,37 +11960,13 @@ function applyUserAvatar(avatarElement) {
           message.appendChild(wrapper);
         } else {
           if (msg.avatar) {
-            const avatar = document.createElement('img');
-            avatar.className = 'avatar char-avatar';
-
-            // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
-            const charName = msg.charName || '对方'; // 获取角色名称
-            const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
-
-            if (characterAvatarUrl) {
-              // 最高优先级：使用角色配置中的头像（类似SillyTavern）
-              avatar.src = characterAvatarUrl;
-            } else if (msg.customAvatarUrl) {
-              // 次高优先级：使用消息中保存的自定义头像
-              avatar.src = msg.customAvatarUrl;
-            } else if (settingsState.charAvatars[charName]) {
-              // 中等优先级：使用设置中的角色头像
-              avatar.src = settingsState.charAvatars[charName];
-            } else {
-              // 最低优先级：使用格式中的头像
-              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
-            }
-
-            // 添加双击戳一戳事件
-            avatar.addEventListener('dblclick', () => {
-              showPokeModal();
+            const charName = msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
+            const avatarBlock = createCharAvatarBlock(msg, {
+              name: charName,
+              avatarClassName: 'avatar char-avatar',
+              addPoke: true,
             });
-
-            // 添加戳一戳提示样式
-            avatar.style.cursor = 'pointer';
-            avatar.title = '双击戳一戳';
-
-            message.appendChild(avatar);
+            if (avatarBlock) message.appendChild(avatarBlock);
           }
           message.appendChild(wrapper);
         }
@@ -18527,28 +18542,13 @@ function toggleFriendsPanel(show) {
           message.appendChild(wrapper);
         } else {
           if (msg.avatar) {
-            const avatar = document.createElement('img');
-            avatar.className = 'avatar';
-
-            // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
-            const charName = msg.charName || msg.name || getCurrentCharName();
-            const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
-
-            if (characterAvatarUrl) {
-              // 最高优先级：使用角色配置中的头像（类似SillyTavern）
-              avatar.src = characterAvatarUrl;
-            } else if (msg.customAvatarUrl) {
-              // 次高优先级：使用消息中保存的自定义头像
-              avatar.src = msg.customAvatarUrl;
-            } else if (settingsState.charAvatars[charName]) {
-              // 中等优先级：使用设置中的角色头像
-              avatar.src = settingsState.charAvatars[charName];
-            } else {
-              // 最低优先级：使用格式中的头像
-              avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
-            }
-
-            message.appendChild(avatar);
+            const charName = msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
+            const avatarBlock = createCharAvatarBlock(msg, {
+              name: charName,
+              avatarClassName: 'avatar',
+              addPoke: false,
+            });
+            if (avatarBlock) message.appendChild(avatarBlock);
           }
           message.appendChild(wrapper);
         }
