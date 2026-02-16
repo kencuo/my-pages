@@ -3932,7 +3932,7 @@
         background: #fff;
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        z-index: 1000;
+        z-index: 1500;
         overflow: hidden;
       }
 
@@ -16089,6 +16089,7 @@ function applyUserAvatar(avatarElement) {
                   name: group.name,
                   members: Array.isArray(group.members) ? group.members : [],
                   messages: [],
+                  addTime: group.addTime || new Date().toISOString(),
                 });
                 groupImportedCount++;
               } else {
@@ -16096,12 +16097,14 @@ function applyUserAvatar(avatarElement) {
                 const target = groupsList.find(g => String(g.name || '').trim() === group.name);
                 if (target && (!Array.isArray(target.members) || target.members.length === 0) && group.members.length) {
                   target.members = group.members;
+                  if (!target.addTime) target.addTime = group.addTime || new Date().toISOString();
                 }
                 groupSkippedCount++;
               }
             }
 
             renderFriendsPanelList();
+            syncGroupsListFromConversations(groupsList);
             syncToSillyTavern();
 
             closeImportExportModal();
@@ -16443,6 +16446,72 @@ function applyUserAvatar(avatarElement) {
         return getGroupConversations();
       }
 
+      function getGroupsStorageKey() {
+        const c = getCurrentCharacterInfo();
+        return `tavern_groups_${c.source}_${c.id}`;
+      }
+
+      function normalizeGroupEntry(entry) {
+        if (typeof entry === 'string') return { name: entry, members: [] };
+        if (entry && typeof entry === 'object') {
+          const name = entry.name || entry.title || entry.nickname || '';
+          const members = Array.isArray(entry.members) ? entry.members.filter(Boolean) : [];
+          return { ...entry, name, members };
+        }
+        return { name: '', members: [] };
+      }
+
+      function loadGroupsList() {
+        try {
+          const key = getGroupsStorageKey();
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            return parent.extension_settings[key] ? JSON.parse(JSON.stringify(parent.extension_settings[key])) : [];
+          }
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) { console.warn('加载群聊列表失败', e); return []; }
+      }
+
+      function saveGroupsList(list) {
+        try {
+          const key = getGroupsStorageKey();
+          const safeList = (Array.isArray(list) ? list : []).map(normalizeGroupEntry).filter(g => g.name);
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            parent.extension_settings[key] = JSON.parse(JSON.stringify(safeList));
+            if (typeof parent.saveSettingsDebounced === 'function') parent.saveSettingsDebounced();
+          }
+          localStorage.setItem(key, JSON.stringify(safeList));
+        } catch (e) { console.warn('保存群聊列表失败', e); }
+      }
+
+      function syncGroupsListFromConversations(conversations) {
+        const existing = loadGroupsList().map(normalizeGroupEntry).filter(g => g.name);
+        const existingMap = new Map(existing.map(g => [String(g.name || '').trim(), g]));
+        const list = (Array.isArray(conversations) ? conversations : getGroupsList())
+          .map(c => {
+            const name = c && c.name ? String(c.name).trim() : '';
+            if (!name) return null;
+            const members = Array.isArray(c.members) ? c.members.filter(Boolean) : [];
+            const prev = existingMap.get(name);
+            const addTime = c.addTime || (prev && prev.addTime) || new Date().toISOString();
+            return { name, members, addTime };
+          })
+          .filter(Boolean);
+        saveGroupsList(list);
+      }
+
+      function hydrateGroupsFromStorageIfEmpty() {
+        if (Array.isArray(state.groupConversations) && state.groupConversations.length) return;
+        const stored = loadGroupsList().map(normalizeGroupEntry).filter(g => g.name);
+        if (!stored.length) return;
+        state.groupConversations = stored.map(g => ({
+          name: String(g.name || '').trim(),
+          members: Array.isArray(g.members) ? g.members : [],
+          messages: [],
+          addTime: g.addTime || new Date().toISOString(),
+        }));
+      }
+
       function normalizeFriendEntry(entry) {
         if (typeof entry === 'string') return { name: entry };
         if (entry && typeof entry === 'object') {
@@ -16622,6 +16691,7 @@ function applyUserAvatar(avatarElement) {
         if (state.groupChatMode) {
           buildPrivateChatTabs(getGroupsList(), state.currentGroupIndex || 0);
         }
+        syncGroupsListFromConversations(list);
         deferredSync();
       }
 
@@ -16716,14 +16786,16 @@ function applyUserAvatar(avatarElement) {
             const existing = groups[existingIndex];
             const merged = splitGroupMembers([...(existing.members || []), ...members].join(','));
             existing.members = merged;
+            if (!existing.addTime) existing.addTime = new Date().toISOString();
             switchPrivateChat(existingIndex, 'group');
           } else {
-            groups.unshift({ name: groupName, members, messages: [] });
+            groups.unshift({ name: groupName, members, messages: [], addTime: new Date().toISOString() });
             switchPrivateChat(0, 'group');
           }
 
           buildPrivateChatTabs(getGroupsList(), state.currentGroupIndex || 0);
           state.friendsPanelMode = 'group';
+          syncGroupsListFromConversations(groups);
           deferredSync();
           close();
           toggleFriendsPanel(false);
@@ -19052,6 +19124,8 @@ function applyUserAvatar(avatarElement) {
 
              state.groupConversations = groupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.privateConversations = privateConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
+             hydrateGroupsFromStorageIfEmpty();
+             syncGroupsListFromConversations(state.groupConversations);
 
              const hasPrivate = state.privateConversations.length > 0;
              const hasGroup = state.groupConversations.length > 0;
@@ -19117,6 +19191,7 @@ function applyUserAvatar(avatarElement) {
             state.groupConversations = [];
             state.currentPrivateIndex = 0;
             state.currentGroupIndex = 0;
+            hydrateGroupsFromStorageIfEmpty();
             setActiveConversationPointer('private', 0);
             const nameSpan = document.getElementById('chatPersonName');
              if (nameSpan && !nameSpan.textContent.trim()) {
