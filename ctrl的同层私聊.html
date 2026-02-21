@@ -11035,7 +11035,8 @@ function applyUserAvatar(avatarElement) {
 
       // ==================== REFACTORED SERIALIZATION LOGIC ====================
 
-      function serializeShoujiLog(msgArr) {
+      function serializeShoujiLog(msgArr, options = {}) {
+        const includeMediaData = options.includeMediaData !== false;
          // ▼▼▼ 新增代码：从页面获取当前聊天对象的名字 ▼▼▼
         const charName = getCurrentCharName();
         const titleLine = (charName && charName !== '对方') ? `【和${charName}的聊天】\n` : '';
@@ -11153,7 +11154,7 @@ function applyUserAvatar(avatarElement) {
           } else if (m.type === 'image') {
             // 图片消息处理 - 保存图片URL和描述信息
             let imageInfo = m.imageDescription || '图片';
-            if (m.imageData && m.fileName) {
+            if (includeMediaData && m.imageData && m.fileName) {
               // 将图片URL和描述信息都保存到序列化文本中
               imageInfo = `${imageInfo}|IMGDATA:${m.imageData}|FILENAME:${m.fileName}`;
             }
@@ -11162,8 +11163,8 @@ function applyUserAvatar(avatarElement) {
               ? `[我方消息|图片|${imageInfo}|${m.time}]`
               : `[${nameForOther}|${m.avatar || ''}|图片|${imageInfo}|${m.time}]`;
           } else if (m.type === 'video') {
-            // 视频消息处理 - 直接保存视频URL
-            const videoUrl = m.videoData || '';
+            // 视频消息处理 - 直接保存视频URL（可选剔除以避免超长上下文）
+            const videoUrl = includeMediaData ? (m.videoData || '') : (m.videoDescription || '视频');
 
             return m.sender === 'user'
               ? `[我方消息|视频|${videoUrl}|${m.time}]`
@@ -13900,7 +13901,7 @@ function applyUserAvatar(avatarElement) {
         // 统一上下文长度，保证稳定性
         const maxContext = 120; // 语音通话和普通聊天使用相同的上下文长度
         const recentMessages = state.messageHistory.slice(-maxContext);
-        let context = serializeShoujiLog(recentMessages);
+        let context = serializeShoujiLog(recentMessages, { includeMediaData: false });
 
         // 调试：记录上下文和模式
         try { if (state.debugEnabled) {
