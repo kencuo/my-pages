@@ -1,4 +1,4 @@
-\<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -14264,6 +14264,18 @@ can call down the storm that writes what comes next.
           setTimeout(() => syncToSillyTavern(), 100);
         } catch (e) {
           hideTypingIndicator();
+          const rawError = String(e && (e.message || e.stack) || e);
+          let friendly = 'AI回复失败';
+          if (/status\s*502/i.test(rawError)) {
+            friendly = 'AI服务暂时不可用(502)，请稍后重试';
+          } else if (/status\s*504|网关超时|超时|timeout/i.test(rawError)) {
+            friendly = 'AI回复超时/网关超时(504)，请稍后重试';
+          } else if (/返回空结果/.test(rawError)) {
+            friendly = 'AI返回空结果，请稍后重试';
+          } else if (/无法解析|被过滤/.test(rawError)) {
+            friendly = 'AI回复无法解析，可能被过滤或格式错误';
+          }
+          try { if (typeof showToast === 'function') showToast(friendly); } catch (_) {}
           // 出错时不提供fallback，让用户手动重试或等待下次对话
           try { if (state.debugEnabled) { console.error('[AI-DEBUG] error:', e); window.__aiDebug = window.__aiDebug || {}; window.__aiDebug.error = String(e && e.stack || e); window.__updateAIDebug && window.__updateAIDebug(); } } catch(_){}
         } finally {
