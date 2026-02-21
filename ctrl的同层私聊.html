@@ -21500,6 +21500,14 @@ can call down the storm that writes what comes next.
         updateWallpaper();
         updateHomeWallpaper();
         try { updateMomentsCoverPreview(); } catch (_) {}
+        // Prefill character name if empty to avoid "对方" fallback when uploading avatar.
+        const nameInput = document.getElementById('charNameInput');
+        if (nameInput && (!nameInput.value.trim() || nameInput.value.trim() === '对方')) {
+          const currentName = (typeof getCurrentCharName === 'function') ? getCurrentCharName() : '';
+          if (currentName && currentName !== '对方') {
+            nameInput.value = currentName;
+          }
+        }
         updateCharAvatarPreview();
         // 更新破限开关显示状态
         document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
@@ -22093,11 +22101,17 @@ can call down the storm that writes what comes next.
 
       // 角色头像上传
       document.getElementById('charAvatarUploadBtn').addEventListener('click', () => {
-        document.getElementById('charAvatarFileInput').click();
+        const input = document.getElementById('charAvatarFileInput');
+        if (input) {
+          // Reset so selecting the same file again still triggers change.
+          input.value = '';
+          input.click();
+        }
       });
 
       document.getElementById('charAvatarFileInput').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
+        const input = e.target;
+        const file = input.files[0];
         if (file) {
           try {
             // 显示上传中的提示
@@ -22124,6 +22138,9 @@ can call down the storm that writes what comes next.
             uploadBtn.disabled = false;
 
             alert(`头像上传失败: ${error.message}`);
+          } finally {
+            // Allow re-selecting the same file next time.
+            input.value = '';
           }
         }
       });
