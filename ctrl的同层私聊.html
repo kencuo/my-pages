@@ -8296,22 +8296,6 @@
       </div>
     </div>
 
-    <!-- 通用确认弹窗 -->
-    <div class="simple-modal-overlay" id="confirmModalOverlay" style="display: none;">
-      <div class="simple-modal" id="confirmModal" style="max-width: 320px;">
-        <div class="simple-modal-header">
-          <span id="confirmModalTitle">请确认</span>
-        </div>
-        <div class="simple-modal-body">
-          <div id="confirmModalContent" style="white-space: pre-wrap; font-size: 13px; line-height: 1.45; color: #333;"></div>
-        </div>
-        <div class="simple-modal-footer">
-          <button class="modal-btn cancel-btn" id="confirmModalCancel">取消</button>
-          <button class="modal-btn confirm-btn" id="confirmModalConfirm">确定</button>
-        </div>
-      </div>
-    </div>
-
     <!-- 收藏消息查看模态框 -->
     <div class="settings-overlay" id="favoritesOverlay" style="display: none;">
       <div class="settings-modal" style="max-width: 500px; max-height: 80vh;">
@@ -16971,40 +16955,6 @@ can call down the storm that writes what comes next.
         if (overlay) overlay.style.display = 'none';
       }
 
-      let pendingConfirmAction = null;
-
-      function showConfirmModal(message, onConfirm, title = '请确认') {
-        const overlay = document.getElementById('confirmModalOverlay');
-        const titleEl = document.getElementById('confirmModalTitle');
-        const contentEl = document.getElementById('confirmModalContent');
-        if (!overlay || !titleEl || !contentEl) {
-          if (typeof confirm === 'function') {
-            if (confirm(message)) {
-              try { if (typeof onConfirm === 'function') onConfirm(); } catch (_) {}
-            }
-          }
-          return;
-        }
-        titleEl.textContent = title || '请确认';
-        contentEl.textContent = message || '';
-        pendingConfirmAction = typeof onConfirm === 'function' ? onConfirm : null;
-        overlay.style.display = 'flex';
-      }
-
-      function closeConfirmModal() {
-        const overlay = document.getElementById('confirmModalOverlay');
-        if (overlay) overlay.style.display = 'none';
-        pendingConfirmAction = null;
-      }
-
-      function confirmModalAccept() {
-        const action = pendingConfirmAction;
-        closeConfirmModal();
-        if (typeof action === 'function') {
-          try { action(); } catch (_) {}
-        }
-      }
-
       function importFriends() {
         if (!selectedImportFile) {
           alert('请先选择要导入的JSON文件');
@@ -17497,24 +17447,11 @@ can call down the storm that writes what comes next.
         return { role, name, members, messages, addTime };
       }
 
-      function normalizeRoleGroupEntryMeta(entry, index = 0) {
-        const base = normalizeRoleGroupEntry(entry, index);
-        return {
-          role: base.role,
-          name: base.name,
-          members: base.members,
-          messages: [],
-          addTime: base.addTime,
-        };
-      }
-
       function loadRoleGroupsFromExtensions() {
         try {
           const ctx = getSillyContextSafe();
           const extValue = readCharacterExtensionField(ctx, EXTENSION_ROLE_GROUPS_KEY);
-          if (Array.isArray(extValue)) {
-            return extValue.map((entry, idx) => normalizeRoleGroupEntryMeta(entry, idx));
-          }
+          if (Array.isArray(extValue)) return JSON.parse(JSON.stringify(extValue));
           return null;
         } catch (e) {
           console.warn('加载角色群聊失败', e);
@@ -17524,7 +17461,7 @@ can call down the storm that writes what comes next.
 
       function saveRoleGroupConversations(list) {
         try {
-          const safeList = (Array.isArray(list) ? list : []).map(normalizeRoleGroupEntryMeta);
+          const safeList = (Array.isArray(list) ? list : []).map(normalizeRoleGroupEntry);
           if (getSillyContextSafe()) {
             void writeCharacterExtensionField(EXTENSION_ROLE_GROUPS_KEY, safeList);
           }
@@ -17595,13 +17532,7 @@ can call down the storm that writes what comes next.
             e.stopPropagation();
             const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
             if (isNaN(idx) || idx < 0) return;
-            const list = loadFriendsList().map(normalizeFriendEntry);
-            const name = list[idx] && list[idx].name ? String(list[idx].name) : '';
-            showConfirmModal(
-              `确认删除好友「${name || ('好友' + (idx + 1))}」吗？`,
-              () => removeFriendAtIndex(idx),
-              '删除好友',
-            );
+            removeFriendAtIndex(idx);
           });
         });
 
@@ -17649,11 +17580,8 @@ can call down the storm that writes what comes next.
             if (isNaN(idx) || idx < 0) return;
             const list = getGroupsList();
             const groupName = list[idx] && list[idx].name ? String(list[idx].name) : '';
-            showConfirmModal(
-              `确认删除群聊「${groupName || ('群聊' + (idx + 1))}」吗？`,
-              () => removeGroupAtIndex(idx),
-              '删除群聊',
-            );
+            if (!confirm(`确认删除群聊「${groupName || ('群聊' + (idx + 1))}」吗？`)) return;
+            removeGroupAtIndex(idx);
           });
         });
 
@@ -17703,11 +17631,8 @@ can call down the storm that writes what comes next.
             const list = getRoleGroupConversations();
             const roleName = list[idx] && list[idx].role ? String(list[idx].role) : '角色';
             const groupName = list[idx] && list[idx].name ? String(list[idx].name) : `群聊${idx + 1}`;
-            showConfirmModal(
-              `确认删除角色群聊「${roleName} · ${groupName}」吗？`,
-              () => removeRoleGroupAtIndex(idx),
-              '删除角色群聊',
-            );
+            if (!confirm(`确认删除角色群聊「${roleName} · ${groupName}」吗？`)) return;
+            removeRoleGroupAtIndex(idx);
           });
         });
 
@@ -17764,6 +17689,8 @@ can call down the storm that writes what comes next.
       function removeFriendAtIndex(index) {
         const list = loadFriendsList().map(normalizeFriendEntry);
         if (index < 0 || index >= list.length) return;
+        const name = list[index] && list[index].name ? String(list[index].name) : '';
+        if (!confirm(`确认删除好友「${name || ('好友' + (index + 1))}」吗？`)) return;
         list.splice(index, 1);
         saveFriendsList(list);
         renderFriendsPanelList();
@@ -18137,20 +18064,6 @@ can call down the storm that writes what comes next.
         importResultOverlay.addEventListener('click', (e) => {
           if (e.target && e.target.id === 'importResultModalOverlay') {
             closeImportResultModal();
-          }
-        });
-      }
-
-      // 通用确认弹窗事件绑定
-      const confirmModalCancel = document.getElementById('confirmModalCancel');
-      if (confirmModalCancel) confirmModalCancel.addEventListener('click', closeConfirmModal);
-      const confirmModalConfirm = document.getElementById('confirmModalConfirm');
-      if (confirmModalConfirm) confirmModalConfirm.addEventListener('click', confirmModalAccept);
-      const confirmModalOverlay = document.getElementById('confirmModalOverlay');
-      if (confirmModalOverlay) {
-        confirmModalOverlay.addEventListener('click', (e) => {
-          if (e.target && e.target.id === 'confirmModalOverlay') {
-            closeConfirmModal();
           }
         });
       }
@@ -20287,7 +20200,7 @@ can call down the storm that writes what comes next.
 
         const privateBlocks = buildPrivateBlocksFromConversations(privateList);
         const qunliaoLog = hasGroup ? serializeQunliao(groupList) : '';
-        const roleGroupLog = '';
+        const roleGroupLog = hasRoleGroup ? serializeRoleGroups(roleGroupList) : '';
         saveRoleGroupConversations(roleGroupList);
 
         if (
@@ -20353,20 +20266,19 @@ can call down the storm that writes what comes next.
              const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
              const privateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
              const parsedRoleGroups = parseRoleGroupConversationsFromShouji(msg.message) || [];
-             const parsedRoleGroupMeta = parsedRoleGroups.map((c, idx) => normalizeRoleGroupEntryMeta(c, idx));
              const extRoleGroups = loadRoleGroupsFromExtensions();
              const roleGroupConversations = (Array.isArray(extRoleGroups) && extRoleGroups.length)
                ? extRoleGroups
-               : parsedRoleGroupMeta;
-             if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroupMeta.length) {
-               saveRoleGroupConversations(parsedRoleGroupMeta);
+               : parsedRoleGroups;
+             if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroups.length) {
+               saveRoleGroupConversations(parsedRoleGroups);
              }
              const nameSpan = document.getElementById('chatPersonName');
 
              state.groupConversations = groupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.privateConversations = privateConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.roleGroupConversations = roleGroupConversations.map((c, idx) => {
-               const safe = normalizeRoleGroupEntryMeta(c, idx);
+               const safe = normalizeRoleGroupEntry(c, idx);
                return safe && safe.members ? safe : { ...safe, members: [] };
              });
              hydrateGroupsFromStorageIfEmpty();
