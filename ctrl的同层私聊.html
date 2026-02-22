@@ -9246,14 +9246,18 @@ function applyUserAvatar(avatarElement) {
       // [消息行...]
       // </group>
       function parseRoleGroupConversationsFromShouji(text) {
-        const shoujiMatch = text && String(text).match(/<shouji>([\s\S]*?)<\/shouji>/);
-        if (!shoujiMatch) return [];
-        const inner = shoujiMatch[1];
-        const blocks = [...inner.matchAll(/<group>([\s\S]*?)<\/group>/g)];
+        const raw = text == null ? '' : String(text);
+        const shoujiMatch = raw.match(/<shouji>([\s\S]*?)<\/shouji>/);
+        const inner = shoujiMatch ? shoujiMatch[1] : raw;
+        const blocks = [...inner.matchAll(/<group>([\s\S]*?)<\/group>/gi)];
         if (!blocks.length) return [];
         const conversations = blocks.map((m, idx) => {
           const block = (m[1] || '').trim();
-          const lines = block.split(/\n+/).map(s => String(s || '').trim()).filter(Boolean);
+          const lines = block
+            .split(/\n+/)
+            .map(s => String(s || '').trim())
+            .filter(Boolean)
+            .filter(line => !/^\s*同层手机/.test(line));
           const headerLine = lines.shift() || '';
           let roleName = '';
           let groupName = '';
@@ -11471,6 +11475,7 @@ function applyUserAvatar(avatarElement) {
           body = body.replace(/<private>[\s\S]*?<\/private>/g, '');
           body = body.replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '');
           body = body.replace(/<group>[\s\S]*?<\/group>/g, '');
+          body = body.replace(/^\s*同层手机.*$/gm, '');
           body = body.trim();
           const merged = [privateBlocks, qunliao, roleGroups, body].filter(Boolean).join('\n\n');
           return `<shouji>\n${merged}\n</shouji>`;
@@ -14498,7 +14503,7 @@ can call down the storm that writes what comes next.
           `群成员：${membersText}。`,
           '这是“偷看”视角，用户不能发言。',
           '输出规则：',
-          '1) 只输出聊天消息行（同层行协议），不要任何解释、不要 <group> 标签、不要标题行。',
+          '1) 只输出聊天消息行，不要任何解释、在 <group> 标签里、不要标题行。',
           '2) 禁止输出 [我方消息|...]，只允许群成员发言。',
           '3) 消息格式与群聊一致，例如：',
           '   [张三|头像后缀|大家晚上好|19:20]',
