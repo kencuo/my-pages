@@ -1416,6 +1416,31 @@
         color: var(--accent-danger);
         transform: scale(1.05);
       }
+      .role-group-ai-btn {
+        margin-left: auto;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(7, 193, 96, 0.12);
+        color: #07c160;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+      }
+      .role-group-ai-btn:hover {
+        background: rgba(7, 193, 96, 0.2);
+        transform: scale(1.06);
+      }
+      .role-group-ai-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
       #requestAiBtn {
         position: absolute;
         top: 6px;
@@ -17329,9 +17354,23 @@ can call down the storm that writes what comes next.
                         <div class="group-title">${roleName} · ${name}</div>
                         <div class="group-members">成员：${memberText}</div>
                       </div>
+                      <button class="role-group-ai-btn" data-index="${i}" title="生成偷看群聊">AI</button>
                     </div>`;
           })
           .join('');
+
+        box.querySelectorAll('.role-group-ai-btn').forEach(btn => {
+          btn.addEventListener('click', async e => {
+            e.stopPropagation();
+            const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
+            if (isNaN(idx) || idx < 0) return;
+            switchRoleGroupChat(idx);
+            toggleFriendsPanel(false);
+            if (typeof requestRoleGroupAiReply === 'function') {
+              await requestRoleGroupAiReply();
+            }
+          });
+        });
 
         box.querySelectorAll('.friend-item').forEach(el => {
           el.addEventListener('click', () => {
