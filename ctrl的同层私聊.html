@@ -6708,6 +6708,7 @@
         <div class="friends-tabs" id="friendsTabs">
           <button class="friends-tab active" data-mode="friend" type="button">私聊好友</button>
           <button class="friends-tab" data-mode="group" type="button">群聊</button>
+          <button class="friends-tab" data-mode="roleGroup" type="button">角色群聊</button>
         </div>
         <div class="friends-list" id="friendsList"></div>
       </div>
@@ -8319,6 +8320,9 @@
         currentPrivateIndex: 0,   // 当前激活私聊索引
         groupConversations: [],   // 群聊多会话(<qunliao>/<multi>)集合
         currentGroupIndex: 0,     // 当前激活群聊索引
+        roleGroupConversations: [], // 角色群聊(<group>)集合（偷看模式）
+        currentRoleGroupIndex: 0,   // 当前激活角色群聊索引
+        roleGroupMode: false,       // 是否处于角色群聊偷看模式
         currentMsgId: null,
         userHasSentNewMessage: false,
         callTimerId: null,
@@ -9149,6 +9153,7 @@ function applyUserAvatar(avatarElement) {
         cleaned = cleaned.replace(/<private>[\s\S]*?<\/private>/g, '');
         cleaned = cleaned.replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '');
         cleaned = cleaned.replace(/<multi>[\s\S]*?<\/multi>/g, '');
+        cleaned = cleaned.replace(/<group>[\s\S]*?<\/group>/g, '');
         cleaned = cleaned.trim();
         if (!cleaned) {
           console.log('Empty content inside <shouji> tags');
@@ -9234,6 +9239,49 @@ function applyUserAvatar(avatarElement) {
         return conversations;
       }
 
+      // ==================== ROLE GROUP (<group>) SUPPORT ====================
+      // 格式：
+      // <group>
+      // [被查看角色|群聊名称|成员1,成员2]
+      // [消息行...]
+      // </group>
+      function parseRoleGroupConversationsFromShouji(text) {
+        const shoujiMatch = text && String(text).match(/<shouji>([\s\S]*?)<\/shouji>/);
+        if (!shoujiMatch) return [];
+        const inner = shoujiMatch[1];
+        const blocks = [...inner.matchAll(/<group>([\s\S]*?)<\/group>/g)];
+        if (!blocks.length) return [];
+        const conversations = blocks.map((m, idx) => {
+          const block = (m[1] || '').trim();
+          const lines = block.split(/\n+/).map(s => String(s || '').trim()).filter(Boolean);
+          const headerLine = lines.shift() || '';
+          let roleName = '';
+          let groupName = '';
+          let members = [];
+          const headerMatch = headerLine.match(/^\[(.+?)\|(.+?)\|([^\]]*)\]$/);
+          if (headerMatch) {
+            roleName = String(headerMatch[1] || '').trim();
+            groupName = String(headerMatch[2] || '').trim();
+            members = splitGroupMembers(headerMatch[3] || '');
+          } else if (headerLine) {
+            const parts = headerLine.replace(/^\[/, '').replace(/\]$/, '').split('|');
+            roleName = String(parts[0] || '').trim();
+            groupName = String(parts[1] || '').trim();
+            members = splitGroupMembers(parts.slice(2).join('|'));
+          }
+          const msgText = lines.join('\n').trim();
+          const messages = msgText ? parseShoujiLog(`<shouji>${msgText}</shouji>`) : [];
+          return {
+            role: roleName || `角色${idx + 1}`,
+            name: groupName || `群聊${idx + 1}`,
+            members,
+            messages,
+            raw: block
+          };
+        });
+        return conversations;
+      }
+
       function getPrivateConversations() {
         if (!Array.isArray(state.privateConversations)) state.privateConversations = [];
         return state.privateConversations;
@@ -9244,28 +9292,47 @@ function applyUserAvatar(avatarElement) {
         return state.groupConversations;
       }
 
+      function getRoleGroupConversations() {
+        if (!Array.isArray(state.roleGroupConversations)) state.roleGroupConversations = [];
+        return state.roleGroupConversations;
+      }
+
+      function getActiveConversationMode() {
+        return state.activeConversationMode || (state.roleGroupMode ? 'roleGroup' : (state.groupChatMode ? 'group' : 'private'));
+      }
+
+      function isRoleGroupMode() {
+        return getActiveConversationMode() === 'roleGroup' || state.roleGroupMode;
+      }
+
       function getActiveConversations() {
-        return state.groupChatMode ? getGroupConversations() : getPrivateConversations();
+        const mode = getActiveConversationMode();
+        if (mode === 'roleGroup') return getRoleGroupConversations();
+        return mode === 'group' ? getGroupConversations() : getPrivateConversations();
       }
 
       function getActiveConversationIndex() {
-        return state.groupChatMode ? (state.currentGroupIndex || 0) : (state.currentPrivateIndex || 0);
+        const mode = getActiveConversationMode();
+        if (mode === 'roleGroup') return state.currentRoleGroupIndex || 0;
+        return mode === 'group' ? (state.currentGroupIndex || 0) : (state.currentPrivateIndex || 0);
       }
 
       function setActiveConversationIndex(index) {
-        if (state.groupChatMode) state.currentGroupIndex = index;
+        const mode = getActiveConversationMode();
+        if (mode === 'roleGroup') state.currentRoleGroupIndex = index;
+        else if (mode === 'group') state.currentGroupIndex = index;
         else state.currentPrivateIndex = index;
       }
 
       function setActiveConversationPointer(mode, index) {
-        const nextMode = mode === 'group' ? 'group' : 'private';
+        const nextMode = mode === 'roleGroup' ? 'roleGroup' : (mode === 'group' ? 'group' : 'private');
         state.activeConversationMode = nextMode;
         state.activeConversationIndex = Number.isInteger(index) ? index : 0;
       }
 
       function syncActiveConversationCache() {
-        const mode = state.activeConversationMode || (state.groupChatMode ? 'group' : 'private');
-        const list = mode === 'group' ? getGroupConversations() : getPrivateConversations();
+        const mode = getActiveConversationMode();
+        const list = mode === 'roleGroup' ? getRoleGroupConversations() : (mode === 'group' ? getGroupConversations() : getPrivateConversations());
         const idx = Number.isInteger(state.activeConversationIndex) ? state.activeConversationIndex : getActiveConversationIndex();
         if (Array.isArray(list) && list[idx]) {
           list[idx].messages = Array.isArray(state.messageHistory) ? [...state.messageHistory] : [];
@@ -9283,6 +9350,13 @@ function applyUserAvatar(avatarElement) {
         const list = getGroupConversations();
         if (!list.length) return null;
         const idx = Math.max(0, Math.min(state.currentGroupIndex || 0, list.length - 1));
+        return list[idx] || null;
+      }
+
+      function getActiveRoleGroupConversation() {
+        const list = getRoleGroupConversations();
+        if (!list.length) return null;
+        const idx = Math.max(0, Math.min(state.currentRoleGroupIndex || 0, list.length - 1));
         return list[idx] || null;
       }
 
@@ -9671,6 +9745,9 @@ function applyUserAvatar(avatarElement) {
         s = s.replace(/<shouji>[\s\S]*?<\/shouji>/gi, '');
         s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
         s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
+        s = s.replace(/<qunliao>[\s\S]*?<\/qunliao>/gi, '');
+        s = s.replace(/<multi>[\s\S]*?<\/multi>/gi, '');
+        s = s.replace(/<group>[\s\S]*?<\/group>/gi, '');
         s = s.replace(/<\/?post:\d+>/gi, '');
         // strip legacy marker line if it appears
         s = s.replace(/^\s*同层朋友圈\s*$/gm, '');
@@ -9679,9 +9756,10 @@ function applyUserAvatar(avatarElement) {
 
         let lines = s.split('\n').map(l => String(l).trim()).filter(Boolean);
         // If we stripped everything, try a softer salvage pass (remove only tag markers, not full blocks).
-        if (lines.length === 0 && /<\/?(shouji|private|pyq|post:\d+)>/i.test(original)) {
+        if (lines.length === 0 && /<\/?(shouji|private|pyq|qunliao|multi|group|post:\d+)>/i.test(original)) {
           let alt = String(original);
           alt = alt.replace(/<\/?(shouji|private|pyq)>/gi, '');
+          alt = alt.replace(/<\/?(qunliao|multi|group)>/gi, '');
           alt = alt.replace(/<\/?post:\d+>/gi, '');
           alt = alt.replace(/^\s*同层朋友圈\s*$/gm, '');
           alt = alt.replace(/<[^>\n]+>/g, '');
@@ -10950,9 +11028,27 @@ function applyUserAvatar(avatarElement) {
         tabs.style.display = 'flex';
       }
 
+      function setRoleGroupInputLock(locked) {
+        const input = document.getElementById('chatInput');
+        if (input) {
+          if (!input.dataset.placeholder) input.dataset.placeholder = input.placeholder || '';
+          input.placeholder = locked ? '偷看模式：用户不能发送消息' : (input.dataset.placeholder || '');
+          input.disabled = !!locked;
+        }
+        const ids = ['sendBtn', 'voiceModeBtn', 'emojiBtn', 'addBtn'];
+        ids.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.disabled = !!locked;
+        });
+      }
+
       // 切换当前会话
       function switchPrivateChat(index, mode = null) {
         syncActiveConversationCache();
+        if (state.roleGroupMode) {
+          state.roleGroupMode = false;
+          setRoleGroupInputLock(false);
+        }
         const targetMode = mode === 'group' ? 'group' : (mode === 'private' ? 'private' : (state.groupChatMode ? 'group' : 'private'));
         const willBeGroup = targetMode === 'group';
         if (state.groupChatMode !== willBeGroup) {
@@ -10984,10 +11080,45 @@ function applyUserAvatar(avatarElement) {
         updateAiRequestButtonVisibility();
       }
 
+      // 切换到角色群聊（偷看模式）
+      function switchRoleGroupChat(index) {
+        syncActiveConversationCache();
+        state.roleGroupMode = true;
+        state.groupChatMode = false;
+        state.friendsPanelMode = 'roleGroup';
+        try { localStorage.setItem('tavern_chat_mode', 'roleGroup'); } catch (_) {}
+
+        const list = getRoleGroupConversations();
+        if (!list.length) return;
+        if (index < 0 || index >= list.length) index = 0;
+        state.currentRoleGroupIndex = index;
+
+        const conv = list[index] || {};
+        const roleName = String(conv.role || conv.viewer || '').trim();
+        const groupName = String(conv.name || '').trim();
+        const title = roleName && groupName ? `${roleName} · ${groupName}` : (groupName || roleName || '角色群聊');
+        const nameSpan = document.getElementById('chatPersonName');
+        if (nameSpan) nameSpan.textContent = title;
+
+        state.messageHistory = Array.isArray(conv.messages) ? [...conv.messages] : [];
+        setActiveConversationPointer('roleGroup', index);
+
+        const tabs = document.getElementById('privateChatTabs');
+        if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
+        lastHistoryCount = 0;
+        renderAllMessages();
+        setRoleGroupInputLock(true);
+        updateAiRequestButtonVisibility();
+      }
+
       // 公开方法：打开/创建某个角色的私聊
       function openConversation(name) {
         if (!name) return;
         syncActiveConversationCache();
+        if (state.roleGroupMode) {
+          state.roleGroupMode = false;
+          setRoleGroupInputLock(false);
+        }
         if (state.groupChatMode) {
           state.groupChatMode = false;
           state.friendsPanelMode = 'friend';
@@ -11214,6 +11345,44 @@ function applyUserAvatar(avatarElement) {
         return '<shouji>\n' + titleLine + lines.join('\n') + '\n</shouji>';
       }
 
+      function serializeMessageLinesOnly(msgArr, options = {}) {
+        try {
+          const shouji = serializeShoujiLog(Array.isArray(msgArr) ? msgArr : [], options);
+          const m = shouji.match(/<shouji>([\s\S]*?)<\/shouji>/);
+          const inner = m ? (m[1] || '') : '';
+          let lines = inner.split(/\n+/).map(s => String(s || '').trim()).filter(Boolean);
+          if (lines.length && /^【和.+?的聊天】$/.test(lines[0])) {
+            lines.shift();
+          }
+          return lines.join('\n').trim();
+        } catch (_) {
+          return '';
+        }
+      }
+
+      function serializeRoleGroupBlock(conversation, msgArrOverride = null) {
+        const conv = conversation || {};
+        const roleName = String(conv.role || conv.viewer || conv.character || '角色').trim() || '角色';
+        const groupName = String(conv.name || '群聊').trim() || '群聊';
+        const members = Array.isArray(conv.members) ? conv.members : [];
+        const header = `[${roleName}|${groupName}|${members.join(',')}]`;
+        const msgArr = Array.isArray(msgArrOverride) ? msgArrOverride : (Array.isArray(conv.messages) ? conv.messages : []);
+        const body = serializeMessageLinesOnly(msgArr, { includeMediaData: true });
+        const merged = [header, body].filter(Boolean).join('\n');
+        return `<group>\n${merged}\n</group>`;
+      }
+
+      function serializeRoleGroups(conversations, msgArrOverrideForActive = null) {
+        const list = Array.isArray(conversations) ? conversations : [];
+        if (!list.length) return '';
+        return list.map((c, idx) => {
+          if (msgArrOverrideForActive && idx === (state.currentRoleGroupIndex || 0)) {
+            return serializeRoleGroupBlock(c, msgArrOverrideForActive);
+          }
+          return serializeRoleGroupBlock(c);
+        }).join('\n');
+      }
+
       // ==================== GROUP CHAT SERIALIZATION (<qunliao>/<multi>) ====================
       function serializeMultiBlock(conversation, msgArrOverride = null) {
         const conv = conversation || {};
@@ -11292,16 +11461,18 @@ function applyUserAvatar(avatarElement) {
         return `<shouji>\n${trimmed}\n</shouji>`;
       }
 
-      function upsertPrivateAndGroupIntoShoujiMessage(shoujiMessageText, privateBlocksText, qunliaoText) {
+      function upsertPrivateAndGroupIntoShoujiMessage(shoujiMessageText, privateBlocksText, qunliaoText, roleGroupText = '') {
         const msg = ensureShoujiWrapper(shoujiMessageText);
         const privateBlocks = String(privateBlocksText || '').trim();
         const qunliao = String(qunliaoText || '').trim();
+        const roleGroups = String(roleGroupText || '').trim();
         return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/, (_m, inner) => {
           let body = String(inner || '');
           body = body.replace(/<private>[\s\S]*?<\/private>/g, '');
           body = body.replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '');
+          body = body.replace(/<group>[\s\S]*?<\/group>/g, '');
           body = body.trim();
-          const merged = [privateBlocks, qunliao, body].filter(Boolean).join('\n\n');
+          const merged = [privateBlocks, qunliao, roleGroups, body].filter(Boolean).join('\n\n');
           return `<shouji>\n${merged}\n</shouji>`;
         });
       }
@@ -12900,6 +13071,10 @@ function applyUserAvatar(avatarElement) {
       // 发送消息
       async function sendMessage(extra = {}) {
         try {
+          if (isRoleGroupMode()) {
+            try { showToast('偷看模式无法发送消息'); } catch (_) {}
+            return;
+          }
 
 
           const input = document.getElementById('chatInput');
@@ -14134,7 +14309,8 @@ can call down the storm that writes what comes next.
                 .replace(/<\/?shouji>/g, '')
                 .replace(/<\/?private>/g, '')
                 .replace(/<\/?qunliao>/g, '')
-                .replace(/<\/?multi>/g, '');
+                .replace(/<\/?multi>/g, '')
+                .replace(/<\/?group>/g, '');
               msgs = parseShoujiLog(`<shouji>${normalized}</shouji>`);
             } catch (_) {
               // 当前片段不完整，先忽略
@@ -14287,6 +14463,155 @@ can call down the storm that writes what comes next.
         }
       }
 
+      // 请求 AI 生成“角色群聊”回复（偷看模式）
+      async function requestRoleGroupAiReply() {
+        if (!AI_GENERATE && !AI_GENERATE_RAW) {
+          try { showToast('AI 不可用'); } catch (_) {}
+          return;
+        }
+        if (state.isAiReplying) return;
+
+        let conv = getActiveRoleGroupConversation();
+        if (!conv) {
+          const created = addRoleGroupViaPrompt();
+          if (!created) {
+            try { showToast('暂无角色群聊'); } catch (_) {}
+            return;
+          }
+          conv = getActiveRoleGroupConversation();
+          if (!conv) return;
+        }
+
+        const roleName = String(conv.role || conv.viewer || '角色').trim() || '角色';
+        const groupName = String(conv.name || '群聊').trim() || '群聊';
+        const membersText = Array.isArray(conv.members) && conv.members.length ? conv.members.join(',') : '（未设置成员）';
+
+        state.isAiReplying = true;
+        updateAiRequestButtonVisibility();
+        showTypingIndicator();
+
+        const maxContext = 120;
+        const recentMessages = Array.isArray(conv.messages) ? conv.messages.slice(-maxContext) : [];
+        const contextLines = serializeMessageLinesOnly(recentMessages, { includeMediaData: false });
+        const systemPrompt = [
+          `你正在生成「${roleName}」的群聊记录（群聊名：${groupName}）。`,
+          `群成员：${membersText}。`,
+          '这是“偷看”视角，用户不能发言。',
+          '输出规则：',
+          '1) 只输出聊天消息行（同层行协议），不要任何解释、不要 <group> 标签、不要标题行。',
+          '2) 禁止输出 [我方消息|...]，只允许群成员发言。',
+          '3) 消息格式与群聊一致，例如：',
+          '   [张三|头像后缀|大家晚上好|19:20]',
+          '   <李四|头像后缀|引用内容|回复内容|19:21>',
+          '4) 一次输出 1~3 行即可。',
+          contextLines ? `\n已有聊天记录（供参考）：\n${contextLines}` : ''
+        ].join('\n');
+
+        let stream;
+        try {
+          const timeoutMs = 180000;
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('AI回复超时')), timeoutMs)
+          );
+
+          if (state.jailbreakEnabled && AI_GENERATE_RAW) {
+            const rawRequestData = {
+              ordered_prompts: [
+                { role: 'system', content: JAILBREAK_PROMPT },
+                'world_info_before',
+                'persona_description',
+                'char_description',
+                'char_personality',
+                'scenario',
+                'world_info_after',
+                'dialogue_examples',
+                'chat_history',
+                'user_input'
+              ],
+              injects: [
+                { role: 'system', content: systemPrompt, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: true
+            };
+            stream = await Promise.race([AI_GENERATE_RAW(rawRequestData), timeoutPromise]);
+          } else {
+            const requestData = {
+              injects: [
+                { role: 'system', content: systemPrompt, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: true
+            };
+            stream = await Promise.race([AI_GENERATE(requestData), timeoutPromise]);
+          }
+
+          if (!stream) throw new Error('AI生成返回空结果');
+
+          let buffer = '';
+          let handled = 0;
+
+          const processBuffer = () => {
+            let msgs = [];
+            try {
+              const normalized = String(buffer || '')
+                .replace(/<\/?shouji>/g, '')
+                .replace(/<\/?private>/g, '')
+                .replace(/<\/?qunliao>/g, '')
+                .replace(/<\/?multi>/g, '')
+                .replace(/<\/?group>/g, '');
+              msgs = parseShoujiLog(`<shouji>${normalized}</shouji>`);
+            } catch (_) {}
+
+            while (handled < msgs.length) {
+              const msg = msgs[handled++];
+              if (!msg || msg.sender === 'user') continue; // 用户不能发言
+              state.messageHistory.push(msg);
+              appendMessage(msg, state.messageHistory.length - 1);
+            }
+          };
+
+          if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
+            for await (const chunk of stream) {
+              buffer += chunk;
+              processBuffer();
+              await yieldForStreamPace();
+            }
+          } else if (typeof stream === 'string') {
+            buffer = stream;
+            processBuffer();
+          }
+
+          if (handled === 0) {
+            const fallback = await AI_GENERATE({
+              injects: [
+                { role: 'system', content: systemPrompt, position: 'in_chat', depth: 0, should_scan: true }
+              ],
+              should_stream: false
+            });
+            buffer = String(fallback || '');
+            processBuffer();
+          }
+
+          if (handled === 0) {
+            throw new Error('AI生成内容无法解析或被过滤');
+          }
+
+          hideTypingIndicator();
+          setTimeout(() => syncToSillyTavern(), 100);
+        } catch (e) {
+          hideTypingIndicator();
+          const rawError = String(e && (e.message || e.stack) || e);
+          let friendly = 'AI 回复失败';
+          if (/status\s*502/i.test(rawError)) friendly = 'AI服务暂时不可用(502)，请稍后重试';
+          else if (/status\s*504|网关超时|超时|timeout/i.test(rawError)) friendly = 'AI回复超时/网关超时(504)，请稍后重试';
+          else if (/AI生成返回空结果/i.test(rawError)) friendly = 'AI返回空结果，请稍后重试';
+          else if (/无法解析|被过滤/i.test(rawError)) friendly = 'AI输出格式不正确，请重试';
+          try { if (typeof showToast === 'function') showToast(friendly); } catch (_) {}
+        } finally {
+          state.isAiReplying = false;
+          updateAiRequestButtonVisibility();
+        }
+      }
+
       // ========== AI 调试面板 ==========
       (function setupAIDebugPanel(){
         if (window.__aiDebugUIInstalled) return; // 防重复
@@ -14422,7 +14747,8 @@ can call down the storm that writes what comes next.
         const lastMessage = state.messageHistory[state.messageHistory.length - 1];
         
         // 显示按钮的条件：AI不在输入中，且最后一条消息不是AI刚发送的（或用户有新消息）
-        const shouldShow = !typingIndicator && !callTypingIndicator && (!lastMessage || lastMessage.sender !== 'char' || state.userHasSentNewMessage);
+        const isRoleGroup = isRoleGroupMode();
+        const shouldShow = !typingIndicator && !callTypingIndicator && (isRoleGroup || (!lastMessage || lastMessage.sender !== 'char' || state.userHasSentNewMessage));
         
         // 主聊天界面按钮
         if (btn) {
@@ -14772,12 +15098,12 @@ can call down the storm that writes what comes next.
         });
       }
 
-      // 保存角色头像到本地
+      // 保存角色头像到角色卡扩展（兼容本地）
       async function uploadCharacterAvatarToSillyTavern(file, charName, dataUrl) {
-        console.log(`👤 保存角色头像到本地: ${charName}, 文件: ${file.name}`);
+        console.log(`👤 保存角色头像到角色卡扩展: ${charName}, 文件: ${file.name}`);
 
-        // 直接保存到本地配置，不再尝试上传到SillyTavern（避免配额问题）
-        console.log('💾 保存头像到本地配置...');
+        // 直接保存到角色卡扩展/本地配置，不再尝试上传到SillyTavern（避免配额问题）
+        console.log('💾 保存头像到角色卡扩展/本地配置...');
 
         // 保存到角色配置
         setCharacterAvatarUrl(charName, dataUrl);
@@ -14797,11 +15123,11 @@ can call down the storm that writes what comes next.
         updateCharAvatars();
         saveSettings();
 
-        console.log(`✅ 角色 ${charName} 的头像已保存到本地，更新了 ${updatedCount} 条消息`);
+        console.log(`✅ 角色 ${charName} 的头像已保存（角色卡扩展/本地），更新了 ${updatedCount} 条消息`);
         console.log(`📏 头像数据大小: ${(dataUrl.length / 1024).toFixed(1)} KB`);
 
         // 给用户明确的成功反馈
-        alert(`✅ 角色 "${charName}" 的头像已成功保存！\n\n📊 详情：\n• 保存位置：本地配置\n• 更新消息：${updatedCount} 条\n• 数据大小：${(dataUrl.length / 1024).toFixed(1)} KB`);
+        alert(`✅ 角色 "${charName}" 的头像已成功保存！\n\n📊 详情：\n• 保存位置：角色卡扩展/本地配置\n• 更新消息：${updatedCount} 条\n• 数据大小：${(dataUrl.length / 1024).toFixed(1)} KB`);
 
         // 强制刷新聊天界面，确保头像立即显示
         setTimeout(() => {
@@ -15869,7 +16195,10 @@ can call down the storm that writes what comes next.
 
       // 事件绑定
       document.getElementById('sendBtn').onclick = () => sendMessage({});
-              document.getElementById('requestAiBtn').onclick = requestAiReply;
+              document.getElementById('requestAiBtn').onclick = () => {
+                if (isRoleGroupMode() && typeof requestRoleGroupAiReply === 'function') return requestRoleGroupAiReply();
+                return requestAiReply();
+              };
         document.getElementById('voiceCallRequestAiBtn').onclick = requestAiReply;
       // 集成群聊列表开关
       document.getElementById('friendsBtn').onclick = () => toggleFriendsPanel(true);
@@ -15921,6 +16250,7 @@ can call down the storm that writes what comes next.
       const EXTENSION_FRIENDS_KEY = 'tavern_helper_friends_v1';
       const EXTENSION_GROUPS_KEY = 'tavern_helper_groups_v1';
       const EXTENSION_UI_ASSETS_KEY = 'tavern_helper_ui_assets_v1';
+      const EXTENSION_CHAR_PROFILE_KEY = 'tavern_helper_char_profile_v1';
 
       function getSillyContextSafe() {
         try {
@@ -16043,6 +16373,45 @@ can call down the storm that writes what comes next.
         }
         if (!areUiAssetsEqual(legacyAssets, mergedAssets)) {
           saveUiAssetsLegacy(mergedAssets);
+        }
+      }
+
+      function isCurrentCharacterName(charName) {
+        if (!charName) return false;
+        const current = (typeof getCurrentCharName === 'function') ? getCurrentCharName() : '';
+        return current && String(charName) === String(current);
+      }
+
+      function normalizeCharProfile(input) {
+        const obj = (input && typeof input === 'object') ? input : {};
+        const avatarUrl = (typeof obj.avatarUrl === 'string') ? obj.avatarUrl.trim() : '';
+        const lastUpdated = (typeof obj.lastUpdated === 'string') ? obj.lastUpdated.trim() : '';
+        if (!avatarUrl) return null;
+        return {
+          avatarUrl,
+          lastUpdated: lastUpdated || new Date().toISOString()
+        };
+      }
+
+      async function migrateCharacterProfileStorage() {
+        const ctx = await ensureCharacterUnshallowed();
+        if (!ctx) return;
+        const currentName = (typeof getCurrentCharName === 'function') ? getCurrentCharName() : '';
+        if (!currentName) return;
+
+        const extProfile = normalizeCharProfile(readCharacterExtensionField(ctx, EXTENSION_CHAR_PROFILE_KEY));
+        let legacyProfile = null;
+        try {
+          const raw = localStorage.getItem(`char_profile_${currentName}`);
+          legacyProfile = normalizeCharProfile(raw ? JSON.parse(raw) : null);
+        } catch (_) {
+          legacyProfile = null;
+        }
+
+        if (!extProfile && legacyProfile) {
+          void writeCharacterExtensionField(EXTENSION_CHAR_PROFILE_KEY, legacyProfile);
+        } else if (extProfile && (!legacyProfile || legacyProfile.avatarUrl !== extProfile.avatarUrl)) {
+          localStorage.setItem(`char_profile_${currentName}`, JSON.stringify(extProfile));
         }
       }
 
@@ -16914,18 +17283,65 @@ can call down the storm that writes what comes next.
         });
       }
 
+      function displayRoleGroupsInPanel() {
+        const list = getRoleGroupConversations();
+        const box = document.getElementById('friendsList');
+        if (!box) return;
+
+        if (!list.length) {
+          box.innerHTML = '<div style="color: var(--text-tertiary); text-align:center; padding: 24px;">暂无角色群聊，点击左上角 AI 可生成</div>';
+          return;
+        }
+
+        box.innerHTML = list
+          .map((c, i) => {
+            const roleName = String(c && (c.role || c.viewer || '') || '').trim() || '角色';
+            const name = String(c && c.name || '').trim() || `群聊${i + 1}`;
+            const members = (c && Array.isArray(c.members)) ? c.members : [];
+            const initial = roleName ? roleName.charAt(0) : '角';
+            const memberText = members.length ? members.join(',') : '未设置成员';
+            return `<div class="friend-item" data-index="${i}">
+                      <div class="friend-avatar">${initial}</div>
+                      <div class="friend-name">
+                        <div class="group-title">${roleName} · ${name}</div>
+                        <div class="group-members">成员：${memberText}</div>
+                      </div>
+                    </div>`;
+          })
+          .join('');
+
+        box.querySelectorAll('.friend-item').forEach(el => {
+          el.addEventListener('click', () => {
+            const idx = parseInt(el.getAttribute('data-index') || '-1', 10);
+            if (isNaN(idx) || idx < 0) return;
+            switchRoleGroupChat(idx);
+            toggleFriendsPanel(false);
+          });
+        });
+      }
+
       function renderFriendsPanelList() {
         if (state.friendsPanelMode === 'group') displayGroupsInPanel();
+        else if (state.friendsPanelMode === 'roleGroup') displayRoleGroupsInPanel();
         else displayFriendsListInPanel();
       }
 
       function setFriendsPanelMode(mode) {
-        const nextMode = mode === 'group' ? 'group' : 'friend';
+        const nextMode = mode === 'group' ? 'group' : (mode === 'roleGroup' ? 'roleGroup' : 'friend');
         state.friendsPanelMode = nextMode;
         const title = document.getElementById('friendsTitle');
-        if (title) title.textContent = nextMode === 'group' ? '群聊' : '私聊好友';
+        if (title) title.textContent = nextMode === 'group' ? '群聊' : (nextMode === 'roleGroup' ? '角色群聊' : '私聊好友');
         const addBtn = document.getElementById('friendsAddBtn');
-        if (addBtn) addBtn.title = nextMode === 'group' ? '创建群聊' : '添加好友';
+        if (addBtn) {
+          addBtn.style.display = '';
+          if (nextMode === 'roleGroup') {
+            addBtn.title = '创建角色群聊';
+            addBtn.onclick = () => { addRoleGroupViaPrompt(); };
+          } else {
+            addBtn.title = nextMode === 'group' ? '创建群聊' : '添加好友';
+            addBtn.onclick = openAddChoiceModal;
+          }
+        }
         document.querySelectorAll('#friendsTabs .friends-tab').forEach(btn => {
           const isActive = btn.getAttribute('data-mode') === nextMode;
           btn.classList.toggle('active', isActive);
@@ -16957,6 +17373,29 @@ can call down the storm that writes what comes next.
         setFriendsPanelMode('friend');
         openConversation(name);
         toggleFriendsPanel(false);
+      }
+
+      function addRoleGroupViaPrompt() {
+        const roleName = prompt('请输入被查看的角色名');
+        if (!roleName) return false;
+        const groupName = prompt('请输入群聊名称');
+        if (!groupName) return false;
+        const membersRaw = prompt('请输入群成员（用中文或英文逗号分隔，可留空）', '') || '';
+        const members = splitGroupMembers(membersRaw);
+
+        const list = getRoleGroupConversations();
+        list.push({
+          role: String(roleName || '').trim() || '角色',
+          name: String(groupName || '').trim() || '群聊',
+          members,
+          messages: [],
+          addTime: new Date().toISOString()
+        });
+        state.currentRoleGroupIndex = Math.max(0, list.length - 1);
+        if (state.friendsPanelMode === 'roleGroup') renderFriendsPanelList();
+        switchRoleGroupChat(state.currentRoleGroupIndex);
+        deferredSync(0);
+        return true;
       }
 
       function removeGroupAtIndex(index) {
@@ -17002,7 +17441,8 @@ can call down the storm that writes what comes next.
         const panel = document.getElementById('friendsPanel');
         if (!panel) return;
         if (show) {
-          setFriendsPanelMode(state.groupChatMode ? 'group' : 'friend');
+          const defaultMode = isRoleGroupMode() ? 'roleGroup' : (state.groupChatMode ? 'group' : 'friend');
+          setFriendsPanelMode(defaultMode);
           panel.style.display = 'flex';
           panel.setAttribute('aria-hidden', 'false');
         } else {
@@ -19340,12 +19780,14 @@ can call down the storm that writes what comes next.
 
         const privateList = getPrivateConversations();
         const groupList = getGroupConversations();
+        const roleGroupList = getRoleGroupConversations();
         const hasPrivate = privateList.length > 0;
         const hasGroup = groupList.length > 0;
+        const hasRoleGroup = roleGroupList.length > 0;
         const pyqText = serializeMomentsToPyq(state.moments);
 
         // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
-        if (!hasPrivate && !hasGroup) {
+        if (!hasPrivate && !hasGroup && !hasRoleGroup) {
           if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
             if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
             const log = serializeShoujiLog(state.messageHistory);
@@ -19360,6 +19802,7 @@ can call down the storm that writes what comes next.
 
         const privateBlocks = buildPrivateBlocksFromConversations(privateList);
         const qunliaoLog = hasGroup ? serializeQunliao(groupList) : '';
+        const roleGroupLog = hasRoleGroup ? serializeRoleGroups(roleGroupList) : '';
 
         if (
           typeof getCurrentMessageId === 'function' &&
@@ -19370,7 +19813,7 @@ can call down the storm that writes what comes next.
           const currentId = state.currentMsgId;
           const msgObj = getChatMessages(currentId)[0];
           const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
-          const updatedCore = upsertPrivateAndGroupIntoShoujiMessage(raw, privateBlocks, qunliaoLog);
+          const updatedCore = upsertPrivateAndGroupIntoShoujiMessage(raw, privateBlocks, qunliaoLog, roleGroupLog);
           const updated = upsertPyqIntoShoujiMessage(updatedCore, pyqText);
           await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
           return;
@@ -19378,7 +19821,7 @@ can call down the storm that writes what comes next.
 
         if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
           if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          let messageToSave = upsertPrivateAndGroupIntoShoujiMessage('<shouji>\n</shouji>', privateBlocks, qunliaoLog);
+          let messageToSave = upsertPrivateAndGroupIntoShoujiMessage('<shouji>\n</shouji>', privateBlocks, qunliaoLog, roleGroupLog);
           try {
             messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
           } catch (_) {}
@@ -19418,34 +19861,56 @@ can call down the storm that writes what comes next.
             try {
               state.moments = parseMomentsFromShouji(msg.message);
             } catch (e) {
-              state.moments = [];
-            }
+             state.moments = [];
+           }
              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
              const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
              const privateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
+             const roleGroupConversations = parseRoleGroupConversationsFromShouji(msg.message) || [];
              const nameSpan = document.getElementById('chatPersonName');
 
              state.groupConversations = groupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.privateConversations = privateConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
+             state.roleGroupConversations = roleGroupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              hydrateGroupsFromStorageIfEmpty();
              syncGroupsListFromConversations(state.groupConversations);
 
              const hasPrivate = state.privateConversations.length > 0;
              const hasGroup = state.groupConversations.length > 0;
+             const hasRoleGroup = state.roleGroupConversations.length > 0;
 
              // 决定默认模式（优先使用上次选择）
              let preferred = '';
              try { preferred = String(localStorage.getItem('tavern_chat_mode') || ''); } catch (_) {}
-             if (preferred === 'group' && hasGroup) state.groupChatMode = true;
-             else if (preferred === 'private' && hasPrivate) state.groupChatMode = false;
-             else if (!hasPrivate && hasGroup) state.groupChatMode = true;
-             else state.groupChatMode = false;
-             state.friendsPanelMode = state.groupChatMode ? 'group' : 'friend';
+             if (preferred === 'roleGroup' && hasRoleGroup) {
+               state.roleGroupMode = true;
+               state.groupChatMode = false;
+             } else if (preferred === 'group' && hasGroup) {
+               state.roleGroupMode = false;
+               state.groupChatMode = true;
+             } else if (preferred === 'private' && hasPrivate) {
+               state.roleGroupMode = false;
+               state.groupChatMode = false;
+             } else if (hasPrivate) {
+               state.roleGroupMode = false;
+               state.groupChatMode = false;
+             } else if (hasGroup) {
+               state.roleGroupMode = false;
+               state.groupChatMode = true;
+             } else if (hasRoleGroup) {
+               state.roleGroupMode = true;
+               state.groupChatMode = false;
+             } else {
+               state.roleGroupMode = false;
+               state.groupChatMode = false;
+             }
+             state.friendsPanelMode = state.roleGroupMode ? 'roleGroup' : (state.groupChatMode ? 'group' : 'friend');
 
-             if (hasPrivate || hasGroup) {
+             if (hasPrivate || hasGroup || hasRoleGroup) {
                // 选择默认激活会话：若标题名与现有显示名或可解析名匹配，则选之
                let activePrivateIndex = 0;
                let activeGroupIndex = 0;
+               let activeRoleGroupIndex = 0;
                const _titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
                const wantedName = (nameSpan?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(msg.message)) || '';
                if (wantedName && hasPrivate) {
@@ -19458,16 +19923,35 @@ can call down the storm that writes what comes next.
                }
                state.currentPrivateIndex = activePrivateIndex;
                state.currentGroupIndex = activeGroupIndex;
+               state.currentRoleGroupIndex = activeRoleGroupIndex;
 
-               const activeList = state.groupChatMode ? state.groupConversations : state.privateConversations;
-               const activeIndex = state.groupChatMode ? state.currentGroupIndex : state.currentPrivateIndex;
-               state.messageHistory = Array.isArray(activeList[activeIndex]?.messages) ? [...activeList[activeIndex].messages] : [];
-               setActiveConversationPointer(state.groupChatMode ? 'group' : 'private', activeIndex);
-               if (nameSpan) nameSpan.textContent = activeList[activeIndex]?.name || wantedName || '';
-               buildPrivateChatTabs(activeList, activeIndex);
+               if (state.roleGroupMode && hasRoleGroup) {
+                 const activeList = state.roleGroupConversations;
+                 const activeIndex = Math.max(0, Math.min(state.currentRoleGroupIndex || 0, activeList.length - 1));
+                 const conv = activeList[activeIndex] || {};
+                 const roleName = String(conv.role || conv.viewer || '').trim();
+                 const groupName = String(conv.name || '').trim();
+                 const title = roleName && groupName ? `${roleName} · ${groupName}` : (groupName || roleName || '');
+                 state.messageHistory = Array.isArray(conv.messages) ? [...conv.messages] : [];
+                 setActiveConversationPointer('roleGroup', activeIndex);
+                 if (nameSpan) nameSpan.textContent = title;
+                 const tabs = document.getElementById('privateChatTabs');
+                 if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
+                 setRoleGroupInputLock(true);
+               } else {
+                 const activeList = state.groupChatMode ? state.groupConversations : state.privateConversations;
+                 const activeIndex = state.groupChatMode ? state.currentGroupIndex : state.currentPrivateIndex;
+                 state.messageHistory = Array.isArray(activeList[activeIndex]?.messages) ? [...activeList[activeIndex].messages] : [];
+                 setActiveConversationPointer(state.groupChatMode ? 'group' : 'private', activeIndex);
+                 if (nameSpan) nameSpan.textContent = activeList[activeIndex]?.name || wantedName || '';
+                 buildPrivateChatTabs(activeList, activeIndex);
+                 setRoleGroupInputLock(false);
+               }
                console.log('Loaded conversations - private:', state.privateConversations.length, 'group:', state.groupConversations.length);
              } else {
                state.groupChatMode = false;
+               state.roleGroupMode = false;
+               setRoleGroupInputLock(false);
                // 单会话格式保持兼容
                const titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
                const personName = titleMatch ? titleMatch[1] : parsePersonNameFromShouji(msg.message);
@@ -19490,10 +19974,14 @@ can call down the storm that writes what comes next.
             state.moments = [];
             state.groupChatMode = false;
             state.friendsPanelMode = 'friend';
+            state.roleGroupMode = false;
+            setRoleGroupInputLock(false);
             state.privateConversations = [];
             state.groupConversations = [];
+            state.roleGroupConversations = [];
             state.currentPrivateIndex = 0;
             state.currentGroupIndex = 0;
+            state.currentRoleGroupIndex = 0;
             hydrateGroupsFromStorageIfEmpty();
             setActiveConversationPointer('private', 0);
             const nameSpan = document.getElementById('chatPersonName');
@@ -19537,6 +20025,8 @@ can call down the storm that writes what comes next.
           await migrateFriendAndGroupStorage();
           // 尝试将 UI 资源迁移到角色卡扩展字段（头像/壁纸/朋友圈封面）
           await migrateUiAssetsStorage();
+          // 尝试将角色头像迁移到角色卡扩展字段
+          await migrateCharacterProfileStorage();
 
           // 初始化各个模块
           await initMusicApp();
@@ -20219,6 +20709,7 @@ can call down the storm that writes what comes next.
             .replace(/<pyq>[\s\S]*?<\/pyq>/g, '')
             .replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '')
             .replace(/<multi>[\s\S]*?<\/multi>/g, '')
+            .replace(/<group>[\s\S]*?<\/group>/g, '')
             .replace(/^\s*同层朋友圈\s*$/gm, '');
           // 查找第一个角色消息中的角色名
           const charMsgMatch = content.match(/\[(?!评论\|)(.+?)\|(.+?)\|.*?\|(\d{2}:\d{2})\]/);
@@ -21096,13 +21587,28 @@ can call down the storm that writes what comes next.
       // 角色配置管理 - 类似SillyTavern的角色数据保存机制
       function getCharacterProfile(charName) {
         if (!charName) return null;
-        const savedProfile = localStorage.getItem(`char_profile_${charName}`);
-        return savedProfile ? JSON.parse(savedProfile) : null;
+        if (isCurrentCharacterName(charName)) {
+          const ctx = getSillyContextSafe();
+          const extProfile = normalizeCharProfile(readCharacterExtensionField(ctx, EXTENSION_CHAR_PROFILE_KEY));
+          if (extProfile) return extProfile;
+        }
+        try {
+          const savedProfile = localStorage.getItem(`char_profile_${charName}`);
+          const parsed = savedProfile ? JSON.parse(savedProfile) : null;
+          return normalizeCharProfile(parsed);
+        } catch (_) {
+          return null;
+        }
       }
 
       function saveCharacterProfile(charName, profileData) {
         if (!charName) return;
-        localStorage.setItem(`char_profile_${charName}`, JSON.stringify(profileData));
+        const normalized = normalizeCharProfile(profileData);
+        if (isCurrentCharacterName(charName) && getSillyContextSafe()) {
+          void writeCharacterExtensionField(EXTENSION_CHAR_PROFILE_KEY, normalized);
+        }
+        if (normalized) localStorage.setItem(`char_profile_${charName}`, JSON.stringify(normalized));
+        else localStorage.removeItem(`char_profile_${charName}`);
       }
 
       function getCharacterAvatarUrl(charName) {
@@ -21113,9 +21619,15 @@ can call down the storm that writes what comes next.
 
       function setCharacterAvatarUrl(charName, avatarUrl) {
         if (!charName) return;
-        let profile = getCharacterProfile(charName) || {};
-        profile.avatarUrl = avatarUrl;
-        profile.lastUpdated = new Date().toISOString();
+        const url = (typeof avatarUrl === 'string') ? avatarUrl.trim() : '';
+        if (!url) {
+          saveCharacterProfile(charName, null);
+          return;
+        }
+        const profile = {
+          avatarUrl: url,
+          lastUpdated: new Date().toISOString()
+        };
         saveCharacterProfile(charName, profile);
       }
 
@@ -21685,12 +22197,8 @@ can call down the storm that writes what comes next.
             return;
           }
 
-          // 清除角色配置中的头像
-          const profile = getCharacterProfile(charName);
-          if (profile && profile.avatarUrl) {
-            delete profile.avatarUrl;
-            saveCharacterProfile(charName, profile);
-          }
+          // 清除角色卡扩展/本地配置中的头像
+          setCharacterAvatarUrl(charName, null);
 
           // 清除设置状态中的头像
           if (settingsState.charAvatars[charName]) {
