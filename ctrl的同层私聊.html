@@ -17497,11 +17497,24 @@ can call down the storm that writes what comes next.
         return { role, name, members, messages, addTime };
       }
 
+      function normalizeRoleGroupEntryMeta(entry, index = 0) {
+        const base = normalizeRoleGroupEntry(entry, index);
+        return {
+          role: base.role,
+          name: base.name,
+          members: base.members,
+          messages: [],
+          addTime: base.addTime,
+        };
+      }
+
       function loadRoleGroupsFromExtensions() {
         try {
           const ctx = getSillyContextSafe();
           const extValue = readCharacterExtensionField(ctx, EXTENSION_ROLE_GROUPS_KEY);
-          if (Array.isArray(extValue)) return JSON.parse(JSON.stringify(extValue));
+          if (Array.isArray(extValue)) {
+            return extValue.map((entry, idx) => normalizeRoleGroupEntryMeta(entry, idx));
+          }
           return null;
         } catch (e) {
           console.warn('加载角色群聊失败', e);
@@ -17511,7 +17524,7 @@ can call down the storm that writes what comes next.
 
       function saveRoleGroupConversations(list) {
         try {
-          const safeList = (Array.isArray(list) ? list : []).map(normalizeRoleGroupEntry);
+          const safeList = (Array.isArray(list) ? list : []).map(normalizeRoleGroupEntryMeta);
           if (getSillyContextSafe()) {
             void writeCharacterExtensionField(EXTENSION_ROLE_GROUPS_KEY, safeList);
           }
@@ -20274,7 +20287,7 @@ can call down the storm that writes what comes next.
 
         const privateBlocks = buildPrivateBlocksFromConversations(privateList);
         const qunliaoLog = hasGroup ? serializeQunliao(groupList) : '';
-        const roleGroupLog = hasRoleGroup ? serializeRoleGroups(roleGroupList) : '';
+        const roleGroupLog = '';
         saveRoleGroupConversations(roleGroupList);
 
         if (
@@ -20340,19 +20353,20 @@ can call down the storm that writes what comes next.
              const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
              const privateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
              const parsedRoleGroups = parseRoleGroupConversationsFromShouji(msg.message) || [];
+             const parsedRoleGroupMeta = parsedRoleGroups.map((c, idx) => normalizeRoleGroupEntryMeta(c, idx));
              const extRoleGroups = loadRoleGroupsFromExtensions();
              const roleGroupConversations = (Array.isArray(extRoleGroups) && extRoleGroups.length)
                ? extRoleGroups
-               : parsedRoleGroups;
-             if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroups.length) {
-               saveRoleGroupConversations(parsedRoleGroups);
+               : parsedRoleGroupMeta;
+             if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroupMeta.length) {
+               saveRoleGroupConversations(parsedRoleGroupMeta);
              }
              const nameSpan = document.getElementById('chatPersonName');
 
              state.groupConversations = groupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.privateConversations = privateConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.roleGroupConversations = roleGroupConversations.map((c, idx) => {
-               const safe = normalizeRoleGroupEntry(c, idx);
+               const safe = normalizeRoleGroupEntryMeta(c, idx);
                return safe && safe.members ? safe : { ...safe, members: [] };
              });
              hydrateGroupsFromStorageIfEmpty();
