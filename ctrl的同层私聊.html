@@ -9936,7 +9936,8 @@ function applyUserAvatar(avatarElement) {
 
       function getMomentsCoverUrl() {
         try {
-          const v = localStorage.getItem(MOMENTS_COVER_LS_KEY);
+          const fromState = (settingsState && settingsState.momentsCover) ? settingsState.momentsCover : '';
+          const v = fromState || localStorage.getItem(MOMENTS_COVER_LS_KEY);
           const s = String(v || '').trim();
           if (!s) return DEFAULT_MOMENTS_COVER_URL;
           return sanitizeMomentPlainText(s, { singleLine: true }) || DEFAULT_MOMENTS_COVER_URL;
@@ -9948,6 +9949,7 @@ function applyUserAvatar(avatarElement) {
       function setMomentsCoverUrl(url) {
         try {
           const s = sanitizeMomentPlainText(String(url || ''), { singleLine: true });
+          settingsState.momentsCover = s ? s : null;
           if (!s) localStorage.removeItem(MOMENTS_COVER_LS_KEY);
           else localStorage.setItem(MOMENTS_COVER_LS_KEY, s);
         } catch (_) {}
@@ -15918,6 +15920,7 @@ can call down the storm that writes what comes next.
       // 角色卡扩展字段（写入角色卡文件，随角色变化）
       const EXTENSION_FRIENDS_KEY = 'tavern_helper_friends_v1';
       const EXTENSION_GROUPS_KEY = 'tavern_helper_groups_v1';
+      const EXTENSION_UI_ASSETS_KEY = 'tavern_helper_ui_assets_v1';
 
       function getSillyContextSafe() {
         try {
@@ -15964,6 +15967,82 @@ can call down the storm that writes what comes next.
         } catch (e) {
           console.warn('写入角色扩展字段失败', e);
           return false;
+        }
+      }
+
+      function normalizeUiAssets(input) {
+        const obj = (input && typeof input === 'object') ? input : {};
+        const pick = (v) => {
+          const s = (typeof v === 'string') ? v.trim() : '';
+          return s ? s : null;
+        };
+        return {
+          userAvatar: pick(obj.userAvatar),
+          wallpaper: pick(obj.wallpaper),
+          homeWallpaper: pick(obj.homeWallpaper),
+          momentsCover: pick(obj.momentsCover)
+        };
+      }
+
+      function areUiAssetsEqual(a, b) {
+        return (
+          (a?.userAvatar || null) === (b?.userAvatar || null) &&
+          (a?.wallpaper || null) === (b?.wallpaper || null) &&
+          (a?.homeWallpaper || null) === (b?.homeWallpaper || null) &&
+          (a?.momentsCover || null) === (b?.momentsCover || null)
+        );
+      }
+
+      function loadUiAssetsLegacy() {
+        try {
+          const pick = (key) => {
+            const v = localStorage.getItem(key);
+            const s = String(v || '').trim();
+            return s ? s : null;
+          };
+          return {
+            userAvatar: pick('chatUserAvatar'),
+            wallpaper: pick('chatWallpaper'),
+            homeWallpaper: pick('homeWallpaper'),
+            momentsCover: pick(typeof MOMENTS_COVER_LS_KEY !== 'undefined' ? MOMENTS_COVER_LS_KEY : 'moments_cover_url_v1')
+          };
+        } catch (_) {
+          return { userAvatar: null, wallpaper: null, homeWallpaper: null, momentsCover: null };
+        }
+      }
+
+      function saveUiAssetsLegacy(assets) {
+        try {
+          const write = (key, value) => {
+            if (value) localStorage.setItem(key, value);
+            else localStorage.removeItem(key);
+          };
+          write('chatUserAvatar', assets?.userAvatar || '');
+          write('chatWallpaper', assets?.wallpaper || '');
+          write('homeWallpaper', assets?.homeWallpaper || '');
+          write(typeof MOMENTS_COVER_LS_KEY !== 'undefined' ? MOMENTS_COVER_LS_KEY : 'moments_cover_url_v1', assets?.momentsCover || '');
+        } catch (_) {}
+      }
+
+      async function migrateUiAssetsStorage() {
+        const ctx = await ensureCharacterUnshallowed();
+        if (!ctx) return;
+
+        const extAssets = normalizeUiAssets(readCharacterExtensionField(ctx, EXTENSION_UI_ASSETS_KEY));
+        const legacyAssets = loadUiAssetsLegacy();
+        const mergedAssets = {
+          userAvatar: extAssets.userAvatar || legacyAssets.userAvatar,
+          wallpaper: extAssets.wallpaper || legacyAssets.wallpaper,
+          homeWallpaper: extAssets.homeWallpaper || legacyAssets.homeWallpaper,
+          momentsCover: extAssets.momentsCover || legacyAssets.momentsCover
+        };
+
+        const hasAny = mergedAssets.userAvatar || mergedAssets.wallpaper || mergedAssets.homeWallpaper || mergedAssets.momentsCover;
+        if (hasAny && !areUiAssetsEqual(extAssets, mergedAssets)) {
+          void writeCharacterExtensionField(EXTENSION_UI_ASSETS_KEY, mergedAssets);
+        }
+        if (!areUiAssetsEqual(legacyAssets, mergedAssets)) {
+          saveUiAssetsLegacy(mergedAssets);
         }
       }
 
@@ -19456,6 +19535,8 @@ can call down the storm that writes what comes next.
 
           // 尝试将好友/群聊迁移到角色卡扩展字段（角色切换时自动分离）
           await migrateFriendAndGroupStorage();
+          // 尝试将 UI 资源迁移到角色卡扩展字段（头像/壁纸/朋友圈封面）
+          await migrateUiAssetsStorage();
 
           // 初始化各个模块
           await initMusicApp();
@@ -20453,6 +20534,7 @@ can call down the storm that writes what comes next.
         userAvatar: null,
         wallpaper: null,
         homeWallpaper: null,
+        momentsCover: null,
         charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
       };
 
@@ -21050,30 +21132,42 @@ can call down the storm that writes what comes next.
         }
       }
 
-      // 从localStorage加载设置
+      // 加载设置（优先角色卡扩展，兼容 localStorage）
       function loadSettings() {
-        const savedAvatar = localStorage.getItem('chatUserAvatar');
-        const savedWallpaper = localStorage.getItem('chatWallpaper');
-        const savedHomeWallpaper = localStorage.getItem('homeWallpaper');
+        const legacyAssets = loadUiAssetsLegacy();
+        const ctx = getSillyContextSafe();
+        const extAssets = normalizeUiAssets(readCharacterExtensionField(ctx, EXTENSION_UI_ASSETS_KEY));
+        const mergedAssets = {
+          userAvatar: extAssets.userAvatar || legacyAssets.userAvatar,
+          wallpaper: extAssets.wallpaper || legacyAssets.wallpaper,
+          homeWallpaper: extAssets.homeWallpaper || legacyAssets.homeWallpaper,
+          momentsCover: extAssets.momentsCover || legacyAssets.momentsCover
+        };
+
+        settingsState.userAvatar = mergedAssets.userAvatar;
+        settingsState.wallpaper = mergedAssets.wallpaper;
+        settingsState.homeWallpaper = mergedAssets.homeWallpaper;
+        settingsState.momentsCover = mergedAssets.momentsCover;
+
+        if (settingsState.userAvatar) {
+          updateUserAvatars();
+        }
+        if (settingsState.wallpaper) {
+          updateWallpaper();
+        }
+        if (settingsState.homeWallpaper) {
+          updateHomeWallpaper();
+        }
+
+        if (ctx && !areUiAssetsEqual(extAssets, mergedAssets)) {
+          const hasAny = mergedAssets.userAvatar || mergedAssets.wallpaper || mergedAssets.homeWallpaper || mergedAssets.momentsCover;
+          if (hasAny) void writeCharacterExtensionField(EXTENSION_UI_ASSETS_KEY, mergedAssets);
+        }
+
         const savedCharAvatars = localStorage.getItem('chatCharAvatars');
         const savedJailbreak = localStorage.getItem('jailbreakEnabled');
         const savedTheme = localStorage.getItem('chatTheme');
         const savedBubbleStyle = localStorage.getItem('chatBubbleStyle');
-
-        if (savedAvatar) {
-          settingsState.userAvatar = savedAvatar;
-          updateUserAvatars();
-        }
-
-        if (savedWallpaper) {
-          settingsState.wallpaper = savedWallpaper;
-          updateWallpaper();
-        }
-
-        if (savedHomeWallpaper) {
-          settingsState.homeWallpaper = savedHomeWallpaper;
-          updateHomeWallpaper();
-        }
 
         if (savedCharAvatars) {
           try {
@@ -21207,31 +21301,22 @@ can call down the storm that writes what comes next.
           }
         }
 
-        // 朋友圈封面预览（封面本身使用 localStorage:moments_cover_url_v1）
+        // 朋友圈封面预览（封面优先读取角色卡扩展，兼容 localStorage）
         try { updateMomentsCoverPreview(); } catch (_) {}
       }
 
-      // 保存设置到localStorage
+      // 保存设置（优先写入角色卡扩展，兼容 localStorage）
       function saveSettings() {
-        // 保存用户头像（包括清除的情况）
-        if (settingsState.userAvatar) {
-          localStorage.setItem('chatUserAvatar', settingsState.userAvatar);
-        } else {
-          localStorage.removeItem('chatUserAvatar');
-        }
+        const uiAssets = {
+          userAvatar: settingsState.userAvatar || null,
+          wallpaper: settingsState.wallpaper || null,
+          homeWallpaper: settingsState.homeWallpaper || null,
+          momentsCover: settingsState.momentsCover || null
+        };
 
-        // 保存壁纸（包括清除的情况）
-        if (settingsState.wallpaper) {
-          localStorage.setItem('chatWallpaper', settingsState.wallpaper);
-        } else {
-          localStorage.removeItem('chatWallpaper');
-        }
-
-        // 保存主屏壁纸（包括清除的情况）
-        if (settingsState.homeWallpaper) {
-          localStorage.setItem('homeWallpaper', settingsState.homeWallpaper);
-        } else {
-          localStorage.removeItem('homeWallpaper');
+        saveUiAssetsLegacy(uiAssets);
+        if (getSillyContextSafe()) {
+          void writeCharacterExtensionField(EXTENSION_UI_ASSETS_KEY, uiAssets);
         }
 
         // 保存角色头像
@@ -21575,20 +21660,21 @@ can call down the storm that writes what comes next.
       function resetSetting(type) {
         if (type === 'avatar') {
           settingsState.userAvatar = null;
-          localStorage.removeItem('chatUserAvatar');
           updateUserAvatars();
+          saveSettings();
         } else if (type === 'wallpaper') {
           settingsState.wallpaper = null;
-          localStorage.removeItem('chatWallpaper');
           updateWallpaper();
+          saveSettings();
         } else if (type === 'homeWallpaper') {
           settingsState.homeWallpaper = null;
-          localStorage.removeItem('homeWallpaper');
           updateHomeWallpaper();
+          saveSettings();
         } else if (type === 'momentsCover') {
           try { if (typeof setMomentsCoverUrl === 'function') setMomentsCoverUrl(''); } catch (_) {}
           updateMomentsCoverPreview();
           try { if (typeof renderMomentsList === 'function') renderMomentsList(); } catch (_) {}
+          saveSettings();
         } else if (type === 'charAvatar') {
           // 优先使用输入框中的角色名，如果没有则使用当前角色名
           const nameInput = document.getElementById('charNameInput');
