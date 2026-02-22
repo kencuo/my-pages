@@ -9331,7 +9331,22 @@ function applyUserAvatar(avatarElement) {
             members = splitGroupMembers(parts.slice(2).join('|'));
           }
           const msgText = lines.join('\n').trim();
-          const messages = msgText ? parseShoujiLog(`<shouji>${msgText}</shouji>`) : [];
+          let messages = msgText ? parseShoujiLog(`<shouji>${msgText}</shouji>`) : [];
+          if (!messages.length && block) {
+            const escapeHtml = (value) =>
+              String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            const rawBlock = `<group>\n${block}\n</group>`;
+            messages = [{
+              sender: 'char',
+              type: 'text',
+              content: escapeHtml(rawBlock),
+              time: getTimeStr(),
+              charName: roleName || `角色${idx + 1}`,
+            }];
+          }
           return {
             role: roleName || `角色${idx + 1}`,
             name: groupName || `群聊${idx + 1}`,
@@ -14525,11 +14540,17 @@ can call down the storm that writes what comes next.
         }
       }
 
-      function extractFirstRoleGroupBlock(rawText) {
+      function extractFirstRoleGroupBlock(rawText, roleHint) {
         let text = String(rawText || '').trim();
         if (!text) return '';
+        const safeRole = String(roleHint || '角色').trim() || '角色';
+        const replacePlaceholders = (value) => String(value || '')
+          .replace(/\{\{\s*char\s*\}\}/gi, safeRole)
+          .replace(/\{\{\s*被查看的角色\s*\}\}/g, safeRole)
+          .replace(/\{\{\s*角色\s*\}\}/g, safeRole);
+        text = replacePlaceholders(text);
         const fenceMatch = text.match(/```(?:\w+)?\s*([\s\S]*?)```/);
-        if (fenceMatch) text = String(fenceMatch[1] || '').trim();
+        if (fenceMatch) text = replacePlaceholders(fenceMatch[1] || '').trim();
         const groupMatch = text.match(/<group>[\s\S]*?<\/group>/i);
         if (groupMatch) return groupMatch[0];
         if (/<\/group>/i.test(text) && !/<group>/i.test(text)) {
@@ -14541,14 +14562,21 @@ can call down the storm that writes what comes next.
           const body = text.slice(start).trim();
           return `<group>\n${body}\n</group>`;
         }
+        const looseHeaderMatch = text.match(/^[^\n]*\|[^\n]*\|[^\n]*/m);
+        if (looseHeaderMatch) {
+          const start = text.indexOf(looseHeaderMatch[0]);
+          const body = text.slice(start).trim();
+          return `<group>\n${body}\n</group>`;
+        }
         return '';
       }
 
-      function getRoleGroupAiFormatPrompt() {
+      function getRoleGroupAiFormatPrompt(roleHint) {
+        const safeRole = String(roleHint || '角色').trim() || '角色';
         return [
           '<group>',
-          '[{{被查看的角色}}|{{群聊的名字}}|{{群成员，用中文或者英文的逗号隔开}}]',
-          '{{这里就是和群聊功能一样的消息类型格式}}',
+          `[${safeRole}|群聊名|成员A,成员B,成员C,…]`,
+          '[成员名字||消息内容|12:34]',
           '</group>'
         ].join('\n');
       }
@@ -14578,7 +14606,7 @@ can call down the storm that writes what comes next.
             `被查看角色：${roleHint}`,
             existingNames.length ? `已存在群聊名（避免重复）：${existingNames.join('、')}` : '',
             '输出格式（严格）：',
-            getRoleGroupAiFormatPrompt(),
+            getRoleGroupAiFormatPrompt(roleHint),
             '补充说明：消息格式与群聊一致，例如：',
             '[成员|头像后缀|消息内容|时间]',
             '规则：',
@@ -14586,7 +14614,8 @@ can call down the storm that writes what comes next.
             '2) 群聊名简短自然，且不与已有重复。',
             '3) 消息 1~3 行即可，时间用 24h 的 HH:MM。',
             '4) 头像后缀可留空，但必须保留字段位置，如：张三||内容|19:20。',
-            '5) 只允许群成员发言，不要出现“我/用户/旁白”。'
+            '5) 只允许群成员发言，不要出现“我/用户/旁白”。',
+            '6) 禁止输出 {{char}} 或 {{...}} 这类占位符，必须写真实名字。'
           ].filter(Boolean).join('\n');
 
           // 调试：记录角色群聊创建上下文
@@ -14652,7 +14681,7 @@ can call down the storm that writes what comes next.
             window.__aiDebug.stream = String(outRaw || '');
             window.__updateAIDebug && window.__updateAIDebug();
           }} catch(_){}
-          const groupBlock = extractFirstRoleGroupBlock(outRaw);
+          const groupBlock = extractFirstRoleGroupBlock(outRaw, roleHint);
           if (!groupBlock) throw new Error('未生成群聊块');
 
           const parsed = parseRoleGroupConversationsFromShouji(`<shouji>${groupBlock}</shouji>`);
@@ -17746,7 +17775,7 @@ can call down the storm that writes what comes next.
           addBtn.style.display = '';
           if (nextMode === 'roleGroup') {
             addBtn.title = '创建角色群聊';
-            addBtn.onclick = () => { addRoleGroupViaPrompt(); };
+            addBtn.onclick = () => { openRoleGroupCreateModal(); };
           } else {
             addBtn.title = nextMode === 'group' ? '创建群聊' : '添加好友';
             addBtn.onclick = openAddChoiceModal;
@@ -18035,6 +18064,128 @@ can call down the storm that writes what comes next.
         overlay.style.display = 'flex';
         overlay.setAttribute('aria-hidden', 'false');
         setTimeout(() => { overlay.querySelector('#groupCreateNameInput')?.focus(); }, 0);
+      }
+
+      function ensureRoleGroupCreateModal() {
+        let overlay = document.getElementById('roleGroupCreateOverlay');
+        if (overlay) return overlay;
+
+        overlay = document.createElement('div');
+        overlay.id = 'roleGroupCreateOverlay';
+        overlay.className = 'settings-overlay';
+        overlay.style.display = 'none';
+        overlay.innerHTML = `
+          <div class="settings-modal" style="max-width: 520px;">
+            <div class="settings-header">
+              <div class="settings-title">创建角色群聊</div>
+              <button class="settings-close-btn" id="roleGroupCreateCloseBtn">×</button>
+            </div>
+            <div class="settings-content">
+              <div class="form-group">
+                <label>被查看角色</label>
+                <input id="roleGroupCreateRoleInput" type="text" placeholder="例如：楚绥星" />
+              </div>
+              <div class="form-group">
+                <label>群名称</label>
+                <input id="roleGroupCreateNameInput" type="text" placeholder="例如：冒险小队" />
+              </div>
+              <div class="form-group">
+                <label>群成员</label>
+                <div class="group-member-grid" id="roleGroupMembersGrid"></div>
+                <button class="group-member-add" id="roleGroupMemberAddBtn" type="button">+ 添加一个格子</button>
+                <div style="margin-top: 6px; color: var(--text-tertiary); font-size: 12px;">支持中文/英文逗号分隔</div>
+              </div>
+              <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 14px;">
+                <button class="modal-btn cancel-btn" id="roleGroupCreateCancelBtn" type="button">取消</button>
+                <button class="modal-btn confirm-btn" id="roleGroupCreateConfirmBtn" type="button">创建</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const close = () => { overlay.style.display = 'none'; };
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('#roleGroupCreateCloseBtn')?.addEventListener('click', close);
+        overlay.querySelector('#roleGroupCreateCancelBtn')?.addEventListener('click', close);
+
+        const grid = overlay.querySelector('#roleGroupMembersGrid');
+        const addChip = (value = '') => {
+          if (!grid) return;
+          const chip = document.createElement('div');
+          chip.className = 'group-member-chip';
+          chip.innerHTML = `<input type="text" placeholder="成员" value="${String(value).replace(/\"/g, '&quot;')}" />
+                            <button type="button" title="移除">×</button>`;
+          chip.querySelector('button')?.addEventListener('click', () => chip.remove());
+          grid.appendChild(chip);
+          chip.querySelector('input')?.focus();
+        };
+
+        const addBtn = overlay.querySelector('#roleGroupMemberAddBtn');
+        if (addBtn) addBtn.addEventListener('click', () => addChip(''));
+
+        const confirmBtn = overlay.querySelector('#roleGroupCreateConfirmBtn');
+        if (confirmBtn) confirmBtn.addEventListener('click', () => {
+          const roleInput = overlay.querySelector('#roleGroupCreateRoleInput');
+          const nameInput = overlay.querySelector('#roleGroupCreateNameInput');
+          const roleName = roleInput ? String(roleInput.value || '').trim() : '';
+          const groupName = nameInput ? String(nameInput.value || '').trim() : '';
+          if (!roleName) {
+            alert('请输入被查看角色');
+            return;
+          }
+          if (!groupName) {
+            alert('请输入群名称');
+            return;
+          }
+
+          const inputs = [...overlay.querySelectorAll('#roleGroupMembersGrid input')];
+          const rawMembers = inputs.map(i => String(i.value || '')).join(',');
+          const members = splitGroupMembers(rawMembers);
+
+          const list = getRoleGroupConversations();
+          syncActiveConversationCache();
+          list.push({
+            role: roleName,
+            name: groupName,
+            members,
+            messages: [],
+            addTime: new Date().toISOString(),
+          });
+          state.currentRoleGroupIndex = Math.max(0, list.length - 1);
+          if (state.friendsPanelMode === 'roleGroup') renderFriendsPanelList();
+          switchRoleGroupChat(state.currentRoleGroupIndex);
+          deferredSync(0);
+          close();
+          toggleFriendsPanel(false);
+        });
+
+        return overlay;
+      }
+
+      function openRoleGroupCreateModal() {
+        const overlay = ensureRoleGroupCreateModal();
+        const roleInput = overlay.querySelector('#roleGroupCreateRoleInput');
+        if (roleInput) {
+          const currentRole = (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '';
+          roleInput.value = currentRole;
+        }
+        const nameInput = overlay.querySelector('#roleGroupCreateNameInput');
+        if (nameInput) nameInput.value = '';
+        const grid = overlay.querySelector('#roleGroupMembersGrid');
+        if (grid) {
+          grid.innerHTML = '';
+          for (let i = 0; i < 3; i++) {
+            const chip = document.createElement('div');
+            chip.className = 'group-member-chip';
+            chip.innerHTML = `<input type="text" placeholder="成员" value="" /><button type="button" title="移除">×</button>`;
+            chip.querySelector('button')?.addEventListener('click', () => chip.remove());
+            grid.appendChild(chip);
+          }
+        }
+        overlay.style.display = 'flex';
+        overlay.setAttribute('aria-hidden', 'false');
+        setTimeout(() => { overlay.querySelector('#roleGroupCreateRoleInput')?.focus(); }, 0);
       }
 
       function ensureAddChoiceModal() {
