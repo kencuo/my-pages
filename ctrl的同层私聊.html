@@ -14494,7 +14494,7 @@ can call down the storm that writes what comes next.
         const recentMessages = Array.isArray(conv.messages) ? conv.messages.slice(-maxContext) : [];
         const contextLines = serializeMessageLinesOnly(recentMessages, { includeMediaData: false });
         const systemPrompt = [
-          `你正在生成「${roleName}」的群聊记录（群聊名：${groupName}）。`,
+          `你正在查看「${roleName}」的群聊记录（群聊名：${groupName}）。`,
           `群成员：${membersText}。`,
           '这是“偷看”视角，用户不能发言。',
           '输出规则：',
