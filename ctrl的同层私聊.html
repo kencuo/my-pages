@@ -9099,7 +9099,7 @@ function applyUserAvatar(avatarElement) {
         },
         {
           // Avatar supports SillyTavern IMGDATA tokens: "IMGDATA:/path|FILENAME:xxx" (note the extra '|')
-          regex: /^\<(.+?)\|((?:IMGDATA:[^|>]+\|FILENAME:[^|>]+)|[^|>]+)\|(.*?)\|(.*?)\|(\d{2}:\d{2})\>$/,
+          regex: /^\<(.+?)\|((?:IMGDATA:[^|>]+\|FILENAME:[^|>]+)|[^|>]*)\|(.*?)\|(.*?)\|(\d{2}:\d{2})\>$/,
           handler: ([, charName, avatar, quote, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
@@ -9120,7 +9120,7 @@ function applyUserAvatar(avatarElement) {
         },
         {
           // Avatar supports SillyTavern IMGDATA tokens: "IMGDATA:/path|FILENAME:xxx" (note the extra '|')
-          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|(.*?)\|(\d{2}:\d{2})\]$/,
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]*)\|(.*?)\|(\d{2}:\d{2})\]$/,
           handler: ([, charName, avatar, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
@@ -9276,14 +9276,18 @@ function applyUserAvatar(avatarElement) {
         normalized = normalized.replace(/<br\s*\/?>/gi, '\n');
         normalized = normalized.replace(/&lt;group&gt;/gi, '<group>').replace(/&lt;\/group&gt;/gi, '</group>');
         // 兼容旧格式：用“同层手机xxx”作为 <group> 起始标记
-        normalized = normalized.replace(
-          /^\s*同层手机[^\n]*\s*(\[[^\]]+\])/gmi,
-          '<group>\n$1'
-        );
-        normalized = normalized.replace(
-          /^\s*同层手机[^\n]*\s*$/gmi,
-          '<group>'
-        );
+        // 注意：如果已经有 <group> 标签，就不要再把“同层手机”替换成 <group>，避免头行被污染
+        const hasGroupTag = /<group>/i.test(normalized) || /<\/group>/i.test(normalized);
+        if (!hasGroupTag) {
+          normalized = normalized.replace(
+            /^\s*同层手机[^\n]*\s*(\[[^\]]+\])/gmi,
+            '<group>\n$1'
+          );
+          normalized = normalized.replace(
+            /^\s*同层手机[^\n]*\s*$/gmi,
+            '<group>'
+          );
+        }
         if (!/<group>/i.test(normalized) && /<\/group>/i.test(normalized)) {
           normalized = `<group>\n${normalized}`;
         }
@@ -9298,7 +9302,8 @@ function applyUserAvatar(avatarElement) {
             .split(/\n+/)
             .map(s => String(s || '').trim())
             .filter(Boolean)
-            .filter(line => !/^\s*同层手机/.test(line));
+            .filter(line => !/^\s*同层手机/.test(line))
+            .filter(line => !/^\s*<\/?group>\s*$/i.test(line));
           const headerLine = lines.shift() || '';
           let roleName = '';
           let groupName = '';
@@ -14554,20 +14559,23 @@ can call down the storm that writes what comes next.
             existingNames.length ? `已存在群聊名（避免重复）：${existingNames.join('、')}` : '',
             '输出格式（严格）：',
             '<group>',
-            '[被查看角色|群聊名称|成员1,成员2,成员3]',
-            '[成员|头像后缀|消息内容|时间]',
-            '...</group>',
+            '[{{被查看的角色}}|{{群聊的名字}}|{{群成员，用中文或者英文的逗号隔开}}]',
+            '{{这里就是和群聊功能一样的消息类型格式}}',
+            '</group>',
+            '示例（示例里用真实名字，最终输出不要保留 {{}} 占位符）：',
+            '<group>',
+            `[${roleHint}|夜航计划|${roleHint},林夏,周序]`,
+            '[林夏||到了没？|19:20]',
+            `[${roleHint}||刚下电梯，马上来|19:21]`,
+            '</group>',
             '规则：',
             '1) 成员至少3人，包含被查看角色本人。',
             '2) 群聊名简短自然，且不与已有重复。',
             '3) 消息 1~3 行即可，时间用 24h 的 HH:MM。',
             '4) 头像后缀可留空，但必须保留字段位置，如：张三||内容|19:20。',
-            '5) 只允许群成员发言，不要出现“我/用户/旁白”。被查看角色和成员必须输出人名，例如：',
-            '<group>',
-            '[楚绥星|夜航计划|楚绥星,林夏,周序]',
-            '[林夏||到了没？|19:20]',
-            '[楚绥星||刚下电梯，马上来|19:21]',
-            '</group>'
+            '5) 只允许群成员发言，不要出现“我/用户/旁白”。',
+            '6) 不要输出“同层手机xxx”等额外行。',
+            '7) 人名不允许是<group>或者是<tableEdit>'
           ].filter(Boolean).join('\n');
 
           // 调试：记录角色群聊创建上下文
