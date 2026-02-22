@@ -14544,6 +14544,21 @@ can call down the storm that writes what comes next.
         return '';
       }
 
+      function getRoleGroupAiFormatPrompt() {
+        return [
+          '请严格按以下格式输出：',
+          '<group>',
+          '[{{被查看的角色}}|{{群聊的名字}}|{{群成员，用中文或者英文的逗号隔开}}]',
+          '{{这里就是和群聊功能一样的消息类型格式}}',
+          '</group>'
+        ].join('\n');
+      }
+
+      function showRoleGroupAiPrompt() {
+        const promptText = getRoleGroupAiFormatPrompt();
+        showConfirmModal(promptText, () => { requestRoleGroupAiCreate(); }, '角色群聊提示词');
+      }
+
       // 请求 AI 生成“角色群聊”（含群聊名/成员/初始消息）
       async function requestRoleGroupAiCreate() {
         if (!AI_GENERATE && !AI_GENERATE_RAW) {
@@ -17748,7 +17763,7 @@ can call down the storm that writes what comes next.
           if (nextMode === 'roleGroup') {
             aiBtn.style.display = '';
             aiBtn.title = 'AI生成角色群聊';
-            aiBtn.onclick = () => { requestRoleGroupAiCreate(); };
+            aiBtn.onclick = () => { showRoleGroupAiPrompt(); };
           } else {
             aiBtn.style.display = 'none';
             aiBtn.onclick = null;
