@@ -14568,6 +14568,20 @@ can call down the storm that writes what comes next.
           const body = text.slice(start).trim();
           return `<group>\n${body}\n</group>`;
         }
+        // 兜底：AI完全没给格式时，强行包成合法 <group>，并把原文塞进一条消息里
+        const sanitized = String(text || '')
+          .replace(/\r/g, '')
+          .replace(/\n+/g, ' / ')
+          .replace(/\|/g, '｜')
+          .replace(/\[/g, '［')
+          .replace(/\]/g, '］')
+          .trim();
+        if (sanitized) {
+          const members = [safeRole, '成员A', '成员B'].join(',');
+          const headerLine = `[${safeRole}|群聊|${members}]`;
+          const fallbackLine = `[${safeRole}||${sanitized}|${getTimeStr()}]`;
+          return `<group>\n${headerLine}\n${fallbackLine}\n</group>`;
+        }
         return '';
       }
 
