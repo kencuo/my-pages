@@ -8281,6 +8281,21 @@
       </div>
     </div>
 
+    <!-- 导入结果弹窗 -->
+    <div class="simple-modal-overlay" id="importResultModalOverlay" style="display: none;">
+      <div class="simple-modal" id="importResultModal" style="max-width: 320px;">
+        <div class="simple-modal-header">
+          <span id="importResultTitle">✅ 导入完成</span>
+        </div>
+        <div class="simple-modal-body">
+          <div id="importResultContent" style="white-space: pre-wrap; font-size: 13px; line-height: 1.45; color: #333;"></div>
+        </div>
+        <div class="simple-modal-footer">
+          <button class="modal-btn confirm-btn" id="importResultConfirm">知道了</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 收藏消息查看模态框 -->
     <div class="settings-overlay" id="favoritesOverlay" style="display: none;">
       <div class="settings-modal" style="max-width: 500px; max-height: 80vh;">
@@ -16920,6 +16935,26 @@ can call down the storm that writes what comes next.
         }
       }
 
+      function showImportResultModal(title, message) {
+        const overlay = document.getElementById('importResultModalOverlay');
+        const titleEl = document.getElementById('importResultTitle');
+        const contentEl = document.getElementById('importResultContent');
+        if (!overlay || !titleEl || !contentEl) {
+          const fallbackTitle = title ? String(title) : '导入完成';
+          const fallbackMessage = message ? String(message) : '';
+          alert(fallbackMessage ? `${fallbackTitle}\n\n${fallbackMessage}` : fallbackTitle);
+          return;
+        }
+        titleEl.textContent = title || '导入完成';
+        contentEl.textContent = message || '';
+        overlay.style.display = 'flex';
+      }
+
+      function closeImportResultModal() {
+        const overlay = document.getElementById('importResultModalOverlay');
+        if (overlay) overlay.style.display = 'none';
+      }
+
       function importFriends() {
         if (!selectedImportFile) {
           alert('请先选择要导入的JSON文件');
@@ -16999,7 +17034,8 @@ can call down the storm that writes what comes next.
 
             closeImportExportModal();
 
-            let resultMessage = `✅ 导入完成！\n\n`;
+            const resultTitle = '✅ 导入完成';
+            let resultMessage = '';
             resultMessage += `角色: ${charInfo.name}\n`;
             resultMessage += `导入模式: ${importMode === 'replace' ? '替换' : '合并'}\n`;
             resultMessage += `成功导入好友: ${importedCount} 个\n`;
@@ -17010,7 +17046,7 @@ can call down the storm that writes what comes next.
             }
             resultMessage += `当前好友总数: ${finalFriends.length} 个`;
 
-            alert(resultMessage);
+            showImportResultModal(resultTitle, resultMessage);
           } catch (error) {
             console.error('导入好友列表失败:', error);
             alert('❌ 导入失败: ' + error.message);
@@ -17187,12 +17223,12 @@ can call down the storm that writes what comes next.
 
           const versionInfo = worldbookData.version ? ` (版本: ${worldbookData.version})` : '';
 
-          alert(
-            `✅ 远程世界书导入成功！\n\n` +
-              `来源: ${worldbookData.name || '未知'}${versionInfo}\n` +
-              `导入条目: ${entryCount} 个\n` +
-              `目标世界书: ${targetWorldbook}`,
-          );
+          const resultTitle = '✅ 远程世界书导入成功';
+          const resultMessage =
+            `来源: ${worldbookData.name || '未知'}${versionInfo}\n` +
+            `导入条目: ${entryCount} 个\n` +
+            `目标世界书: ${targetWorldbook}`;
+          showImportResultModal(resultTitle, resultMessage);
         } catch (error) {
           console.error('世界书处理失败');
           throw error;
@@ -18019,6 +18055,18 @@ can call down the storm that writes what comes next.
           hideFileSendModal();
         }
       });
+
+      // 导入结果弹窗事件绑定
+      const importResultConfirm = document.getElementById('importResultConfirm');
+      if (importResultConfirm) importResultConfirm.addEventListener('click', closeImportResultModal);
+      const importResultOverlay = document.getElementById('importResultModalOverlay');
+      if (importResultOverlay) {
+        importResultOverlay.addEventListener('click', (e) => {
+          if (e.target && e.target.id === 'importResultModalOverlay') {
+            closeImportResultModal();
+          }
+        });
+      }
 
       // ==================== 时间选择弹窗事件监听器 ====================
 
