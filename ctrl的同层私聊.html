@@ -14574,7 +14574,7 @@ can call down the storm that writes what comes next.
             .slice(0, 8);
 
           const promptText = [
-            '请生成一个“偷看群聊”。只输出一个 <group> 块，禁止解释或代码块。',
+            '请生成一个“偷看群聊”。只输出一个 <group> 块，记得要输出<group>作为开始。禁止解释或代码块。',
             `被查看角色：${roleHint}`,
             existingNames.length ? `已存在群聊名（避免重复）：${existingNames.join('、')}` : '',
             '输出格式（严格）：',
