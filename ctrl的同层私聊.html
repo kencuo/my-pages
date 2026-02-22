@@ -15915,12 +15915,64 @@ can call down the storm that writes what comes next.
         return { id: 'default', name: '默认角色', source: 'default' };
       }
 
+      // 角色卡扩展字段（写入角色卡文件，随角色变化）
+      const EXTENSION_FRIENDS_KEY = 'tavern_helper_friends_v1';
+      const EXTENSION_GROUPS_KEY = 'tavern_helper_groups_v1';
+
+      function getSillyContextSafe() {
+        try {
+          if (typeof parent !== 'undefined' && parent.SillyTavern && typeof parent.SillyTavern.getContext === 'function') {
+            return parent.SillyTavern.getContext();
+          }
+          if (typeof parent !== 'undefined' && typeof parent.getContext === 'function') {
+            return parent.getContext();
+          }
+        } catch (_) {}
+        return null;
+      }
+
+      async function ensureCharacterUnshallowed() {
+        const ctx = getSillyContextSafe();
+        if (ctx && typeof ctx.unshallowCharacter === 'function') {
+          try {
+            await ctx.unshallowCharacter(ctx.characterId);
+          } catch (_) {}
+        }
+        return ctx;
+      }
+
+      function readCharacterExtensionField(ctx, key) {
+        if (!ctx || !ctx.characters) return null;
+        const char = ctx.characters[ctx.characterId];
+        if (!char) return null;
+        let ext = char?.data?.extensions;
+        if (!ext && char?.json_data) {
+          try {
+            ext = JSON.parse(char.json_data)?.data?.extensions;
+          } catch (_) {}
+        }
+        if (!ext || typeof ext !== 'object') return null;
+        return ext[key] === undefined ? null : ext[key];
+      }
+
+      async function writeCharacterExtensionField(key, value) {
+        const ctx = getSillyContextSafe();
+        if (!ctx || typeof ctx.writeExtensionField !== 'function') return false;
+        try {
+          await ctx.writeExtensionField(ctx.characterId, key, value);
+          return true;
+        } catch (e) {
+          console.warn('写入角色扩展字段失败', e);
+          return false;
+        }
+      }
+
       function getFriendsStorageKey() {
         const c = getCurrentCharacterInfo();
         return `tavern_friends_${c.source}_${c.id}`;
       }
 
-      function loadFriendsList() {
+      function loadFriendsListLegacy() {
         try {
           const key = getFriendsStorageKey();
           if (typeof parent !== 'undefined' && parent.extension_settings) {
@@ -15931,7 +15983,7 @@ can call down the storm that writes what comes next.
         } catch (e) { console.warn('加载好友失败', e); return []; }
       }
 
-      function saveFriendsList(list) {
+      function saveFriendsListLegacy(list) {
         try {
           const key = getFriendsStorageKey();
           if (typeof parent !== 'undefined' && parent.extension_settings) {
@@ -15940,6 +15992,47 @@ can call down the storm that writes what comes next.
           }
           localStorage.setItem(key, JSON.stringify(list));
         } catch (e) { console.warn('保存好友失败', e); }
+      }
+
+      function loadFriendsList() {
+        try {
+          const ctx = getSillyContextSafe();
+          const extValue = readCharacterExtensionField(ctx, EXTENSION_FRIENDS_KEY);
+          if (Array.isArray(extValue)) return JSON.parse(JSON.stringify(extValue));
+          return loadFriendsListLegacy();
+        } catch (e) { console.warn('加载好友失败', e); return []; }
+      }
+
+      function saveFriendsList(list) {
+        try {
+          const safeList = Array.isArray(list) ? list : [];
+          saveFriendsListLegacy(safeList);
+          if (getSillyContextSafe()) {
+            void writeCharacterExtensionField(EXTENSION_FRIENDS_KEY, safeList);
+          }
+        } catch (e) { console.warn('保存好友失败', e); }
+      }
+
+      async function migrateFriendAndGroupStorage() {
+        const ctx = await ensureCharacterUnshallowed();
+        if (!ctx) return;
+
+        const extFriends = readCharacterExtensionField(ctx, EXTENSION_FRIENDS_KEY);
+        const extGroups = readCharacterExtensionField(ctx, EXTENSION_GROUPS_KEY);
+        const legacyFriends = loadFriendsListLegacy();
+        const legacyGroups = loadGroupsListLegacy();
+
+        if (!Array.isArray(extFriends) && legacyFriends.length) {
+          void writeCharacterExtensionField(EXTENSION_FRIENDS_KEY, legacyFriends);
+        } else if (Array.isArray(extFriends)) {
+          saveFriendsListLegacy(extFriends);
+        }
+
+        if (!Array.isArray(extGroups) && legacyGroups.length) {
+          void writeCharacterExtensionField(EXTENSION_GROUPS_KEY, legacyGroups);
+        } else if (Array.isArray(extGroups)) {
+          saveGroupsListLegacy(extGroups);
+        }
       }
 
       // ==================== 导入/导出与远程世界书 ====================
@@ -16573,7 +16666,7 @@ can call down the storm that writes what comes next.
         return { name: '', members: [] };
       }
 
-      function loadGroupsList() {
+      function loadGroupsListLegacy() {
         try {
           const key = getGroupsStorageKey();
           if (typeof parent !== 'undefined' && parent.extension_settings) {
@@ -16584,7 +16677,7 @@ can call down the storm that writes what comes next.
         } catch (e) { console.warn('加载群聊列表失败', e); return []; }
       }
 
-      function saveGroupsList(list) {
+      function saveGroupsListLegacy(list) {
         try {
           const key = getGroupsStorageKey();
           const safeList = (Array.isArray(list) ? list : []).map(normalizeGroupEntry).filter(g => g.name);
@@ -16593,6 +16686,25 @@ can call down the storm that writes what comes next.
             if (typeof parent.saveSettingsDebounced === 'function') parent.saveSettingsDebounced();
           }
           localStorage.setItem(key, JSON.stringify(safeList));
+        } catch (e) { console.warn('保存群聊列表失败', e); }
+      }
+
+      function loadGroupsList() {
+        try {
+          const ctx = getSillyContextSafe();
+          const extValue = readCharacterExtensionField(ctx, EXTENSION_GROUPS_KEY);
+          if (Array.isArray(extValue)) return JSON.parse(JSON.stringify(extValue));
+          return loadGroupsListLegacy();
+        } catch (e) { console.warn('加载群聊列表失败', e); return []; }
+      }
+
+      function saveGroupsList(list) {
+        try {
+          const safeList = (Array.isArray(list) ? list : []).map(normalizeGroupEntry).filter(g => g.name);
+          saveGroupsListLegacy(safeList);
+          if (getSillyContextSafe()) {
+            void writeCharacterExtensionField(EXTENSION_GROUPS_KEY, safeList);
+          }
         } catch (e) { console.warn('保存群聊列表失败', e); }
       }
 
@@ -19341,6 +19453,9 @@ can call down the storm that writes what comes next.
 
           // 检查SillyTavern API
           checkSillyTavernAPI();
+
+          // 尝试将好友/群聊迁移到角色卡扩展字段（角色切换时自动分离）
+          await migrateFriendAndGroupStorage();
 
           // 初始化各个模块
           await initMusicApp();
