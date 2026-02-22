@@ -1423,31 +1423,6 @@
         color: var(--accent-danger);
         transform: scale(1.05);
       }
-      .role-group-ai-btn {
-        margin-left: auto;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        border: none;
-        background: rgba(7, 193, 96, 0.12);
-        color: #07c160;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-      }
-      .role-group-ai-btn:hover {
-        background: rgba(7, 193, 96, 0.2);
-        transform: scale(1.06);
-      }
-      .role-group-ai-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-      }
       #requestAiBtn {
         position: absolute;
         top: 6px;
@@ -7439,8 +7414,8 @@
             <label class="setting-label">开发与调试</label>
             <div class="setting-preview">
               <div class="preview-info" style="flex: 1;">
-                <div class="preview-title">AI 调试面板</div>
-                <div class="preview-desc">从这里打开或关闭调试面板（隐藏悬浮按钮）</div>
+                <div class="preview-title">私聊/群聊/角色群聊 AI 调试</div>
+                <div class="preview-desc">从这里打开或关闭调试面板（私聊/群聊/角色群聊通用）</div>
               </div>
               <button class="upload-btn" id="openAIDebugBtn" style="white-space: nowrap;">打开调试</button>
             </div>
@@ -14575,6 +14550,17 @@ can call down the storm that writes what comes next.
             '5) 只允许群成员发言，不要出现“我/用户/旁白”。'
           ].filter(Boolean).join('\n');
 
+          // 调试：记录角色群聊创建上下文
+          try { if (state.debugEnabled) {
+            window.__aiDebug = window.__aiDebug || { stream: '', messages: [] };
+            window.__aiDebug.mode = (state.jailbreakEnabled && AI_GENERATE_RAW) ? 'roleGroup(createRaw)' : 'roleGroup(create)';
+            window.__aiDebug.context = systemPrompt;
+            window.__aiDebug.stream = '';
+            window.__aiDebug.messages = [];
+            window.__aiDebug.error = '';
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch(_){}
+
           const timeoutMs = 180000;
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('AI回复超时')), timeoutMs)
@@ -14600,6 +14586,12 @@ can call down the storm that writes what comes next.
               ],
               should_stream: false
             };
+            try { if (state.debugEnabled && window.__aiDebug) {
+              const safe = JSON.parse(JSON.stringify(rawRequestData));
+              window.__aiDebug.jailbreak_prompt = JAILBREAK_PROMPT;
+              window.__aiDebug.request = safe;
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch(_){}
             result = await Promise.race([AI_GENERATE_RAW(rawRequestData), timeoutPromise]);
           } else {
             const requestData = {
@@ -14608,10 +14600,19 @@ can call down the storm that writes what comes next.
               ],
               should_stream: false
             };
+            try { if (state.debugEnabled && window.__aiDebug) {
+              const safe = JSON.parse(JSON.stringify(requestData));
+              window.__aiDebug.request = safe;
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch(_){}
             result = await Promise.race([AI_GENERATE(requestData), timeoutPromise]);
           }
 
           const outRaw = await consumeTextStream(result);
+          try { if (state.debugEnabled && window.__aiDebug) {
+            window.__aiDebug.stream = String(outRaw || '');
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch(_){}
           const groupBlock = extractFirstRoleGroupBlock(outRaw);
           if (!groupBlock) throw new Error('未生成群聊块');
 
@@ -14643,7 +14644,12 @@ can call down the storm that writes what comes next.
           const rawError = String(e && (e.message || e.stack) || e);
           const friendly = /超时/.test(rawError) ? 'AI生成群聊超时，请稍后重试' : 'AI生成群聊失败';
           try { showToast(friendly); } catch (_) {}
-          try { if (state.debugEnabled) { console.error('[AI-DEBUG] role group create error:', e); } } catch(_){}
+          try { if (state.debugEnabled) {
+            console.error('[AI-DEBUG] role group create error:', e);
+            window.__aiDebug = window.__aiDebug || {};
+            window.__aiDebug.error = String(e && (e.stack || e) || e);
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch(_){}
         } finally {
           state.isAiReplying = false;
           updateAiRequestButtonVisibility();
@@ -14695,6 +14701,17 @@ can call down the storm that writes what comes next.
           contextLines ? `\n已有聊天记录（供参考）：\n${contextLines}` : ''
         ].join('\n');
 
+        // 调试：记录角色群聊AI回复上下文
+        try { if (state.debugEnabled) {
+          window.__aiDebug = window.__aiDebug || { stream: '', messages: [] };
+          window.__aiDebug.mode = (state.jailbreakEnabled && AI_GENERATE_RAW) ? 'roleGroup(generateRaw)' : 'roleGroup(generate)';
+          window.__aiDebug.context = systemPrompt;
+          window.__aiDebug.stream = '';
+          window.__aiDebug.messages = [];
+          window.__aiDebug.error = '';
+          window.__updateAIDebug && window.__updateAIDebug();
+        }} catch(_){}
+
         let stream;
         try {
           const timeoutMs = 180000;
@@ -14721,6 +14738,12 @@ can call down the storm that writes what comes next.
               ],
               should_stream: true
             };
+            try { if (state.debugEnabled && window.__aiDebug) {
+              const safe = JSON.parse(JSON.stringify(rawRequestData));
+              window.__aiDebug.jailbreak_prompt = JAILBREAK_PROMPT;
+              window.__aiDebug.request = safe;
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch(_){}
             stream = await Promise.race([AI_GENERATE_RAW(rawRequestData), timeoutPromise]);
           } else {
             const requestData = {
@@ -14729,6 +14752,11 @@ can call down the storm that writes what comes next.
               ],
               should_stream: true
             };
+            try { if (state.debugEnabled && window.__aiDebug) {
+              const safe = JSON.parse(JSON.stringify(requestData));
+              window.__aiDebug.request = safe;
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch(_){}
             stream = await Promise.race([AI_GENERATE(requestData), timeoutPromise]);
           }
 
@@ -14754,17 +14782,32 @@ can call down the storm that writes what comes next.
               if (!msg || msg.sender === 'user') continue; // 用户不能发言
               state.messageHistory.push(msg);
               appendMessage(msg, state.messageHistory.length - 1);
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.messages.push(msg);
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
             }
           };
 
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
               buffer += chunk;
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.stream += String(chunk);
+                if (window.__aiDebug.stream.length > 12000) {
+                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                }
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
               processBuffer();
               await yieldForStreamPace();
             }
           } else if (typeof stream === 'string') {
             buffer = stream;
+            try { if (state.debugEnabled && window.__aiDebug) {
+              window.__aiDebug.stream = String(stream || '');
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch(_){}
             processBuffer();
           }
 
@@ -14794,6 +14837,11 @@ can call down the storm that writes what comes next.
           else if (/AI生成返回空结果/i.test(rawError)) friendly = 'AI返回空结果，请稍后重试';
           else if (/无法解析|被过滤/i.test(rawError)) friendly = 'AI输出格式不正确，请重试';
           try { if (typeof showToast === 'function') showToast(friendly); } catch (_) {}
+          try { if (state.debugEnabled) {
+            window.__aiDebug = window.__aiDebug || {};
+            window.__aiDebug.error = String(e && (e.stack || e) || e);
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch(_){}
         } finally {
           state.isAiReplying = false;
           updateAiRequestButtonVisibility();
@@ -16437,6 +16485,7 @@ can call down the storm that writes what comes next.
       // 角色卡扩展字段（写入角色卡文件，随角色变化）
       const EXTENSION_FRIENDS_KEY = 'tavern_helper_friends_v1';
       const EXTENSION_GROUPS_KEY = 'tavern_helper_groups_v1';
+      const EXTENSION_ROLE_GROUPS_KEY = 'tavern_helper_role_groups_v1';
       const EXTENSION_UI_ASSETS_KEY = 'tavern_helper_ui_assets_v1';
       const EXTENSION_CHAR_PROFILE_KEY = 'tavern_helper_char_profile_v1';
 
@@ -17344,6 +17393,45 @@ can call down the storm that writes what comes next.
         } catch (e) { console.warn('保存群聊列表失败', e); }
       }
 
+      function normalizeRoleGroupEntry(entry, index = 0) {
+        if (!entry || typeof entry !== 'object') {
+          return {
+            role: `角色${index + 1}`,
+            name: `群聊${index + 1}`,
+            members: [],
+            messages: [],
+            addTime: new Date().toISOString()
+          };
+        }
+        const role = String(entry.role || entry.viewer || `角色${index + 1}`).trim() || `角色${index + 1}`;
+        const name = String(entry.name || `群聊${index + 1}`).trim() || `群聊${index + 1}`;
+        const members = Array.isArray(entry.members) ? entry.members.filter(Boolean) : [];
+        const messages = Array.isArray(entry.messages) ? entry.messages : [];
+        const addTime = entry.addTime || new Date().toISOString();
+        return { role, name, members, messages, addTime };
+      }
+
+      function loadRoleGroupsFromExtensions() {
+        try {
+          const ctx = getSillyContextSafe();
+          const extValue = readCharacterExtensionField(ctx, EXTENSION_ROLE_GROUPS_KEY);
+          if (Array.isArray(extValue)) return JSON.parse(JSON.stringify(extValue));
+          return null;
+        } catch (e) {
+          console.warn('加载角色群聊失败', e);
+          return null;
+        }
+      }
+
+      function saveRoleGroupConversations(list) {
+        try {
+          const safeList = (Array.isArray(list) ? list : []).map(normalizeRoleGroupEntry);
+          if (getSillyContextSafe()) {
+            void writeCharacterExtensionField(EXTENSION_ROLE_GROUPS_KEY, safeList);
+          }
+        } catch (e) { console.warn('保存角色群聊失败', e); }
+      }
+
       function syncGroupsListFromConversations(conversations) {
         const existing = loadGroupsList().map(normalizeGroupEntry).filter(g => g.name);
         const existingMap = new Map(existing.map(g => [String(g.name || '').trim(), g]));
@@ -17494,21 +17582,21 @@ can call down the storm that writes what comes next.
                         <div class="group-title">${roleName} · ${name}</div>
                         <div class="group-members">成员：${memberText}</div>
                       </div>
-                      <button class="role-group-ai-btn" data-index="${i}" title="生成偷看群聊">AI</button>
+                      <button class="friend-delete role-group-delete" data-index="${i}" title="删除角色群聊">×</button>
                     </div>`;
           })
           .join('');
 
-        box.querySelectorAll('.role-group-ai-btn').forEach(btn => {
-          btn.addEventListener('click', async e => {
+        box.querySelectorAll('.role-group-delete').forEach(btn => {
+          btn.addEventListener('click', e => {
             e.stopPropagation();
             const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
             if (isNaN(idx) || idx < 0) return;
-            switchRoleGroupChat(idx);
-            toggleFriendsPanel(false);
-            if (typeof requestRoleGroupAiReply === 'function') {
-              await requestRoleGroupAiReply();
-            }
+            const list = getRoleGroupConversations();
+            const roleName = list[idx] && list[idx].role ? String(list[idx].role) : '角色';
+            const groupName = list[idx] && list[idx].name ? String(list[idx].name) : `群聊${idx + 1}`;
+            if (!confirm(`确认删除角色群聊「${roleName} · ${groupName}」吗？`)) return;
+            removeRoleGroupAtIndex(idx);
           });
         });
 
@@ -17609,6 +17697,49 @@ can call down the storm that writes what comes next.
         switchRoleGroupChat(state.currentRoleGroupIndex);
         deferredSync(0);
         return true;
+      }
+
+      function removeRoleGroupAtIndex(index) {
+        const list = getRoleGroupConversations();
+        if (index < 0 || index >= list.length) return;
+
+        // Sync current messages before removing
+        syncActiveConversationCache();
+
+        list.splice(index, 1);
+
+        if (!list.length) {
+          state.roleGroupConversations = [];
+          state.currentRoleGroupIndex = 0;
+          if (state.roleGroupMode) {
+            state.roleGroupMode = false;
+            setRoleGroupInputLock(false);
+
+            const hasPrivate = Array.isArray(state.privateConversations) && state.privateConversations.length > 0;
+            const hasGroup = Array.isArray(state.groupConversations) && state.groupConversations.length > 0;
+
+            if (hasPrivate) {
+              switchPrivateChat(Math.min(state.currentPrivateIndex || 0, state.privateConversations.length - 1), 'private');
+            } else if (hasGroup) {
+              switchPrivateChat(Math.min(state.currentGroupIndex || 0, state.groupConversations.length - 1), 'group');
+            } else {
+              state.messageHistory = [];
+              lastHistoryCount = 0;
+              renderAllMessages();
+              updateAiRequestButtonVisibility();
+            }
+          }
+        } else {
+          let targetIndex = state.currentRoleGroupIndex || 0;
+          if (targetIndex >= list.length) targetIndex = Math.max(0, list.length - 1);
+          state.currentRoleGroupIndex = targetIndex;
+          if (state.roleGroupMode) {
+            switchRoleGroupChat(targetIndex);
+          }
+        }
+
+        if (state.friendsPanelMode === 'roleGroup') renderFriendsPanelList();
+        deferredSync();
       }
 
       function removeGroupAtIndex(index) {
@@ -20006,6 +20137,7 @@ can call down the storm that writes what comes next.
 
         // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
         if (!hasPrivate && !hasGroup && !hasRoleGroup) {
+          saveRoleGroupConversations([]);
           if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
             if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
             const log = serializeShoujiLog(state.messageHistory);
@@ -20021,6 +20153,7 @@ can call down the storm that writes what comes next.
         const privateBlocks = buildPrivateBlocksFromConversations(privateList);
         const qunliaoLog = hasGroup ? serializeQunliao(groupList) : '';
         const roleGroupLog = hasRoleGroup ? serializeRoleGroups(roleGroupList) : '';
+        saveRoleGroupConversations(roleGroupList);
 
         if (
           typeof getCurrentMessageId === 'function' &&
@@ -20084,12 +20217,22 @@ can call down the storm that writes what comes next.
              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
              const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
              const privateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
-             const roleGroupConversations = parseRoleGroupConversationsFromShouji(msg.message) || [];
+             const parsedRoleGroups = parseRoleGroupConversationsFromShouji(msg.message) || [];
+             const extRoleGroups = loadRoleGroupsFromExtensions();
+             const roleGroupConversations = (Array.isArray(extRoleGroups) && extRoleGroups.length)
+               ? extRoleGroups
+               : parsedRoleGroups;
+             if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroups.length) {
+               saveRoleGroupConversations(parsedRoleGroups);
+             }
              const nameSpan = document.getElementById('chatPersonName');
 
              state.groupConversations = groupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.privateConversations = privateConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
-             state.roleGroupConversations = roleGroupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
+             state.roleGroupConversations = roleGroupConversations.map((c, idx) => {
+               const safe = normalizeRoleGroupEntry(c, idx);
+               return safe && safe.members ? safe : { ...safe, members: [] };
+             });
              hydrateGroupsFromStorageIfEmpty();
              syncGroupsListFromConversations(state.groupConversations);
 
