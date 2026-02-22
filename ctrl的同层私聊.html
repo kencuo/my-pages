@@ -8296,6 +8296,22 @@
       </div>
     </div>
 
+    <!-- 通用确认弹窗 -->
+    <div class="simple-modal-overlay" id="confirmModalOverlay" style="display: none;">
+      <div class="simple-modal" id="confirmModal" style="max-width: 320px;">
+        <div class="simple-modal-header">
+          <span id="confirmModalTitle">请确认</span>
+        </div>
+        <div class="simple-modal-body">
+          <div id="confirmModalContent" style="white-space: pre-wrap; font-size: 13px; line-height: 1.45; color: #333;"></div>
+        </div>
+        <div class="simple-modal-footer">
+          <button class="modal-btn cancel-btn" id="confirmModalCancel">取消</button>
+          <button class="modal-btn confirm-btn" id="confirmModalConfirm">确定</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 收藏消息查看模态框 -->
     <div class="settings-overlay" id="favoritesOverlay" style="display: none;">
       <div class="settings-modal" style="max-width: 500px; max-height: 80vh;">
@@ -16955,6 +16971,40 @@ can call down the storm that writes what comes next.
         if (overlay) overlay.style.display = 'none';
       }
 
+      let pendingConfirmAction = null;
+
+      function showConfirmModal(message, onConfirm, title = '请确认') {
+        const overlay = document.getElementById('confirmModalOverlay');
+        const titleEl = document.getElementById('confirmModalTitle');
+        const contentEl = document.getElementById('confirmModalContent');
+        if (!overlay || !titleEl || !contentEl) {
+          if (typeof confirm === 'function') {
+            if (confirm(message)) {
+              try { if (typeof onConfirm === 'function') onConfirm(); } catch (_) {}
+            }
+          }
+          return;
+        }
+        titleEl.textContent = title || '请确认';
+        contentEl.textContent = message || '';
+        pendingConfirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+        overlay.style.display = 'flex';
+      }
+
+      function closeConfirmModal() {
+        const overlay = document.getElementById('confirmModalOverlay');
+        if (overlay) overlay.style.display = 'none';
+        pendingConfirmAction = null;
+      }
+
+      function confirmModalAccept() {
+        const action = pendingConfirmAction;
+        closeConfirmModal();
+        if (typeof action === 'function') {
+          try { action(); } catch (_) {}
+        }
+      }
+
       function importFriends() {
         if (!selectedImportFile) {
           alert('请先选择要导入的JSON文件');
@@ -17532,7 +17582,13 @@ can call down the storm that writes what comes next.
             e.stopPropagation();
             const idx = parseInt(btn.getAttribute('data-index') || '-1', 10);
             if (isNaN(idx) || idx < 0) return;
-            removeFriendAtIndex(idx);
+            const list = loadFriendsList().map(normalizeFriendEntry);
+            const name = list[idx] && list[idx].name ? String(list[idx].name) : '';
+            showConfirmModal(
+              `确认删除好友「${name || ('好友' + (idx + 1))}」吗？`,
+              () => removeFriendAtIndex(idx),
+              '删除好友',
+            );
           });
         });
 
@@ -17580,8 +17636,11 @@ can call down the storm that writes what comes next.
             if (isNaN(idx) || idx < 0) return;
             const list = getGroupsList();
             const groupName = list[idx] && list[idx].name ? String(list[idx].name) : '';
-            if (!confirm(`确认删除群聊「${groupName || ('群聊' + (idx + 1))}」吗？`)) return;
-            removeGroupAtIndex(idx);
+            showConfirmModal(
+              `确认删除群聊「${groupName || ('群聊' + (idx + 1))}」吗？`,
+              () => removeGroupAtIndex(idx),
+              '删除群聊',
+            );
           });
         });
 
@@ -17631,8 +17690,11 @@ can call down the storm that writes what comes next.
             const list = getRoleGroupConversations();
             const roleName = list[idx] && list[idx].role ? String(list[idx].role) : '角色';
             const groupName = list[idx] && list[idx].name ? String(list[idx].name) : `群聊${idx + 1}`;
-            if (!confirm(`确认删除角色群聊「${roleName} · ${groupName}」吗？`)) return;
-            removeRoleGroupAtIndex(idx);
+            showConfirmModal(
+              `确认删除角色群聊「${roleName} · ${groupName}」吗？`,
+              () => removeRoleGroupAtIndex(idx),
+              '删除角色群聊',
+            );
           });
         });
 
@@ -17689,8 +17751,6 @@ can call down the storm that writes what comes next.
       function removeFriendAtIndex(index) {
         const list = loadFriendsList().map(normalizeFriendEntry);
         if (index < 0 || index >= list.length) return;
-        const name = list[index] && list[index].name ? String(list[index].name) : '';
-        if (!confirm(`确认删除好友「${name || ('好友' + (index + 1))}」吗？`)) return;
         list.splice(index, 1);
         saveFriendsList(list);
         renderFriendsPanelList();
@@ -18064,6 +18124,20 @@ can call down the storm that writes what comes next.
         importResultOverlay.addEventListener('click', (e) => {
           if (e.target && e.target.id === 'importResultModalOverlay') {
             closeImportResultModal();
+          }
+        });
+      }
+
+      // 通用确认弹窗事件绑定
+      const confirmModalCancel = document.getElementById('confirmModalCancel');
+      if (confirmModalCancel) confirmModalCancel.addEventListener('click', closeConfirmModal);
+      const confirmModalConfirm = document.getElementById('confirmModalConfirm');
+      if (confirmModalConfirm) confirmModalConfirm.addEventListener('click', confirmModalAccept);
+      const confirmModalOverlay = document.getElementById('confirmModalOverlay');
+      if (confirmModalOverlay) {
+        confirmModalOverlay.addEventListener('click', (e) => {
+          if (e.target && e.target.id === 'confirmModalOverlay') {
+            closeConfirmModal();
           }
         });
       }
