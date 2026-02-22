@@ -9249,7 +9249,25 @@ function applyUserAvatar(avatarElement) {
         const raw = text == null ? '' : String(text);
         const shoujiMatch = raw.match(/<shouji>([\s\S]*?)<\/shouji>/);
         const inner = shoujiMatch ? shoujiMatch[1] : raw;
-        const blocks = [...inner.matchAll(/<group>([\s\S]*?)<\/group>/gi)];
+        let normalized = inner;
+        normalized = normalized.replace(/<br\s*\/?>/gi, '\n');
+        normalized = normalized.replace(/&lt;group&gt;/gi, '<group>').replace(/&lt;\/group&gt;/gi, '</group>');
+        // 兼容旧格式：用“同层手机xxx”作为 <group> 起始标记
+        normalized = normalized.replace(
+          /^\s*同层手机[^\n]*\s*(\[[^\]]+\])/gmi,
+          '<group>\n$1'
+        );
+        normalized = normalized.replace(
+          /^\s*同层手机[^\n]*\s*$/gmi,
+          '<group>'
+        );
+        if (!/<group>/i.test(normalized) && /<\/group>/i.test(normalized)) {
+          normalized = `<group>\n${normalized}`;
+        }
+        if (/<group>/i.test(normalized) && !/<\/group>/i.test(normalized)) {
+          normalized = `${normalized}\n</group>`;
+        }
+        const blocks = [...normalized.matchAll(/<group>([\s\S]*?)<\/group>/gi)];
         if (!blocks.length) return [];
         const conversations = blocks.map((m, idx) => {
           const block = (m[1] || '').trim();
