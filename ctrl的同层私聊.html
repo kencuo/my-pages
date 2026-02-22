@@ -14546,17 +14546,11 @@ can call down the storm that writes what comes next.
 
       function getRoleGroupAiFormatPrompt() {
         return [
-          '请严格按以下格式输出：',
           '<group>',
           '[{{被查看的角色}}|{{群聊的名字}}|{{群成员，用中文或者英文的逗号隔开}}]',
           '{{这里就是和群聊功能一样的消息类型格式}}',
           '</group>'
         ].join('\n');
-      }
-
-      function showRoleGroupAiPrompt() {
-        const promptText = getRoleGroupAiFormatPrompt();
-        showConfirmModal(promptText, () => { requestRoleGroupAiCreate(); }, '角色群聊提示词');
       }
 
       // 请求 AI 生成“角色群聊”（含群聊名/成员/初始消息）
@@ -14579,15 +14573,14 @@ can call down the storm that writes what comes next.
             .filter(Boolean)
             .slice(0, 8);
 
-          const systemPrompt = [
+          const promptText = [
             '请生成一个“偷看群聊”。只输出一个 <group> 块，禁止解释或代码块。',
             `被查看角色：${roleHint}`,
             existingNames.length ? `已存在群聊名（避免重复）：${existingNames.join('、')}` : '',
             '输出格式（严格）：',
-            '<group>',
-            '[被查看角色|群聊名称|成员1,成员2,成员3]',
+            getRoleGroupAiFormatPrompt(),
+            '补充说明：消息格式与群聊一致，例如：',
             '[成员|头像后缀|消息内容|时间]',
-            '...</group>',
             '规则：',
             '1) 成员至少3人，包含被查看角色本人。',
             '2) 群聊名简短自然，且不与已有重复。',
@@ -14599,8 +14592,9 @@ can call down the storm that writes what comes next.
           // 调试：记录角色群聊创建上下文
           try { if (state.debugEnabled) {
             window.__aiDebug = window.__aiDebug || { stream: '', messages: [] };
-            window.__aiDebug.mode = (state.jailbreakEnabled && AI_GENERATE_RAW) ? 'roleGroup(createRaw)' : 'roleGroup(create)';
-            window.__aiDebug.context = systemPrompt;
+            const useRaw = !!AI_GENERATE_RAW;
+            window.__aiDebug.mode = useRaw ? 'roleGroup(createRaw)' : 'roleGroup(create)';
+            window.__aiDebug.context = promptText;
             window.__aiDebug.stream = '';
             window.__aiDebug.messages = [];
             window.__aiDebug.error = '';
@@ -14613,10 +14607,10 @@ can call down the storm that writes what comes next.
           );
 
           let result;
-          if (state.jailbreakEnabled && AI_GENERATE_RAW) {
+          if (AI_GENERATE_RAW) {
             const rawRequestData = {
               ordered_prompts: [
-                { role: 'system', content: JAILBREAK_PROMPT },
+                ...(state.jailbreakEnabled ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
                 'world_info_before',
                 'persona_description',
                 'char_description',
@@ -14627,14 +14621,13 @@ can call down the storm that writes what comes next.
                 'chat_history',
                 'user_input'
               ],
-              injects: [
-                { role: 'system', content: systemPrompt, position: 'in_chat', depth: 0, should_scan: true }
-              ],
-              should_stream: false
+              user_input: promptText,
+              should_stream: false,
+              should_silence: true
             };
             try { if (state.debugEnabled && window.__aiDebug) {
               const safe = JSON.parse(JSON.stringify(rawRequestData));
-              window.__aiDebug.jailbreak_prompt = JAILBREAK_PROMPT;
+              window.__aiDebug.jailbreak_prompt = state.jailbreakEnabled ? JAILBREAK_PROMPT : '(none)';
               window.__aiDebug.request = safe;
               window.__updateAIDebug && window.__updateAIDebug();
             }} catch(_){}
@@ -14642,7 +14635,7 @@ can call down the storm that writes what comes next.
           } else {
             const requestData = {
               injects: [
-                { role: 'system', content: systemPrompt, position: 'in_chat', depth: 0, should_scan: true }
+                { role: 'system', content: promptText, position: 'in_chat', depth: 0, should_scan: true }
               ],
               should_stream: false
             };
@@ -17763,7 +17756,7 @@ can call down the storm that writes what comes next.
           if (nextMode === 'roleGroup') {
             aiBtn.style.display = '';
             aiBtn.title = 'AI生成角色群聊';
-            aiBtn.onclick = () => { showRoleGroupAiPrompt(); };
+            aiBtn.onclick = () => { requestRoleGroupAiCreate(); };
           } else {
             aiBtn.style.display = 'none';
             aiBtn.onclick = null;
