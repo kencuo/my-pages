@@ -6618,6 +6618,10 @@
             <div class="app-icon">🎧</div>
             <div class="app-label">云音乐</div>
           </div>
+          <div class="app-item" id="appDivination">
+            <div class="app-icon">☯</div>
+            <div class="app-label">占卜</div>
+          </div>
           <div class="app-item" id="appSettings">
             <div class="app-icon">⚙️</div>
             <div class="app-label">设置</div>
@@ -7011,6 +7015,121 @@
         <div class="moments-list" id="momentsList"></div>
         <button class="moments-time-fab" id="momentsTimeBtn" title="自定义时间">🕐</button>
         <button class="moments-publish-fab" id="momentsPublishBtn" title="发布" aria-label="发布">＋</button>
+      </div>
+      <style>
+        .divination-overlay {
+          position: absolute;
+          inset: 0;
+          display: none;
+          flex-direction: column;
+          background: linear-gradient(180deg, #efe4c8 0%, #e2d3ac 100%);
+          z-index: 1260;
+        }
+        .divination-header {
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 10px;
+          border-bottom: 1px solid rgba(112, 74, 30, 0.35);
+          background: rgba(248, 242, 226, 0.92);
+          backdrop-filter: blur(4px);
+        }
+        .divination-title {
+          flex: 1;
+          text-align: center;
+          font-size: 14px;
+          font-weight: 700;
+          color: #5a3a18;
+          letter-spacing: 1px;
+        }
+        .divination-btn {
+          height: 28px;
+          min-width: 44px;
+          border: none;
+          border-radius: 14px;
+          background: rgba(112, 74, 30, 0.15);
+          color: #5a3a18;
+          font-size: 12px;
+          cursor: pointer;
+        }
+        .divination-btn.primary {
+          background: #8a5b2e;
+          color: #fff8eb;
+        }
+        .divination-form {
+          padding: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          border-bottom: 1px solid rgba(112, 74, 30, 0.2);
+          background: rgba(255, 252, 244, 0.55);
+        }
+        .divination-input,
+        .divination-textarea {
+          width: 100%;
+          border: 1px solid rgba(112, 74, 30, 0.25);
+          border-radius: 8px;
+          padding: 8px 10px;
+          font-size: 12px;
+          background: rgba(255, 255, 255, 0.85);
+          color: #5a3a18;
+          box-sizing: border-box;
+        }
+        .divination-textarea {
+          min-height: 52px;
+          resize: vertical;
+          line-height: 1.45;
+        }
+        .divination-qa-row {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+        .divination-status {
+          min-height: 16px;
+          font-size: 11px;
+          color: #7a5128;
+        }
+        .divination-status.error {
+          color: #b7412e;
+        }
+        .divination-book {
+          flex: 1;
+          margin: 10px;
+          padding: 16px 14px;
+          overflow-y: auto;
+          border: 1px solid rgba(112, 74, 30, 0.28);
+          border-radius: 8px;
+          background:
+            repeating-linear-gradient(180deg, rgba(153, 110, 62, 0.08) 0, rgba(153, 110, 62, 0.08) 1px, rgba(255, 250, 238, 0) 1px, rgba(255, 250, 238, 0) 32px),
+            linear-gradient(180deg, #fff8ec 0%, #f8edd7 100%);
+          box-shadow: inset 0 0 18px rgba(94, 61, 27, 0.15), 0 4px 12px rgba(69, 42, 16, 0.14);
+          color: #4f3218;
+          font-family: "KaiTi", "STKaiti", "FangSong", serif;
+          font-size: 14px;
+          line-height: 1.7;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+      </style>
+      <div class="divination-overlay" id="divinationOverlay" aria-hidden="true">
+        <div class="divination-header">
+          <button class="divination-btn" id="divinationBackBtn" title="返回">←</button>
+          <div class="divination-title">同层占卜</div>
+          <button class="divination-btn primary" id="divinationCastBtn" title="随机摇卦">起卦</button>
+        </div>
+        <div class="divination-form">
+          <input class="divination-input" id="divinationDateTime" type="datetime-local" />
+          <input class="divination-input" id="divinationGanzhi" type="text" placeholder="可选：天干地支时间（例：丙午年丁卯月辛亥日己巳时）" />
+          <textarea class="divination-textarea" id="divinationQuestion" placeholder="输入你要问的问题（可选）"></textarea>
+          <div class="divination-qa-row">
+            <input class="divination-input" id="divinationFollowupInput" type="text" placeholder="基于当前卦象继续追问（可选）" />
+            <button class="divination-btn primary" id="divinationAskBtn" type="button">追问</button>
+          </div>
+          <div class="divination-status" id="divinationStatus"></div>
+        </div>
+        <div class="divination-book" id="divinationBook">点击“起卦”开始占卜。结果会写入同层 <changes> 标签中。</div>
       </div>
       <div class="more-actions-grid" id="moreActionsGrid">
         <div class="actions-grid-container">
@@ -8384,6 +8503,7 @@
         friendsPanelMode: 'friend',
         activeConversationMode: 'private',
         activeConversationIndex: 0,
+        divinationChanges: '',
       };
 
       // 获取 SillyTavern 生成函数（如果可用）
@@ -8393,6 +8513,31 @@
       // 获取 SillyTavern 原始生成函数（用于破限模式）
       const AI_GENERATE_RAW =
         typeof generateRaw === 'function' ? generateRaw : null;
+
+      // 同层兼容桥：保持小写函数名可用（用户自定义脚本常见命名）
+      function getchatmessage(messageId) {
+        try {
+          if (typeof getChatMessages === 'function') return getChatMessages(messageId);
+        } catch (_) {}
+        return [];
+      }
+
+      async function setchatmessage(messages, options = { refresh: 'none' }) {
+        if (typeof setChatMessages !== 'function') return false;
+        try {
+          await setChatMessages(messages, options);
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      async function generateraw(requestData) {
+        if (typeof generateRaw !== 'function') {
+          throw new Error('generateRaw 不可用');
+        }
+        return generateRaw(requestData);
+      }
 
       // 工具函数：sleep
       function sleep(ms) {
@@ -9777,6 +9922,41 @@ function applyUserAvatar(avatarElement) {
         });
       }
 
+      function sanitizeDivinationContent(raw) {
+        let s = String(raw || '').replace(/\r/g, '').trim();
+        s = s.replace(/<\/?(shouji|private|qunliao|multi|group|pyq|changes)>/gi, '');
+        s = s.replace(/<\/?post:\d+>/gi, '');
+        s = s.replace(/\n{3,}/g, '\n\n').trim();
+        return s;
+      }
+
+      function extractChangesContentFromMessage(rawText) {
+        const raw = String(rawText || '');
+        const m = raw.match(/<changes>\s*([\s\S]*?)\s*<\/changes>/i);
+        if (!m) return '';
+        let inner = String(m[1] || '').trim();
+        const mm = inner.match(/^\{\{([\s\S]*?)\}\}$/);
+        if (mm) inner = String(mm[1] || '').trim();
+        return sanitizeDivinationContent(inner);
+      }
+
+      function buildChangesBlock(content) {
+        const text = sanitizeDivinationContent(content);
+        if (!text) return '';
+        return `<changes>\n{{\n${text}\n}}\n</changes>`;
+      }
+
+      function upsertChangesIntoShoujiMessage(shoujiMessageText, content) {
+        const msg = ensureShoujiWrapper(shoujiMessageText);
+        const block = buildChangesBlock(content);
+        return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/, (_m, inner) => {
+          let body = String(inner || '');
+          body = body.replace(/<changes>[\s\S]*?<\/changes>/gi, '').trim();
+          const merged = [block, body].filter(Boolean).join('\n\n');
+          return `<shouji>\n${merged}\n</shouji>`;
+        });
+      }
+
       // ==================== MOMENTS UI (朋友圈) ====================
       function unescapeStoredText(s) {
         return String(s || '').replace(/\\n/g, '\n');
@@ -10144,6 +10324,404 @@ function applyUserAvatar(avatarElement) {
         // 回到主屏
         const homeOverlay = document.getElementById('homeOverlay');
         if (homeOverlay) homeOverlay.style.display = 'flex';
+      }
+
+      const DIVINATION_YAO_LABELS = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
+      const DIVINATION_TRIGRAM_MAP = {
+        '111': '乾',
+        '110': '兑',
+        '101': '离',
+        '100': '震',
+        '011': '巽',
+        '010': '坎',
+        '001': '艮',
+        '000': '坤',
+      };
+      const DIVINATION_SYSTEM_PROMPT = [
+        '你是专业六爻占卜师。',
+        '你必须严格依据用户提供的摇卦结果解卦，不能自行改卦、补卦或重摇。',
+        '输出语言为简体中文，术语清晰，建议务实。',
+      ].join('\n');
+      const divinationRuntime = {
+        busy: false,
+        history: [],
+      };
+
+      function toLocalDateTimeInputValue(date = new Date()) {
+        const d = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return d.toISOString().slice(0, 16);
+      }
+
+      function formatModernDateTime(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return raw;
+        const y = d.getFullYear();
+        const m = d.getMonth() + 1;
+        const day = d.getDate();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${y}年${m}月${day}日 ${hh}:${mm}`;
+      }
+
+      function rollOneYao() {
+        const toss = () => (Math.random() < 0.5 ? 2 : 3);
+        const value = toss() + toss() + toss(); // 6/7/8/9
+        const isYang = value === 7 || value === 9;
+        const isMoving = value === 6 || value === 9;
+        return { value, isYang, isMoving };
+      }
+
+      function trigramNameFromBits(bits) {
+        return DIVINATION_TRIGRAM_MAP[String(bits || '')] || '未知';
+      }
+
+      function buildYaoVisual(lines, useChanged = false) {
+        const out = [];
+        for (let i = 5; i >= 0; i--) {
+          const line = lines[i];
+          const isYang = useChanged ? (line.isMoving ? !line.isYang : line.isYang) : line.isYang;
+          const base = isYang ? '━━━━━━' : '━━  ━━';
+          const moving = (!useChanged && line.isMoving) ? (line.isYang ? ' ○动' : ' ×动') : '';
+          out.push(`${DIVINATION_YAO_LABELS[i]} ${base}${moving}`);
+        }
+        return out.join('\n');
+      }
+
+      function randomSixYaoCast() {
+        let lines = [];
+        let tries = 0;
+        do {
+          lines = Array.from({ length: 6 }, () => rollOneYao());
+          tries += 1;
+        } while (!lines.some(x => x.isMoving) && tries < 10);
+        if (!lines.some(x => x.isMoving)) {
+          const idx = Math.floor(Math.random() * 6);
+          const forced = lines[idx] && lines[idx].isYang
+            ? { value: 9, isYang: true, isMoving: true }
+            : { value: 6, isYang: false, isMoving: true };
+          lines[idx] = forced;
+        }
+
+        const baseBitsBottom = lines.map(x => (x.isYang ? '1' : '0')).join('');
+        const changedBitsBottom = lines
+          .map(x => (x.isMoving ? (x.isYang ? '0' : '1') : (x.isYang ? '1' : '0')))
+          .join('');
+        const movingLabels = lines
+          .map((x, idx) => (x.isMoving ? DIVINATION_YAO_LABELS[idx] : ''))
+          .filter(Boolean);
+        return {
+          lines,
+          baseBitsBottom,
+          changedBitsBottom,
+          lowerBaseBits: baseBitsBottom.slice(0, 3),
+          upperBaseBits: baseBitsBottom.slice(3, 6),
+          lowerChangedBits: changedBitsBottom.slice(0, 3),
+          upperChangedBits: changedBitsBottom.slice(3, 6),
+          movingLabels,
+        };
+      }
+
+      function summarizeCastForPrompt(input, cast) {
+        const modern = input.modernTime || '未填写';
+        const ganzhi = input.ganzhiTime || '未填写';
+        const question = input.question || '未填写（请按综合运势解卦）';
+        const moving = cast.movingLabels.length ? cast.movingLabels.join('、') : '无';
+        return [
+          `用户时间（现代）：${modern}`,
+          `用户时间（天干地支）：${ganzhi}`,
+          `用户问题：${question}`,
+          `本卦下卦（内卦）：${trigramNameFromBits(cast.lowerBaseBits)}(${cast.lowerBaseBits})`,
+          `本卦上卦（外卦）：${trigramNameFromBits(cast.upperBaseBits)}(${cast.upperBaseBits})`,
+          `变卦下卦（内卦）：${trigramNameFromBits(cast.lowerChangedBits)}(${cast.lowerChangedBits})`,
+          `变卦上卦（外卦）：${trigramNameFromBits(cast.upperChangedBits)}(${cast.upperChangedBits})`,
+          `动爻：${moving}`,
+          '本卦爻象（自上而下）：',
+          buildYaoVisual(cast.lines, false),
+          '变卦爻象（自上而下）：',
+          buildYaoVisual(cast.lines, true),
+        ].join('\n');
+      }
+
+      function normalizeDivinationOutput(rawOutput) {
+        const raw = String(rawOutput || '').replace(/\r/g, '').trim();
+        if (!raw) return '';
+        const blockMatch = raw.match(/<changes>\s*([\s\S]*?)\s*<\/changes>/i);
+        let core = blockMatch ? String(blockMatch[1] || '').trim() : raw;
+        const bodyMatch = core.match(/^\{\{([\s\S]*?)\}\}$/);
+        if (bodyMatch) core = String(bodyMatch[1] || '').trim();
+        return sanitizeDivinationContent(core);
+      }
+
+      function setDivinationStatus(message, isError = false) {
+        const el = document.getElementById('divinationStatus');
+        if (!el) return;
+        el.textContent = String(message || '');
+        el.classList.toggle('error', !!isError);
+      }
+
+      function setDivinationBusy(busy) {
+        divinationRuntime.busy = !!busy;
+        const castBtn = document.getElementById('divinationCastBtn');
+        const askBtn = document.getElementById('divinationAskBtn');
+        const followupInput = document.getElementById('divinationFollowupInput');
+        if (castBtn) castBtn.disabled = !!busy;
+        if (askBtn) askBtn.disabled = !!busy;
+        if (followupInput) followupInput.disabled = !!busy;
+      }
+
+      function renderDivinationBook(content) {
+        const book = document.getElementById('divinationBook');
+        if (!book) return;
+        const text = sanitizeDivinationContent(content || '');
+        if (text) {
+          book.textContent = text;
+        } else {
+          book.textContent = '点击“起卦”开始占卜。结果会写入同层 <changes> 标签中。';
+        }
+      }
+
+      function openDivinationPanel() {
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'none';
+        const panel = document.getElementById('divinationOverlay');
+        if (panel) {
+          panel.style.display = 'flex';
+          panel.setAttribute('aria-hidden', 'false');
+        }
+        const dateInput = document.getElementById('divinationDateTime');
+        if (dateInput && !dateInput.value) {
+          dateInput.value = toLocalDateTimeInputValue(new Date());
+        }
+        renderDivinationBook(state.divinationChanges);
+        setDivinationStatus('');
+      }
+
+      function closeDivinationPanel() {
+        const panel = document.getElementById('divinationOverlay');
+        if (panel) {
+          panel.style.display = 'none';
+          panel.setAttribute('aria-hidden', 'true');
+        }
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'flex';
+      }
+
+      async function persistDivinationChanges(content) {
+        if (typeof getCurrentMessageId !== 'function') return false;
+        const currentId = getCurrentMessageId();
+        if (currentId === null || currentId === undefined) return false;
+        const msgObj = getchatmessage(currentId)[0];
+        const raw = msgObj && msgObj.message ? String(msgObj.message) : '<shouji>\n</shouji>';
+        const normalized = sanitizeDivinationContent(content);
+        const updated = upsertChangesIntoShoujiMessage(raw, normalized);
+        const ok = await setchatmessage([{ message_id: currentId, message: updated }], { refresh: 'none' });
+        if (ok) state.divinationChanges = normalized;
+        return ok;
+      }
+
+      function collectDivinationInput() {
+        const dateInput = document.getElementById('divinationDateTime');
+        const ganzhiInput = document.getElementById('divinationGanzhi');
+        const qInput = document.getElementById('divinationQuestion');
+        const modernRaw = dateInput ? String(dateInput.value || '').trim() : '';
+        return {
+          modernTime: formatModernDateTime(modernRaw) || '未填写',
+          ganzhiTime: ganzhiInput ? String(ganzhiInput.value || '').trim() || '未填写' : '未填写',
+          question: qInput ? String(qInput.value || '').trim() : '',
+        };
+      }
+
+      function buildDivinationPrompt(input, cast) {
+        return [
+          '请你基于以下六爻随机摇卦结果进行完整解卦。',
+          '你必须识别并写出：本卦、变卦、动爻、卦意、对问题的判断、行动建议。',
+          '不要重新摇卦，不要修改我提供的爻信息。',
+          '如果用户问题为空，就按综合运势解读（事业、情感、行动建议）。',
+          '你必须严格只输出以下格式，不能出现任何额外前后缀：',
+          '<changes>',
+          '{{',
+          '（这里写多行卦象与解析）',
+          '}}',
+          '</changes>',
+          '',
+          '以下是摇卦数据：',
+          summarizeCastForPrompt(input, cast),
+        ].join('\n');
+      }
+
+      function buildDivinationFollowupPrompt(input, followupQuestion, currentContent) {
+        const recentHistory = divinationRuntime.history
+          .slice(-8)
+          .map(item => `[${item.role}] ${item.content}`)
+          .join('\n');
+        return [
+          '沿用同一卦象继续答疑，禁止重新起卦。',
+          '请保留已有核心卦象信息，并在末尾新增“追问答复”部分。',
+          '你必须严格只输出以下格式，不能有任何额外文本：',
+          '<changes>',
+          '{{',
+          '（这里写更新后的完整卦象解析与追问答复）',
+          '}}',
+          '</changes>',
+          '',
+          `用户时间（现代）：${input.modernTime}`,
+          `用户时间（天干地支）：${input.ganzhiTime}`,
+          '当前卦象内容：',
+          sanitizeDivinationContent(currentContent),
+          recentHistory ? `最近问答记录：\n${recentHistory}` : '',
+          `用户追问：${followupQuestion}`,
+        ].filter(Boolean).join('\n');
+      }
+
+      async function requestDivinationByRawPrompt(promptText, mode = 'divination(generateRaw)') {
+        const rawRequestData = {
+          ordered_prompts: [
+            ...(state.jailbreakEnabled && AI_GENERATE_RAW ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
+            { role: 'system', content: DIVINATION_SYSTEM_PROMPT },
+            'world_info_before',
+            'persona_description',
+            'char_description',
+            'char_personality',
+            'scenario',
+            'world_info_after',
+            'dialogue_examples',
+            'chat_history',
+            'user_input',
+          ],
+          user_input: promptText,
+          should_silence: true,
+          should_stream: true,
+        };
+
+        try {
+          if (state.debugEnabled) {
+            window.__aiDebug = window.__aiDebug || { stream: '', messages: [] };
+            window.__aiDebug.mode = mode;
+            window.__aiDebug.context = promptText;
+            window.__aiDebug.stream = '';
+            window.__aiDebug.messages = [];
+            window.__aiDebug.error = '';
+            window.__aiDebug.request = JSON.parse(JSON.stringify(rawRequestData));
+            window.__updateAIDebug && window.__updateAIDebug();
+          }
+        } catch (_) {}
+
+        const stream = await generateraw(rawRequestData);
+        const out = await consumeTextStream(stream, (chunk) => {
+          try {
+            if (state.debugEnabled && window.__aiDebug) {
+              window.__aiDebug.stream = (window.__aiDebug.stream || '') + String(chunk || '');
+              if (window.__aiDebug.stream.length > 12000) {
+                window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+              }
+              window.__updateAIDebug && window.__updateAIDebug();
+            }
+          } catch (_) {}
+        });
+        return String(out || '');
+      }
+
+      async function castDivinationHexagram() {
+        if (divinationRuntime.busy) return;
+        if (!AI_GENERATE_RAW) {
+          setDivinationStatus('未找到 generateRaw()，无法起卦。', true);
+          return;
+        }
+        const input = collectDivinationInput();
+        const cast = randomSixYaoCast();
+        const preview = summarizeCastForPrompt(input, cast);
+        setDivinationBusy(true);
+        setDivinationStatus('正在随机摇卦并请求 AI 解卦...');
+        renderDivinationBook(`【随机摇卦数据】\n${preview}\n\n请稍候，AI 正在解卦...`);
+        try {
+          const promptText = buildDivinationPrompt(input, cast);
+          const raw = await requestDivinationByRawPrompt(promptText, 'divination(cast-generateRaw)');
+          const normalized = normalizeDivinationOutput(raw);
+          if (!normalized) throw new Error('AI 返回为空');
+          const saved = await persistDivinationChanges(normalized);
+          renderDivinationBook(normalized);
+          divinationRuntime.history = [
+            { role: 'user', content: input.question || '综合运势' },
+            { role: 'assistant', content: normalized },
+          ];
+          setDivinationStatus(saved ? '起卦完成，已写入同层 <changes>。' : '起卦完成，但写回同层失败。', !saved);
+        } catch (e) {
+          renderDivinationBook(state.divinationChanges);
+          setDivinationStatus(`起卦失败：${e && e.message ? e.message : '未知错误'}`, true);
+        } finally {
+          setDivinationBusy(false);
+        }
+      }
+
+      async function askDivinationFollowup() {
+        if (divinationRuntime.busy) return;
+        if (!AI_GENERATE_RAW) {
+          setDivinationStatus('未找到 generateRaw()，无法追问。', true);
+          return;
+        }
+        const askInput = document.getElementById('divinationFollowupInput');
+        const followup = askInput ? String(askInput.value || '').trim() : '';
+        if (!followup) {
+          setDivinationStatus('请先输入追问内容。', true);
+          return;
+        }
+        const current = sanitizeDivinationContent(state.divinationChanges || '');
+        if (!current) {
+          setDivinationStatus('请先点击“起卦”生成卦象。', true);
+          return;
+        }
+        const input = collectDivinationInput();
+        setDivinationBusy(true);
+        setDivinationStatus('正在基于当前卦象回答追问...');
+        try {
+          const promptText = buildDivinationFollowupPrompt(input, followup, current);
+          const raw = await requestDivinationByRawPrompt(promptText, 'divination(followup-generateRaw)');
+          let normalized = normalizeDivinationOutput(raw);
+          if (!normalized) throw new Error('AI 返回为空');
+          if (!/本卦|变卦|动爻|卦/.test(normalized)) {
+            normalized = `${current}\n\n【追问】${followup}\n【答复】${normalized}`;
+          }
+          const saved = await persistDivinationChanges(normalized);
+          renderDivinationBook(normalized);
+          divinationRuntime.history.push({ role: 'user', content: followup });
+          divinationRuntime.history.push({ role: 'assistant', content: normalized.slice(-500) });
+          if (askInput) askInput.value = '';
+          setDivinationStatus(saved ? '追问完成，结果已更新到同层 <changes>。' : '追问完成，但写回同层失败。', !saved);
+        } catch (e) {
+          setDivinationStatus(`追问失败：${e && e.message ? e.message : '未知错误'}`, true);
+        } finally {
+          setDivinationBusy(false);
+        }
+      }
+
+      function initDivinationPanel() {
+        const overlay = document.getElementById('divinationOverlay');
+        if (!overlay || overlay.dataset.bound === '1') return;
+        overlay.dataset.bound = '1';
+
+        const backBtn = document.getElementById('divinationBackBtn');
+        const castBtn = document.getElementById('divinationCastBtn');
+        const askBtn = document.getElementById('divinationAskBtn');
+        const followupInput = document.getElementById('divinationFollowupInput');
+        const dateInput = document.getElementById('divinationDateTime');
+
+        if (dateInput && !dateInput.value) {
+          dateInput.value = toLocalDateTimeInputValue(new Date());
+        }
+        if (backBtn) backBtn.onclick = closeDivinationPanel;
+        if (castBtn) castBtn.onclick = castDivinationHexagram;
+        if (askBtn) askBtn.onclick = askDivinationFollowup;
+        if (followupInput) {
+          followupInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              askDivinationFollowup();
+            }
+          });
+        }
+        renderDivinationBook(state.divinationChanges);
       }
 
       function renderMomentsList() {
@@ -20196,6 +20774,7 @@ can call down the storm that writes what comes next.
         const hasGroup = groupList.length > 0;
         const hasRoleGroup = roleGroupList.length > 0;
         const pyqText = serializeMomentsToPyq(state.moments);
+        const divinationText = sanitizeDivinationContent(state.divinationChanges || '');
 
         // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
         if (!hasPrivate && !hasGroup && !hasRoleGroup) {
@@ -20204,9 +20783,18 @@ can call down the storm that writes what comes next.
             if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
             const log = serializeShoujiLog(state.messageHistory);
             let messageToSave = log;
+            let preservedChanges = '';
+            try {
+              const currentObj = getchatmessage(state.currentMsgId)[0];
+              preservedChanges = extractChangesContentFromMessage(currentObj && currentObj.message ? currentObj.message : '');
+            } catch (_) {}
             try {
               messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
             } catch (_) {}
+            const changesToSave = divinationText || preservedChanges;
+            if (changesToSave) {
+              messageToSave = upsertChangesIntoShoujiMessage(messageToSave, changesToSave);
+            }
             await setChatMessages([{ message_id: state.currentMsgId, message: messageToSave }], { refresh: 'none' });
           }
           return;
@@ -20227,7 +20815,12 @@ can call down the storm that writes what comes next.
           const msgObj = getChatMessages(currentId)[0];
           const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
           const updatedCore = upsertPrivateAndGroupIntoShoujiMessage(raw, privateBlocks, qunliaoLog, roleGroupLog);
-          const updated = upsertPyqIntoShoujiMessage(updatedCore, pyqText);
+          let updated = upsertPyqIntoShoujiMessage(updatedCore, pyqText);
+          const preservedChanges = extractChangesContentFromMessage(raw);
+          const changesToSave = divinationText || preservedChanges;
+          if (changesToSave) {
+            updated = upsertChangesIntoShoujiMessage(updated, changesToSave);
+          }
           await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
           return;
         }
@@ -20238,6 +20831,9 @@ can call down the storm that writes what comes next.
           try {
             messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
           } catch (_) {}
+          if (divinationText) {
+            messageToSave = upsertChangesIntoShoujiMessage(messageToSave, divinationText);
+          }
           await setChatMessages([{ message_id: state.currentMsgId, message: messageToSave }], { refresh: 'none' });
         }
       }
@@ -20270,6 +20866,11 @@ can call down the storm that writes what comes next.
            state.currentMsgId = getCurrentMessageId();
            const msg = getChatMessages(state.currentMsgId)[0];
            if (msg && msg.message) {
+            try {
+              state.divinationChanges = extractChangesContentFromMessage(msg.message);
+            } catch (_) {
+              state.divinationChanges = '';
+            }
             // 解析同层朋友圈（<pyq>）——独立于私聊会话
             try {
               state.moments = parseMomentsFromShouji(msg.message);
@@ -20395,6 +20996,7 @@ can call down the storm that writes what comes next.
           } else {
             state.messageHistory = [];
             state.moments = [];
+            state.divinationChanges = '';
             state.groupChatMode = false;
             state.friendsPanelMode = 'friend';
             state.roleGroupMode = false;
@@ -20418,6 +21020,7 @@ can call down the storm that writes what comes next.
 
           // 强制重置渲染状态
           lastHistoryCount = 0;
+          try { if (typeof renderDivinationBook === 'function') renderDivinationBook(state.divinationChanges); } catch (_) {}
 
           // 延迟渲染确保DOM已准备好
           setTimeout(() => {
@@ -20469,6 +21072,7 @@ can call down the storm that writes what comes next.
 
           // 绑定所有事件监听器
           bindEventListeners();
+          try { if (typeof initDivinationPanel === 'function') initDivinationPanel(); } catch (_) {}
 
           // iOS-like home overlay (clock/dock)
           try { if (typeof initIosHomeScreen === 'function') initIosHomeScreen(); } catch (_) {}
@@ -24850,6 +25454,7 @@ can call down the storm that writes what comes next.
         const appStore = document.getElementById('appStore');
         const appMusic = document.getElementById('appMusic');
         const appCloudMusic = document.getElementById('appCloudMusic');
+        const appDivination = document.getElementById('appDivination');
         const appSettings = document.getElementById('appSettings');
         const homeBtn = document.getElementById('homeBtn');
 
@@ -24874,6 +25479,12 @@ can call down the storm that writes what comes next.
         });
         if (appStore) appStore.addEventListener('click', placeholder('商店'));
         if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
+        if (appDivination) appDivination.addEventListener('click', () => {
+          try {
+            if (typeof openDivinationPanel === 'function') return openDivinationPanel();
+          } catch (_) {}
+          return placeholder('占卜')();
+        });
         if (appCloudMusic) appCloudMusic.addEventListener('click', () => {
           if (homeOverlay) homeOverlay.style.display = 'none';
           const o = document.getElementById('cloudMusicOverlay');
@@ -24901,6 +25512,7 @@ can call down the storm that writes what comes next.
           const appMoments = document.getElementById('appMoments');
           const appStore = document.getElementById('appStore');
           const appMusic = document.getElementById('appMusic');
+          const appDivination = document.getElementById('appDivination');
           const appSettings = document.getElementById('appSettings');
           const homeBtn = document.getElementById('homeBtn');
           const homeDockBtn = document.getElementById('homeDockBtn');
@@ -24908,16 +25520,25 @@ can call down the storm that writes what comes next.
           const momentsAiBtn = document.getElementById('momentsAiBtn');
           const momentsPublishBtn = document.getElementById('momentsPublishBtn');
           const momentsTimeBtn = document.getElementById('momentsTimeBtn');
+          const divinationBackBtn = document.getElementById('divinationBackBtn');
+          const divinationCastBtn = document.getElementById('divinationCastBtn');
+          const divinationAskBtn = document.getElementById('divinationAskBtn');
 
           const openChat = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
             try { if (typeof toggleFriendsPanel === 'function') toggleFriendsPanel(true); } catch (_) {}
           };
 
+          const showHome = () => {
+            try { if (typeof closeMomentsPanel === 'function') closeMomentsPanel(); } catch (_) {}
+            try { if (typeof closeDivinationPanel === 'function') closeDivinationPanel(); } catch (_) {}
+            if (homeOverlay) homeOverlay.style.display = 'flex';
+          };
+
           if (appChat) appChat.onclick = openChat;
           if (appMessages) appMessages.onclick = openChat;
-          if (homeBtn) homeBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
-          if (homeDockBtn) homeDockBtn.onclick = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
+          if (homeBtn) homeBtn.onclick = showHome;
+          if (homeDockBtn) homeDockBtn.onclick = showHome;
           if (appMoments) appMoments.onclick = () => {
             try { if (typeof openMomentsPanel === 'function') return openMomentsPanel(); } catch(_) {}
             showToastSafe('朋友圈 功能暂未开放');
@@ -24926,6 +25547,10 @@ can call down the storm that writes what comes next.
           if (appMusic) appMusic.onclick = () => {
             try { if (typeof openMusicPanel === 'function') return openMusicPanel(); } catch(_) {}
             showToastSafe('音乐 功能暂未开放');
+          };
+          if (appDivination) appDivination.onclick = () => {
+            try { if (typeof openDivinationPanel === 'function') return openDivinationPanel(); } catch(_) {}
+            showToastSafe('占卜 功能暂未开放');
           };
           if (appSettings) appSettings.onclick = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
@@ -24960,6 +25585,21 @@ can call down the storm that writes what comes next.
               if (typeof showTimeSelectModal === 'function') return showTimeSelectModal();
             } catch (_) {}
             showToastSafe('自定义时间不可用');
+          };
+
+          if (divinationBackBtn) divinationBackBtn.onclick = () => {
+            try { if (typeof closeDivinationPanel === 'function') return closeDivinationPanel(); } catch(_) {}
+            const o = document.getElementById('divinationOverlay');
+            if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden', 'true'); }
+            if (homeOverlay) homeOverlay.style.display = 'flex';
+          };
+          if (divinationCastBtn) divinationCastBtn.onclick = () => {
+            try { if (typeof castDivinationHexagram === 'function') return castDivinationHexagram(); } catch (_) {}
+            showToastSafe('起卦失败');
+          };
+          if (divinationAskBtn) divinationAskBtn.onclick = () => {
+            try { if (typeof askDivinationFollowup === 'function') return askDivinationFollowup(); } catch (_) {}
+            showToastSafe('追问失败');
           };
         };
         if (document.readyState === 'loading') {
