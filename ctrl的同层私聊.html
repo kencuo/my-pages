@@ -6652,6 +6652,10 @@
             <div class="app-icon">🧭</div>
             <div class="app-label">朋友圈</div>
           </div>
+          <div class="app-item" id="appForum">
+            <div class="app-icon">🗂️</div>
+            <div class="app-label">论坛</div>
+          </div>
           <div class="app-item" id="appStore">
             <div class="app-icon">🛒</div>
             <div class="app-label">商店</div>
@@ -6674,6 +6678,7 @@
         <div class="ios-dock" aria-label="Dock">
           <div class="dock-item" id="dockChat" title="聊天">💬</div>
           <div class="dock-item" id="dockMoments" title="朋友圈">🧭</div>
+          <div class="dock-item" id="dockForum" title="论坛">🗂️</div>
           <div class="dock-item" id="dockMusic" title="云音乐">🎧</div>
           <div class="dock-item" id="dockSettings" title="设置">⚙️</div>
         </div>
@@ -7058,6 +7063,188 @@
         <div class="moments-list" id="momentsList"></div>
         <button class="moments-time-fab" id="momentsTimeBtn" title="自定义时间">🕐</button>
         <button class="moments-publish-fab" id="momentsPublishBtn" title="发布" aria-label="发布">＋</button>
+      </div>
+      <!-- 论坛覆盖层（同层论坛 / <forum>） -->
+      <style>
+        .forum-overlay {
+          position: absolute;
+          inset: 0;
+          display: none;
+          flex-direction: column;
+          background: #f7f3ea;
+          font-family: "Microsoft YaHei", "SimSun", "PingFang SC", "Mi Sans", Arial, sans-serif;
+          z-index: 1255;
+        }
+        .forum-header {
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 10px;
+          background: #f2efe8;
+          border-bottom: 1px solid #d8cfc0;
+        }
+        .forum-title {
+          flex: 1;
+          text-align: left;
+          font-size: 14px;
+          font-weight: 700;
+          color: #3a2f23;
+          padding-left: 6px;
+        }
+        .forum-header-actions {
+          display: flex;
+          gap: 6px;
+        }
+        .forum-btn {
+          height: 26px;
+          min-width: 28px;
+          padding: 0 8px;
+          border: 1px solid #c9bfae;
+          border-radius: 3px;
+          background: #ffffff;
+          color: #5c4a2a;
+          cursor: pointer;
+          font-size: 12px;
+        }
+        .forum-btn.primary {
+          background: #2d6dcc;
+          border-color: #2d6dcc;
+          color: #fff;
+        }
+        .forum-btn.ghost {
+          border-color: #9ab7e4;
+          color: #2d6dcc;
+        }
+        .forum-btn.small {
+          height: 22px;
+          min-width: 44px;
+          padding: 0 8px;
+          font-size: 11px;
+          border-radius: 11px;
+        }
+        #forumBackBtn {
+          width: 44px;
+          min-width: 44px;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          background: transparent;
+          color: #2d6dcc;
+          font-size: 16px;
+        }
+        .forum-subnav {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 6px 10px;
+          background: #fbf9f4;
+          border-bottom: 1px solid #e0d6c8;
+          font-size: 12px;
+          color: #6b5d4f;
+        }
+        .forum-subnav-title {
+          font-weight: 700;
+          color: #3a2f23;
+        }
+        .forum-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 10px 10px 14px;
+        }
+        .forum-card {
+          background: #ffffff;
+          border: 1px solid #e0d6c8;
+          border-radius: 4px;
+          padding: 8px 10px;
+          margin-bottom: 10px;
+          box-shadow: none;
+        }
+        .forum-post-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #0645ad;
+          line-height: 1.3;
+          cursor: pointer;
+        }
+        .forum-post-title:hover { text-decoration: underline; }
+        .forum-meta {
+          margin-top: 4px;
+          font-size: 11px;
+          color: #7a6a58;
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .forum-content {
+          margin-top: 8px;
+          font-size: 13px;
+          color: #3a2f23;
+          white-space: pre-wrap;
+          line-height: 1.45;
+        }
+        .forum-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .forum-actions .forum-btn,
+        .forum-comment-actions .forum-btn {
+          background: transparent;
+          border: none;
+          padding: 0;
+          height: auto;
+          min-width: 0;
+          color: #2d6dcc;
+          font-size: 12px;
+        }
+        .forum-actions .forum-btn:hover,
+        .forum-comment-actions .forum-btn:hover {
+          text-decoration: underline;
+        }
+        .forum-comments {
+          margin-top: 10px;
+          background: #f9f7f2;
+          border-radius: 4px;
+          padding: 6px 8px;
+          border: 1px dashed #d8cfc0;
+        }
+        .forum-comment {
+          font-size: 12px;
+          color: #3a2f23;
+          line-height: 1.35;
+          padding: 4px 0;
+          border-bottom: 1px dashed #e0d6c8;
+        }
+        .forum-comment:last-child { border-bottom: none; }
+        .forum-comment .fc-head { font-weight: 600; color: #2d6dcc; }
+        .forum-comment .fc-reply { margin-left: 4px; color: #6b5d4f; }
+        .forum-comment .fc-time { font-size: 11px; color: #8a7b69; margin-left: 6px; }
+        .forum-comment .fc-text { white-space: pre-wrap; word-break: break-word; }
+        .forum-comment-actions { margin-top: 4px; display: flex; gap: 6px; }
+        .forum-empty {
+          padding: 40px 10px;
+          text-align: center;
+          color: #8a7b69;
+          font-size: 13px;
+        }
+      </style>
+      <div class="forum-overlay" id="forumOverlay" aria-hidden="true">
+        <div class="forum-header">
+          <button class="forum-btn" id="forumBackBtn" title="返回">←</button>
+          <div class="forum-title">天涯论坛</div>
+          <div class="forum-header-actions">
+            <button class="forum-btn ghost" id="forumAiPostBtn" title="AI发帖">AI发帖</button>
+            <button class="forum-btn primary" id="forumPublishBtn" title="发帖">发帖</button>
+          </div>
+        </div>
+        <div class="forum-subnav">
+          <span class="forum-subnav-title">同层论坛</span>
+          <span>看帖 / 回帖 / 发帖</span>
+        </div>
+        <div class="forum-list" id="forumList"></div>
       </div>
       <style>
         .divination-overlay {
@@ -8532,6 +8719,7 @@ https://i.postimg.cc/.../xxx.png"
         callStartTime: null,
         ringInterval: null, // Store ringing animation interval
         moments: [],
+        forum: [],
         inVoiceCall: false,
         currentCallTranscript: [],
         // 多图片支持
@@ -9378,7 +9566,9 @@ function applyUserAvatar(avatarElement) {
         // 兼容：<shouji> 里可能混入 <private> / <pyq> 等结构化块（同层朋友圈/多会话）
         let cleaned = raw;
         cleaned = cleaned.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
+        cleaned = cleaned.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
         cleaned = cleaned.replace(/^\s*同层朋友圈\s*$/gm, '');
+        cleaned = cleaned.replace(/^\s*同层论坛\s*$/gm, '');
         cleaned = cleaned.replace(/<private>[\s\S]*?<\/private>/g, '');
         cleaned = cleaned.replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '');
         cleaned = cleaned.replace(/<multi>[\s\S]*?<\/multi>/g, '');
@@ -9657,9 +9847,11 @@ function applyUserAvatar(avatarElement) {
           s = s.replace(/<shouji>[\s\S]*?<\/shouji>/gi, '');
           s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
           s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
+          s = s.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
           s = s.replace(/<\/?post:\d+>/gi, '');
           // remove legacy label line if it got injected into content
           s = s.replace(/^\s*同层朋友圈\s*$/gm, '');
+          s = s.replace(/^\s*同层论坛\s*$/gm, '');
           // remove any remaining tag-ish fragments
           s = s.replace(/<[^>\n]+>/g, '');
           // normalize back to stored style
@@ -9984,9 +10176,194 @@ function applyUserAvatar(avatarElement) {
         });
       }
 
+      // ==================== FORUM (<forum>) SUPPORT ====================
+      // 格式（存储在 <shouji> 内、</shouji> 之前）：
+      // <forum>
+      // [帖子1]
+      // [标题|发布者|发布时间]
+      // <content>
+      // 帖子内容...
+      // </content>
+      // <comment>评论内容</comment>
+      // [/帖子1]
+      // </forum>
+      function sanitizeForumPlainText(raw, opts = {}) {
+        const singleLine = !!opts.singleLine;
+        let s = String(raw || '');
+        s = s.replace(/\r/g, '');
+        s = s.replace(/\\n/g, '\n');
+        const original = s;
+        s = s.replace(/<shouji>[\s\S]*?<\/shouji>/gi, '');
+        s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
+        s = s.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
+        s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
+        s = s.replace(/<qunliao>[\s\S]*?<\/qunliao>/gi, '');
+        s = s.replace(/<multi>[\s\S]*?<\/multi>/gi, '');
+        s = s.replace(/<group>[\s\S]*?<\/group>/gi, '');
+        s = s.replace(/<\/?content>/gi, '');
+        s = s.replace(/<\/?comment>/gi, '');
+        s = s.replace(/\[\/?帖子[^\]]*\]/g, '');
+        s = s.replace(/<\/?post:\d+>/gi, '');
+        s = s.replace(/^\s*同层论坛\s*$/gm, '');
+        s = s.replace(/^\s*同层朋友圈\s*$/gm, '');
+        s = s.replace(/<[^>\n]+>/g, '');
+        let lines = s.split('\n').map(l => String(l).trim()).filter(Boolean);
+        if (lines.length === 0 && /<\/?(shouji|private|forum|forun|pyq|qunliao|multi|group|post:\d+)>/i.test(original)) {
+          let alt = String(original);
+          alt = alt.replace(/<\/?(shouji|private|forum|forun|pyq)>/gi, '');
+          alt = alt.replace(/<\/?(qunliao|multi|group)>/gi, '');
+          alt = alt.replace(/<\/?post:\d+>/gi, '');
+          alt = alt.replace(/\[\/?帖子[^\]]*\]/g, '');
+          alt = alt.replace(/^\s*同层论坛\s*$/gm, '');
+          alt = alt.replace(/^\s*同层朋友圈\s*$/gm, '');
+          alt = alt.replace(/<[^>\n]+>/g, '');
+          lines = alt.split('\n').map(l => String(l).trim()).filter(Boolean);
+        }
+        if (singleLine) lines = lines.slice(0, 1);
+        return lines.join('\n').trim();
+      }
+
+      function sanitizeForumHeaderField(raw) {
+        let s = sanitizeForumPlainText(raw, { singleLine: true });
+        s = s.replace(/\|/g, '').trim();
+        return s;
+      }
+
+      function forumTextToStorage(raw) {
+        const s = sanitizeForumPlainText(raw);
+        return s.replace(/\n/g, '\\n');
+      }
+
+      function parseForumFromShouji(text) {
+        const shoujiMatch = text && String(text).match(/<shouji>([\s\S]*?)<\/shouji>/);
+        if (!shoujiMatch) return [];
+        const inner = shoujiMatch[1] || '';
+        const lower = inner.toLowerCase();
+        const startIdx = lower.indexOf('<forum>');
+        const endIdx = Math.max(lower.lastIndexOf('</forum>'), lower.lastIndexOf('</forun>'));
+        if (startIdx < 0 || endIdx < 0 || endIdx <= startIdx) return [];
+        const forumInner = inner.slice(startIdx + 7, endIdx).trim();
+        if (!forumInner) return [];
+
+        const posts = [];
+        const postRe = /\[帖子([^\]]*)\]([\s\S]*?)\[\/帖子\1\]/g;
+        let m;
+        let seq = 0;
+        while ((m = postRe.exec(forumInner))) {
+          const idRaw = String(m[1] || '').trim();
+          const idNum = Number(idRaw);
+          const id = Number.isFinite(idNum) ? idNum : (++seq);
+          const block = String(m[2] || '');
+          const lines = block.split('\n').map(s => s.trim()).filter(Boolean);
+          const headerLine = lines.find(l => /^\[.*\|.*\|.*\]$/.test(l)) || '';
+          const headerInner = headerLine.replace(/^\[|\]$/g, '');
+          const parts = headerInner.split('|');
+          let title = '';
+          let author = '';
+          let time = '';
+          if (parts.length >= 3) {
+            title = sanitizeForumHeaderField(parts.slice(0, parts.length - 2).join('|'));
+            author = sanitizeForumHeaderField(parts[parts.length - 2] || '');
+            time = sanitizeForumHeaderField(parts[parts.length - 1] || '');
+          }
+
+          const contentMatch = block.match(/<content>([\s\S]*?)<\/content>/i);
+          const contentRaw = contentMatch ? contentMatch[1] : '';
+          const content = forumTextToStorage(contentRaw);
+
+          const comments = [];
+          const commentRe = /<comment>([\s\S]*?)<\/comment>/gi;
+          let cm;
+          while ((cm = commentRe.exec(block))) {
+            const cText = forumTextToStorage(cm[1] || '');
+            if (!cText) continue;
+            comments.push({ text: cText });
+          }
+
+          if (!title && !author && !time && !content && comments.length === 0) continue;
+
+          posts.push({
+            id,
+            title,
+            author,
+            time,
+            content,
+            comments,
+          });
+        }
+
+        return posts.sort((a, b) => (a.id || 0) - (b.id || 0));
+      }
+
+      function parseForumFromRawText(raw) {
+        const s = String(raw || '').replace(/\r/g, '').trim();
+        if (!s) return [];
+        if (/<forum>/i.test(s) && /<\/foru?m>/i.test(s)) {
+          return parseForumFromShouji(`<shouji>\n${s}\n</shouji>`);
+        }
+        if (/\[帖子[^\]]*\]/.test(s) && /\[\/帖子/.test(s)) {
+          return parseForumFromShouji(`<shouji>\n<forum>\n${s}\n</forum>\n</shouji>`);
+        }
+        return [];
+      }
+
+      function serializeForumToForum(posts) {
+        const list = Array.isArray(posts) ? posts : [];
+        const lines = [];
+        lines.push('<forum>');
+        if (list.length > 0) {
+          const sorted = [...list].sort((a, b) => (a.id || 0) - (b.id || 0));
+          for (const post of sorted) {
+            const pid = Number.isFinite(Number(post.id)) ? Number(post.id) : Date.now();
+            const title = sanitizeForumHeaderField(post.title || '未命名');
+            const author = sanitizeForumHeaderField(post.author || '匿名');
+            const time = sanitizeForumHeaderField(post.time || getFullTimeStr());
+            const content = unescapeStoredText(post.content || '');
+            lines.push(`[帖子${pid}]`);
+            lines.push(`[${title}|${author}|${time}]`);
+            lines.push('<content>');
+            if (content) lines.push(content);
+            lines.push('</content>');
+            const comments = Array.isArray(post.comments) ? post.comments : [];
+            for (const c of comments) {
+              const cText = unescapeStoredText((c && (c.text || c.content)) || '');
+              if (cText) lines.push(`<comment>${cText}</comment>`);
+            }
+            lines.push(`[/帖子${pid}]`);
+          }
+        }
+        lines.push('</forum>');
+        return lines.join('\n');
+      }
+
+      function upsertForumIntoShoujiMessage(shoujiMessageText, forumText) {
+        const msg = String(shoujiMessageText || '<shouji>\n</shouji>');
+        const forum = String(forumText || '').trim();
+        return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/, (_m, inner) => {
+          let body = String(inner || '');
+          body = body.replace(/^\s*同层论坛\s*$/gm, '');
+          try {
+            const lower = body.toLowerCase();
+            const s = lower.indexOf('<forum>');
+            let e = lower.lastIndexOf('</forum>');
+            const e2 = lower.lastIndexOf('</forun>');
+            if (e2 > e) e = e2;
+            if (s >= 0 && e >= 0 && e > s) {
+              body = body.slice(0, s) + body.slice(e + 8);
+            } else {
+              body = body.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
+            }
+          } catch (_) {
+            body = body.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
+          }
+          body = body.trim();
+          const merged = [body, forum].filter(Boolean).join('\n\n');
+          return `<shouji>\n${merged}\n</shouji>`;
+        });
+      }
       function sanitizeDivinationContent(raw) {
         let s = String(raw || '').replace(/\r/g, '').trim();
-        s = s.replace(/<\/?(shouji|private|qunliao|multi|group|pyq|changes)>/gi, '');
+        s = s.replace(/<\/?(shouji|private|qunliao|multi|group|pyq|forum|forun|changes)>/gi, '');
         s = s.replace(/<\/?post:\d+>/gi, '');
         s = s.replace(/\n{3,}/g, '\n\n').trim();
         return s;
@@ -10036,20 +10413,22 @@ function applyUserAvatar(avatarElement) {
         s = s.replace(/<shouji>[\s\S]*?<\/shouji>/gi, '');
         s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
         s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
+        s = s.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
         s = s.replace(/<qunliao>[\s\S]*?<\/qunliao>/gi, '');
         s = s.replace(/<multi>[\s\S]*?<\/multi>/gi, '');
         s = s.replace(/<group>[\s\S]*?<\/group>/gi, '');
         s = s.replace(/<\/?post:\d+>/gi, '');
         // strip legacy marker line if it appears
         s = s.replace(/^\s*同层朋友圈\s*$/gm, '');
+        s = s.replace(/^\s*同层论坛\s*$/gm, '');
         // remove any remaining tag-ish fragments to avoid accidental </pyq> etc.
         s = s.replace(/<[^>\n]+>/g, '');
 
         let lines = s.split('\n').map(l => String(l).trim()).filter(Boolean);
         // If we stripped everything, try a softer salvage pass (remove only tag markers, not full blocks).
-        if (lines.length === 0 && /<\/?(shouji|private|pyq|qunliao|multi|group|post:\d+)>/i.test(original)) {
+        if (lines.length === 0 && /<\/?(shouji|private|pyq|forum|forun|qunliao|multi|group|post:\d+)>/i.test(original)) {
           let alt = String(original);
-          alt = alt.replace(/<\/?(shouji|private|pyq)>/gi, '');
+          alt = alt.replace(/<\/?(shouji|private|pyq|forum|forun)>/gi, '');
           alt = alt.replace(/<\/?(qunliao|multi|group)>/gi, '');
           alt = alt.replace(/<\/?post:\d+>/gi, '');
           alt = alt.replace(/^\s*同层朋友圈\s*$/gm, '');
@@ -10946,6 +11325,532 @@ function applyUserAvatar(avatarElement) {
         }
       }
 
+      // ==================== FORUM UI (同层论坛) ====================
+      function openForumPanel() {
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'none';
+        const o = document.getElementById('forumOverlay');
+        if (o) {
+          o.style.display = 'flex';
+          o.setAttribute('aria-hidden', 'false');
+        }
+        renderForumList();
+        try { if (typeof deferredSync === 'function') deferredSync(0); } catch (_) {}
+      }
+
+      function closeForumPanel() {
+        const o = document.getElementById('forumOverlay');
+        if (o) {
+          o.style.display = 'none';
+          o.setAttribute('aria-hidden', 'true');
+        }
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'flex';
+      }
+
+      function nextForumId() {
+        const posts = Array.isArray(state.forum) ? state.forum : [];
+        const maxId = posts.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0);
+        return maxId + 1;
+      }
+
+      function buildForumCommentText(author, time, content, replyTo) {
+        const name = sanitizeForumHeaderField(author || '匿名');
+        const t = sanitizeForumHeaderField(time || getFullTimeStr());
+        const body = sanitizeForumPlainText(content || '');
+        if (!body) return '';
+        const rt = sanitizeForumHeaderField(replyTo || '');
+        const head = rt ? `${name} 回复 ${rt}` : name;
+        if (head && t) return `${head}（${t}）：${body}`;
+        if (head) return `${head}：${body}`;
+        return body;
+      }
+
+      function addForumPost(title, author, content) {
+        const t = sanitizeForumHeaderField(title || '未命名');
+        const a = sanitizeForumHeaderField(author || '匿名');
+        const c = forumTextToStorage(content || '');
+        if (!t && !c) return;
+        if (!Array.isArray(state.forum)) state.forum = [];
+        state.forum.push({
+          id: nextForumId(),
+          title: t || '未命名',
+          author: a || '匿名',
+          time: getFullTimeStr(),
+          content: c,
+          comments: [],
+        });
+        deferredSync(0);
+        renderForumList();
+      }
+
+      function addForumComment(postId, text) {
+        const t = forumTextToStorage(text || '');
+        if (!t) return;
+        const posts = Array.isArray(state.forum) ? state.forum : [];
+        const post = posts.find(p => Number(p.id) === Number(postId));
+        if (!post) return;
+        if (!Array.isArray(post.comments)) post.comments = [];
+        post.comments.push({ text: t });
+        deferredSync(0);
+        renderForumList();
+      }
+
+      function parseForumCommentDisplay(rawText) {
+        const text = unescapeStoredText(rawText || '');
+        let author = '';
+        let replyTo = '';
+        let time = '';
+        let content = text;
+        let m = text.match(/^(.+?) 回复 (.+?)（(.+?)）：([\s\S]*)$/);
+        if (m) {
+          author = String(m[1] || '').trim();
+          replyTo = String(m[2] || '').trim();
+          time = String(m[3] || '').trim();
+          content = String(m[4] || '').trim();
+        } else {
+          m = text.match(/^(.+?)（(.+?)）：([\s\S]*)$/);
+          if (m) {
+            author = String(m[1] || '').trim();
+            time = String(m[2] || '').trim();
+            content = String(m[3] || '').trim();
+          }
+        }
+        return { author, replyTo, time, content: content || text, raw: text };
+      }
+
+      function renderForumList() {
+        const list = document.getElementById('forumList');
+        if (!list) return;
+        list.innerHTML = '';
+        const posts = Array.isArray(state.forum) ? [...state.forum] : [];
+        posts.sort((a, b) => (b.id || 0) - (a.id || 0));
+
+        if (posts.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'forum-empty';
+          empty.textContent = '还没有论坛帖子，点下方“发帖”创建第一帖吧。';
+          list.appendChild(empty);
+          return;
+        }
+
+        for (const post of posts) {
+          const card = document.createElement('div');
+          card.className = 'forum-card';
+
+          const title = document.createElement('div');
+          title.className = 'forum-post-title';
+          title.textContent = post.title || '未命名';
+          card.appendChild(title);
+
+          const meta = document.createElement('div');
+          meta.className = 'forum-meta';
+          const author = post.author || '匿名';
+          const time = post.time || '';
+          meta.textContent = time ? `${author} · ${time}` : author;
+          card.appendChild(meta);
+
+          const content = document.createElement('div');
+          content.className = 'forum-content';
+          content.textContent = unescapeStoredText(post.content || '');
+          card.appendChild(content);
+
+          const actions = document.createElement('div');
+          actions.className = 'forum-actions';
+          const btnComment = document.createElement('button');
+          btnComment.className = 'forum-btn small';
+          btnComment.textContent = '评论';
+          btnComment.onclick = () => openForumComposer({ mode: 'comment', postId: post.id });
+          const btnAi = document.createElement('button');
+          btnAi.className = 'forum-btn small';
+          btnAi.textContent = 'AI回复';
+          btnAi.onclick = () => forumAiReply(post.id);
+          actions.appendChild(btnComment);
+          actions.appendChild(btnAi);
+          card.appendChild(actions);
+
+          const commentsWrap = document.createElement('div');
+          commentsWrap.className = 'forum-comments';
+          const comments = Array.isArray(post.comments) ? post.comments : [];
+          if (comments.length === 0) {
+            const c = document.createElement('div');
+            c.className = 'forum-comment';
+            c.style.borderBottom = 'none';
+            c.textContent = '暂无评论';
+            commentsWrap.appendChild(c);
+          } else {
+            comments.forEach((cmt) => {
+              const row = document.createElement('div');
+              row.className = 'forum-comment';
+
+              const parsed = parseForumCommentDisplay((cmt && (cmt.text || cmt.content)) || '');
+              const head = document.createElement('div');
+              head.className = 'fc-head';
+              const name = document.createElement('span');
+              name.className = 'fc-name';
+              name.textContent = parsed.author || '评论';
+              const reply = document.createElement('span');
+              reply.className = 'fc-reply';
+              reply.textContent = parsed.replyTo ? ` 回复 ${parsed.replyTo}` : '';
+              const t = document.createElement('span');
+              t.className = 'fc-time';
+              t.textContent = parsed.time ? ` ${parsed.time}` : '';
+              head.appendChild(name);
+              head.appendChild(reply);
+              head.appendChild(t);
+              row.appendChild(head);
+
+              const body = document.createElement('div');
+              body.className = 'fc-text';
+              body.textContent = parsed.content || '';
+              row.appendChild(body);
+
+              const cActions = document.createElement('div');
+              cActions.className = 'forum-comment-actions';
+              const r = document.createElement('button');
+              r.className = 'forum-btn small';
+              r.textContent = '回复';
+              r.onclick = () => openForumComposer({ mode: 'comment', postId: post.id, replyTo: parsed.author || '' });
+              const ai = document.createElement('button');
+              ai.className = 'forum-btn small';
+              ai.textContent = 'AI回复';
+              ai.onclick = () => forumAiReply(post.id, parsed.raw);
+              cActions.appendChild(r);
+              cActions.appendChild(ai);
+              row.appendChild(cActions);
+
+              commentsWrap.appendChild(row);
+            });
+          }
+          card.appendChild(commentsWrap);
+          list.appendChild(card);
+        }
+      }
+
+      function ensureForumComposerModal() {
+        let modal = document.getElementById('forumComposeModal');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'forumComposeModal';
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.45);
+          z-index: 9999;
+          display: none;
+          align-items: center;
+          justify-content: center;
+        `;
+
+        modal.innerHTML = `
+          <div style="background: #fff; border-radius: 12px; width: 92%; max-width: 340px; padding: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div id="forumComposeTitle" style="font-size: 16px; font-weight: 600; color: #333;">发布帖子</div>
+              <button id="forumComposeClose" style="background: none; border: none; font-size: 22px; color: #666; cursor: pointer;">×</button>
+            </div>
+
+            <input id="forumComposePostTitle" placeholder="帖子标题" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; margin-bottom: 8px;" />
+            <textarea id="forumComposeText" placeholder="写下你的内容..." style="width: 100%; min-height: 90px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; resize: vertical;"></textarea>
+
+            <div id="forumComposeStatus" style="margin-top: 8px; font-size: 12px; color: #888; min-height: 16px;"></div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+              <button id="forumComposeCancel" style="padding: 6px 16px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 6px; cursor: pointer;">取消</button>
+              <button id="forumComposeConfirm" style="padding: 6px 16px; border: none; background: #07c160; color: white; border-radius: 6px; cursor: pointer;">确定</button>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeBtn = modal.querySelector('#forumComposeClose');
+        const cancelBtn = modal.querySelector('#forumComposeCancel');
+        const confirmBtn = modal.querySelector('#forumComposeConfirm');
+
+        const closeModal = () => {
+          modal.style.display = 'none';
+          const titleInput = modal.querySelector('#forumComposePostTitle');
+          const textArea = modal.querySelector('#forumComposeText');
+          const status = modal.querySelector('#forumComposeStatus');
+          if (titleInput) titleInput.value = '';
+          if (textArea) textArea.value = '';
+          if (status) { status.textContent = ''; status.style.color = '#888'; }
+        };
+
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+
+        modal.onclick = (e) => {
+          if (e.target === modal) closeModal();
+        };
+
+        confirmBtn.onclick = () => {
+          const mode = modal.dataset.mode || 'post';
+          const titleInput = modal.querySelector('#forumComposePostTitle');
+          const textArea = modal.querySelector('#forumComposeText');
+          const status = modal.querySelector('#forumComposeStatus');
+          const title = String(titleInput?.value || '').trim();
+          const text = String(textArea?.value || '').trim();
+
+          if (mode === 'post') {
+            if (!title && !text) {
+              if (status) { status.textContent = '请填写标题或内容'; status.style.color = '#dc3545'; }
+              return;
+            }
+            const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
+            addForumPost(title || '未命名', name || '我', text);
+          } else {
+            if (!text) {
+              if (status) { status.textContent = '请输入评论内容'; status.style.color = '#dc3545'; }
+              return;
+            }
+            const postId = Number(modal.dataset.postId || 0);
+            const replyTo = modal.dataset.replyTo || '';
+            const name = (typeof getUserDisplayName === 'function') ? getUserDisplayName() : '我';
+            const commentText = buildForumCommentText(name || '我', getFullTimeStr(), text, replyTo);
+            addForumComment(postId, commentText);
+          }
+
+          closeModal();
+        };
+
+        return modal;
+      }
+
+      function openForumComposer(options = {}) {
+        const modal = ensureForumComposerModal();
+        const mode = options.mode || 'post';
+        modal.dataset.mode = mode;
+        modal.dataset.postId = options.postId != null ? String(options.postId) : '';
+        modal.dataset.replyTo = options.replyTo ? String(options.replyTo) : '';
+
+        const titleEl = modal.querySelector('#forumComposeTitle');
+        const titleInput = modal.querySelector('#forumComposePostTitle');
+        const textArea = modal.querySelector('#forumComposeText');
+        const status = modal.querySelector('#forumComposeStatus');
+
+        if (titleEl) {
+          titleEl.textContent = mode === 'comment'
+            ? (options.replyTo ? `回复 ${options.replyTo}` : '评论帖子')
+            : '发布帖子';
+        }
+        if (titleInput) {
+          titleInput.style.display = mode === 'comment' ? 'none' : 'block';
+          if (mode !== 'comment') titleInput.placeholder = '帖子标题';
+        }
+        if (textArea) {
+          textArea.placeholder = mode === 'comment' ? '写下你的评论...' : '写下你的内容...';
+          if (options.prefillText) textArea.value = String(options.prefillText || '');
+        }
+        if (status) { status.textContent = ''; status.style.color = '#888'; }
+
+        modal.style.display = 'flex';
+      }
+
+      async function forumQuickAiPost() {
+        if (!AI_GENERATE_RAW) {
+          try { showToast('未找到 generateRaw()，无法让 AI 发帖'); } catch (_) {}
+          return;
+        }
+        const topic = prompt('让 AI 发一条论坛帖子（可选主题，留空=自由发挥）：', '');
+        if (topic === null) return;
+        const topicText = String(topic || '').trim();
+
+        const promptText = [
+          '你正在以“同层论坛”的格式发帖。',
+          '要求：只输出一个 <forum> 区块，内部包含 1~N 个帖子。',
+          '每个帖子必须严格使用以下格式：',
+          '<forum>',
+          '[帖子1]',
+          '[标题|发布者|发布时间]',
+          '<content>',
+          '帖子内容（可多段落）',
+          '</content>',
+          '<comment>评论内容（可选，可多条）</comment>',
+          '[/帖子1]',
+          '</forum>',
+          '不要输出任何解释/多余文本/代码块。',
+          topicText ? `主题/提示：${topicText}` : '',
+        ].filter(Boolean).join('\n');
+
+        try {
+          const rawRequestData = {
+            ordered_prompts: [
+              ...(state.jailbreakEnabled ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
+              'world_info_before',
+              'persona_description',
+              'char_description',
+              'char_personality',
+              'scenario',
+              'world_info_after',
+              'dialogue_examples',
+              'chat_history',
+              'user_input',
+            ],
+            user_input: promptText,
+            should_silence: true,
+            should_stream: true,
+          };
+
+          try { if (state.debugEnabled) {
+            window.__aiDebug = window.__aiDebug || { stream: '', messages: [] };
+            window.__aiDebug.mode = 'forum(post-generateRaw)';
+            window.__aiDebug.context = promptText;
+            window.__aiDebug.stream = '';
+            window.__aiDebug.messages = [];
+            window.__aiDebug.error = '';
+            window.__aiDebug.request = JSON.parse(JSON.stringify(rawRequestData));
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch (_) {}
+
+          const result = await AI_GENERATE_RAW(rawRequestData);
+          const outRaw = (await consumeTextStream(result, (chunk) => {
+            try { if (state.debugEnabled && window.__aiDebug) {
+              window.__aiDebug.stream = (window.__aiDebug.stream || '') + String(chunk || '');
+              if (window.__aiDebug.stream.length > 12000) {
+                window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+              }
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch (_) {}
+          })).trim();
+
+          const parsed = parseForumFromRawText(outRaw);
+          if (!parsed.length) {
+            const fallback = sanitizeForumPlainText(outRaw);
+            if (fallback) {
+              addForumPost(topicText || '未命名', getCurrentCharName(), fallback);
+            }
+            return;
+          }
+
+          if (!Array.isArray(state.forum)) state.forum = [];
+          for (const p of parsed) {
+            const comments = Array.isArray(p.comments) ? p.comments : [];
+            state.forum.push({
+              id: nextForumId(),
+              title: p.title || '未命名',
+              author: p.author || getCurrentCharName() || '匿名',
+              time: p.time || getFullTimeStr(),
+              content: p.content || '',
+              comments: comments.map(c => ({ text: c.text || c.content || '' })).filter(c => (c.text || '').trim()),
+            });
+          }
+          deferredSync(0);
+          renderForumList();
+        } catch (_) {
+          try { showToast('AI 发帖失败'); } catch (_) {}
+        }
+      }
+
+      async function forumAiReply(postId, replyToText) {
+        if (!AI_GENERATE_RAW) {
+          try { showToast('未找到 generateRaw()，无法让 AI 回复'); } catch (_) {}
+          return;
+        }
+        const posts = Array.isArray(state.forum) ? state.forum : [];
+        const post = posts.find(p => Number(p.id) === Number(postId));
+        if (!post) return;
+
+        const postContent = unescapeStoredText(post.content || '');
+        const replyText = replyToText ? unescapeStoredText(String(replyToText)) : '';
+        const existingComments = (Array.isArray(post.comments) ? post.comments : [])
+          .slice(-6)
+          .map(c => unescapeStoredText((c && (c.text || c.content)) || ''))
+          .filter(Boolean)
+          .join('\n');
+
+        const promptText = [
+          '你正在以“同层论坛评论”的形式回复。',
+          '要求：只输出 1~N 行 <comment>评论内容</comment>，不要输出任何解释/多余文本/代码块。',
+          '评论内容可多段落。',
+          `帖子标题：${post.title || ''}`,
+          `发布者：${post.author || ''}`,
+          `发布时间：${post.time || ''}`,
+          `帖子内容：${postContent}`,
+          existingComments ? `现有评论：\n${existingComments}` : '',
+          replyText ? `你要回复的评论：${replyText}` : '',
+        ].filter(Boolean).join('\n');
+
+        try {
+          const rawRequestData = {
+            ordered_prompts: [
+              ...(state.jailbreakEnabled ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
+              'world_info_before',
+              'persona_description',
+              'char_description',
+              'char_personality',
+              'scenario',
+              'world_info_after',
+              'dialogue_examples',
+              'chat_history',
+              'user_input',
+            ],
+            user_input: promptText,
+            should_silence: true,
+            should_stream: true,
+          };
+
+          try { if (state.debugEnabled) {
+            window.__aiDebug = window.__aiDebug || { stream: '', messages: [] };
+            window.__aiDebug.mode = 'forum(generateRaw)';
+            window.__aiDebug.context = promptText;
+            window.__aiDebug.stream = '';
+            window.__aiDebug.messages = [];
+            window.__aiDebug.error = '';
+            window.__aiDebug.request = JSON.parse(JSON.stringify(rawRequestData));
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch (_) {}
+
+          const result = await AI_GENERATE_RAW(rawRequestData);
+          const outRaw = (await consumeTextStream(result, (chunk) => {
+            try { if (state.debugEnabled && window.__aiDebug) {
+              window.__aiDebug.stream = (window.__aiDebug.stream || '') + String(chunk || '');
+              if (window.__aiDebug.stream.length > 12000) {
+                window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+              }
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch (_) {}
+          })).trim();
+
+          const comments = [];
+          const re = /<comment>([\s\S]*?)<\/comment>/gi;
+          let m;
+          while ((m = re.exec(outRaw))) {
+            const t = forumTextToStorage(m[1] || '');
+            if (t) comments.push(t);
+          }
+          if (!comments.length) {
+            const fallback = forumTextToStorage(outRaw || '');
+            if (fallback) comments.push(fallback);
+          }
+          if (!comments.length) return;
+
+          if (!Array.isArray(post.comments)) post.comments = [];
+          for (const t of comments) {
+            post.comments.push({ text: t });
+          }
+          deferredSync(0);
+          renderForumList();
+        } catch (_) {
+          try { showToast('AI 回复失败'); } catch (_) {}
+        }
+      }
+
+      function initForumPanel() {
+        const overlay = document.getElementById('forumOverlay');
+        if (!overlay || overlay.dataset.bound === '1') return;
+        overlay.dataset.bound = '1';
+        const backBtn = document.getElementById('forumBackBtn');
+        const aiBtn = document.getElementById('forumAiPostBtn');
+        const publishBtn = document.getElementById('forumPublishBtn');
+        if (backBtn) backBtn.onclick = closeForumPanel;
+        if (aiBtn) aiBtn.onclick = forumQuickAiPost;
+        if (publishBtn) publishBtn.onclick = () => openForumComposer({ mode: 'post' });
+      }
       function ensureMomentsComposerModal() {
         let modal = document.getElementById('momentsComposeModal');
         if (modal) return modal;
@@ -11333,6 +12238,12 @@ function applyUserAvatar(avatarElement) {
         deferredSync(0);
         renderMomentsList();
       }
+            // 解析同层论坛（<forum>）——独立于私聊会话
+            try {
+              state.forum = parseForumFromShouji(msg.message);
+            } catch (e) {
+              state.forum = [];
+            }
 
       function addMomentComment(postId, name, avatar, replyToName, content, imageUrl) {
         const text = sanitizeMomentPlainText(content);
@@ -11487,6 +12398,12 @@ function applyUserAvatar(avatarElement) {
             });
             added++;
           }
+            // 解析同层论坛（<forum>）——独立于私聊会话
+            try {
+              state.forum = parseForumFromShouji(msg.message);
+            } catch (e) {
+              state.forum = [];
+            }
           if (!added) {
             // fallback: treat as plain body, keep old behavior
             const out = sanitizeMomentPlainText(outRaw);
@@ -21177,6 +22094,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const hasGroup = groupList.length > 0;
         const hasRoleGroup = roleGroupList.length > 0;
         const pyqText = serializeMomentsToPyq(state.moments);
+        const forumText = serializeForumToForum(state.forum);
         const divinationText = sanitizeDivinationContent(state.divinationChanges || '');
 
         // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
@@ -21193,6 +22111,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             } catch (_) {}
             try {
               messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
+              messageToSave = upsertForumIntoShoujiMessage(messageToSave, forumText);
             } catch (_) {}
             const changesToSave = divinationText || preservedChanges;
             if (changesToSave) {
@@ -21219,6 +22138,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
           const updatedCore = upsertPrivateAndGroupIntoShoujiMessage(raw, privateBlocks, qunliaoLog, roleGroupLog);
           let updated = upsertPyqIntoShoujiMessage(updatedCore, pyqText);
+          updated = upsertForumIntoShoujiMessage(updated, forumText);
           const preservedChanges = extractChangesContentFromMessage(raw);
           const changesToSave = divinationText || preservedChanges;
           if (changesToSave) {
@@ -21233,6 +22153,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           let messageToSave = upsertPrivateAndGroupIntoShoujiMessage('<shouji>\n</shouji>', privateBlocks, qunliaoLog, roleGroupLog);
           try {
             messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
+            messageToSave = upsertForumIntoShoujiMessage(messageToSave, forumText);
           } catch (_) {}
           if (divinationText) {
             messageToSave = upsertChangesIntoShoujiMessage(messageToSave, divinationText);
@@ -21280,6 +22201,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             } catch (e) {
              state.moments = [];
            }
+            // 解析同层论坛（<forum>）——独立于私聊会话
+            try {
+              state.forum = parseForumFromShouji(msg.message);
+            } catch (e) {
+              state.forum = [];
+            }
              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
              const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
              const privateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
@@ -21399,6 +22326,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           } else {
             state.messageHistory = [];
             state.moments = [];
+            state.forum = [];
             state.divinationChanges = '';
             state.groupChatMode = false;
             state.friendsPanelMode = 'friend';
@@ -21476,6 +22404,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           // 绑定所有事件监听器
           bindEventListeners();
           try { if (typeof initDivinationPanel === 'function') initDivinationPanel(); } catch (_) {}
+          try { if (typeof initForumPanel === 'function') initForumPanel(); } catch (_) {}
 
           // iOS-like home overlay (clock/dock)
           try { if (typeof initIosHomeScreen === 'function') initIosHomeScreen(); } catch (_) {}
@@ -22143,10 +23072,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           // 排除同层朋友圈块，避免误把 [评论|...] 当成角色消息
           content = String(content || '')
             .replace(/<pyq>[\s\S]*?<\/pyq>/g, '')
+            .replace(/<forum>[\s\S]*?<\/foru?m>/gi, '')
             .replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '')
             .replace(/<multi>[\s\S]*?<\/multi>/g, '')
             .replace(/<group>[\s\S]*?<\/group>/g, '')
-            .replace(/^\s*同层朋友圈\s*$/gm, '');
+            .replace(/^\s*同层朋友圈\s*$/gm, '')
+            .replace(/^\s*同层论坛\s*$/gm, '');
           // 查找第一个角色消息中的角色名
           const charMsgMatch = content.match(/\[(?!评论\|)(.+?)\|(.+?)\|.*?\|(\d{2}:\d{2})\]/);
           if (charMsgMatch && charMsgMatch[1] !== '我方消息' && charMsgMatch[1] !== '对方消息') {
@@ -23404,6 +24335,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }
         hookDock('dockChat', 'appChat');
         hookDock('dockMoments', 'appMoments');
+        hookDock('dockForum', 'appForum');
         hookDock('dockMusic', 'appCloudMusic');
         hookDock('dockSettings', 'appSettings');
       }
@@ -25860,6 +26792,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const appChat = document.getElementById('appChat');
         const appMessages = document.getElementById('appMessages');
         const appMoments = document.getElementById('appMoments');
+        const appForum = document.getElementById('appForum');
         const appStore = document.getElementById('appStore');
         const appMusic = document.getElementById('appMusic');
         const appCloudMusic = document.getElementById('appCloudMusic');
@@ -25885,6 +26818,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             if (typeof openMomentsPanel === 'function') return openMomentsPanel();
           } catch (_) {}
           return placeholder('朋友圈')();
+        });
+        if (appForum) appForum.addEventListener('click', () => {
+          try {
+            if (typeof openForumPanel === 'function') return openForumPanel();
+          } catch (_) {}
+          return placeholder('论坛')();
         });
         if (appStore) appStore.addEventListener('click', placeholder('商店'));
         if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
@@ -25919,6 +26858,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const appChat = document.getElementById('appChat');
           const appMessages = document.getElementById('appMessages');
           const appMoments = document.getElementById('appMoments');
+          const appForum = document.getElementById('appForum');
           const appStore = document.getElementById('appStore');
           const appMusic = document.getElementById('appMusic');
           const appDivination = document.getElementById('appDivination');
@@ -25929,6 +26869,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const momentsAiBtn = document.getElementById('momentsAiBtn');
           const momentsPublishBtn = document.getElementById('momentsPublishBtn');
           const momentsTimeBtn = document.getElementById('momentsTimeBtn');
+          const forumBackBtn = document.getElementById('forumBackBtn');
+          const forumAiPostBtn = document.getElementById('forumAiPostBtn');
+          const forumPublishBtn = document.getElementById('forumPublishBtn');
           const divinationBackBtn = document.getElementById('divinationBackBtn');
           const divinationCastBtn = document.getElementById('divinationCastBtn');
           const divinationAskBtn = document.getElementById('divinationAskBtn');
@@ -25940,6 +26883,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
           const showHome = () => {
             try { if (typeof closeMomentsPanel === 'function') closeMomentsPanel(); } catch (_) {}
+            try { if (typeof closeForumPanel === 'function') closeForumPanel(); } catch (_) {}
             try { if (typeof closeDivinationPanel === 'function') closeDivinationPanel(); } catch (_) {}
             if (homeOverlay) homeOverlay.style.display = 'flex';
           };
@@ -25951,6 +26895,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           if (appMoments) appMoments.onclick = () => {
             try { if (typeof openMomentsPanel === 'function') return openMomentsPanel(); } catch(_) {}
             showToastSafe('朋友圈 功能暂未开放');
+          };
+          if (appForum) appForum.onclick = () => {
+            try { if (typeof openForumPanel === 'function') return openForumPanel(); } catch(_) {}
+            showToastSafe('论坛 功能暂未开放');
           };
           if (appStore) appStore.onclick = () => showToastSafe('商店 功能暂未开放');
           if (appMusic) appMusic.onclick = () => {
@@ -25996,6 +26944,26 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             showToastSafe('自定义时间不可用');
           };
 
+          if (forumBackBtn) forumBackBtn.onclick = () => {
+            try { if (typeof closeForumPanel === 'function') return closeForumPanel(); } catch(_) {}
+            const o = document.getElementById('forumOverlay');
+            if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden','true'); }
+            if (homeOverlay) homeOverlay.style.display = 'flex';
+          };
+          if (forumAiPostBtn) forumAiPostBtn.onclick = () => {
+            try {
+              if (typeof forumQuickAiPost === 'function') return forumQuickAiPost();
+              return showToastSafe('AI发帖不可用');
+            } catch(_) {}
+            showToastSafe('AI 不可用');
+          };
+          if (forumPublishBtn) forumPublishBtn.onclick = () => {
+            try {
+              if (typeof openForumComposer === 'function') return openForumComposer({ mode: 'post' });
+            } catch(_) {}
+            showToastSafe('发帖失败');
+          };
+
           if (divinationBackBtn) divinationBackBtn.onclick = () => {
             try { if (typeof closeDivinationPanel === 'function') return closeDivinationPanel(); } catch(_) {}
             const o = document.getElementById('divinationOverlay');
@@ -26036,3 +27004,4 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
+
