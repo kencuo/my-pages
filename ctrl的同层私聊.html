@@ -1811,6 +1811,22 @@
         overflow: hidden;
       }
 
+      /* 设置页作为独立应用界面（不透出聊天背景） */
+      #settingsOverlay {
+        background: var(--bg-primary);
+        backdrop-filter: none;
+        align-items: stretch;
+        justify-content: stretch;
+      }
+      #settingsOverlay .settings-modal {
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
       .settings-header {
         padding: 15px 20px;
         background: #f8f8f8;
@@ -6393,7 +6409,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        background: url('https://files.catbox.moe/juvczm.jpeg') center/cover no-repeat;
+        background: url('https://i.postimg.cc/HkJHhjQq/IMG-7523.jpg') center/cover no-repeat;
         z-index: 999;
         padding-top: 16px;
       }
@@ -6680,7 +6696,6 @@
           <div class="dock-item" id="dockMoments" title="朋友圈">🧭</div>
           <div class="dock-item" id="dockForum" title="论坛">🗂️</div>
           <div class="dock-item" id="dockMusic" title="云音乐">🎧</div>
-          <div class="dock-item" id="dockSettings" title="设置">⚙️</div>
         </div>
       </div>
       <!-- 聊天界面 -->
@@ -7832,7 +7847,7 @@ https://i.postimg.cc/.../xxx.png"
           <div class="setting-section">
             <label class="setting-label">主屏壁纸</label>
             <div class="setting-preview">
-              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://files.catbox.moe/juvczm.jpeg" alt="主屏壁纸预览">
+              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://i.postimg.cc/HkJHhjQq/IMG-7523.jpg" alt="主屏壁纸预览">
               <div class="preview-info">
                 <div class="preview-title">自定义主屏壁纸</div>
                 <div class="preview-desc">上传本地图片作为主屏背景</div>
@@ -24274,7 +24289,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             home.style.backgroundSize = 'cover';
             home.style.backgroundPosition = 'center';
           } else {
-            home.style.backgroundImage = "url('https://files.catbox.moe/juvczm.jpeg')";
+            home.style.backgroundImage = "url('https://i.postimg.cc/HkJHhjQq/IMG-7523.jpg')";
             home.style.backgroundSize = 'cover';
             home.style.backgroundPosition = 'center';
           }
@@ -24282,7 +24297,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         const preview = document.getElementById('homeWallpaperPreview');
         if (preview) {
-          preview.src = settingsState.homeWallpaper || 'https://files.catbox.moe/juvczm.jpeg';
+          preview.src = settingsState.homeWallpaper || 'https://i.postimg.cc/HkJHhjQq/IMG-7523.jpg';
         }
       }
 
@@ -24337,7 +24352,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         hookDock('dockMoments', 'appMoments');
         hookDock('dockForum', 'appForum');
         hookDock('dockMusic', 'appCloudMusic');
-        hookDock('dockSettings', 'appSettings');
       }
 
       function updateMomentsCoverPreview() {
@@ -24607,10 +24621,14 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         document.getElementById('jailbreakToggle').checked = state.jailbreakEnabled;
       }
 
-      // 隐藏设置模态框
-      function hideSettings() {
+      // 隐藏设置模态框（默认回到主屏）
+      function hideSettings(backToHome = true) {
         const overlay = document.getElementById('settingsOverlay');
         overlay.style.display = 'none';
+        if (backToHome) {
+          const homeOverlay = document.getElementById('homeOverlay');
+          if (homeOverlay) homeOverlay.style.display = 'flex';
+        }
       }
 
       // 截屏功能
@@ -25073,7 +25091,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const wrap = document.getElementById('ai-debug-panel');
           if (wrap) wrap.style.display = 'block';
           try { localStorage.setItem('ai_debug_visible', '1'); } catch(_){}
-          try { hideSettings(); } catch(_){}
+          try { hideSettings(false); } catch(_){}
         });
       }
 
@@ -25094,7 +25112,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             window.__aiDebug.error = '';
             window.__updateAIDebug && window.__updateAIDebug();
           } catch(_){}
-          try { hideSettings(); } catch(_){}
+          try { hideSettings(false); } catch(_){}
         });
       }
 
