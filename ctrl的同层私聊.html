@@ -8835,17 +8835,17 @@ function applyUserAvatar(avatarElement) {
         const avatar = document.createElement('img');
         avatar.className = options.avatarClassName || 'avatar char-avatar';
 
-        // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+        // 头像优先级：角色配置头像 > 设置中的角色头像 > 消息中的自定义头像 > 格式中的头像
         const characterAvatarUrl = getCharacterAvatarUrl(resolvedName);
         if (characterAvatarUrl) {
           // 最高优先级：使用角色配置中的头像（类似SillyTavern）
           avatar.src = characterAvatarUrl;
-        } else if (msg.customAvatarUrl) {
-          // 次高优先级：使用消息中保存的自定义头像
-          avatar.src = msg.customAvatarUrl;
         } else if (settingsState.charAvatars[resolvedName]) {
-          // 中等优先级：使用设置中的角色头像
+          // 次高优先级：使用设置中的角色头像
           avatar.src = settingsState.charAvatars[resolvedName];
+        } else if (msg.customAvatarUrl) {
+          // 中等优先级：使用消息中保存的自定义头像
+          avatar.src = msg.customAvatarUrl;
         } else {
           // 最低优先级：使用格式中的头像
           avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
@@ -17000,12 +17000,13 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         setCharacterAvatarUrl(charName, dataUrl);
         settingsState.charAvatars[charName] = dataUrl;
 
-        // 更新消息历史中的角色头像
+        // 仅统计匹配消息，不再把头像写入每条消息（避免不同角色头像串号）
+        const normalizedTarget = String(charName || '').trim();
         let updatedCount = 0;
         state.messageHistory.forEach(msg => {
-          if (msg.sender === 'char' && (msg.charName === charName || msg.name === charName || (!msg.charName && !msg.name))) {
-            msg.customAvatarUrl = dataUrl;
-            msg.charName = charName;
+          if (!msg || msg.sender !== 'char') return;
+          const normalizedName = String(msg.charName || msg.name || '').trim();
+          if (normalizedName && normalizedName === normalizedTarget) {
             updatedCount++;
           }
         });
@@ -18269,9 +18270,16 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       }
 
       function isCurrentCharacterName(charName) {
-        if (!charName) return false;
-        const current = (typeof getCurrentCharName === 'function') ? getCurrentCharName() : '';
-        return current && String(charName) === String(current);
+        const target = String(charName || '').trim();
+        if (!target) return false;
+        try {
+          const info = getCurrentCharacterInfo();
+          const current = String((info && info.name) || '').trim();
+          if (!current) return false;
+          return target === current;
+        } catch (_) {
+          return false;
+        }
       }
 
       function normalizeCharProfile(input) {
@@ -18288,7 +18296,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       async function migrateCharacterProfileStorage() {
         const ctx = await ensureCharacterUnshallowed();
         if (!ctx) return;
-        const currentName = (typeof getCurrentCharName === 'function') ? getCurrentCharName() : '';
+        const currentInfo = getCurrentCharacterInfo();
+        const currentName = String((currentInfo && currentInfo.name) || '').trim();
         if (!currentName) return;
 
         const extProfile = normalizeCharProfile(readCharacterExtensionField(ctx, EXTENSION_CHAR_PROFILE_KEY));
@@ -18303,7 +18312,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (!extProfile && legacyProfile) {
           void writeCharacterExtensionField(EXTENSION_CHAR_PROFILE_KEY, legacyProfile);
         } else if (extProfile && (!legacyProfile || legacyProfile.avatarUrl !== extProfile.avatarUrl)) {
-          localStorage.setItem(`char_profile_${currentName}`, JSON.stringify(extProfile));
+          try {
+            localStorage.setItem(`char_profile_${currentName}`, JSON.stringify(extProfile));
+          } catch (e) {
+            console.warn('同步角色头像到 localStorage 失败，已忽略:', e);
+          }
         }
       }
 
@@ -22430,6 +22443,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           }, 3000);
 
         } catch (error) {
+          console.error('应用初始化失败:', error);
           // 显示错误提示
           showErrorMessage('应用初始化失败，请刷新页面重试');
         }
@@ -23989,8 +24003,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (isCurrentCharacterName(charName) && getSillyContextSafe()) {
           void writeCharacterExtensionField(EXTENSION_CHAR_PROFILE_KEY, normalized);
         }
-        if (normalized) localStorage.setItem(`char_profile_${charName}`, JSON.stringify(normalized));
-        else localStorage.removeItem(`char_profile_${charName}`);
+        try {
+          if (normalized) localStorage.setItem(`char_profile_${charName}`, JSON.stringify(normalized));
+          else localStorage.removeItem(`char_profile_${charName}`);
+        } catch (e) {
+          console.warn('保存角色头像到 localStorage 失败，已忽略:', e);
+        }
       }
 
       function getCharacterAvatarUrl(charName) {
@@ -24015,7 +24033,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
       // 初始化角色头像配置
       function initializeCharacterAvatars() {
-        const charName = getCurrentCharName();
+        const info = getCurrentCharacterInfo();
+        const charName = String((info && info.name) || '').trim();
         if (charName) {
           const characterAvatarUrl = getCharacterAvatarUrl(charName);
           if (characterAvatarUrl) {
@@ -24065,7 +24084,18 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         if (savedCharAvatars) {
           try {
-            settingsState.charAvatars = JSON.parse(savedCharAvatars);
+            const parsed = JSON.parse(savedCharAvatars);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              const sanitized = {};
+              Object.entries(parsed).forEach(([name, url]) => {
+                const safeName = String(name || '').trim();
+                const safeUrl = String(url || '').trim();
+                if (safeName && safeUrl) sanitized[safeName] = safeUrl;
+              });
+              settingsState.charAvatars = sanitized;
+            } else {
+              settingsState.charAvatars = {};
+            }
             updateCharAvatars();
           } catch (e) {
             console.error('Failed to parse char avatars:', e);
@@ -24214,10 +24244,22 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }
 
         // 保存角色头像
-        if (settingsState.charAvatars && Object.keys(settingsState.charAvatars).length > 0) {
-          localStorage.setItem('chatCharAvatars', JSON.stringify(settingsState.charAvatars));
-        } else {
-          localStorage.removeItem('chatCharAvatars');
+        try {
+          const avatarMap = {};
+          if (settingsState.charAvatars && typeof settingsState.charAvatars === 'object') {
+            Object.entries(settingsState.charAvatars).forEach(([name, url]) => {
+              const safeName = String(name || '').trim();
+              const safeUrl = String(url || '').trim();
+              if (safeName && safeUrl) avatarMap[safeName] = safeUrl;
+            });
+          }
+          if (Object.keys(avatarMap).length > 0) {
+            localStorage.setItem('chatCharAvatars', JSON.stringify(avatarMap));
+          } else {
+            localStorage.removeItem('chatCharAvatars');
+          }
+        } catch (e) {
+          console.warn('保存角色头像映射失败（可能超出存储配额），已忽略:', e);
         }
       }
 
@@ -24381,27 +24423,28 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             const messageIndex = parseInt(messageElement.dataset.index);
             if (!isNaN(messageIndex) && state.messageHistory[messageIndex]) {
               const msg = state.messageHistory[messageIndex];
-              const charName = msg.charName || '对方'; // 获取角色名称
+              const fallbackName = (typeof getCurrentCharName === 'function') ? getCurrentCharName() : '对方';
+              const charName = String(msg.charName || msg.name || fallbackName || '对方').trim(); // 获取角色名称
               const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
 
               console.log(`🔄 处理头像 ${index}: 角色=${charName}, 配置头像=${!!characterAvatarUrl}`);
 
-              // 头像优先级：角色配置头像 > 消息中的自定义头像 > 设置中的角色头像 > 格式中的头像
+              // 头像优先级：角色配置头像 > 设置中的角色头像 > 消息中的自定义头像 > 格式中的头像
               if (characterAvatarUrl) {
                 // 最高优先级：使用角色配置中的头像（类似SillyTavern）
                 avatar.src = characterAvatarUrl;
                 updatedCount++;
                 console.log(`✅ 头像 ${index} 已更新为角色配置头像`);
-              } else if (msg.customAvatarUrl) {
-                // 次高优先级：使用消息中保存的自定义头像
-                avatar.src = msg.customAvatarUrl;
-                updatedCount++;
-                console.log(`✅ 头像 ${index} 已更新为自定义头像`);
               } else if (settingsState.charAvatars[charName]) {
-                // 中等优先级：使用设置中的角色头像
+                // 次高优先级：使用设置中的角色头像
                 avatar.src = settingsState.charAvatars[charName];
                 updatedCount++;
                 console.log(`✅ 头像 ${index} 已更新为设置头像`);
+              } else if (msg.customAvatarUrl) {
+                // 低优先级：使用消息中保存的自定义头像
+                avatar.src = msg.customAvatarUrl;
+                updatedCount++;
+                console.log(`✅ 头像 ${index} 已更新为自定义头像`);
               } else if (msg.avatar) {
                 // 最低优先级：使用格式中的头像
                 avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
@@ -24539,8 +24582,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
 
             console.log(`👤 开始上传角色头像: ${charName}`);
-            // 尝试保存到SillyTavern的角色系统
-            await uploadCharacterAvatarToSillyTavern(file, charName, dataUrl);
+            // 优先上传到 SillyTavern 本地图片目录，避免 data URL 过大导致存储问题
+            const uploaded = await tryUploadToSillyTavern('char_avatar', charName);
+            const finalAvatarUrl = uploaded || dataUrl;
+            // 尝试保存到角色头像系统
+            await uploadCharacterAvatarToSillyTavern(file, charName, finalAvatarUrl);
           }
 
           saveSettings(); // 统一保存所有设置
