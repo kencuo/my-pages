@@ -1215,6 +1215,32 @@
         height: 18px;
         color: var(--text-secondary);
       }
+      /* 私聊专属设置按钮（右上角） */
+      .private-chat-settings-btn {
+        position: absolute;
+        top: 6px;
+        right: 12px;
+        width: 32px;
+        height: 32px;
+        background-color: var(--bg-tertiary);
+        border: none;
+        border-radius: 50%;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 6px var(--shadow-medium);
+        transition: all 0.2s;
+      }
+      .private-chat-settings-btn:hover {
+        background-color: var(--bg-primary);
+        transform: scale(1.1);
+      }
+      .private-chat-settings-btn svg {
+        width: 18px;
+        height: 18px;
+        color: var(--text-secondary);
+      }
       /* 好友列表按钮样式 */
       .friends-btn {
         position: absolute;
@@ -1234,6 +1260,30 @@
       }
       .friends-btn:hover { background-color: var(--bg-primary); transform: scale(1.1); }
       .friends-btn svg { width: 18px; height: 18px; color: var(--text-secondary); }
+      /* 左上角：返回聊天列表按钮 */
+      .back-chat-list-btn {
+        position: absolute;
+        top: 6px;
+        left: 12px;
+        width: 32px;
+        height: 32px;
+        background-color: var(--bg-tertiary);
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 6px var(--shadow-medium);
+        transition: all 0.2s;
+        color: var(--text-secondary);
+        font-size: 18px;
+        line-height: 1;
+      }
+      .back-chat-list-btn:hover {
+        background-color: var(--bg-primary);
+        transform: scale(1.08);
+      }
       /* 一体化好友面板样式 */
       .friends-panel {
         position: absolute;
@@ -1425,7 +1475,7 @@
       #requestAiBtn {
         position: absolute;
         top: 6px;
-        left: 12px;
+        left: 56px;
         width: 32px;
         height: 32px;
         background-color: #07c160;
@@ -6706,6 +6756,7 @@
             <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path>
           </svg>
         </button>
+        <button class="back-chat-list-btn" id="backToChatListBtn" title="返回聊天列表" aria-label="返回聊天列表">←</button>
         <button id="requestAiBtn">
           <svg viewBox="0 0 24 24">
             <path
@@ -6724,6 +6775,14 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
             <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+        </button>
+        <button class="private-chat-settings-btn" id="privateChatSettingsBtn" title="当前私聊设置">
+          <svg viewBox="0 0 24 24">
+            <path
+              fill="currentColor"
+              d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"
+            ></path>
           </svg>
         </button>
         <button class="settings-btn" id="settingsBtn">
@@ -8674,6 +8733,53 @@ https://i.postimg.cc/.../xxx.png"
         </div>
         <div class="simple-modal-footer">
           <button class="modal-btn confirm-btn" id="importResultConfirm">知道了</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 私聊专属设置弹窗 -->
+    <div class="settings-overlay" id="privateChatSettingsOverlay" style="display: none;">
+      <div class="settings-modal" style="max-width: 260px;">
+        <div class="settings-header">
+          <div class="settings-title">私聊设置</div>
+          <button class="settings-close-btn" id="privateChatSettingsCloseBtn">×</button>
+        </div>
+        <div class="settings-content">
+          <div class="setting-section" style="margin-bottom: 14px;">
+            <div class="preview-desc">当前私聊：<span id="privateChatSettingsTarget" style="color:#333;font-weight:600;">-</span></div>
+          </div>
+
+          <div class="setting-section" style="margin-bottom: 18px;">
+            <label class="setting-label">该角色头像</label>
+            <div class="setting-preview">
+              <img class="char-avatar-preview" id="privateChatAvatarPreview" src="https://files.catbox.moe/e1xk9k.jpeg" alt="角色头像预览">
+              <div class="preview-info">
+                <div class="preview-title">私聊角色头像</div>
+                <div class="preview-desc">仅修改该角色头像</div>
+              </div>
+            </div>
+            <div class="setting-buttons">
+              <button class="upload-btn" id="privateChatAvatarUploadBtn">上传头像</button>
+              <button class="reset-btn" id="privateChatAvatarResetBtn">重置</button>
+            </div>
+            <input type="file" class="file-input" id="privateChatAvatarFileInput" accept="image/*">
+          </div>
+
+          <div class="setting-section">
+            <label class="setting-label">该私聊背景</label>
+            <div class="setting-preview">
+              <img class="wallpaper-preview" id="privateChatWallpaperPreview" src="https://files.catbox.moe/e1xk9k.jpeg" alt="私聊背景预览">
+              <div class="preview-info">
+                <div class="preview-title">专属聊天背景</div>
+                <div class="preview-desc" id="privateChatWallpaperHint">未设置时使用通用背景</div>
+              </div>
+            </div>
+            <div class="setting-buttons">
+              <button class="upload-btn" id="privateChatWallpaperUploadBtn">上传背景</button>
+              <button class="reset-btn" id="privateChatWallpaperResetBtn">重置</button>
+            </div>
+            <input type="file" class="file-input" id="privateChatWallpaperFileInput" accept="image/*">
+          </div>
         </div>
       </div>
     </div>
@@ -11685,7 +11791,9 @@ function applyUserAvatar(avatarElement) {
           '<content>',
           '帖子内容（可多段落）',
           '</content>',
-          '<comment>评论内容（可选，可多条）</comment>',
+          '<comment>评论内容（可选）</comment>',
+          '<comment>评论内容</comment>',
+          '(可以多条评论内容)',
           '[/帖子1]',
           '</forum>',
           '不要输出任何解释/多余文本/代码块。',
@@ -12696,6 +12804,11 @@ function applyUserAvatar(avatarElement) {
         // 强制重新渲染
         lastHistoryCount = 0;
         renderAllMessages();
+        updateWallpaper();
+        const privateSettingsOverlay = document.getElementById('privateChatSettingsOverlay');
+        if (privateSettingsOverlay && privateSettingsOverlay.style.display === 'flex') {
+          updatePrivateChatSettingsPreview();
+        }
         updateAiRequestButtonVisibility();
       }
 
@@ -12726,6 +12839,7 @@ function applyUserAvatar(avatarElement) {
         if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
         lastHistoryCount = 0;
         renderAllMessages();
+        updateWallpaper();
         setRoleGroupInputLock(true);
         updateAiRequestButtonVisibility();
       }
@@ -12760,6 +12874,8 @@ function applyUserAvatar(avatarElement) {
           buildPrivateChatTabs(list, state.currentPrivateIndex);
           lastHistoryCount = 0;
           renderAllMessages();
+          updateWallpaper();
+          updatePrivateChatSettingsButtonVisibility();
           deferredSync();
           return;
         }
@@ -12771,6 +12887,8 @@ function applyUserAvatar(avatarElement) {
         buildPrivateChatTabs(state.privateConversations, 0);
         lastHistoryCount = 0;
         renderAllMessages();
+        updateWallpaper();
+        updatePrivateChatSettingsButtonVisibility();
         deferredSync();
       }
 
@@ -16650,6 +16768,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (voiceCallBtn) {
           voiceCallBtn.style.display = (state.inVoiceCall && shouldShow) ? 'flex' : 'none';
         }
+        updatePrivateChatSettingsButtonVisibility();
       }
 
       // 🚀 优化：更快响应的输入指示器
@@ -18091,8 +18210,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                 if (isRoleGroupMode() && typeof requestRoleGroupAiReply === 'function') return requestRoleGroupAiReply();
                 return requestAiReply({ fromRequestAiBtn: true });
               };
-        document.getElementById('voiceCallRequestAiBtn').onclick = requestAiReply;
+      document.getElementById('voiceCallRequestAiBtn').onclick = requestAiReply;
       // 集成群聊列表开关
+      document.getElementById('backToChatListBtn').onclick = () => toggleFriendsPanel(true);
       document.getElementById('friendsBtn').onclick = () => toggleFriendsPanel(true);
       document.getElementById('imgBtn').onclick = sendImage;
       document.getElementById('recallBtn').onclick = recallLastUserMsg; // This button is in the action grid, keep it for now.
@@ -18144,6 +18264,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       const EXTENSION_ROLE_GROUPS_KEY = 'tavern_helper_role_groups_v1';
       const EXTENSION_UI_ASSETS_KEY = 'tavern_helper_ui_assets_v1';
       const EXTENSION_CHAR_PROFILE_KEY = 'tavern_helper_char_profile_v1';
+      const EXTENSION_PRIVATE_CHAT_STYLES_KEY = 'tavern_helper_private_chat_styles_v1';
+      const PRIVATE_CHAT_STYLE_LS_KEY = 'tavern_private_chat_styles_v1';
 
       function getSillyContextSafe() {
         try {
@@ -18267,6 +18389,234 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (!areUiAssetsEqual(legacyAssets, mergedAssets)) {
           saveUiAssetsLegacy(mergedAssets);
         }
+      }
+
+      function normalizePrivateChatStyles(input) {
+        const src = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+        const out = {};
+        Object.entries(src).forEach(([rawName, rawStyle]) => {
+          const name = String(rawName || '').trim();
+          if (!name) return;
+          let wallpaper = '';
+          if (typeof rawStyle === 'string') wallpaper = rawStyle.trim();
+          else if (rawStyle && typeof rawStyle === 'object') wallpaper = String(rawStyle.wallpaper || '').trim();
+          if (!wallpaper) return;
+          out[name] = { wallpaper };
+        });
+        return out;
+      }
+
+      function loadPrivateChatStylesLegacy() {
+        try {
+          const raw = localStorage.getItem(PRIVATE_CHAT_STYLE_LS_KEY);
+          return normalizePrivateChatStyles(raw ? JSON.parse(raw) : {});
+        } catch (_) {
+          return {};
+        }
+      }
+
+      function savePrivateChatStylesLegacy(styles) {
+        try {
+          const safe = normalizePrivateChatStyles(styles);
+          if (Object.keys(safe).length) localStorage.setItem(PRIVATE_CHAT_STYLE_LS_KEY, JSON.stringify(safe));
+          else localStorage.removeItem(PRIVATE_CHAT_STYLE_LS_KEY);
+        } catch (_) {}
+      }
+
+      function loadPrivateChatStyles() {
+        const ctx = getSillyContextSafe();
+        const ext = normalizePrivateChatStyles(readCharacterExtensionField(ctx, EXTENSION_PRIVATE_CHAT_STYLES_KEY));
+        const legacy = loadPrivateChatStylesLegacy();
+        const merged = Object.keys(ext).length ? { ...legacy, ...ext } : legacy;
+        settingsState.privateChatStyles = merged;
+        if (ctx && JSON.stringify(ext) !== JSON.stringify(merged)) {
+          void writeCharacterExtensionField(EXTENSION_PRIVATE_CHAT_STYLES_KEY, merged);
+        }
+        if (JSON.stringify(legacy) !== JSON.stringify(merged)) {
+          savePrivateChatStylesLegacy(merged);
+        }
+      }
+
+      function savePrivateChatStyles() {
+        const safe = normalizePrivateChatStyles(settingsState.privateChatStyles);
+        settingsState.privateChatStyles = safe;
+        savePrivateChatStylesLegacy(safe);
+        if (getSillyContextSafe()) {
+          void writeCharacterExtensionField(EXTENSION_PRIVATE_CHAT_STYLES_KEY, safe);
+        }
+      }
+
+      function isPrivateChatMode() {
+        return getActiveConversationMode() === 'private' && !state.groupChatMode && !state.roleGroupMode;
+      }
+
+      function getActivePrivateConversationName() {
+        if (!isPrivateChatMode()) return '';
+        const list = getPrivateConversations();
+        if (Array.isArray(list) && list.length) {
+          const idx = Math.max(0, Math.min(state.currentPrivateIndex || 0, list.length - 1));
+          const name = String(list[idx]?.name || '').trim();
+          if (name) return name;
+        }
+        return String(document.getElementById('chatPersonName')?.textContent || '').trim();
+      }
+
+      function getPrivateChatStyleForName(name) {
+        const key = String(name || '').trim();
+        if (!key) return null;
+        const style = settingsState.privateChatStyles?.[key];
+        return style && style.wallpaper ? style : null;
+      }
+
+      function getCurrentPrivateWallpaperOverride() {
+        const name = getActivePrivateConversationName();
+        const style = getPrivateChatStyleForName(name);
+        return style?.wallpaper || '';
+      }
+
+      function setPrivateChatWallpaperForName(name, wallpaper) {
+        const key = String(name || '').trim();
+        if (!key) return;
+        const url = String(wallpaper || '').trim();
+        if (!settingsState.privateChatStyles || typeof settingsState.privateChatStyles !== 'object') {
+          settingsState.privateChatStyles = {};
+        }
+        if (!url) {
+          delete settingsState.privateChatStyles[key];
+        } else {
+          settingsState.privateChatStyles[key] = { wallpaper: url };
+        }
+        savePrivateChatStyles();
+      }
+
+      function updatePrivateChatSettingsButtonVisibility() {
+        const btn = document.getElementById('privateChatSettingsBtn');
+        if (!btn) return;
+        const show = isPrivateChatMode() && !!getActivePrivateConversationName();
+        btn.style.display = show ? 'flex' : 'none';
+        if (!show) hidePrivateChatSettings();
+      }
+
+      function updatePrivateChatSettingsPreview() {
+        const targetName = getActivePrivateConversationName();
+        const targetEl = document.getElementById('privateChatSettingsTarget');
+        if (targetEl) targetEl.textContent = targetName || '-';
+
+        const avatarPreview = document.getElementById('privateChatAvatarPreview');
+        if (avatarPreview) {
+          const avatarUrl = getCharacterAvatarUrl(targetName) || settingsState.charAvatars[targetName] || 'https://files.catbox.moe/e1xk9k.jpeg';
+          avatarPreview.src = avatarUrl;
+        }
+
+        const wallpaperPreview = document.getElementById('privateChatWallpaperPreview');
+        const wallpaperHint = document.getElementById('privateChatWallpaperHint');
+        const privateWallpaper = getPrivateChatStyleForName(targetName)?.wallpaper || '';
+        const globalWallpaper = settingsState.wallpaper || '';
+        if (wallpaperPreview) {
+          wallpaperPreview.src = privateWallpaper || globalWallpaper || 'https://files.catbox.moe/e1xk9k.jpeg';
+        }
+        if (wallpaperHint) {
+          wallpaperHint.textContent = privateWallpaper ? '已设置专属背景（优先于通用背景）' : '未设置时使用通用背景';
+        }
+      }
+
+      function showPrivateChatSettings() {
+        if (!isPrivateChatMode()) {
+          if (typeof showToast === 'function') showToast('仅私聊可设置专属头像/背景');
+          return;
+        }
+        const overlay = document.getElementById('privateChatSettingsOverlay');
+        if (!overlay) return;
+        updatePrivateChatSettingsPreview();
+        overlay.style.display = 'flex';
+      }
+
+      function hidePrivateChatSettings() {
+        const overlay = document.getElementById('privateChatSettingsOverlay');
+        if (overlay) overlay.style.display = 'none';
+      }
+
+      function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = (e) => reject(e);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function uploadImageAssetForSettings(file, dataUrl, prefix, chName = '') {
+        try {
+          let ext = (String(file?.name || '').split('.').pop() || '').toLowerCase();
+          if (!ext || ext === String(file?.name || '').toLowerCase()) {
+            const t = String(file?.type || '').toLowerCase();
+            if (t.includes('png')) ext = 'png';
+            else if (t.includes('jpeg') || t.includes('jpg')) ext = 'jpg';
+            else if (t.includes('webp')) ext = 'webp';
+            else if (t.includes('gif')) ext = 'gif';
+            else if (t.includes('bmp')) ext = 'bmp';
+          }
+          if (!['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'].includes(ext)) return '';
+          const format = ext === 'jpg' ? 'jpeg' : ext;
+          const comma = String(dataUrl || '').indexOf(',');
+          const base64 = comma >= 0 ? String(dataUrl || '').slice(comma + 1) : String(dataUrl || '');
+          const filename = `${prefix}_${Date.now()}.${ext}`;
+          const body = { image: base64, format, filename };
+          if (chName) body.ch_name = chName;
+          const res = await fetch('/api/images/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            cache: 'no-cache',
+          });
+          if (!res.ok) return '';
+          const data = await res.json().catch(() => null);
+          return (data && data.path) ? String(data.path) : '';
+        } catch (_) {
+          return '';
+        }
+      }
+
+      async function uploadPrivateChatAvatar(file) {
+        const name = getActivePrivateConversationName();
+        if (!name) return;
+        const dataUrl = await readFileAsDataUrl(file);
+        const uploaded = await uploadImageAssetForSettings(file, dataUrl, 'private_char_avatar', name);
+        const finalUrl = uploaded || dataUrl;
+        setCharacterAvatarUrl(name, finalUrl);
+        settingsState.charAvatars[name] = finalUrl;
+        updateCharAvatars();
+        saveSettings();
+        updatePrivateChatSettingsPreview();
+      }
+
+      function resetPrivateChatAvatar() {
+        const name = getActivePrivateConversationName();
+        if (!name) return;
+        setCharacterAvatarUrl(name, null);
+        if (settingsState.charAvatars[name]) delete settingsState.charAvatars[name];
+        updateCharAvatars();
+        saveSettings();
+        updatePrivateChatSettingsPreview();
+      }
+
+      async function uploadPrivateChatWallpaper(file) {
+        const name = getActivePrivateConversationName();
+        if (!name) return;
+        const dataUrl = await readFileAsDataUrl(file);
+        const uploaded = await uploadImageAssetForSettings(file, dataUrl, 'private_chat_wallpaper', `private_wallpaper_${name}`);
+        const finalUrl = uploaded || dataUrl;
+        setPrivateChatWallpaperForName(name, finalUrl);
+        updateWallpaper();
+        updatePrivateChatSettingsPreview();
+      }
+
+      function resetPrivateChatWallpaper() {
+        const name = getActivePrivateConversationName();
+        if (!name) return;
+        setPrivateChatWallpaperForName(name, '');
+        updateWallpaper();
+        updatePrivateChatSettingsPreview();
       }
 
       function isCurrentCharacterName(charName) {
@@ -22384,6 +22734,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           // 延迟渲染确保DOM已准备好
           setTimeout(() => {
             renderAllMessages();
+            updateWallpaper();
+            updatePrivateChatSettingsButtonVisibility();
             updateAiRequestButtonVisibility();
             console.log('Messages rendered, total in DOM:', document.querySelectorAll('#chatMessages .message').length);
             // 若URL包含 ?char=xxx，则打开/创建该私聊
@@ -23422,7 +23774,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         wallpaper: null,
         homeWallpaper: null,
         momentsCover: null,
-        charAvatars: {} // 存储角色头像，格式：{角色名: 头像URL}
+        charAvatars: {}, // 存储角色头像，格式：{角色名: 头像URL}
+        privateChatStyles: {} // 私聊专属设置，格式：{角色名: { wallpaper: URL }}
       };
 
       // ==================== 收藏消息功能 ====================
@@ -24061,13 +24414,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         settingsState.wallpaper = mergedAssets.wallpaper;
         settingsState.homeWallpaper = mergedAssets.homeWallpaper;
         settingsState.momentsCover = mergedAssets.momentsCover;
+        loadPrivateChatStyles();
 
         if (settingsState.userAvatar) {
           updateUserAvatars();
         }
-        if (settingsState.wallpaper) {
-          updateWallpaper();
-        }
+        updateWallpaper();
         if (settingsState.homeWallpaper) {
           updateHomeWallpaper();
         }
@@ -24227,6 +24579,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         // 朋友圈封面预览（封面优先读取角色卡扩展，兼容 localStorage）
         try { updateMomentsCoverPreview(); } catch (_) {}
+        updatePrivateChatSettingsButtonVisibility();
       }
 
       // 保存设置（优先写入角色卡扩展，兼容 localStorage）
@@ -24242,6 +24595,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (getSillyContextSafe()) {
           void writeCharacterExtensionField(EXTENSION_UI_ASSETS_KEY, uiAssets);
         }
+        savePrivateChatStyles();
 
         // 保存角色头像
         try {
@@ -24302,9 +24656,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       }
       function updateWallpaper() {
         const chatMessages = document.querySelector('.chat-messages');
+        const privateOverride = getCurrentPrivateWallpaperOverride();
+        const effectiveWallpaper = privateOverride || settingsState.wallpaper || '';
         if (chatMessages) {
-          if (settingsState.wallpaper) {
-            chatMessages.style.backgroundImage = `url(${settingsState.wallpaper})`;
+          if (effectiveWallpaper) {
+            chatMessages.style.backgroundImage = `url(${effectiveWallpaper})`;
             chatMessages.style.backgroundSize = 'cover';
             chatMessages.style.backgroundPosition = 'center';
           } else {
@@ -25129,6 +25485,61 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       document.getElementById('screenshotBtn').addEventListener('click', (event) => takeScreenshot(event));
       document.getElementById('settingsBtn').addEventListener('click', showSettings);
       document.getElementById('settingsCloseBtn').addEventListener('click', hideSettings);
+      document.getElementById('privateChatSettingsBtn').addEventListener('click', showPrivateChatSettings);
+      document.getElementById('privateChatSettingsCloseBtn').addEventListener('click', hidePrivateChatSettings);
+      document.getElementById('privateChatSettingsOverlay').addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'privateChatSettingsOverlay') hidePrivateChatSettings();
+      });
+
+      document.getElementById('privateChatAvatarUploadBtn').addEventListener('click', () => {
+        const input = document.getElementById('privateChatAvatarFileInput');
+        if (input) {
+          input.value = '';
+          input.click();
+        }
+      });
+      document.getElementById('privateChatAvatarFileInput').addEventListener('change', async (e) => {
+        const input = e.target;
+        const file = input.files && input.files[0];
+        if (!file) return;
+        try {
+          await uploadPrivateChatAvatar(file);
+          if (typeof showToast === 'function') showToast('角色头像已更新');
+        } catch (err) {
+          alert(`头像上传失败: ${err && err.message ? err.message : err}`);
+        } finally {
+          input.value = '';
+        }
+      });
+      document.getElementById('privateChatAvatarResetBtn').addEventListener('click', () => {
+        resetPrivateChatAvatar();
+        if (typeof showToast === 'function') showToast('已重置角色头像');
+      });
+
+      document.getElementById('privateChatWallpaperUploadBtn').addEventListener('click', () => {
+        const input = document.getElementById('privateChatWallpaperFileInput');
+        if (input) {
+          input.value = '';
+          input.click();
+        }
+      });
+      document.getElementById('privateChatWallpaperFileInput').addEventListener('change', async (e) => {
+        const input = e.target;
+        const file = input.files && input.files[0];
+        if (!file) return;
+        try {
+          await uploadPrivateChatWallpaper(file);
+          if (typeof showToast === 'function') showToast('私聊背景已更新');
+        } catch (err) {
+          alert(`背景上传失败: ${err && err.message ? err.message : err}`);
+        } finally {
+          input.value = '';
+        }
+      });
+      document.getElementById('privateChatWallpaperResetBtn').addEventListener('click', () => {
+        resetPrivateChatWallpaper();
+        if (typeof showToast === 'function') showToast('已恢复通用背景');
+      });
 
       // 打开 AI 调试面板（移入设置内）
       const __openAIDebugBtn = document.getElementById('openAIDebugBtn');
