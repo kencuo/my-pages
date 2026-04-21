@@ -14295,6 +14295,18 @@ function applyUserAvatar(avatarElement) {
           showContextMenu(e, idx);
         });
 
+        // 便捷点击入口：满足“点击即可改/删/重roll”
+        if (
+          (msg.sender === 'user' && isUserMessagePendingReply(idx) && isEditableTextMessage(msg)) ||
+          (msg.sender === 'char' && (isEditableTextMessage(msg) || isLatestCharMessage(idx)))
+        ) {
+          contentDiv.addEventListener('click', e => {
+            // 避免抢占图片/视频等内置点击行为
+            if (e.target.closest('img,video,audio,button,input,textarea,select,a')) return;
+            showContextMenu(e, idx);
+          });
+        }
+
         // 移动端长按支持 - 只对非交互式消息启用，增强视觉反馈
         if (!['transfer', 'redpacket'].includes(msg.type) || msg.claimed) {
           let longPressTimer = null;
@@ -14431,25 +14443,46 @@ function applyUserAvatar(avatarElement) {
         menu.style.minWidth = '140px';
         menu.style.fontSize = '16px';
 
-        let menuItems = '';
         const message = state.messageHistory[idx];
+        const menuItemBaseStyle = 'padding:20px 28px;cursor:pointer;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;';
+        const menuItems = [];
 
-        // Quote action is always available - 增大触摸区域，优化手机体验
-        menuItems +=
-          '<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="quote"><span style="font-size:20px;">📝</span> 引用</div>';
+        // Quote action is always available
+        menuItems.push({ action: 'quote', icon: '📝', text: '引用' });
+
+        // 用户消息：在“申请回复前”可编辑/删除
+        if (isUserMessagePendingReply(idx) && isEditableTextMessage(message)) {
+          menuItems.push({ action: 'edit-message', icon: '✏️', text: '编辑消息' });
+        }
+        if (isUserMessagePendingReply(idx)) {
+          menuItems.push({ action: 'delete-message', icon: '🗑️', text: '删除消息' });
+        }
+
+        // 角色消息：可编辑；最后一条可重roll
+        if (message && message.sender === 'char' && isEditableTextMessage(message)) {
+          menuItems.push({ action: 'edit-message', icon: '✏️', text: '编辑回复' });
+        }
+        if (message && message.sender === 'char' && isLatestCharMessage(idx)) {
+          menuItems.push({ action: 'reroll-message', icon: '♻️', text: '重roll此回复' });
+        }
 
         // Recall action only for user's own, non-recalled messages
-        if (message.sender === 'user' && message.type !== 'recalled') {
-          menuItems += '<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="recall"><span style="font-size:20px;">↩️</span> 撤回</div>';
+        if (message.sender === 'user' && message.type !== 'recalled' && message.type !== 'retracted') {
+          menuItems.push({ action: 'recall', icon: '↩️', text: '撤回' });
         }
 
         // Favorite action for all messages
         const isFavorited = isMessageFavorited(idx);
         const favoriteIcon = isFavorited ? '💔' : '⭐';
         const favoriteText = isFavorited ? '取消收藏' : '收藏';
-        menuItems += `<div class="menu-item-large" style="padding:20px 28px;cursor:pointer;font-size:18px;min-height:28px;display:flex;align-items:center;gap:10px;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:500;" data-action="favorite"><span style="font-size:20px;">${favoriteIcon}</span> ${favoriteText}</div>`;
+        menuItems.push({ action: 'favorite', icon: favoriteIcon, text: favoriteText });
 
-        menu.innerHTML = menuItems;
+        menu.innerHTML = menuItems
+          .map((item, i) => {
+            const border = i < menuItems.length - 1 ? 'border-bottom:1px solid #f0f0f0;' : '';
+            return `<div class="menu-item-large" style="${menuItemBaseStyle}${border}" data-action="${item.action}"><span style="font-size:20px;">${item.icon}</span> ${item.text}</div>`;
+          })
+          .join('');
 
         // 计算菜单位置，确保不超出屏幕边界
         const phoneRect = document.querySelector('.cute-phone').getBoundingClientRect();
@@ -14482,23 +14515,8 @@ function applyUserAvatar(avatarElement) {
 
           const action = e.target.dataset.action || e.target.closest('[data-action]')?.dataset.action;
           console.log('检测到的动作:', action);
-
-          if (action === 'quote') {
-            console.log('执行引用操作');
-            const contentToQuote = message.content || message.originalContent || '';
-            state.quoteContent = contentToQuote;
-            const input = document.getElementById('chatInput');
-            input.placeholder = `引用: ${contentToQuote.substring(0, 20)}...`;
-            input.focus();
-            removeContextMenu();
-          } else if (action === 'recall') {
-            console.log('执行撤回操作');
-            recallMessage(idx);
-            removeContextMenu();
-          } else if (action === 'favorite') {
-            console.log('执行收藏操作');
-            toggleMessageFavorite(idx);
-            removeContextMenu();
+          if (action) {
+            handleContextMenuAction(action, idx);
           }
         });
 
@@ -14520,18 +14538,7 @@ function applyUserAvatar(avatarElement) {
             if (action) {
               // 延迟执行，确保事件处理完成
               setTimeout(() => {
-                if (action === 'quote') {
-                  const contentToQuote = message.content || message.originalContent || '';
-                  state.quoteContent = contentToQuote;
-                  const input = document.getElementById('chatInput');
-                  input.placeholder = `引用: ${contentToQuote.substring(0, 20)}...`;
-                  input.focus();
-                } else if (action === 'recall') {
-                  recallMessage(idx);
-                } else if (action === 'favorite') {
-                  toggleMessageFavorite(idx);
-                }
-                removeContextMenu();
+                handleContextMenuAction(action, idx);
               }, 50);
             }
           });
@@ -14590,6 +14597,184 @@ function applyUserAvatar(avatarElement) {
       function removeContextMenu() {
         const menu = document.querySelector('.context-menu');
         if (menu) menu.remove();
+      }
+
+      function isEditableTextMessage(message) {
+        if (!message) return false;
+        const t = String(message.type || 'text');
+        return t === 'text' || t === '';
+      }
+
+      function isUserMessagePendingReply(idx) {
+        const message = state.messageHistory[idx];
+        if (!message || message.sender !== 'user') return false;
+        if (state.isAiReplying) return false;
+        for (let i = idx + 1; i < state.messageHistory.length; i++) {
+          const next = state.messageHistory[i];
+          if (next && next.sender === 'char') return false;
+        }
+        return true;
+      }
+
+      function getLatestCharMessageIndex() {
+        for (let i = state.messageHistory.length - 1; i >= 0; i--) {
+          if (state.messageHistory[i] && state.messageHistory[i].sender === 'char') return i;
+        }
+        return -1;
+      }
+
+      function isLatestCharMessage(idx) {
+        return idx === getLatestCharMessageIndex();
+      }
+
+      function recomputePendingUserState() {
+        let pending = false;
+        for (let i = state.messageHistory.length - 1; i >= 0; i--) {
+          const msg = state.messageHistory[i];
+          if (!msg) continue;
+          if (msg.sender === 'char') {
+            pending = false;
+            break;
+          }
+          if (msg.sender === 'user') {
+            pending = true;
+            break;
+          }
+        }
+        state.userHasSentNewMessage = pending;
+      }
+
+      function reindexFavoritesAfterMessageDelete(removedIndex) {
+        const favorites = loadFavoriteMessages();
+        let changed = false;
+        const next = [];
+        for (const fav of favorites) {
+          if (!fav || fav.chatId !== state.currentMsgId) {
+            next.push(fav);
+            continue;
+          }
+          if (fav.originalIndex === removedIndex) {
+            changed = true;
+            continue;
+          }
+          if (typeof fav.originalIndex === 'number' && fav.originalIndex > removedIndex) {
+            next.push({ ...fav, originalIndex: fav.originalIndex - 1 });
+            changed = true;
+          } else {
+            next.push(fav);
+          }
+        }
+        if (changed) saveFavoriteMessages(next);
+      }
+
+      function deleteMessageAtIndex(idx, options = {}) {
+        if (!Number.isInteger(idx) || idx < 0 || idx >= state.messageHistory.length) return false;
+        state.messageHistory.splice(idx, 1);
+        reindexFavoritesAfterMessageDelete(idx);
+        recomputePendingUserState();
+        renderAllMessages();
+        updateAiRequestButtonVisibility();
+        if (!options.skipSync) {
+          deferredSync(50);
+        }
+        if (!options.silent) showToast('消息已删除', 'success');
+        return true;
+      }
+
+      function editMessageAtIndex(idx) {
+        const originalMsg = state.messageHistory[idx];
+        if (!originalMsg) return;
+        if (!isEditableTextMessage(originalMsg)) {
+          showToast('当前仅支持编辑文本消息', 'error');
+          return;
+        }
+        const originalText = String(originalMsg.content || originalMsg.originalContent || '');
+        const nextTextRaw = prompt('编辑消息内容：', originalText);
+        if (nextTextRaw == null) return;
+        const nextText = String(nextTextRaw).trim();
+        if (!nextText) {
+          showToast('消息内容不能为空', 'error');
+          return;
+        }
+        const parsed = parseInlineContentType(nextText);
+        state.messageHistory[idx] = {
+          ...originalMsg,
+          ...parsed,
+          content: nextText,
+        };
+        recomputePendingUserState();
+        updateMessage(idx);
+        updateAiRequestButtonVisibility();
+        deferredSync(50);
+        showToast('消息已修改', 'success');
+      }
+
+      async function rerollCharMessageAt(idx) {
+        const msg = state.messageHistory[idx];
+        if (!msg || msg.sender !== 'char') return;
+        if (state.isAiReplying) {
+          showToast('AI 正在回复中，请稍候', 'info');
+          return;
+        }
+        if (!isLatestCharMessage(idx)) {
+          showToast('仅支持重roll最后一条角色回复', 'info');
+          return;
+        }
+        if (!confirm('将删除这条回复并重新申请回复，是否继续？')) return;
+        const removed = deleteMessageAtIndex(idx, { silent: true, skipSync: true });
+        if (!removed) return;
+        try {
+          await syncToSillyTavern();
+        } catch (_) {}
+        // 强制请求一次回复（即使当前最后一条仍是 char）
+        await requestAiReply({ fromRequestAiBtn: true, force: true });
+      }
+
+      function handleContextMenuAction(action, idx) {
+        const message = state.messageHistory[idx];
+        if (!message) {
+          removeContextMenu();
+          return;
+        }
+        if (action === 'quote') {
+          const contentToQuote = message.content || message.originalContent || '';
+          state.quoteContent = contentToQuote;
+          const input = document.getElementById('chatInput');
+          if (input) {
+            input.placeholder = `引用: ${contentToQuote.substring(0, 20)}...`;
+            input.focus();
+          }
+          removeContextMenu();
+          return;
+        }
+        if (action === 'recall') {
+          recallMessage(idx);
+          removeContextMenu();
+          return;
+        }
+        if (action === 'favorite') {
+          toggleMessageFavorite(idx);
+          removeContextMenu();
+          return;
+        }
+        if (action === 'edit-message') {
+          removeContextMenu();
+          editMessageAtIndex(idx);
+          return;
+        }
+        if (action === 'delete-message') {
+          removeContextMenu();
+          if (confirm('确认删除这条消息吗？')) {
+            deleteMessageAtIndex(idx);
+          }
+          return;
+        }
+        if (action === 'reroll-message') {
+          removeContextMenu();
+          rerollCharMessageAt(idx);
+          return;
+        }
+        removeContextMenu();
       }
 
       // 显示转账操作菜单
@@ -15913,6 +16098,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         // 检查可用的生成函数
         if (!AI_GENERATE && !AI_GENERATE_RAW) return;
         const fromRequestAiBtn = !!(options && typeof options === 'object' && options.fromRequestAiBtn === true);
+        const forceReply = !!(options && typeof options === 'object' && options.force === true);
 
         // 防止重复调用AI回复
         if (state.isAiReplying) {
@@ -15946,7 +16132,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         // 直接模式：跳过识图API，直接传图片给AI
 
         // 语音通话中允许AI主动回复，普通聊天中防止AI连续回复
-        if (!state.inVoiceCall) {
+        if (!state.inVoiceCall && !forceReply) {
           const lastMessage = state.messageHistory[state.messageHistory.length - 1];
           if (lastMessage && lastMessage.sender === 'char' && !state.userHasSentNewMessage) {
             return;
