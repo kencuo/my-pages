@@ -14297,8 +14297,8 @@ function applyUserAvatar(avatarElement) {
 
         // 便捷点击入口：满足“点击即可改/删/重roll”
         if (
-          (msg.sender === 'user' && isUserMessagePendingReply(idx) && isEditableTextMessage(msg)) ||
-          (msg.sender === 'char' && (isEditableTextMessage(msg) || isLatestCharMessage(idx)))
+          (msg.sender === 'user' && isUserMessagePendingReply(idx) && isEditableMessage(msg)) ||
+          (msg.sender === 'char' && (isEditableMessage(msg) || isLatestCharMessage(idx)))
         ) {
           contentDiv.addEventListener('click', e => {
             // 避免抢占图片/视频等内置点击行为
@@ -14451,7 +14451,7 @@ function applyUserAvatar(avatarElement) {
         menuItems.push({ action: 'quote', icon: '📝', text: '引用' });
 
         // 用户消息：在“申请回复前”可编辑/删除
-        if (isUserMessagePendingReply(idx) && isEditableTextMessage(message)) {
+        if (isUserMessagePendingReply(idx) && isEditableMessage(message)) {
           menuItems.push({ action: 'edit-message', icon: '✏️', text: '编辑消息' });
         }
         if (isUserMessagePendingReply(idx)) {
@@ -14459,7 +14459,7 @@ function applyUserAvatar(avatarElement) {
         }
 
         // 角色消息：可编辑；最后一条可重roll
-        if (message && message.sender === 'char' && isEditableTextMessage(message)) {
+        if (message && message.sender === 'char' && isEditableMessage(message)) {
           menuItems.push({ action: 'edit-message', icon: '✏️', text: '编辑回复' });
         }
         if (message && message.sender === 'char' && isLatestCharMessage(idx)) {
@@ -14599,10 +14599,13 @@ function applyUserAvatar(avatarElement) {
         if (menu) menu.remove();
       }
 
-      function isEditableTextMessage(message) {
+      function isEditableMessage(message) {
         if (!message) return false;
         const t = String(message.type || 'text');
-        return t === 'text' || t === '';
+        if (t === 'text' || t === '') return true;
+        if (t === 'voice') return true;
+        if (t === 'redpacket') return !message.claimed;
+        return false;
       }
 
       function isUserMessagePendingReply(idx) {
@@ -14684,24 +14687,69 @@ function applyUserAvatar(avatarElement) {
       function editMessageAtIndex(idx) {
         const originalMsg = state.messageHistory[idx];
         if (!originalMsg) return;
-        if (!isEditableTextMessage(originalMsg)) {
-          showToast('当前仅支持编辑文本消息', 'error');
+        if (!isEditableMessage(originalMsg)) {
+          showToast('当前仅支持编辑文本/语音/红包消息', 'error');
           return;
         }
-        const originalText = String(originalMsg.content || originalMsg.originalContent || '');
-        const nextTextRaw = prompt('编辑消息内容：', originalText);
-        if (nextTextRaw == null) return;
-        const nextText = String(nextTextRaw).trim();
-        if (!nextText) {
-          showToast('消息内容不能为空', 'error');
-          return;
+        const msgType = String(originalMsg.type || 'text');
+
+        if (msgType === 'voice') {
+          const oldVoiceText = String(originalMsg.voiceText || originalMsg.content || '');
+          const nextVoiceTextRaw = prompt('编辑语音文字内容：', oldVoiceText);
+          if (nextVoiceTextRaw == null) return;
+          const nextVoiceText = String(nextVoiceTextRaw).trim();
+          if (!nextVoiceText) {
+            showToast('语音内容不能为空', 'error');
+            return;
+          }
+          state.messageHistory[idx] = {
+            ...originalMsg,
+            type: 'voice',
+            voiceText: nextVoiceText,
+            content: `语音消息|${nextVoiceText}`,
+          };
+        } else if (msgType === 'redpacket') {
+          const oldAmount = Number(originalMsg.amount || 0);
+          const amountRaw = prompt('编辑红包金额（元，最高200）：', oldAmount > 0 ? String(oldAmount) : '0.01');
+          if (amountRaw == null) return;
+          const amountNum = Number(amountRaw);
+          if (!Number.isFinite(amountNum) || amountNum <= 0) {
+            showToast('红包金额必须大于0', 'error');
+            return;
+          }
+          if (amountNum > 200) {
+            showToast('红包金额不能超过200元', 'error');
+            return;
+          }
+          const oldTarget = String(originalMsg.targetName || '');
+          const targetRaw = prompt('编辑红包对象（可留空）：', oldTarget);
+          if (targetRaw == null) return;
+          const targetName = String(targetRaw || '').trim();
+          const amount = amountNum.toFixed(2);
+          state.messageHistory[idx] = {
+            ...originalMsg,
+            type: 'redpacket',
+            amount,
+            targetName,
+            content: `红包${amount}元${targetName ? `(给${targetName})` : ''}`,
+          };
+        } else {
+          const originalText = String(originalMsg.content || originalMsg.originalContent || '');
+          const nextTextRaw = prompt('编辑消息内容：', originalText);
+          if (nextTextRaw == null) return;
+          const nextText = String(nextTextRaw).trim();
+          if (!nextText) {
+            showToast('消息内容不能为空', 'error');
+            return;
+          }
+          const parsed = parseInlineContentType(nextText);
+          state.messageHistory[idx] = {
+            ...originalMsg,
+            ...parsed,
+            content: nextText,
+          };
         }
-        const parsed = parseInlineContentType(nextText);
-        state.messageHistory[idx] = {
-          ...originalMsg,
-          ...parsed,
-          content: nextText,
-        };
+
         recomputePendingUserState();
         updateMessage(idx);
         updateAiRequestButtonVisibility();
