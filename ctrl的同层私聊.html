@@ -1260,30 +1260,6 @@
       }
       .friends-btn:hover { background-color: var(--bg-primary); transform: scale(1.1); }
       .friends-btn svg { width: 18px; height: 18px; color: var(--text-secondary); }
-      /* 左上角：返回聊天列表按钮 */
-      .back-chat-list-btn {
-        position: absolute;
-        top: 6px;
-        left: 12px;
-        width: 32px;
-        height: 32px;
-        background-color: var(--bg-tertiary);
-        border: none;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 2px 6px var(--shadow-medium);
-        transition: all 0.2s;
-        color: var(--text-secondary);
-        font-size: 18px;
-        line-height: 1;
-      }
-      .back-chat-list-btn:hover {
-        background-color: var(--bg-primary);
-        transform: scale(1.08);
-      }
       /* 一体化好友面板样式 */
       .friends-panel {
         position: absolute;
@@ -1475,7 +1451,7 @@
       #requestAiBtn {
         position: absolute;
         top: 6px;
-        left: 56px;
+        left: 12px;
         width: 32px;
         height: 32px;
         background-color: #07c160;
@@ -6756,7 +6732,6 @@
             <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path>
           </svg>
         </button>
-        <button class="back-chat-list-btn" id="backToChatListBtn" title="返回聊天列表" aria-label="返回聊天列表">←</button>
         <button id="requestAiBtn">
           <svg viewBox="0 0 24 24">
             <path
@@ -8933,6 +8908,38 @@ function applyUserAvatar(avatarElement) {
         }
       }
 
+      // 从消息格式字段中提取可用头像标识（优先 catbox 后缀）
+      function normalizeAvatarToken(rawToken) {
+        const raw = String(rawToken || '').trim();
+        if (!raw) return '';
+        const catboxUrlMatch = raw.match(/https?:\/\/files\.catbox\.moe\/([a-zA-Z0-9._-]+\.(?:jpe?g|png|gif|webp|bmp))/i);
+        if (catboxUrlMatch && catboxUrlMatch[1]) return catboxUrlMatch[1];
+        const catboxFileMatch = raw.match(/([a-zA-Z0-9._-]+\.(?:jpe?g|png|gif|webp|bmp))/i);
+        if (catboxFileMatch && catboxFileMatch[1]) return catboxFileMatch[1];
+        return raw;
+      }
+
+      // 无角色专属头像时：尝试从“格式里的头像字段”回退（含历史同角色消息）
+      function inferCharAvatarTokenFromFormat(charName, preferredMsg = null) {
+        const targetName = String(charName || '').trim();
+        const preferredToken = preferredMsg && typeof preferredMsg === 'object'
+          ? String(preferredMsg.avatar || '').trim()
+          : '';
+        if (preferredToken) return normalizeAvatarToken(preferredToken);
+
+        const list = Array.isArray(state.messageHistory) ? state.messageHistory : [];
+        for (let i = list.length - 1; i >= 0; i--) {
+          const m = list[i];
+          if (!m || m.sender !== 'char') continue;
+          const mName = String(m.charName || m.name || '').trim();
+          if (targetName && mName && mName !== targetName) continue;
+          const token = String(m.avatar || '').trim();
+          if (!token) continue;
+          return normalizeAvatarToken(token);
+        }
+        return '';
+      }
+
       function createCharAvatarBlock(msg, options = {}) {
         if (!msg) return null;
         const rawName = options.name || msg.charName || msg.name || (typeof getCurrentCharName === 'function' ? getCurrentCharName() : '') || '对方';
@@ -8940,6 +8947,7 @@ function applyUserAvatar(avatarElement) {
         const resolvedName = name || '对方';
         const avatar = document.createElement('img');
         avatar.className = options.avatarClassName || 'avatar char-avatar';
+        const formatAvatarToken = inferCharAvatarTokenFromFormat(resolvedName, msg);
 
         // 头像优先级：角色配置头像 > 设置中的角色头像 > 消息中的自定义头像 > 格式中的头像
         const characterAvatarUrl = getCharacterAvatarUrl(resolvedName);
@@ -8954,7 +8962,7 @@ function applyUserAvatar(avatarElement) {
           avatar.src = msg.customAvatarUrl;
         } else {
           // 最低优先级：使用格式中的头像
-          avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
+          avatar.src = resolveAvatarUrl(formatAvatarToken, getAvatarFallbackUrlForName(resolvedName));
         }
 
         if (options.addPoke) {
@@ -10580,7 +10588,7 @@ function applyUserAvatar(avatarElement) {
       }
 
       function resolveAvatarUrl(avatarSuffixOrUrl, fallbackUrl) {
-        const v = String(avatarSuffixOrUrl || '').trim();
+        const v = normalizeAvatarToken(avatarSuffixOrUrl);
         if (!v) return fallbackUrl || '';
 
         function getSillyTavernBaseUrl() {
@@ -10619,6 +10627,10 @@ function applyUserAvatar(avatarElement) {
         }
         // Absolute/relative URLs (SillyTavern serves /user/images/... under same origin)
         if (/^https?:\/\//i.test(v) || v.startsWith('data:') || v.startsWith('/')) return absolutizeMaybe(v);
+        const catboxFileMatch = String(v).match(/([a-zA-Z0-9._-]+\.(?:jpe?g|png|gif|webp|bmp))/i);
+        if (catboxFileMatch && catboxFileMatch[1]) {
+          return `https://files.catbox.moe/${catboxFileMatch[1]}`;
+        }
         return `https://files.catbox.moe/${v}`;
       }
 
@@ -14420,11 +14432,12 @@ function applyUserAvatar(avatarElement) {
 
       // Helper to get last char info
       function getLastCharInfo() {
-        const lastCharMsg = [...state.messageHistory].reverse().find(m => m.sender === 'char' && m.avatar);
+        const currentName = (typeof getCurrentCharName === 'function') ? getCurrentCharName() : '';
+        const avatarToken = inferCharAvatarTokenFromFormat(currentName);
         return {
-          avatarUrl: lastCharMsg ? resolveAvatarUrl(lastCharMsg.avatar, '') : '',
-          avatarId: lastCharMsg ? lastCharMsg.avatar : '',
-          name: NAME_CHAR, // Using the constant for now
+          avatarUrl: avatarToken ? resolveAvatarUrl(avatarToken, '') : '',
+          avatarId: avatarToken || '',
+          name: currentName || NAME_CHAR,
         };
       }
 
@@ -18446,7 +18459,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               };
       document.getElementById('voiceCallRequestAiBtn').onclick = requestAiReply;
       // 集成群聊列表开关
-      document.getElementById('backToChatListBtn').onclick = () => toggleFriendsPanel(true);
       document.getElementById('friendsBtn').onclick = () => toggleFriendsPanel(true);
       document.getElementById('imgBtn').onclick = sendImage;
       document.getElementById('recallBtn').onclick = recallLastUserMsg; // This button is in the action grid, keep it for now.
@@ -25016,6 +25028,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               const fallbackName = (typeof getCurrentCharName === 'function') ? getCurrentCharName() : '对方';
               const charName = String(msg.charName || msg.name || fallbackName || '对方').trim(); // 获取角色名称
               const characterAvatarUrl = getCharacterAvatarUrl(charName); // 从角色配置获取头像
+              const formatAvatarToken = inferCharAvatarTokenFromFormat(charName, msg);
 
               console.log(`🔄 处理头像 ${index}: 角色=${charName}, 配置头像=${!!characterAvatarUrl}`);
 
@@ -25035,9 +25048,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                 avatar.src = msg.customAvatarUrl;
                 updatedCount++;
                 console.log(`✅ 头像 ${index} 已更新为自定义头像`);
-              } else if (msg.avatar) {
+              } else if (formatAvatarToken) {
                 // 最低优先级：使用格式中的头像
-                avatar.src = resolveAvatarUrl(msg.avatar, getDefaultAvatarDataUrl());
+                avatar.src = resolveAvatarUrl(formatAvatarToken, getAvatarFallbackUrlForName(charName));
                 console.log(`✅ 头像 ${index} 使用格式头像`);
               }
             }
