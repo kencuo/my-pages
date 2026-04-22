@@ -6542,13 +6542,53 @@
         font-size: 10px;
         opacity: 0.9;
       }
-      .home-overlay .app-grid {
+      .home-overlay .home-app-pager {
         margin: 12px 0 0 0;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
         width: 90%;
         max-width: 260px;
+        overflow: hidden;
+        touch-action: pan-y;
+      }
+      .home-overlay .home-app-track {
+        display: flex;
+        width: 100%;
+        transition: transform 0.28s ease;
+        transform: translateX(0%);
+      }
+      .home-overlay .app-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        column-gap: 16px;
+        row-gap: 14px;
+        justify-items: center;
+      }
+      .home-overlay .app-grid.app-grid-page {
+        flex: 0 0 100%;
+        align-content: start;
+        min-height: 126px;
+      }
+      .home-page-dots {
+        position: absolute;
+        left: 50%;
+        bottom: 74px;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        z-index: 2;
+      }
+      .home-page-dot {
+        width: 5px;
+        height: 5px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.45);
+        padding: 0;
+        cursor: pointer;
+      }
+      .home-page-dot.active {
+        background: rgba(255, 255, 255, 0.95);
       }
       /* hide header home button and add bottom floating home button */
       .chat-header .home-btn { display: none; }
@@ -6685,36 +6725,45 @@
           </div>
         </div>
 
-        <div class="app-grid">
-          <div class="app-item" id="appChat">
-            <div class="app-icon">💬</div>
-            <div class="app-label">聊天</div>
+        <div class="home-app-pager" id="homeAppPager" aria-label="主屏应用分页">
+          <div class="home-app-track" id="homeAppTrack">
+            <div class="app-grid app-grid-page" data-page="0">
+              <div class="app-item" id="appChat">
+                <div class="app-icon">💬</div>
+                <div class="app-label">聊天</div>
+              </div>
+              <div class="app-item" id="appMoments">
+                <div class="app-icon">🧭</div>
+                <div class="app-label">朋友圈</div>
+              </div>
+              <div class="app-item" id="appForum">
+                <div class="app-icon">🗂️</div>
+                <div class="app-label">论坛</div>
+              </div>
+              <div class="app-item" id="appStore">
+                <div class="app-icon">🛒</div>
+                <div class="app-label">商店</div>
+              </div>
+              <div class="app-item" id="appCloudMusic">
+                <div class="app-icon">🎧</div>
+                <div class="app-label">云音乐</div>
+              </div>
+              <div class="app-item" id="appDivination">
+                <div class="app-icon">☯</div>
+                <div class="app-label">占卜</div>
+              </div>
+            </div>
+            <div class="app-grid app-grid-page" data-page="1">
+              <div class="app-item" id="appSettings">
+                <div class="app-icon">⚙️</div>
+                <div class="app-label">设置</div>
+              </div>
+            </div>
           </div>
-          <div class="app-item" id="appMoments">
-            <div class="app-icon">🧭</div>
-            <div class="app-label">朋友圈</div>
-          </div>
-          <div class="app-item" id="appForum">
-            <div class="app-icon">🗂️</div>
-            <div class="app-label">论坛</div>
-          </div>
-          <div class="app-item" id="appStore">
-            <div class="app-icon">🛒</div>
-            <div class="app-label">商店</div>
-          </div>
-          
-          <div class="app-item" id="appCloudMusic">
-            <div class="app-icon">🎧</div>
-            <div class="app-label">云音乐</div>
-          </div>
-          <div class="app-item" id="appDivination">
-            <div class="app-icon">☯</div>
-            <div class="app-label">占卜</div>
-          </div>
-          <div class="app-item" id="appSettings">
-            <div class="app-icon">⚙️</div>
-            <div class="app-label">设置</div>
-          </div>
+        </div>
+        <div class="home-page-dots" id="homeAppDots" aria-label="主屏页码">
+          <button class="home-page-dot active" data-page="0" aria-label="第1页"></button>
+          <button class="home-page-dot" data-page="1" aria-label="第2页"></button>
         </div>
 
         <div class="ios-dock" aria-label="Dock">
@@ -8852,6 +8901,10 @@ https://i.postimg.cc/.../xxx.png"
         divinationChanges: '',
       };
 
+      // AI消息分段渲染队列：用于“这条、下一条”逐条出现
+      let aiMessageRenderQueue = Promise.resolve();
+      let aiPendingRenderCount = 0;
+
       // 获取 SillyTavern 生成函数（如果可用）
       const AI_GENERATE =
         typeof generate === 'function' ? generate : null;
@@ -9066,6 +9119,64 @@ function applyUserAvatar(avatarElement) {
           return;
         }
         await new Promise(r => requestAnimationFrame(r));
+      }
+
+      function getAiMessageFlowDelayMs(msg, queueDepth = 0) {
+        if (!msg || msg.sender !== 'char' || state.inVoiceCall) return 0;
+        const speed = Number(state.typingSpeedLevel || 2);
+        const text = String(msg.content || '');
+        const textLen = text.replace(/\s+/g, '').length;
+
+        let baseDelay = 460;
+        let perChar = 8;
+        let extraCap = 260;
+        if (speed <= 1) {
+          baseDelay = 780;
+          perChar = 12;
+          extraCap = 420;
+        } else if (speed >= 3) {
+          baseDelay = 260;
+          perChar = 5;
+          extraCap = 180;
+        }
+
+        // 首条更快显示，后续消息按节奏逐条出现
+        if (queueDepth <= 0) return Math.max(80, Math.round(baseDelay * 0.35));
+        const extra = Math.min(extraCap, textLen * perChar);
+        return baseDelay + extra;
+      }
+
+      function enqueueAiMessageRender(msg, idx) {
+        const shouldFlow = !!(msg && msg.sender === 'char' && !state.inVoiceCall);
+        if (!shouldFlow) {
+          appendMessage(msg, idx, true);
+          return Promise.resolve();
+        }
+
+        const queueDepth = aiPendingRenderCount;
+        aiPendingRenderCount += 1;
+
+        const task = Promise.resolve(aiMessageRenderQueue)
+          .catch(() => {})
+          .then(async () => {
+            const delayMs = getAiMessageFlowDelayMs(msg, queueDepth);
+            if (delayMs > 0) await sleep(delayMs);
+            appendMessage(msg, idx, true);
+          });
+
+        aiMessageRenderQueue = task
+          .catch(() => {})
+          .finally(() => {
+            aiPendingRenderCount = Math.max(0, aiPendingRenderCount - 1);
+          });
+
+        return aiMessageRenderQueue;
+      }
+
+      async function waitForAiMessageRenderQueue() {
+        try {
+          await aiMessageRenderQueue;
+        } catch (_) {}
       }
 
       // 工具函数：获取当前时间字符串（只返回HH:MM格式）
@@ -16399,8 +16510,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                 }
               }
 
-              state.messageHistory.push(msg);
-              appendMessage(msg, state.messageHistory.length - 1);
+              const newIndex = state.messageHistory.push(msg) - 1;
+              if (msg.sender === 'char') {
+                enqueueAiMessageRender(msg, newIndex);
+              } else {
+                appendMessage(msg, newIndex);
+              }
 
               // 调试：记录解析后的消息
               try { if (state.debugEnabled && window.__aiDebug) {
@@ -16478,10 +16593,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             throw new Error('AI生成内容无法解析或被过滤');
           }
 
+          await waitForAiMessageRenderQueue();
           hideTypingIndicator();
           // 统一使用延迟同步，提升响应速度
           setTimeout(() => syncToSillyTavern(), 100);
         } catch (e) {
+          await waitForAiMessageRenderQueue();
           hideTypingIndicator();
           const rawError = String(e && (e.message || e.stack) || e);
           let friendly = 'AI回复失败';
@@ -16800,8 +16917,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             while (handled < msgs.length) {
               const msg = msgs[handled++];
               if (!msg || msg.sender === 'user') continue; // 用户不能发言
-              state.messageHistory.push(msg);
-              appendMessage(msg, state.messageHistory.length - 1);
+              const newIndex = state.messageHistory.push(msg) - 1;
+              enqueueAiMessageRender(msg, newIndex);
               try { if (state.debugEnabled && window.__aiDebug) {
                 window.__aiDebug.messages.push(msg);
                 window.__updateAIDebug && window.__updateAIDebug();
@@ -16846,9 +16963,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             throw new Error('AI生成内容无法解析或被过滤');
           }
 
+          await waitForAiMessageRenderQueue();
           hideTypingIndicator();
           setTimeout(() => syncToSillyTavern(), 100);
         } catch (e) {
+          await waitForAiMessageRenderQueue();
           hideTypingIndicator();
           const rawError = String(e && (e.message || e.stack) || e);
           let friendly = 'AI 回复失败';
@@ -24945,9 +25064,69 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }
       }
 
+      function initHomeAppPager() {
+        const pager = document.getElementById('homeAppPager');
+        const track = document.getElementById('homeAppTrack');
+        const dotsWrap = document.getElementById('homeAppDots');
+        if (!pager || !track || !dotsWrap) return;
+        if (pager.dataset.pagerInited === '1') return;
+        pager.dataset.pagerInited = '1';
+
+        const pageNodes = Array.from(track.querySelectorAll('.app-grid-page'));
+        if (!pageNodes.length) return;
+
+        const validPageCount = pageNodes.filter((p) => p.querySelector('.app-item')).length;
+        const totalPages = Math.max(1, Math.min(2, validPageCount));
+
+        const dots = Array.from(dotsWrap.querySelectorAll('.home-page-dot'));
+        dots.forEach((dot, idx) => {
+          dot.style.display = idx < totalPages ? '' : 'none';
+        });
+
+        let currentPage = 0;
+        const maxPage = totalPages - 1;
+        const setPage = (page, animated = true) => {
+          const next = Math.max(0, Math.min(maxPage, page));
+          currentPage = next;
+          track.style.transition = animated ? 'transform 0.28s ease' : 'none';
+          track.style.transform = `translateX(-${next * 100}%)`;
+          dots.forEach((dot, idx) => dot.classList.toggle('active', idx === next));
+        };
+
+        dots.forEach((dot) => {
+          dot.addEventListener('click', () => {
+            const page = Number(dot.getAttribute('data-page') || 0);
+            setPage(page);
+          });
+        });
+
+        let startX = 0;
+        let startY = 0;
+        pager.addEventListener('touchstart', (e) => {
+          if (maxPage <= 0) return;
+          const t = e.touches && e.touches[0];
+          if (!t) return;
+          startX = t.clientX;
+          startY = t.clientY;
+        }, { passive: true });
+
+        pager.addEventListener('touchend', (e) => {
+          if (maxPage <= 0) return;
+          const t = e.changedTouches && e.changedTouches[0];
+          if (!t) return;
+          const dx = t.clientX - startX;
+          const dy = t.clientY - startY;
+          if (Math.abs(dx) < 35 || Math.abs(dx) < Math.abs(dy)) return;
+          setPage(dx < 0 ? currentPage + 1 : currentPage - 1);
+        }, { passive: true });
+
+        setPage(0, false);
+      }
+
       function initIosHomeScreen() {
         // Live clock/date for the iOS-like home overlay.
         try { if (typeof updateHomeWallpaper === 'function') updateHomeWallpaper(); } catch (_) {}
+        try { if (typeof initHomeAppPager === 'function') initHomeAppPager(); } catch (_) {}
         function pad2(n) { return String(n).padStart(2, '0'); }
         function weekZh(d) {
           const map = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
