@@ -6398,6 +6398,24 @@
           transform: translate(-50%, -50%) scale(1);
         }
       }
+
+      /* 对方消息“逐条浮现” */
+      .message.flow-enter {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+        animation: messageFlowFadeIn 0.24s ease-out forwards;
+      }
+
+      @keyframes messageFlowFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px) scale(0.985);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
       /* 私聊标签栏 */
       .chat-tabs {
         display: none;
@@ -6754,6 +6772,10 @@
               </div>
             </div>
             <div class="app-grid app-grid-page" data-page="1">
+              <div class="app-item" id="appDiary">
+                <div class="app-icon">📔</div>
+                <div class="app-label">日记本</div>
+              </div>
               <div class="app-item" id="appSettings">
                 <div class="app-icon">⚙️</div>
                 <div class="app-label">设置</div>
@@ -7156,7 +7178,7 @@
         <div class="moments-header">
           <button class="moments-btn" id="momentsBackBtn" title="返回">←</button>
           <div class="moments-title">朋友圈</div>
-          <button class="moments-btn" id="momentsAiBtn" title="AI">AI</button>
+          <button class="moments-btn" id="momentsAiBtn" title="AI">对方</button>
         </div>
         <div class="moments-list" id="momentsList"></div>
         <button class="moments-time-fab" id="momentsTimeBtn" title="自定义时间">🕐</button>
@@ -7334,7 +7356,7 @@
           <button class="forum-btn" id="forumBackBtn" title="返回">←</button>
           <div class="forum-title">天涯论坛</div>
           <div class="forum-header-actions">
-            <button class="forum-btn ghost" id="forumAiPostBtn" title="AI发帖">AI发帖</button>
+            <button class="forum-btn ghost" id="forumAiPostBtn" title="AI发帖">对方发帖</button>
             <button class="forum-btn primary" id="forumPublishBtn" title="发帖">发帖</button>
           </div>
         </div>
@@ -7458,6 +7480,132 @@
           <div class="divination-status" id="divinationStatus"></div>
         </div>
         <div class="divination-book" id="divinationBook">点击“起卦”开始占卜。</div>
+      </div>
+      <style>
+        .diary-overlay {
+          position: absolute;
+          inset: 0;
+          display: none;
+          flex-direction: column;
+          background: var(--bg-primary);
+          z-index: 1270;
+        }
+        .diary-header {
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 10px;
+          background: var(--bg-header);
+          border-bottom: 1px solid var(--border-primary);
+        }
+        .diary-title {
+          flex: 1;
+          text-align: center;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .diary-btn {
+          height: 28px;
+          min-width: 44px;
+          border: none;
+          border-radius: 14px;
+          background: var(--bg-tertiary);
+          color: var(--text-secondary);
+          font-size: 12px;
+          cursor: pointer;
+        }
+        .diary-btn.primary {
+          background: var(--accent-primary);
+          color: #fff;
+        }
+        .diary-controls {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          border-bottom: 1px solid var(--border-primary);
+          background: var(--bg-secondary);
+        }
+        .diary-select {
+          flex: 1;
+          min-width: 0;
+          border: 1px solid var(--border-primary);
+          border-radius: 8px;
+          padding: 6px 8px;
+          font-size: 12px;
+          color: var(--text-primary);
+          background: #fff;
+        }
+        .diary-status {
+          min-height: 16px;
+          padding: 0 10px 6px;
+          font-size: 11px;
+          color: var(--text-secondary);
+        }
+        .diary-status.error {
+          color: #c62828;
+        }
+        .diary-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 10px;
+        }
+        .diary-empty {
+          padding: 40px 10px;
+          text-align: center;
+          color: var(--text-tertiary);
+          font-size: 13px;
+        }
+        .diary-card {
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-primary);
+          border-radius: 12px;
+          padding: 10px;
+          margin-bottom: 10px;
+          box-shadow: 0 1px 4px var(--shadow-light);
+        }
+        .diary-card-title {
+          font-size: 12px;
+          color: var(--text-secondary);
+          margin-bottom: 6px;
+          font-weight: 600;
+        }
+        .diary-meta {
+          font-size: 12px;
+          color: var(--text-primary);
+          line-height: 1.4;
+          margin-bottom: 8px;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+        .diary-content {
+          font-size: 13px;
+          color: var(--text-primary);
+          line-height: 1.55;
+          white-space: pre-wrap;
+          word-break: break-word;
+          background: var(--bg-tertiary);
+          border-radius: 8px;
+          border: 1px solid var(--border-secondary);
+          padding: 8px;
+          max-height: 150px;
+          overflow-y: auto;
+        }
+      </style>
+      <div class="diary-overlay" id="diaryOverlay" aria-hidden="true">
+        <div class="diary-header">
+          <button class="diary-btn" id="diaryBackBtn" title="返回">←</button>
+          <div class="diary-title">日记</div>
+          <button class="diary-btn primary" id="diaryAiBtn" title="AI写日记">对方写</button>
+        </div>
+        <div class="diary-controls">
+          <select class="diary-select" id="diaryFriendSelect"></select>
+          <button class="diary-btn" id="diaryRefreshBtn" type="button">刷新</button>
+        </div>
+        <div class="diary-status" id="diaryStatus">请选择一个私聊好友查看日记。</div>
+        <div class="diary-list" id="diaryList"></div>
       </div>
       <div class="more-actions-grid" id="moreActionsGrid">
         <div class="actions-grid-container">
@@ -8899,11 +9047,13 @@ https://i.postimg.cc/.../xxx.png"
         activeConversationMode: 'private',
         activeConversationIndex: 0,
         divinationChanges: '',
+        diaryByFriend: {},
       };
 
       // AI消息分段渲染队列：用于“这条、下一条”逐条出现
       let aiMessageRenderQueue = Promise.resolve();
       let aiPendingRenderCount = 0;
+      let lastAiMessageRenderAt = 0;
 
       // 获取 SillyTavern 生成函数（如果可用）
       const AI_GENERATE =
@@ -9127,23 +9277,26 @@ function applyUserAvatar(avatarElement) {
         const text = String(msg.content || '');
         const textLen = text.replace(/\s+/g, '').length;
 
-        let baseDelay = 460;
-        let perChar = 8;
-        let extraCap = 260;
+        let firstDelay = 260;
+        let nextBase = 720;
+        let perChar = 6;
+        let extraCap = 220;
         if (speed <= 1) {
-          baseDelay = 780;
-          perChar = 12;
-          extraCap = 420;
+          firstDelay = 360;
+          nextBase = 920;
+          perChar = 9;
+          extraCap = 320;
         } else if (speed >= 3) {
-          baseDelay = 260;
-          perChar = 5;
+          firstDelay = 180;
+          nextBase = 520;
+          perChar = 4;
           extraCap = 180;
         }
 
         // 首条更快显示，后续消息按节奏逐条出现
-        if (queueDepth <= 0) return Math.max(80, Math.round(baseDelay * 0.35));
+        if (queueDepth <= 0) return firstDelay;
         const extra = Math.min(extraCap, textLen * perChar);
-        return baseDelay + extra;
+        return nextBase + extra;
       }
 
       function enqueueAiMessageRender(msg, idx) {
@@ -9160,8 +9313,14 @@ function applyUserAvatar(avatarElement) {
           .catch(() => {})
           .then(async () => {
             const delayMs = getAiMessageFlowDelayMs(msg, queueDepth);
-            if (delayMs > 0) await sleep(delayMs);
-            appendMessage(msg, idx, true);
+            const speed = Number(state.typingSpeedLevel || 2);
+            const minGap = speed <= 1 ? 800 : speed >= 3 ? 420 : 600;
+            const sinceLast = Date.now() - lastAiMessageRenderAt;
+            const waitGap = Math.max(0, minGap - sinceLast);
+            const totalDelay = Math.max(delayMs, waitGap);
+            if (totalDelay > 0) await sleep(totalDelay);
+            appendMessage(msg, idx, true, { flowIn: true });
+            lastAiMessageRenderAt = Date.now();
           });
 
         aiMessageRenderQueue = task
@@ -12097,6 +12256,356 @@ function applyUserAvatar(avatarElement) {
         if (aiBtn) aiBtn.onclick = forumQuickAiPost;
         if (publishBtn) publishBtn.onclick = () => openForumComposer({ mode: 'post' });
       }
+
+      // ==================== DIARY UI (同层日记 <diary>) ====================
+      const diaryRuntime = {
+        busy: false,
+        selectedFriend: '',
+      };
+
+      function setDiaryStatus(text, isError = false) {
+        const el = document.getElementById('diaryStatus');
+        if (!el) return;
+        el.textContent = String(text || '');
+        el.classList.toggle('error', !!isError);
+      }
+
+      function getDiaryFriendCandidates() {
+        const names = [];
+        const pushName = (raw) => {
+          const n = String(raw || '').trim();
+          if (!n || names.includes(n)) return;
+          names.push(n);
+        };
+
+        try {
+          const friends = loadFriendsList().map(normalizeFriendEntry).filter(f => f && f.name);
+          friends.forEach(f => pushName(f.name));
+        } catch (_) {}
+
+        try {
+          const privateList = getPrivateConversations();
+          privateList.forEach(c => pushName(c && c.name));
+        } catch (_) {}
+
+        try {
+          const currentPrivateName = getActivePrivateConversationName();
+          if (currentPrivateName) pushName(currentPrivateName);
+        } catch (_) {}
+
+        return names;
+      }
+
+      function parseDiaryEntryBlock(blockText, fallbackName = '', defaultId = 1) {
+        const block = String(blockText || '');
+        if (!block.trim()) return null;
+
+        const headerMatch = block.match(/\[([^\]\n|]+)\|([^\]\n|]+)\|([^\]\n|]+)\|([^\]\n|]+)\|([^\]\n|]+)\]/);
+        const contentMatch = block.match(/\[内容\]([\s\S]*?)\[\/内容\]/i);
+
+        const roleName = headerMatch ? String(headerMatch[1] || '').trim() : (String(fallbackName || '').trim() || '角色');
+        const time = headerMatch ? String(headerMatch[2] || '').trim() : getFullTimeStr();
+        const weather = headerMatch ? String(headerMatch[3] || '').trim() : '晴';
+        const location = headerMatch ? String(headerMatch[4] || '').trim() : '未知地点';
+        const mood = headerMatch ? String(headerMatch[5] || '').trim() : '平静';
+        const content = contentMatch
+          ? String(contentMatch[1] || '').trim()
+          : String(block.replace(headerMatch ? headerMatch[0] : '', '').trim());
+
+        if (!content) return null;
+        return {
+          id: Number(defaultId) || 1,
+          roleName: roleName || (String(fallbackName || '').trim() || '角色'),
+          time: time || getFullTimeStr(),
+          weather: weather || '晴',
+          location: location || '未知地点',
+          mood: mood || '平静',
+          content,
+        };
+      }
+
+      function parseDiaryFromRawText(rawText, fallbackName = '') {
+        let text = String(rawText || '').trim();
+        if (!text) return [];
+
+        const fenceMatch = text.match(/```(?:\w+)?\s*([\s\S]*?)```/);
+        if (fenceMatch) text = String(fenceMatch[1] || '').trim();
+
+        const diaryMatch = text.match(/<diary>[\s\S]*?<\/diary>/i);
+        if (diaryMatch) text = diaryMatch[0];
+        if (!/^<diary>/i.test(text) && /\[日记\d+\]/.test(text)) text = `<diary>\n${text}\n</diary>`;
+        if (!/^<diary>/i.test(text)) return [];
+
+        const body = text
+          .replace(/^\s*<diary>\s*/i, '')
+          .replace(/\s*<\/diary>\s*$/i, '');
+
+        const entries = [];
+        const entryRe = /\[日记(\d+)\]([\s\S]*?)\[\/日记\1\]/g;
+        let m;
+        while ((m = entryRe.exec(body))) {
+          const id = Number(m[1]) || (entries.length + 1);
+          const parsed = parseDiaryEntryBlock(m[2], fallbackName, id);
+          if (parsed) entries.push(parsed);
+        }
+
+        if (!entries.length) {
+          const fallback = parseDiaryEntryBlock(body, fallbackName, 1);
+          if (fallback) entries.push(fallback);
+        }
+        return entries;
+      }
+
+      function getDiaryEntriesByFriend(friendName) {
+        const key = String(friendName || '').trim();
+        if (!key) return [];
+        const safe = normalizeDiaryStore(state.diaryByFriend);
+        state.diaryByFriend = safe;
+        return Array.isArray(safe[key]) ? safe[key] : [];
+      }
+
+      function setDiaryEntriesByFriend(friendName, entries) {
+        const key = String(friendName || '').trim();
+        if (!key) return;
+        const safeStore = normalizeDiaryStore(state.diaryByFriend);
+        const safeEntries = (Array.isArray(entries) ? entries : [])
+          .map((it, idx) => {
+            if (!it || typeof it !== 'object') return null;
+            const content = String(it.content || '').trim();
+            if (!content) return null;
+            return {
+              id: Number(it.id) || (idx + 1),
+              roleName: String(it.roleName || it.name || key).trim() || key,
+              time: String(it.time || '').trim() || getFullTimeStr(),
+              weather: String(it.weather || '').trim() || '晴',
+              location: String(it.location || '').trim() || '未知地点',
+              mood: String(it.mood || '').trim() || '平静',
+              content,
+            };
+          })
+          .filter(Boolean);
+        if (!safeEntries.length) delete safeStore[key];
+        else safeStore[key] = safeEntries;
+        state.diaryByFriend = safeStore;
+        saveDiaryStore(safeStore);
+      }
+
+      function renderDiaryList(friendName) {
+        const box = document.getElementById('diaryList');
+        if (!box) return;
+        box.innerHTML = '';
+        const name = String(friendName || '').trim();
+        if (!name) {
+          box.innerHTML = '<div class="diary-empty">请先选择一个私聊好友。</div>';
+          return;
+        }
+
+        const entries = getDiaryEntriesByFriend(name);
+        if (!entries.length) {
+          box.innerHTML = `<div class="diary-empty">${name} 还没有日记，点击右上角“AI写”生成。</div>`;
+          return;
+        }
+
+        const sorted = [...entries].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+        sorted.forEach((entry) => {
+          const card = document.createElement('div');
+          card.className = 'diary-card';
+
+          const title = document.createElement('div');
+          title.className = 'diary-card-title';
+          title.textContent = `日记${entry.id || ''}`;
+
+          const meta = document.createElement('div');
+          meta.className = 'diary-meta';
+          meta.textContent = `${entry.roleName}｜${entry.time}\n${entry.weather}｜${entry.location}｜${entry.mood}`;
+
+          const content = document.createElement('div');
+          content.className = 'diary-content';
+          content.textContent = String(entry.content || '');
+
+          card.appendChild(title);
+          card.appendChild(meta);
+          card.appendChild(content);
+          box.appendChild(card);
+        });
+      }
+
+      function refreshDiaryFriendSelect(preferredName = '') {
+        const select = document.getElementById('diaryFriendSelect');
+        if (!select) return;
+        const names = getDiaryFriendCandidates();
+        const current = String(preferredName || select.value || diaryRuntime.selectedFriend || '').trim();
+
+        select.innerHTML = '';
+        if (!names.length) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = '暂无私聊好友';
+          select.appendChild(option);
+          diaryRuntime.selectedFriend = '';
+          setDiaryStatus('暂无私聊好友，请先在“聊天”里添加好友。', true);
+          renderDiaryList('');
+          return;
+        }
+
+        names.forEach((name) => {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          select.appendChild(option);
+        });
+
+        const next = names.includes(current) ? current : names[0];
+        select.value = next;
+        diaryRuntime.selectedFriend = next;
+        const count = getDiaryEntriesByFriend(next).length;
+        setDiaryStatus(count > 0 ? `当前：${next}（共 ${count} 篇日记）` : `当前：${next}（暂无日记）`);
+        renderDiaryList(next);
+      }
+
+      function buildDiaryPrompt(friendName) {
+        const target = String(friendName || '').trim() || '角色';
+        const privateList = getPrivateConversations();
+        const conv = privateList.find(c => c && String(c.name || '').trim() === target);
+        const recentMessages = conv && Array.isArray(conv.messages)
+          ? conv.messages.slice(-20)
+          : [];
+        const context = (typeof serializeMessageLinesOnly === 'function')
+          ? String(serializeMessageLinesOnly(recentMessages, { includeMediaData: false }) || '').trim()
+          : '';
+
+        return [
+          `当前用户正在查看好友「${target}」的日记页。`,
+          `你现在生成的是好友「${target}」的日记，不是其他人的日记。`,
+          '你必须严格只输出一个 <diary> 块，禁止任何解释、前后缀、代码块。',
+          '格式（必须严格按下面结构输出）：',
+          '<diary>',
+          '[日记1]',
+          `[${target}|时间|天气|地点|心情]`,
+          '[内容]',
+          '这里是日记内容，可以分很多行（所以要有滑动条）',
+          '[/内容]',
+          '[/日记1]',
+          '',
+          '[日记2]',
+          '格式同上',
+          '[/日记2]',
+          '……',
+          '</diary>',
+          '规则：',
+          `1) 角色名字字段必须始终是「${target}」。`,
+          '2) 输出 2~4 篇日记，尽量有连续时间感。',
+          '3) 时间、天气、地点、心情都要填写，简洁自然。',
+          '4) [内容] 内可以多行，像真实日记，细节化。',
+          '5) 不要出现“用户/我方/系统提示”等无关字段。',
+          context ? `参考最近聊天记录（可用于语气/内容一致性）：\n${context}` : '',
+        ].filter(Boolean).join('\n');
+      }
+
+      async function aiGenerateDiaryForFriend(friendName) {
+        const target = String(friendName || '').trim();
+        if (!target) {
+          setDiaryStatus('请先选择一个好友。', true);
+          return;
+        }
+        if (!AI_GENERATE_RAW) {
+          setDiaryStatus('未找到 generateRaw()，无法 AI 写日记。', true);
+          return;
+        }
+        if (diaryRuntime.busy) return;
+        diaryRuntime.busy = true;
+        setDiaryStatus(`正在为 ${target} 生成日记...`);
+
+        const promptText = buildDiaryPrompt(target);
+        const jailbreakPrompt = (typeof JAILBREAK_PROMPT === 'string') ? String(JAILBREAK_PROMPT).trim() : '';
+        const rawRequestData = {
+          ordered_prompts: [
+            ...(jailbreakPrompt ? [{ role: 'system', content: jailbreakPrompt }] : []),
+            { role: 'system', content: '你是“同层日记生成器”。严格输出 <diary> 区块，绝不输出解释。' },
+            'world_info_before',
+            'persona_description',
+            'char_description',
+            'char_personality',
+            'scenario',
+            'world_info_after',
+            'dialogue_examples',
+            'chat_history',
+            'user_input',
+          ],
+          user_input: promptText,
+          should_silence: true,
+          should_stream: true,
+        };
+
+        try {
+          const stream = await generateraw(rawRequestData);
+          const outRaw = await consumeTextStream(stream);
+          const entries = parseDiaryFromRawText(outRaw, target);
+          if (!entries.length) throw new Error('AI输出未匹配到 <diary> 格式');
+          setDiaryEntriesByFriend(target, entries);
+          const count = getDiaryEntriesByFriend(target).length;
+          setDiaryStatus(`已为 ${target} 生成 ${count} 篇日记。`);
+          renderDiaryList(target);
+        } catch (e) {
+          setDiaryStatus(`AI写日记失败：${e && e.message ? e.message : '未知错误'}`, true);
+        } finally {
+          diaryRuntime.busy = false;
+        }
+      }
+
+      function openDiaryPanel() {
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'none';
+        const o = document.getElementById('diaryOverlay');
+        if (o) {
+          o.style.display = 'flex';
+          o.setAttribute('aria-hidden', 'false');
+        }
+        state.diaryByFriend = normalizeDiaryStore(state.diaryByFriend);
+        refreshDiaryFriendSelect(diaryRuntime.selectedFriend);
+      }
+
+      function closeDiaryPanel() {
+        const o = document.getElementById('diaryOverlay');
+        if (o) {
+          o.style.display = 'none';
+          o.setAttribute('aria-hidden', 'true');
+        }
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'flex';
+      }
+
+      function initDiaryPanel() {
+        const overlay = document.getElementById('diaryOverlay');
+        if (!overlay || overlay.dataset.bound === '1') return;
+        overlay.dataset.bound = '1';
+
+        const backBtn = document.getElementById('diaryBackBtn');
+        const aiBtn = document.getElementById('diaryAiBtn');
+        const refreshBtn = document.getElementById('diaryRefreshBtn');
+        const select = document.getElementById('diaryFriendSelect');
+
+        state.diaryByFriend = loadDiaryStore();
+
+        if (backBtn) backBtn.onclick = closeDiaryPanel;
+        if (refreshBtn) refreshBtn.onclick = () => refreshDiaryFriendSelect(select ? select.value : '');
+        if (select) {
+          select.addEventListener('change', () => {
+            diaryRuntime.selectedFriend = String(select.value || '').trim();
+            const name = diaryRuntime.selectedFriend;
+            const count = name ? getDiaryEntriesByFriend(name).length : 0;
+            setDiaryStatus(name ? `当前：${name}（共 ${count} 篇日记）` : '请先选择一个好友。');
+            renderDiaryList(name);
+          });
+        }
+        if (aiBtn) {
+          aiBtn.onclick = () => {
+            const name = String(select ? select.value : diaryRuntime.selectedFriend || '').trim();
+            void aiGenerateDiaryForFriend(name);
+          };
+        }
+      }
+
       function ensureMomentsComposerModal() {
         let modal = document.getElementById('momentsComposeModal');
         if (modal) return modal;
@@ -13405,7 +13914,7 @@ function applyUserAvatar(avatarElement) {
       }
 
       // Append a single message to the chat
-      function appendMessage(msg, idx, isGenerated = false) {
+      function appendMessage(msg, idx, isGenerated = false, options = {}) {
         const chat = document.getElementById('chatMessages');
         if (!chat) {
           console.warn('Chat container not found');
@@ -13417,6 +13926,9 @@ function applyUserAvatar(avatarElement) {
           // 标记生成的消息用于优化渲染
           if (isGenerated || idx >= lastHistoryCount) {
             message.classList.add('generated');
+          }
+          if (options && options.flowIn) {
+            message.classList.add('flow-enter');
           }
           chat.appendChild(message);
 
@@ -18630,7 +19142,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       const EXTENSION_UI_ASSETS_KEY = 'tavern_helper_ui_assets_v1';
       const EXTENSION_CHAR_PROFILE_KEY = 'tavern_helper_char_profile_v1';
       const EXTENSION_PRIVATE_CHAT_STYLES_KEY = 'tavern_helper_private_chat_styles_v1';
+      const EXTENSION_DIARY_KEY = 'tavern_helper_diary_v1';
       const PRIVATE_CHAT_STYLE_LS_KEY = 'tavern_private_chat_styles_v1';
+      const DIARY_LS_KEY = 'tavern_diary_v1';
 
       function getSillyContextSafe() {
         try {
@@ -19079,6 +19593,71 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             void writeCharacterExtensionField(EXTENSION_FRIENDS_KEY, safeList);
           }
         } catch (e) { console.warn('保存好友失败', e); }
+      }
+
+      function normalizeDiaryStore(input) {
+        const src = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+        const out = {};
+        Object.entries(src).forEach(([rawName, rawEntries]) => {
+          const name = String(rawName || '').trim();
+          if (!name) return;
+          const list = Array.isArray(rawEntries) ? rawEntries : [];
+          out[name] = list
+            .map((it, idx) => {
+              if (!it || typeof it !== 'object') return null;
+              const roleName = String(it.roleName || it.name || name).trim() || name;
+              const time = String(it.time || '').trim() || getFullTimeStr();
+              const weather = String(it.weather || '').trim() || '晴';
+              const location = String(it.location || '').trim() || '未知地点';
+              const mood = String(it.mood || '').trim() || '平静';
+              const content = String(it.content || '').trim();
+              if (!content) return null;
+              return {
+                id: Number(it.id) || (idx + 1),
+                roleName,
+                time,
+                weather,
+                location,
+                mood,
+                content,
+              };
+            })
+            .filter(Boolean);
+        });
+        return out;
+      }
+
+      function loadDiaryStoreLegacy() {
+        try {
+          const raw = localStorage.getItem(DIARY_LS_KEY);
+          return normalizeDiaryStore(raw ? JSON.parse(raw) : {});
+        } catch (_) {
+          return {};
+        }
+      }
+
+      function saveDiaryStoreLegacy(store) {
+        try {
+          const safe = normalizeDiaryStore(store);
+          localStorage.setItem(DIARY_LS_KEY, JSON.stringify(safe));
+        } catch (_) {}
+      }
+
+      function loadDiaryStore() {
+        try {
+          const ctx = getSillyContextSafe();
+          const extValue = readCharacterExtensionField(ctx, EXTENSION_DIARY_KEY);
+          if (extValue && typeof extValue === 'object') return normalizeDiaryStore(extValue);
+        } catch (_) {}
+        return loadDiaryStoreLegacy();
+      }
+
+      function saveDiaryStore(store) {
+        const safe = normalizeDiaryStore(store);
+        saveDiaryStoreLegacy(safe);
+        if (getSillyContextSafe()) {
+          void writeCharacterExtensionField(EXTENSION_DIARY_KEY, safe);
+        }
       }
 
       async function migrateFriendAndGroupStorage() {
@@ -23150,6 +23729,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           bindEventListeners();
           try { if (typeof initDivinationPanel === 'function') initDivinationPanel(); } catch (_) {}
           try { if (typeof initForumPanel === 'function') initForumPanel(); } catch (_) {}
+          try { if (typeof initDiaryPanel === 'function') initDiaryPanel(); } catch (_) {}
 
           // iOS-like home overlay (clock/dock)
           try { if (typeof initIosHomeScreen === 'function') initIosHomeScreen(); } catch (_) {}
@@ -27698,10 +28278,14 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const appMusic = document.getElementById('appMusic');
         const appCloudMusic = document.getElementById('appCloudMusic');
         const appDivination = document.getElementById('appDivination');
+        const appDiary = document.getElementById('appDiary');
         const appSettings = document.getElementById('appSettings');
         const homeBtn = document.getElementById('homeBtn');
 
-        const showHome = () => { if (homeOverlay) homeOverlay.style.display = 'flex'; };
+        const showHome = () => {
+          try { if (typeof closeDiaryPanel === 'function') closeDiaryPanel(); } catch (_) {}
+          if (homeOverlay) homeOverlay.style.display = 'flex';
+        };
         const openChat = () => {
           if (homeOverlay) homeOverlay.style.display = 'none';
           try { if (typeof toggleFriendsPanel === 'function') toggleFriendsPanel(true); } catch (_) {}
@@ -27734,6 +28318,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           } catch (_) {}
           return placeholder('占卜')();
         });
+        if (appDiary) appDiary.addEventListener('click', () => {
+          try {
+            if (typeof openDiaryPanel === 'function') return openDiaryPanel();
+          } catch (_) {}
+          return placeholder('日记本')();
+        });
         if (appCloudMusic) appCloudMusic.addEventListener('click', () => {
           if (homeOverlay) homeOverlay.style.display = 'none';
           const o = document.getElementById('cloudMusicOverlay');
@@ -27763,6 +28353,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const appStore = document.getElementById('appStore');
           const appMusic = document.getElementById('appMusic');
           const appDivination = document.getElementById('appDivination');
+          const appDiary = document.getElementById('appDiary');
           const appSettings = document.getElementById('appSettings');
           const homeBtn = document.getElementById('homeBtn');
           const homeDockBtn = document.getElementById('homeDockBtn');
@@ -27786,6 +28377,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             try { if (typeof closeMomentsPanel === 'function') closeMomentsPanel(); } catch (_) {}
             try { if (typeof closeForumPanel === 'function') closeForumPanel(); } catch (_) {}
             try { if (typeof closeDivinationPanel === 'function') closeDivinationPanel(); } catch (_) {}
+            try { if (typeof closeDiaryPanel === 'function') closeDiaryPanel(); } catch (_) {}
             if (homeOverlay) homeOverlay.style.display = 'flex';
           };
 
@@ -27809,6 +28401,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           if (appDivination) appDivination.onclick = () => {
             try { if (typeof openDivinationPanel === 'function') return openDivinationPanel(); } catch(_) {}
             showToastSafe('占卜 功能暂未开放');
+          };
+          if (appDiary) appDiary.onclick = () => {
+            try { if (typeof openDiaryPanel === 'function') return openDiaryPanel(); } catch(_) {}
+            showToastSafe('日记本 功能暂未开放');
           };
           if (appSettings) appSettings.onclick = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
