@@ -7487,62 +7487,80 @@
           inset: 0;
           display: none;
           flex-direction: column;
-          background: var(--bg-primary);
+          background:
+            radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 55%),
+            linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
           z-index: 1270;
         }
         .diary-header {
-          height: 40px;
+          height: 44px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 0 10px;
-          background: var(--bg-header);
+          background: color-mix(in srgb, var(--bg-header) 86%, #ffffff 14%);
           border-bottom: 1px solid var(--border-primary);
+          backdrop-filter: blur(8px);
         }
         .diary-title {
           flex: 1;
           text-align: center;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 600;
           color: var(--text-primary);
+          letter-spacing: 0.5px;
         }
         .diary-btn {
-          height: 28px;
+          height: 30px;
           min-width: 44px;
           border: none;
-          border-radius: 14px;
+          border-radius: 15px;
           background: var(--bg-tertiary);
           color: var(--text-secondary);
           font-size: 12px;
           cursor: pointer;
+          box-shadow: 0 2px 6px var(--shadow-light);
+          transition: all 0.2s ease;
+        }
+        .diary-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px var(--shadow-medium);
         }
         .diary-btn.primary {
           background: var(--accent-primary);
           color: #fff;
         }
         .diary-controls {
+          position: sticky;
+          top: 0;
+          z-index: 2;
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 8px 10px;
+          padding: 10px;
           border-bottom: 1px solid var(--border-primary);
-          background: var(--bg-secondary);
+          background: color-mix(in srgb, var(--bg-secondary) 90%, #ffffff 10%);
+          backdrop-filter: blur(6px);
         }
         .diary-select {
           flex: 1;
           min-width: 0;
           border: 1px solid var(--border-primary);
-          border-radius: 8px;
-          padding: 6px 8px;
+          border-radius: 10px;
+          padding: 7px 10px;
           font-size: 12px;
           color: var(--text-primary);
-          background: #fff;
+          background: color-mix(in srgb, #fff 90%, var(--bg-tertiary) 10%);
         }
         .diary-status {
-          min-height: 16px;
-          padding: 0 10px 6px;
-          font-size: 11px;
+          margin: 8px 10px 0;
+          min-height: 18px;
+          padding: 6px 10px;
+          font-size: 12px;
           color: var(--text-secondary);
+          background: color-mix(in srgb, var(--bg-secondary) 86%, #fff 14%);
+          border: 1px solid var(--border-secondary);
+          border-radius: 10px;
         }
         .diary-status.error {
           color: #c62828;
@@ -7550,7 +7568,7 @@
         .diary-list {
           flex: 1;
           overflow-y: auto;
-          padding: 10px;
+          padding: 8px 10px 12px;
         }
         .diary-empty {
           padding: 40px 10px;
@@ -7559,39 +7577,86 @@
           font-size: 13px;
         }
         .diary-card {
-          background: var(--bg-secondary);
+          background: linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.93) 100%);
           border: 1px solid var(--border-primary);
-          border-radius: 12px;
-          padding: 10px;
-          margin-bottom: 10px;
-          box-shadow: 0 1px 4px var(--shadow-light);
+          border-radius: 14px;
+          padding: 12px;
+          margin-bottom: 12px;
+          box-shadow: 0 4px 14px var(--shadow-light);
+          min-height: 248px; /* 比最初版本更长，读起来不压抑 */
+          display: flex;
+          flex-direction: column;
+        }
+        .diary-card-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 8px;
         }
         .diary-card-title {
-          font-size: 12px;
-          color: var(--text-secondary);
-          margin-bottom: 6px;
-          font-weight: 600;
+          font-size: 13px;
+          color: var(--accent-secondary);
+          margin-bottom: 0;
+          font-weight: 700;
+          letter-spacing: 0.2px;
+        }
+        .diary-card-stamp {
+          font-size: 11px;
+          color: var(--text-tertiary);
+          border: 1px dashed var(--border-primary);
+          border-radius: 999px;
+          padding: 2px 8px;
+          flex: 0 0 auto;
         }
         .diary-meta {
           font-size: 12px;
-          color: var(--text-primary);
+          color: var(--text-secondary);
           line-height: 1.4;
           margin-bottom: 8px;
           white-space: pre-wrap;
           word-break: break-word;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .diary-meta-chip {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 999px;
+          border: 1px solid var(--border-secondary);
+          background: color-mix(in srgb, var(--bg-secondary) 80%, #fff 20%);
+          font-size: 11px;
+          line-height: 1.25;
         }
         .diary-content {
+          flex: 1 1 auto;
           font-size: 13px;
           color: var(--text-primary);
-          line-height: 1.55;
+          line-height: 1.58;
           white-space: pre-wrap;
           word-break: break-word;
-          background: var(--bg-tertiary);
+          background:
+            repeating-linear-gradient(
+              180deg,
+              rgba(255,255,255,0.95) 0,
+              rgba(255,255,255,0.95) 25px,
+              rgba(224, 224, 224, 0.85) 26px
+            );
           border-radius: 8px;
           border: 1px solid var(--border-secondary);
-          padding: 8px;
-          max-height: 150px;
+          padding: 10px;
+          min-height: 168px;
+          max-height: 280px;
           overflow-y: auto;
+          font-family: "Noto Serif SC", "STSong", "Songti SC", serif;
+        }
+        .diary-time {
+          margin-top: 4px;
+          font-size: 11px;
+          color: var(--text-tertiary);
+          text-align: right;
         }
       </style>
       <div class="diary-overlay" id="diaryOverlay" aria-hidden="true">
@@ -9966,6 +10031,7 @@ function applyUserAvatar(avatarElement) {
         let cleaned = raw;
         cleaned = cleaned.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
         cleaned = cleaned.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
+        cleaned = cleaned.replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '');
         cleaned = cleaned.replace(/^\s*同层朋友圈\s*$/gm, '');
         cleaned = cleaned.replace(/^\s*同层论坛\s*$/gm, '');
         cleaned = cleaned.replace(/<private>[\s\S]*?<\/private>/g, '');
@@ -10596,6 +10662,7 @@ function applyUserAvatar(avatarElement) {
         s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
         s = s.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
         s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
+        s = s.replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '');
         s = s.replace(/<qunliao>[\s\S]*?<\/qunliao>/gi, '');
         s = s.replace(/<multi>[\s\S]*?<\/multi>/gi, '');
         s = s.replace(/<group>[\s\S]*?<\/group>/gi, '');
@@ -10762,7 +10829,7 @@ function applyUserAvatar(avatarElement) {
       }
       function sanitizeDivinationContent(raw) {
         let s = String(raw || '').replace(/\r/g, '').trim();
-        s = s.replace(/<\/?(shouji|private|qunliao|multi|group|pyq|forum|forun|changes)>/gi, '');
+        s = s.replace(/<\/?(shouji|private|qunliao|multi|group|pyq|forum|forun|changes|diary_store)>/gi, '');
         s = s.replace(/<\/?post:\d+>/gi, '');
         s = s.replace(/\n{3,}/g, '\n\n').trim();
         return s;
@@ -10813,6 +10880,7 @@ function applyUserAvatar(avatarElement) {
         s = s.replace(/<private>[\s\S]*?<\/private>/gi, '');
         s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
         s = s.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
+        s = s.replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '');
         s = s.replace(/<qunliao>[\s\S]*?<\/qunliao>/gi, '');
         s = s.replace(/<multi>[\s\S]*?<\/multi>/gi, '');
         s = s.replace(/<group>[\s\S]*?<\/group>/gi, '');
@@ -12356,6 +12424,108 @@ function applyUserAvatar(avatarElement) {
         return entries;
       }
 
+      function sanitizeDiaryHeaderField(raw, fallback = '') {
+        let s = String(raw || '').replace(/\r/g, '').trim();
+        if (!s) s = String(fallback || '').trim();
+        s = s.replace(/[\n\r]/g, ' ');
+        s = s.replace(/\|/g, '｜');
+        s = s.replace(/[\[\]]/g, '');
+        return s || String(fallback || '').trim();
+      }
+
+      function serializeDiaryStoreToDiaryTag(store) {
+        const safeStore = normalizeDiaryStore(store);
+        const names = Object.keys(safeStore).map(n => String(n || '').trim()).filter(Boolean);
+        if (!names.length) return '';
+
+        const lines = ['<diary_store>'];
+        names.sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+
+        names.forEach((name) => {
+          const entries = Array.isArray(safeStore[name]) ? safeStore[name] : [];
+          if (!entries.length) return;
+          const encodedName = encodeURIComponent(name);
+          lines.push(`<friend name="${encodedName}">`);
+          lines.push('<diary>');
+          const sorted = [...entries].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+          sorted.forEach((entry, idx) => {
+            const eid = Number(entry.id) || (idx + 1);
+            const roleName = sanitizeDiaryHeaderField(entry.roleName, name);
+            const time = sanitizeDiaryHeaderField(entry.time, getFullTimeStr());
+            const weather = sanitizeDiaryHeaderField(entry.weather, '晴');
+            const location = sanitizeDiaryHeaderField(entry.location, '未知地点');
+            const mood = sanitizeDiaryHeaderField(entry.mood, '平静');
+            const content = String(entry.content || '').replace(/\r/g, '').trim();
+            if (!content) return;
+            lines.push(`[日记${eid}]`);
+            lines.push(`[${roleName}|${time}|${weather}|${location}|${mood}]`);
+            lines.push('[内容]');
+            lines.push(content);
+            lines.push('[/内容]');
+            lines.push(`[/日记${eid}]`);
+          });
+          lines.push('</diary>');
+          lines.push('</friend>');
+        });
+
+        lines.push('</diary_store>');
+        return lines.join('\n');
+      }
+
+      function parseDiaryStoreFromShouji(rawText) {
+        const msg = ensureShoujiWrapper(rawText);
+        const shoujiMatch = msg.match(/<shouji>([\s\S]*?)<\/shouji>/i);
+        if (!shoujiMatch) return {};
+        const inner = String(shoujiMatch[1] || '');
+        const lower = inner.toLowerCase();
+        const startIdx = lower.indexOf('<diary_store>');
+        const endIdx = lower.lastIndexOf('</diary_store>');
+        if (startIdx < 0 || endIdx < 0 || endIdx <= startIdx) return {};
+
+        const diaryStoreBody = inner.slice(startIdx + '<diary_store>'.length, endIdx).trim();
+        if (!diaryStoreBody) return {};
+
+        const out = {};
+        const friendRe = /<friend\s+name="([^"]*)">([\s\S]*?)<\/friend>/gi;
+        let m;
+        while ((m = friendRe.exec(diaryStoreBody))) {
+          let name = '';
+          try { name = decodeURIComponent(String(m[1] || '')); } catch (_) { name = String(m[1] || ''); }
+          name = String(name || '').trim();
+          if (!name) continue;
+          const friendBody = String(m[2] || '').trim();
+          const diaryMatch = friendBody.match(/<diary>[\s\S]*?<\/diary>/i);
+          const rawDiary = diaryMatch ? diaryMatch[0] : friendBody;
+          const entries = parseDiaryFromRawText(rawDiary, name);
+          if (entries.length) out[name] = entries;
+        }
+
+        return normalizeDiaryStore(out);
+      }
+
+      function upsertDiaryIntoShoujiMessage(shoujiMessageText, diaryText) {
+        const msg = ensureShoujiWrapper(shoujiMessageText);
+        const diary = String(diaryText || '').trim();
+        return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/i, (_m, inner) => {
+          let body = String(inner || '');
+          try {
+            const lower = body.toLowerCase();
+            const s = lower.indexOf('<diary_store>');
+            const e = lower.lastIndexOf('</diary_store>');
+            if (s >= 0 && e >= 0 && e > s) {
+              body = body.slice(0, s) + body.slice(e + '</diary_store>'.length);
+            } else {
+              body = body.replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '');
+            }
+          } catch (_) {
+            body = body.replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '');
+          }
+          body = body.trim();
+          const merged = [body, diary].filter(Boolean).join('\n\n');
+          return `<shouji>\n${merged}\n</shouji>`;
+        });
+      }
+
       function getDiaryEntriesByFriend(friendName) {
         const key = String(friendName || '').trim();
         if (!key) return [];
@@ -12388,6 +12558,7 @@ function applyUserAvatar(avatarElement) {
         else safeStore[key] = safeEntries;
         state.diaryByFriend = safeStore;
         saveDiaryStore(safeStore);
+        try { deferredSync(0); } catch (_) {}
       }
 
       function renderDiaryList(friendName) {
@@ -12408,24 +12579,52 @@ function applyUserAvatar(avatarElement) {
 
         const sorted = [...entries].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
         sorted.forEach((entry) => {
+          const roleName = String(entry.roleName || name || '角色').trim() || name || '角色';
+
           const card = document.createElement('div');
           card.className = 'diary-card';
 
+          const head = document.createElement('div');
+          head.className = 'diary-card-head';
+
           const title = document.createElement('div');
           title.className = 'diary-card-title';
-          title.textContent = `日记${entry.id || ''}`;
+          title.textContent = `📔 日记${entry.id || ''} · ${roleName}`;
+
+          const stamp = document.createElement('div');
+          stamp.className = 'diary-card-stamp';
+          stamp.textContent = `No.${entry.id || ''}`;
+
+          head.appendChild(title);
+          head.appendChild(stamp);
 
           const meta = document.createElement('div');
           meta.className = 'diary-meta';
-          meta.textContent = `${entry.roleName}｜${entry.time}\n${entry.weather}｜${entry.location}｜${entry.mood}`;
+          const chips = [
+            `🕒 ${entry.time || getFullTimeStr()}`,
+            `🌤️ ${entry.weather || '晴'}`,
+            `📍 ${entry.location || '未知地点'}`,
+            `💭 ${entry.mood || '平静'}`,
+          ];
+          chips.forEach((txt) => {
+            const chip = document.createElement('span');
+            chip.className = 'diary-meta-chip';
+            chip.textContent = txt;
+            meta.appendChild(chip);
+          });
 
           const content = document.createElement('div');
           content.className = 'diary-content';
           content.textContent = String(entry.content || '');
 
-          card.appendChild(title);
+          const time = document.createElement('div');
+          time.className = 'diary-time';
+          time.textContent = String(entry.time || getTimeStr() || '');
+
+          card.appendChild(head);
           card.appendChild(meta);
           card.appendChild(content);
+          card.appendChild(time);
           box.appendChild(card);
         });
       }
@@ -12585,7 +12784,11 @@ function applyUserAvatar(avatarElement) {
         const refreshBtn = document.getElementById('diaryRefreshBtn');
         const select = document.getElementById('diaryFriendSelect');
 
-        state.diaryByFriend = loadDiaryStore();
+        {
+          const fromState = normalizeDiaryStore(state.diaryByFriend);
+          if (Object.keys(fromState).length) state.diaryByFriend = fromState;
+          else state.diaryByFriend = loadDiaryStore();
+        }
 
         if (backBtn) backBtn.onclick = closeDiaryPanel;
         if (refreshBtn) refreshBtn.onclick = () => refreshDiaryFriendSelect(select ? select.value : '');
@@ -23417,6 +23620,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const hasRoleGroup = roleGroupList.length > 0;
         const pyqText = serializeMomentsToPyq(state.moments);
         const forumText = serializeForumToForum(state.forum);
+        const diaryText = serializeDiaryStoreToDiaryTag(state.diaryByFriend);
         const divinationText = sanitizeDivinationContent(state.divinationChanges || '');
 
         // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
@@ -23434,6 +23638,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             try {
               messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
               messageToSave = upsertForumIntoShoujiMessage(messageToSave, forumText);
+              messageToSave = upsertDiaryIntoShoujiMessage(messageToSave, diaryText);
             } catch (_) {}
             const changesToSave = divinationText || preservedChanges;
             if (changesToSave) {
@@ -23461,6 +23666,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const updatedCore = upsertPrivateAndGroupIntoShoujiMessage(raw, privateBlocks, qunliaoLog, roleGroupLog);
           let updated = upsertPyqIntoShoujiMessage(updatedCore, pyqText);
           updated = upsertForumIntoShoujiMessage(updated, forumText);
+          updated = upsertDiaryIntoShoujiMessage(updated, diaryText);
           const preservedChanges = extractChangesContentFromMessage(raw);
           const changesToSave = divinationText || preservedChanges;
           if (changesToSave) {
@@ -23476,6 +23682,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           try {
             messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
             messageToSave = upsertForumIntoShoujiMessage(messageToSave, forumText);
+            messageToSave = upsertDiaryIntoShoujiMessage(messageToSave, diaryText);
           } catch (_) {}
           if (divinationText) {
             messageToSave = upsertChangesIntoShoujiMessage(messageToSave, divinationText);
@@ -23528,6 +23735,19 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               state.forum = parseForumFromShouji(msg.message);
             } catch (e) {
               state.forum = [];
+            }
+            // 解析同层日记（<diary_store>）——按好友维度存储
+            try {
+              const diaryFromMsg = parseDiaryStoreFromShouji(msg.message);
+              const diaryFromStore = loadDiaryStore();
+              const mergedDiary = normalizeDiaryStore({
+                ...diaryFromStore,
+                ...diaryFromMsg,
+              });
+              state.diaryByFriend = mergedDiary;
+              saveDiaryStore(mergedDiary);
+            } catch (_) {
+              state.diaryByFriend = loadDiaryStore();
             }
              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
              const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
@@ -23647,9 +23867,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
              }
           } else {
             state.messageHistory = [];
-            state.moments = [];
-            state.forum = [];
-            state.divinationChanges = '';
+           state.moments = [];
+           state.forum = [];
+           state.diaryByFriend = loadDiaryStore();
+           state.divinationChanges = '';
             state.groupChatMode = false;
             state.friendsPanelMode = 'friend';
             state.roleGroupMode = false;
@@ -24399,6 +24620,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           content = String(content || '')
             .replace(/<pyq>[\s\S]*?<\/pyq>/g, '')
             .replace(/<forum>[\s\S]*?<\/foru?m>/gi, '')
+            .replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '')
             .replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '')
             .replace(/<multi>[\s\S]*?<\/multi>/g, '')
             .replace(/<group>[\s\S]*?<\/group>/g, '')
