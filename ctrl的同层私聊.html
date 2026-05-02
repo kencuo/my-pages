@@ -7733,6 +7733,8 @@
           min-height: 0;
           display: flex;
           flex-direction: column;
+          overflow-y: auto;
+          padding-bottom: 12px;
         }
         .shop-hero {
           padding: 12px 12px 10px;
@@ -7789,10 +7791,10 @@
           font-size: 12px;
         }
         .shop-content {
-          flex: 1;
+          flex: 0 0 auto;
           min-height: 0;
           display: grid;
-          grid-template-columns: 1fr 0.94fr;
+          grid-template-columns: 1fr;
           gap: 12px;
           padding: 0 12px 12px;
         }
@@ -7827,10 +7829,22 @@
         .shop-items-list,
         .shop-cart-list,
         .shop-pay-list {
-          flex: 1;
+          flex: 1 1 auto;
           min-height: 0;
           overflow-y: auto;
           padding: 10px 12px 12px;
+        }
+        .shop-items-list {
+          min-height: 240px;
+          max-height: 340px;
+        }
+        .shop-cart-list {
+          min-height: 120px;
+          max-height: 240px;
+        }
+        .shop-pay-list {
+          min-height: 120px;
+          max-height: 240px;
         }
         .shop-item-card {
           border-radius: 16px;
@@ -7935,17 +7949,15 @@
         }
         .shop-pay-panel {
           margin: 0 12px 12px;
+          flex: 0 0 auto;
           border-radius: 18px;
           background: rgba(255, 255, 255, 0.92);
           border: 1px solid rgba(255, 186, 137, 0.48);
           box-shadow: 0 8px 22px rgba(178, 103, 32, 0.1);
           overflow: hidden;
         }
-        @media (max-width: 560px) {
-          .shop-hero,
-          .shop-content {
-            grid-template-columns: 1fr;
-          }
+        .shop-hero {
+          grid-template-columns: 1fr;
         }
       </style>
       <div class="shop-overlay" id="shopOverlay" aria-hidden="true">
@@ -7977,7 +7989,7 @@
               <div class="shop-panel-head">
                 <div>
                   <div class="shop-panel-title">今日推荐</div>
-                  <div class="shop-panel-hint">手指向上滑到列表底部时可继续补货</div>
+                  <div class="shop-panel-hint" id="shopItemsHint">手指向上滑到列表底部时可继续补货</div>
                 </div>
               </div>
               <div class="shop-items-list" id="shopItemsList"></div>
@@ -11931,6 +11943,7 @@ function applyUserAvatar(avatarElement) {
         const shop = getShopData();
         const moneyEl = document.getElementById('shopMoneyAmount');
         const hintEl = document.getElementById('shopGeneratedHint');
+        const itemsHintEl = document.getElementById('shopItemsHint');
         const totalEl = document.getElementById('shopCartTotal');
         const summaryEl = document.getElementById('shopCartSummary');
         const itemsList = document.getElementById('shopItemsList');
@@ -11940,6 +11953,9 @@ function applyUserAvatar(avatarElement) {
         if (hintEl) hintEl.textContent = shop.lastGeneratedAt
           ? `最近一次生成：${shop.lastGeneratedAt}`
           : '上滑商品区可让 AI 同时刷新余额和商品。';
+        if (itemsHintEl) itemsHintEl.textContent = shop.items.length
+          ? `当前已渲染 ${shop.items.length} 件商品`
+          : '手指向上滑到列表底部时可继续补货';
         if (totalEl) totalEl.textContent = `¥${formatShopMoney(calculateShopCartTotal(shop.cart))}`;
         if (summaryEl) summaryEl.textContent = buildShopLineSummary(shop.cart);
         if (itemsList) {
