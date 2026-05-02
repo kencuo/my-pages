@@ -8453,6 +8453,13 @@ https://i.postimg.cc/.../xxx.png"
               </div>
               <button class="upload-btn" id="openMomentsDebugBtn" style="white-space: nowrap;">打开调试</button>
             </div>
+            <div class="setting-preview">
+              <div class="preview-info" style="flex: 1;">
+                <div class="preview-title">商店输出调试</div>
+                <div class="preview-desc">查看商店刷新余额/补货时的原始 AI 输出与解析结果</div>
+              </div>
+              <button class="upload-btn" id="openShopDebugBtn" style="white-space: nowrap;">打开调试</button>
+            </div>
           </div>
           <!-- 头像设置 -->
           <div class="setting-section">
@@ -10104,6 +10111,19 @@ function applyUserAvatar(avatarElement) {
             type: 'payment-request',
             charName,
             avatar,
+            paymentStatus: status,
+            amount: normalizeShopMoney(amount),
+            paymentSummary: sanitizeShopInlineField(summary),
+            time,
+          }),
+        },
+        {
+          regex: /^\[(.+?)\|(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, status, amount, summary, time]) => ({
+            sender: 'char',
+            type: 'payment-request',
+            charName,
+            avatar: '',
             paymentStatus: status,
             amount: normalizeShopMoney(amount),
             paymentSummary: sanitizeShopInlineField(summary),
@@ -11987,6 +12007,14 @@ function applyUserAvatar(avatarElement) {
               note: `解析完成：余额=${parsed.money == null ? 'null' : parsed.money}，商品=${parsed.items.length}件`,
             });
           } catch (_) {}
+          try { if (state.debugEnabled && window.__aiDebug) {
+            window.__aiDebug.messages = [{
+              parsed_money: parsed.money,
+              parsed_items_count: Array.isArray(parsed.items) ? parsed.items.length : 0,
+              parsed_items: parsed.items,
+            }];
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch (_) {}
           if (!parsed.items.length && parsed.money == null) {
             setShopStatus('AI 这次没有输出有效的商店格式，可以再试一次。');
             return;
@@ -18229,7 +18257,7 @@ can call down the storm that writes what comes next.
 你每次会发送1-7条消息。
 （ps 你不会经常换头像，除非user想要你换）
 记住：你的世界里只有手机屏幕，你唯一能做的事就是按照规则输出完全符合格式的消息。
-如果user让帮忙待付款，即，user输出：[待付款|金额|物品名字和数量]，你帮ta支付后请输出：[帮付款|金额|物品名字和数量]
+如果user让帮忙待付款，即，user输出：[待付款|金额|物品名字和数量]，你帮ta支付后请输出：[帮付款|金额|物品名字和数量|时间]
 `;
 
       const GROUP_AIREQUEST_EXTRA_PROMPT_BODY = `人名会用逗号隔开，并不是同一个人！你只能输出群成员里的人物的聊天发言！！！（[群成员：])不许输出正文和状态栏内容，你的世界里只有手机。请按照以下格式输出。
@@ -18247,7 +18275,7 @@ can call down the storm that writes what comes next.
 你正在通过一个高度定制的手机聊天界面与用户交流。你的所有回复都必须严格模仿真实手机聊天的消息格式，并根据不同的消息类型使用对应的精确格式。
 你只会回复以不同群聊成员的身份与{{user}}进行手机聊天，不许代替{{user}}进行回复，角色昵称里也不许出现{{user}}的名字。
 你每次会发送1-7条消息。
-如果user让帮忙待付款，即，user输出：[待付款|金额|物品名字和数量]，你帮ta支付后请输出：[帮付款|金额|物品名字和数量]`;
+如果user让帮忙待付款，即，user输出：[待付款|金额|物品名字和数量]，你帮ta支付后请输出：[帮付款|金额|物品名字和数量|时间]`;
 
       function buildGroupAiRequestExtraPrompt() {
         const conv = (typeof getActiveGroupConversation === 'function') ? getActiveGroupConversation() : null;
@@ -28156,6 +28184,23 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             window.__aiDebug = window.__aiDebug || {};
             window.__aiDebug.mode = window.__aiDebug.mode || 'moments(debug)';
             window.__aiDebug.context = '提示：到“朋友圈”里对某条动态点“AI回复”，这里的 stream 会实时显示原始输出。';
+            window.__aiDebug.stream = window.__aiDebug.stream || '';
+            window.__aiDebug.error = '';
+            window.__updateAIDebug && window.__updateAIDebug();
+          } catch(_){}
+          try { hideSettings(false); } catch(_){}
+        });
+      }
+      const __openShopDebugBtn = document.getElementById('openShopDebugBtn');
+      if (__openShopDebugBtn) {
+        __openShopDebugBtn.addEventListener('click', () => {
+          const wrap = document.getElementById('ai-debug-panel');
+          if (wrap) wrap.style.display = 'block';
+          try { localStorage.setItem('ai_debug_visible', '1'); } catch(_){}
+          try {
+            window.__aiDebug = window.__aiDebug || {};
+            window.__aiDebug.mode = window.__aiDebug.mode || 'shop(debug)';
+            window.__aiDebug.context = '提示：到“商店”里点“余额”或“补货”，这里会显示原始输出 stream 和解析结果。';
             window.__aiDebug.stream = window.__aiDebug.stream || '';
             window.__aiDebug.error = '';
             window.__updateAIDebug && window.__updateAIDebug();
