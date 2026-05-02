@@ -7790,6 +7790,18 @@
           color: #8a572b;
           font-size: 12px;
         }
+        .shop-debug-box {
+          margin: 0 12px 10px;
+          padding: 8px 10px;
+          border-radius: 12px;
+          background: rgba(89, 52, 22, 0.08);
+          border: 1px dashed rgba(140, 88, 39, 0.35);
+          color: #6f4220;
+          font-size: 11px;
+          line-height: 1.45;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
         .shop-content {
           flex: 0 0 auto;
           min-height: 0;
@@ -7967,6 +7979,7 @@
             <div class="shop-title">喵喵百货</div>
             <div class="shop-subtitle">购物</div>
           </div>
+          <button class="shop-btn" id="shopDebugBtn" title="商店调试">调试</button>
           <button class="shop-btn" id="shopResetBtn" title="清空商店">重置</button>
           <button class="shop-btn" id="shopMoreBtn" title="继续生成商品">补货</button>
           <button class="shop-btn primary" id="shopRefreshMoneyBtn" title="刷新余额">余额</button>
@@ -7985,6 +7998,7 @@
             </div>
           </div>
           <div class="shop-status" id="shopStatus">商店已就绪，可以先让 AI 生成一批商品。</div>
+          <div class="shop-debug-box" id="shopDebugBox" style="display:none;"></div>
           <div class="shop-content">
             <div class="shop-items-panel">
               <div class="shop-panel-head">
@@ -9464,6 +9478,16 @@ https://i.postimg.cc/.../xxx.png"
           lastGeneratedAt: '',
           loading: false,
           lastForwardTarget: null,
+        },
+        shopDebug: {
+          visible: false,
+          mode: '',
+          raw: '',
+          parsedMoney: null,
+          parsedItems: [],
+          note: '',
+          prompt: '',
+          lastUpdatedAt: '',
         },
       };
 
@@ -11903,6 +11927,16 @@ function applyUserAvatar(avatarElement) {
           currentItemsText ? `已有商品（尽量别重复）：\n${currentItemsText}` : '',
         ].filter(Boolean).join('\n');
         try {
+          setShopDebug({
+            mode,
+            prompt: promptText,
+            raw: '',
+            parsedMoney: null,
+            parsedItems: [],
+            note: '已发起商店生成请求，等待 AI 输出...',
+          });
+        } catch (_) {}
+        try {
           const rawRequestData = {
             ordered_prompts: [
               ...(state.jailbreakEnabled ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
@@ -11920,9 +11954,35 @@ function applyUserAvatar(avatarElement) {
             should_silence: true,
             should_stream: true,
           };
+          try { if (state.debugEnabled) {
+            window.__aiDebug = window.__aiDebug || { stream: '', messages: [] };
+            window.__aiDebug.mode = `shop(${mode}-generateRaw)`;
+            window.__aiDebug.context = promptText;
+            window.__aiDebug.stream = '';
+            window.__aiDebug.messages = [];
+            window.__aiDebug.error = '';
+            window.__aiDebug.request = JSON.parse(JSON.stringify(rawRequestData));
+            window.__updateAIDebug && window.__updateAIDebug();
+          }} catch (_) {}
           const stream = await generateraw(rawRequestData);
-          const outRaw = (await consumeTextStream(stream)).trim();
+          const outRaw = (await consumeTextStream(stream, (chunk) => {
+            try { if (state.debugEnabled && window.__aiDebug) {
+              window.__aiDebug.stream = (window.__aiDebug.stream || '') + String(chunk || '');
+              if (window.__aiDebug.stream.length > 12000) {
+                window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+              }
+              window.__updateAIDebug && window.__updateAIDebug();
+            }} catch (_) {}
+          })).trim();
           const parsed = parseShopGenerateOutput(outRaw);
+          try {
+            setShopDebug({
+              raw: outRaw,
+              parsedMoney: parsed.money,
+              parsedItems: parsed.items,
+              note: `解析完成：余额=${parsed.money == null ? 'null' : parsed.money}，商品=${parsed.items.length}件`,
+            });
+          } catch (_) {}
           if (!parsed.items.length && parsed.money == null) {
             setShopStatus('AI 这次没有输出有效的商店格式，可以再试一次。');
             return;
@@ -11946,6 +12006,11 @@ function applyUserAvatar(avatarElement) {
         } catch (e) {
           setShopData({ loading: false }, { skipRender: true, skipSync: true });
           setShopStatus('AI 商店生成失败，请稍后再试。');
+          try {
+            setShopDebug({
+              note: `请求失败：${String(e && (e.message || e) || e)}`,
+            });
+          } catch (_) {}
           try { if (state.debugEnabled) console.warn('shop generate error', e); } catch (_) {}
         } finally {
           setShopData({ loading: false }, { skipRender: true, skipSync: true });
@@ -11962,10 +12027,31 @@ function applyUserAvatar(avatarElement) {
         const itemsList = document.getElementById('shopItemsList');
         const cartList = document.getElementById('shopCartList');
         const payList = document.getElementById('shopPayList');
+        const debugBox = document.getElementById('shopDebugBox');
         if (moneyEl) moneyEl.textContent = `¥${formatShopMoney(shop.money)}`;
         if (hintEl) hintEl.textContent = shop.lastGeneratedAt
           ? `最近一次生成：${shop.lastGeneratedAt}`
           : '上滑商品区可让 AI 同时刷新余额和商品。';
+        if (debugBox) {
+          if (state.shopDebug && state.shopDebug.visible) {
+            debugBox.style.display = 'block';
+            const raw = String(state.shopDebug.raw || '');
+            const previewRaw = raw.length > 800 ? `${raw.slice(0, 800)}\n...` : raw;
+            debugBox.textContent = [
+              `模式: ${state.shopDebug.mode || '-'}`,
+              `备注: ${state.shopDebug.note || '-'}`,
+              `解析余额: ${state.shopDebug.parsedMoney == null ? 'null' : state.shopDebug.parsedMoney}`,
+              `解析商品数: ${Array.isArray(state.shopDebug.parsedItems) ? state.shopDebug.parsedItems.length : 0}`,
+              `最后更新: ${state.shopDebug.lastUpdatedAt || '-'}`,
+              '',
+              'AI原始输出:',
+              previewRaw || '(空)',
+            ].join('\n');
+          } else {
+            debugBox.style.display = 'none';
+            debugBox.textContent = '';
+          }
+        }
         if (totalEl) totalEl.textContent = `¥${formatShopMoney(calculateShopCartTotal(shop.cart))}`;
         if (summaryEl) summaryEl.textContent = buildShopLineSummary(shop.cart);
         if (itemsList) {
@@ -13416,7 +13502,10 @@ function applyUserAvatar(avatarElement) {
       function normalizeShopMoney(value) {
         const raw = String(value == null ? '' : value).replace(/,/g, '').trim();
         if (!raw) return 0;
-        const num = Number(raw);
+        const cleaned = raw
+          .replace(/[￥¥元余额:\s]/g, '')
+          .replace(/[^\d.-]/g, '');
+        const num = Number(cleaned);
         if (!Number.isFinite(num)) return 0;
         return Math.max(0, Number(num.toFixed(2)));
       }
@@ -13639,6 +13728,23 @@ function applyUserAvatar(avatarElement) {
       function getShopData() {
         state.shopData = normalizeShopData(state.shopData);
         return state.shopData;
+      }
+
+      function setShopDebug(data = {}) {
+        const next = {
+          ...state.shopDebug,
+          ...(data || {}),
+          lastUpdatedAt: getFullTimeStr(),
+        };
+        state.shopDebug = next;
+        try { if (typeof renderShopOverlay === 'function') renderShopOverlay(); } catch (_) {}
+        return next;
+      }
+
+      function toggleShopDebug(force = null) {
+        const next = typeof force === 'boolean' ? force : !state.shopDebug.visible;
+        state.shopDebug = { ...(state.shopDebug || {}), visible: next };
+        try { if (typeof renderShopOverlay === 'function') renderShopOverlay(); } catch (_) {}
       }
 
       function getShopStorageKey() {
@@ -29813,6 +29919,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const divinationBackBtn = document.getElementById('divinationBackBtn');
           const divinationCastBtn = document.getElementById('divinationCastBtn');
           const divinationAskBtn = document.getElementById('divinationAskBtn');
+          const shopDebugBtn = document.getElementById('shopDebugBtn');
           const shopResetBtn = document.getElementById('shopResetBtn');
           const shopBackBtn = document.getElementById('shopBackBtn');
           const shopMoreBtn = document.getElementById('shopMoreBtn');
@@ -29867,6 +29974,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           if (shopBackBtn) shopBackBtn.onclick = () => {
             try { if (typeof closeShopOverlay === 'function') return closeShopOverlay(); } catch(_) {}
             if (homeOverlay) homeOverlay.style.display = 'flex';
+          };
+          if (shopDebugBtn) shopDebugBtn.onclick = () => {
+            try { if (typeof toggleShopDebug === 'function') return toggleShopDebug(); } catch(_) {}
           };
           if (shopResetBtn) shopResetBtn.onclick = () => {
             try { if (typeof resetShopState === 'function') return resetShopState(); } catch(_) {}
