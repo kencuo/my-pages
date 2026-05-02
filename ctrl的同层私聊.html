@@ -7672,6 +7672,337 @@
         <div class="diary-status" id="diaryStatus">请选择一个私聊好友查看日记。</div>
         <div class="diary-list" id="diaryList"></div>
       </div>
+      <style>
+        .shop-overlay {
+          position: absolute;
+          inset: 0;
+          display: none;
+          flex-direction: column;
+          background:
+            radial-gradient(120% 100% at 100% 0%, rgba(255, 219, 173, 0.72) 0%, rgba(255, 219, 173, 0) 45%),
+            linear-gradient(180deg, #fff6ef 0%, #ffe8d8 48%, #f8d4bc 100%);
+          z-index: 1275;
+          color: #4b2c14;
+        }
+        .shop-header {
+          height: 46px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 0 10px;
+          background: rgba(255, 248, 241, 0.96);
+          border-bottom: 1px solid rgba(187, 118, 52, 0.2);
+          backdrop-filter: blur(8px);
+        }
+        .shop-title-wrap {
+          min-width: 0;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          line-height: 1.15;
+        }
+        .shop-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #7d3f16;
+          letter-spacing: 0.4px;
+        }
+        .shop-subtitle {
+          font-size: 11px;
+          color: #b36a35;
+        }
+        .shop-btn {
+          height: 30px;
+          min-width: 30px;
+          padding: 0 10px;
+          border: none;
+          border-radius: 15px;
+          background: rgba(232, 150, 79, 0.14);
+          color: #8a481c;
+          font-size: 12px;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(122, 70, 28, 0.12);
+        }
+        .shop-btn.primary {
+          background: linear-gradient(180deg, #ff8e42 0%, #ff6a1f 100%);
+          color: #fff;
+        }
+        .shop-body {
+          flex: 1;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
+        }
+        .shop-hero {
+          padding: 12px 12px 10px;
+          display: grid;
+          grid-template-columns: 1.2fr 0.9fr;
+          gap: 10px;
+        }
+        .shop-balance-card,
+        .shop-cart-card {
+          border-radius: 18px;
+          padding: 14px 14px 12px;
+          background: rgba(255, 255, 255, 0.92);
+          box-shadow: 0 8px 24px rgba(178, 103, 32, 0.14);
+          border: 1px solid rgba(255, 184, 122, 0.5);
+        }
+        .shop-balance-label,
+        .shop-cart-label {
+          font-size: 11px;
+          color: #a06a40;
+          margin-bottom: 4px;
+        }
+        .shop-balance-amount {
+          font-size: 28px;
+          font-weight: 800;
+          color: #b34a07;
+          letter-spacing: 0.6px;
+        }
+        .shop-balance-hint {
+          margin-top: 6px;
+          font-size: 11px;
+          color: #8e5f39;
+          line-height: 1.4;
+        }
+        .shop-cart-total {
+          font-size: 21px;
+          font-weight: 700;
+          color: #7b3f16;
+          margin-bottom: 6px;
+        }
+        .shop-cart-summary {
+          font-size: 11px;
+          color: #8f6241;
+          min-height: 30px;
+          line-height: 1.45;
+        }
+        .shop-status {
+          margin: 0 12px 10px;
+          min-height: 18px;
+          padding: 8px 12px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.78);
+          border: 1px solid rgba(255, 195, 148, 0.58);
+          color: #8a572b;
+          font-size: 12px;
+        }
+        .shop-content {
+          flex: 1;
+          min-height: 0;
+          display: grid;
+          grid-template-columns: 1fr 0.94fr;
+          gap: 12px;
+          padding: 0 12px 12px;
+        }
+        .shop-items-panel,
+        .shop-cart-panel {
+          min-height: 0;
+          border-radius: 18px;
+          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(255, 186, 137, 0.48);
+          box-shadow: 0 8px 22px rgba(178, 103, 32, 0.1);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .shop-panel-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 12px 12px 8px;
+          border-bottom: 1px solid rgba(226, 172, 128, 0.24);
+        }
+        .shop-panel-title {
+          font-size: 13px;
+          font-weight: 700;
+          color: #8b471b;
+        }
+        .shop-panel-hint {
+          font-size: 11px;
+          color: #b06b39;
+        }
+        .shop-items-list,
+        .shop-cart-list,
+        .shop-pay-list {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          padding: 10px 12px 12px;
+        }
+        .shop-item-card {
+          border-radius: 16px;
+          padding: 12px;
+          margin-bottom: 10px;
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,247,240,0.94) 100%);
+          border: 1px solid rgba(255, 190, 149, 0.7);
+          box-shadow: 0 6px 18px rgba(196, 120, 49, 0.08);
+        }
+        .shop-item-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+        }
+        .shop-item-name {
+          font-size: 14px;
+          font-weight: 700;
+          color: #6b3110;
+          line-height: 1.35;
+        }
+        .shop-item-price {
+          flex: 0 0 auto;
+          font-size: 15px;
+          font-weight: 800;
+          color: #ff5f17;
+        }
+        .shop-item-intro {
+          margin-top: 7px;
+          font-size: 12px;
+          line-height: 1.5;
+          color: #8d6242;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+        .shop-item-actions {
+          margin-top: 10px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .shop-qty-box {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 8px;
+          border-radius: 999px;
+          background: rgba(255, 153, 78, 0.1);
+          color: #8a4a22;
+          font-size: 12px;
+        }
+        .shop-empty {
+          padding: 30px 12px;
+          text-align: center;
+          color: #b07b52;
+          font-size: 12px;
+          line-height: 1.6;
+        }
+        .shop-cart-entry,
+        .shop-pay-entry {
+          padding: 10px 10px 9px;
+          border-radius: 14px;
+          margin-bottom: 9px;
+          background: rgba(255, 247, 239, 0.95);
+          border: 1px solid rgba(246, 191, 150, 0.6);
+        }
+        .shop-cart-entry-head,
+        .shop-pay-entry-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .shop-cart-entry-name,
+        .shop-pay-entry-status {
+          font-size: 13px;
+          font-weight: 700;
+          color: #7d4218;
+        }
+        .shop-cart-entry-price,
+        .shop-pay-entry-amount {
+          font-size: 12px;
+          color: #ff6d22;
+          font-weight: 700;
+        }
+        .shop-cart-entry-meta,
+        .shop-pay-entry-summary {
+          margin-top: 5px;
+          font-size: 11px;
+          color: #95633c;
+          line-height: 1.45;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+        .shop-cart-entry-actions,
+        .shop-checkout-actions {
+          margin-top: 8px;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .shop-pay-panel {
+          margin: 0 12px 12px;
+          border-radius: 18px;
+          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(255, 186, 137, 0.48);
+          box-shadow: 0 8px 22px rgba(178, 103, 32, 0.1);
+          overflow: hidden;
+        }
+        @media (max-width: 560px) {
+          .shop-hero,
+          .shop-content {
+            grid-template-columns: 1fr;
+          }
+        }
+      </style>
+      <div class="shop-overlay" id="shopOverlay" aria-hidden="true">
+        <div class="shop-header">
+          <button class="shop-btn" id="shopBackBtn" title="返回">←</button>
+          <div class="shop-title-wrap">
+            <div class="shop-title">喵喵百货</div>
+            <div class="shop-subtitle">仿淘宝同层购物</div>
+          </div>
+          <button class="shop-btn" id="shopMoreBtn" title="继续生成商品">补货</button>
+          <button class="shop-btn primary" id="shopRefreshMoneyBtn" title="刷新余额">余额</button>
+        </div>
+        <div class="shop-body">
+          <div class="shop-hero">
+            <div class="shop-balance-card">
+              <div class="shop-balance-label">当前余额</div>
+              <div class="shop-balance-amount" id="shopMoneyAmount">¥0</div>
+              <div class="shop-balance-hint" id="shopGeneratedHint">上滑商品区可让 AI 同时刷新余额和商品。</div>
+            </div>
+            <div class="shop-cart-card">
+              <div class="shop-cart-label">购物车合计</div>
+              <div class="shop-cart-total" id="shopCartTotal">¥0</div>
+              <div class="shop-cart-summary" id="shopCartSummary">购物车还是空的。</div>
+            </div>
+          </div>
+          <div class="shop-status" id="shopStatus">商店已就绪，可以先让 AI 生成一批商品。</div>
+          <div class="shop-content">
+            <div class="shop-items-panel">
+              <div class="shop-panel-head">
+                <div>
+                  <div class="shop-panel-title">今日推荐</div>
+                  <div class="shop-panel-hint">手指向上滑到列表底部时可继续补货</div>
+                </div>
+              </div>
+              <div class="shop-items-list" id="shopItemsList"></div>
+            </div>
+            <div class="shop-cart-panel">
+              <div class="shop-panel-head">
+                <div>
+                  <div class="shop-panel-title">购物车</div>
+                  <div class="shop-panel-hint">可自己付款，也可转发请求付款</div>
+                </div>
+              </div>
+              <div class="shop-cart-list" id="shopCartList"></div>
+            </div>
+          </div>
+          <div class="shop-pay-panel">
+            <div class="shop-panel-head">
+              <div>
+                <div class="shop-panel-title">支付记录</div>
+                <div class="shop-panel-hint">这里会同步写入 &lt;pay&gt; 标签</div>
+              </div>
+            </div>
+            <div class="shop-pay-list" id="shopPayList"></div>
+          </div>
+        </div>
+      </div>
       <div class="more-actions-grid" id="moreActionsGrid">
         <div class="actions-grid-container">
           <div class="action-grid-item" id="imgBtn" title="图片">
@@ -9113,6 +9444,15 @@ https://i.postimg.cc/.../xxx.png"
         activeConversationIndex: 0,
         divinationChanges: '',
         diaryByFriend: {},
+        shopData: {
+          money: 0,
+          items: [],
+          payRecords: [],
+          cart: [],
+          lastGeneratedAt: '',
+          loading: false,
+          lastForwardTarget: null,
+        },
       };
 
       // AI消息分段渲染队列：用于“这条、下一条”逐条出现
@@ -9500,6 +9840,16 @@ function applyUserAvatar(avatarElement) {
 
       
       function parseInlineContentType(content) {
+        const paymentCardMatch = String(content || '').match(/^(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)$/);
+        if (paymentCardMatch) {
+          return {
+            type: 'payment-request',
+            paymentStatus: paymentCardMatch[1],
+            amount: normalizeShopMoney(paymentCardMatch[2]),
+            paymentSummary: sanitizeShopInlineField(paymentCardMatch[3]),
+            content,
+          };
+        }
         // Transfer
         const transferMatch = content.match(/^转账(\d+(?:\.\d+)?)元(?:\(给([^)]+)\))?(\(已处理\))?$/);
         if (transferMatch) {
@@ -9702,6 +10052,30 @@ function applyUserAvatar(avatarElement) {
             charName,
             avatar,
             amount: parseFloat(amount),
+            time,
+          }),
+        },
+        {
+          regex: /^\[我方消息\|(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)\|(\d{2}:\d{2})\]$/,
+          handler: ([, status, amount, summary, time]) => ({
+            sender: 'user',
+            type: 'payment-request',
+            paymentStatus: status,
+            amount: normalizeShopMoney(amount),
+            paymentSummary: sanitizeShopInlineField(summary),
+            time,
+          }),
+        },
+        {
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, avatar, status, amount, summary, time]) => ({
+            sender: 'char',
+            type: 'payment-request',
+            charName,
+            avatar,
+            paymentStatus: status,
+            amount: normalizeShopMoney(amount),
+            paymentSummary: sanitizeShopInlineField(summary),
             time,
           }),
         },
@@ -10032,6 +10406,8 @@ function applyUserAvatar(avatarElement) {
         cleaned = cleaned.replace(/<pyq>[\s\S]*?<\/pyq>/g, '');
         cleaned = cleaned.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
         cleaned = cleaned.replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '');
+        cleaned = cleaned.replace(/<shop>[\s\S]*?<\/shop>/gi, '');
+        cleaned = cleaned.replace(/<pay>[\s\S]*?<\/pay>/gi, '');
         cleaned = cleaned.replace(/^\s*同层朋友圈\s*$/gm, '');
         cleaned = cleaned.replace(/^\s*同层论坛\s*$/gm, '');
         cleaned = cleaned.replace(/<private>[\s\S]*?<\/private>/g, '');
@@ -10663,6 +11039,8 @@ function applyUserAvatar(avatarElement) {
         s = s.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
         s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
         s = s.replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '');
+        s = s.replace(/<shop>[\s\S]*?<\/shop>/gi, '');
+        s = s.replace(/<pay>[\s\S]*?<\/pay>/gi, '');
         s = s.replace(/<qunliao>[\s\S]*?<\/qunliao>/gi, '');
         s = s.replace(/<multi>[\s\S]*?<\/multi>/gi, '');
         s = s.replace(/<group>[\s\S]*?<\/group>/gi, '');
@@ -10829,7 +11207,7 @@ function applyUserAvatar(avatarElement) {
       }
       function sanitizeDivinationContent(raw) {
         let s = String(raw || '').replace(/\r/g, '').trim();
-        s = s.replace(/<\/?(shouji|private|qunliao|multi|group|pyq|forum|forun|changes|diary_store)>/gi, '');
+        s = s.replace(/<\/?(shouji|private|qunliao|multi|group|pyq|forum|forun|changes|diary_store|shop|pay)>/gi, '');
         s = s.replace(/<\/?post:\d+>/gi, '');
         s = s.replace(/\n{3,}/g, '\n\n').trim();
         return s;
@@ -10881,6 +11259,8 @@ function applyUserAvatar(avatarElement) {
         s = s.replace(/<pyq>[\s\S]*?<\/pyq>/gi, '');
         s = s.replace(/<forum>[\s\S]*?<\/foru?m>/gi, '');
         s = s.replace(/<diary_store>[\s\S]*?<\/diary_store>/gi, '');
+        s = s.replace(/<shop>[\s\S]*?<\/shop>/gi, '');
+        s = s.replace(/<pay>[\s\S]*?<\/pay>/gi, '');
         s = s.replace(/<qunliao>[\s\S]*?<\/qunliao>/gi, '');
         s = s.replace(/<multi>[\s\S]*?<\/multi>/gi, '');
         s = s.replace(/<group>[\s\S]*?<\/group>/gi, '');
@@ -11234,6 +11614,472 @@ function applyUserAvatar(avatarElement) {
           o.setAttribute('aria-hidden', 'true');
         }
         // 回到主屏
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'flex';
+      }
+
+      function setShopStatus(message) {
+        const el = document.getElementById('shopStatus');
+        if (el) el.textContent = String(message || '');
+      }
+
+      function buildShopLineSummary(cart) {
+        return summarizeShopCart(cart) || '购物车还是空的。';
+      }
+
+      function getConversationSelectionOptions() {
+        const options = [];
+        getPrivateConversations().forEach((conv, idx) => {
+          const name = String(conv && conv.name || '').trim();
+          if (!name) return;
+          options.push({ type: 'private', index: idx, name, label: `私聊：${name}` });
+        });
+        getGroupConversations().forEach((conv, idx) => {
+          const name = String(conv && conv.name || '').trim();
+          if (!name) return;
+          options.push({ type: 'group', index: idx, name, label: `群聊：${name}` });
+        });
+        return options;
+      }
+
+      function promptShopForwardTarget() {
+        const options = getConversationSelectionOptions();
+        if (!options.length) {
+          try { showToast('还没有可转发的私聊或群聊'); } catch (_) {}
+          return null;
+        }
+        const text = options.map((opt, idx) => `${idx + 1}. ${opt.label}`).join('\n');
+        const raw = prompt(`选择转发目标：\n${text}`, '1');
+        if (raw == null) return null;
+        const idx = parseInt(raw, 10) - 1;
+        if (!Number.isInteger(idx) || idx < 0 || idx >= options.length) {
+          try { showToast('选择无效'); } catch (_) {}
+          return null;
+        }
+        return options[idx];
+      }
+
+      function appendPaymentMessageToConversation(target, line) {
+        if (!target || !line) return false;
+        const msg = {
+          sender: 'user',
+          type: 'payment-request',
+          paymentStatus: line.status,
+          amount: normalizeShopMoney(line.amount),
+          paymentSummary: line.summary,
+          content: `${line.status}|${formatShopMoney(line.amount)}|${line.summary}`,
+          time: getTimeStr(),
+        };
+        if (target.type === 'group') {
+          const groups = getGroupConversations();
+          if (!groups[target.index]) return false;
+          if (!Array.isArray(groups[target.index].messages)) groups[target.index].messages = [];
+          groups[target.index].messages.push(msg);
+          if (state.groupChatMode && (state.currentGroupIndex || 0) === target.index) {
+            state.messageHistory = [...groups[target.index].messages];
+            renderAllMessages();
+          }
+          return true;
+        }
+        const privates = getPrivateConversations();
+        if (!privates[target.index]) return false;
+        if (!Array.isArray(privates[target.index].messages)) privates[target.index].messages = [];
+        privates[target.index].messages.push(msg);
+        if (!state.groupChatMode && (state.currentPrivateIndex || 0) === target.index) {
+          state.messageHistory = [...privates[target.index].messages];
+          renderAllMessages();
+        }
+        return true;
+      }
+
+      function addShopPayRecord(record, options = {}) {
+        const shop = getShopData();
+        const next = normalizeShopPayRecords([...(shop.payRecords || []), {
+          ...record,
+          id: record && record.id ? record.id : `shop_pay_${Date.now()}`,
+          time: record && record.time ? record.time : getFullTimeStr(),
+        }]);
+        setShopData({ payRecords: next }, options);
+      }
+
+      function clearShopCart(options = {}) {
+        setShopData({ cart: [] }, options);
+      }
+
+      function addShopItemToCart(itemId) {
+        const shop = getShopData();
+        const item = (shop.items || []).find(it => String(it.id) === String(itemId));
+        if (!item) return;
+        const cart = normalizeShopCartItems(shop.cart);
+        const existing = cart.find(it => String(it.itemId) === String(item.id));
+        if (existing) {
+          existing.qty += 1;
+        } else {
+          cart.push({
+            itemId: item.id,
+            name: item.name,
+            qty: 1,
+            price: item.price,
+          });
+        }
+        setShopData({ cart });
+      }
+
+      function changeShopCartQty(itemId, delta) {
+        const cart = normalizeShopCartItems(getShopData().cart);
+        const target = cart.find(it => String(it.itemId) === String(itemId));
+        if (!target) return;
+        target.qty = Math.max(0, target.qty + delta);
+        const next = cart.filter(it => it.qty > 0);
+        setShopData({ cart: next });
+      }
+
+      function createShopOrderSummary(cart) {
+        const items = normalizeShopCartItems(cart);
+        return items.map(it => `${it.name}x${it.qty}`).join('、');
+      }
+
+      function checkoutShopCart() {
+        const shop = getShopData();
+        const cart = normalizeShopCartItems(shop.cart);
+        if (!cart.length) {
+          try { showToast('购物车为空'); } catch (_) {}
+          return;
+        }
+        const total = calculateShopCartTotal(cart);
+        if (shop.money < total) {
+          try { showToast('余额不足'); } catch (_) {}
+          setShopStatus(`余额不足，当前余额 ¥${formatShopMoney(shop.money)}，购物车合计 ¥${formatShopMoney(total)}。`);
+          return;
+        }
+        const summary = createShopOrderSummary(cart);
+        setShopData({
+          money: normalizeShopMoney(shop.money - total),
+          cart: [],
+        });
+        addShopPayRecord({
+          status: '已购买',
+          amount: total,
+          summary,
+          time: getFullTimeStr(),
+        }, { skipRender: false, skipSync: false });
+        setShopStatus(`已完成付款：${summary}，扣除 ¥${formatShopMoney(total)}。`);
+      }
+
+      function forwardShopPaymentRequest(asPaid = false) {
+        const shop = getShopData();
+        const cart = normalizeShopCartItems(shop.cart);
+        if (!cart.length) {
+          try { showToast('购物车为空'); } catch (_) {}
+          return;
+        }
+        const target = promptShopForwardTarget();
+        if (!target) return;
+        const total = calculateShopCartTotal(cart);
+        const summary = createShopOrderSummary(cart);
+        const status = asPaid ? '已付款' : '待付款';
+        const ok = appendPaymentMessageToConversation(target, { status, amount: total, summary });
+        if (!ok) {
+          try { showToast('转发失败'); } catch (_) {}
+          return;
+        }
+        addShopPayRecord({
+          status,
+          amount: total,
+          summary,
+          targetType: target.type,
+          targetName: target.name,
+          time: getFullTimeStr(),
+        }, { skipRender: false, skipSync: false });
+        setShopData({ lastForwardTarget: { type: target.type, name: target.name } }, { skipRender: true, skipSync: false });
+        setShopStatus(`已转发到${target.type === 'group' ? '群聊' : '私聊'}「${target.name}」：${status} ¥${formatShopMoney(total)}。`);
+      }
+
+      function forwardShopRecordById(recordId) {
+        const shop = getShopData();
+        const record = normalizeShopPayRecords(shop.payRecords).find(it => String(it.id) === String(recordId));
+        if (!record) return;
+        const target = promptShopForwardTarget();
+        if (!target) return;
+        const status = record.status === '待付款' ? '待付款' : (record.status === '帮付款' ? '帮付款' : '已付款');
+        const ok = appendPaymentMessageToConversation(target, {
+          status,
+          amount: record.amount,
+          summary: record.summary,
+        });
+        if (!ok) {
+          try { showToast('转发失败'); } catch (_) {}
+          return;
+        }
+        setShopStatus(`已将记录转发到${target.type === 'group' ? '群聊' : '私聊'}「${target.name}」。`);
+        addShopPayRecord({
+          status,
+          amount: record.amount,
+          summary: record.summary,
+          targetType: target.type,
+          targetName: target.name,
+          time: getFullTimeStr(),
+        }, { skipRender: false, skipSync: false });
+      }
+
+      function parseShopGenerateOutput(raw) {
+        const text = String(raw || '').replace(/\r/g, '').trim();
+        if (!text) return { money: null, items: [] };
+        let money = null;
+        const items = [];
+        text.split('\n').map(s => s.trim()).filter(Boolean).forEach((line, idx) => {
+          const moneyMatch = line.match(/^\[money\|([^\]]+)\]$/i);
+          if (moneyMatch) {
+            money = normalizeShopMoney(moneyMatch[1]);
+            return;
+          }
+          const itemMatch = line.match(/^\[(.*?)\|(.*?)\|(.*?)\]$/);
+          if (!itemMatch) return;
+          const name = sanitizeShopInlineField(itemMatch[1]);
+          const price = normalizeShopMoney(itemMatch[2]);
+          const intro = sanitizeShopInlineField(itemMatch[3], '暂无简介');
+          if (!name) return;
+          items.push({
+            id: `shop_ai_${Date.now()}_${idx}`,
+            name,
+            price,
+            intro,
+            stock: 99,
+          });
+        });
+        return { money, items };
+      }
+
+      async function requestShopGenerate(mode = 'refresh') {
+        if (!AI_GENERATE_RAW) {
+          setShopStatus('未找到 generateRaw()，无法刷新商店。');
+          return;
+        }
+        const currentShop = getShopData();
+        if (currentShop.loading) return;
+        setShopData({ loading: true }, { skipRender: true, skipSync: true });
+        setShopStatus(mode === 'append' ? '正在让 AI 继续补货...' : '正在让 AI 刷新余额和商品...');
+        const currentItemsText = (currentShop.items || [])
+          .slice(0, 12)
+          .map(it => `${it.name}|${formatShopMoney(it.price)}|${it.intro}`)
+          .join('\n');
+        const promptText = [
+          '你正在输出一个“同层商店”数据块。',
+          '严格要求：只输出若干行，不要解释，不要代码块。',
+          '第一行必须是余额，格式为：[money|数字]',
+          '后面每一行必须是商品，格式为：[商品名字|价格|商品简介]',
+          '价格必须是纯数字，不要逗号，不要货币符号。',
+          '商品简介要短一点，适合淘宝风格。',
+          mode === 'append'
+            ? '你这次的目标是继续补充几件新商品，尽量不要和已有商品重复。'
+            : '你这次的目标是同时给出新的余额和几件商品。',
+          `当前余额参考：${formatShopMoney(currentShop.money)}`,
+          currentItemsText ? `已有商品（尽量别重复）：\n${currentItemsText}` : '',
+        ].filter(Boolean).join('\n');
+        try {
+          const rawRequestData = {
+            ordered_prompts: [
+              ...(state.jailbreakEnabled ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
+              'world_info_before',
+              'persona_description',
+              'char_description',
+              'char_personality',
+              'scenario',
+              'world_info_after',
+              'dialogue_examples',
+              'chat_history',
+              'user_input',
+            ],
+            user_input: promptText,
+            should_silence: true,
+            should_stream: true,
+          };
+          const stream = await generateraw(rawRequestData);
+          const outRaw = (await consumeTextStream(stream)).trim();
+          const parsed = parseShopGenerateOutput(outRaw);
+          if (!parsed.items.length && parsed.money == null) {
+            setShopStatus('AI 这次没有输出有效的商店格式，可以再试一次。');
+            return;
+          }
+          const existingItems = normalizeShopItems(currentShop.items);
+          const itemMap = new Map(existingItems.map(it => [String(it.name), it]));
+          if (mode === 'append') {
+            parsed.items.forEach((item) => {
+              if (!itemMap.has(String(item.name))) itemMap.set(String(item.name), item);
+            });
+          } else {
+            parsed.items.forEach((item) => itemMap.set(String(item.name), item));
+          }
+          setShopData({
+            money: parsed.money == null ? currentShop.money : parsed.money,
+            items: mode === 'append' ? [...itemMap.values()] : parsed.items,
+            lastGeneratedAt: getFullTimeStr(),
+            loading: false,
+          }, { skipRender: false, skipSync: false });
+          setShopStatus(mode === 'append' ? `已补充 ${parsed.items.length} 件商品。` : `已刷新余额和 ${parsed.items.length} 件商品。`);
+        } catch (e) {
+          setShopData({ loading: false }, { skipRender: true, skipSync: true });
+          setShopStatus('AI 商店生成失败，请稍后再试。');
+          try { if (state.debugEnabled) console.warn('shop generate error', e); } catch (_) {}
+        } finally {
+          setShopData({ loading: false }, { skipRender: true, skipSync: true });
+          try { renderShopOverlay(); } catch (_) {}
+        }
+      }
+
+      function renderShopOverlay() {
+        const shop = getShopData();
+        const moneyEl = document.getElementById('shopMoneyAmount');
+        const hintEl = document.getElementById('shopGeneratedHint');
+        const totalEl = document.getElementById('shopCartTotal');
+        const summaryEl = document.getElementById('shopCartSummary');
+        const itemsList = document.getElementById('shopItemsList');
+        const cartList = document.getElementById('shopCartList');
+        const payList = document.getElementById('shopPayList');
+        if (moneyEl) moneyEl.textContent = `¥${formatShopMoney(shop.money)}`;
+        if (hintEl) hintEl.textContent = shop.lastGeneratedAt
+          ? `最近一次生成：${shop.lastGeneratedAt}`
+          : '上滑商品区可让 AI 同时刷新余额和商品。';
+        if (totalEl) totalEl.textContent = `¥${formatShopMoney(calculateShopCartTotal(shop.cart))}`;
+        if (summaryEl) summaryEl.textContent = buildShopLineSummary(shop.cart);
+        if (itemsList) {
+          if (!shop.items.length) {
+            itemsList.innerHTML = '<div class="shop-empty">还没有商品，点右上角“补货”或点“余额”先让 AI 生成一批。</div>';
+          } else {
+            itemsList.innerHTML = shop.items.map(item => `
+              <div class="shop-item-card" data-item-id="${item.id}">
+                <div class="shop-item-top">
+                  <div class="shop-item-name">${item.name}</div>
+                  <div class="shop-item-price">¥${formatShopMoney(item.price)}</div>
+                </div>
+                <div class="shop-item-intro">${item.intro}</div>
+                <div class="shop-item-actions">
+                  <span class="shop-qty-box">库存 ${item.stock}</span>
+                  <button class="shop-btn primary" data-shop-add="${item.id}" type="button">加入购物车</button>
+                </div>
+              </div>
+            `).join('');
+          }
+        }
+        if (cartList) {
+          const cart = normalizeShopCartItems(shop.cart);
+          if (!cart.length) {
+            cartList.innerHTML = '<div class="shop-empty">先从左边加点商品进购物车吧。</div>';
+          } else {
+            cartList.innerHTML = cart.map(item => `
+              <div class="shop-cart-entry" data-cart-item="${item.itemId}">
+                <div class="shop-cart-entry-head">
+                  <div class="shop-cart-entry-name">${item.name} x${item.qty}</div>
+                  <div class="shop-cart-entry-price">¥${formatShopMoney(item.price * item.qty)}</div>
+                </div>
+                <div class="shop-cart-entry-meta">单价 ¥${formatShopMoney(item.price)}</div>
+                <div class="shop-cart-entry-actions">
+                  <button class="shop-btn" data-shop-minus="${item.itemId}" type="button">-1</button>
+                  <button class="shop-btn" data-shop-plus="${item.itemId}" type="button">+1</button>
+                  <button class="shop-btn" data-shop-remove="${item.itemId}" type="button">移除</button>
+                </div>
+              </div>
+            `).join('') + `
+              <div class="shop-checkout-actions">
+                <button class="shop-btn primary" id="shopCheckoutBtn" type="button">自己付款</button>
+                <button class="shop-btn" id="shopForwardPendingBtn" type="button">转发请求付款</button>
+                <button class="shop-btn" id="shopForwardPaidBtn" type="button">转发已付款</button>
+              </div>
+            `;
+          }
+        }
+        if (payList) {
+          if (!shop.payRecords.length) {
+            payList.innerHTML = '<div class="shop-empty">还没有付款记录。</div>';
+          } else {
+            payList.innerHTML = [...shop.payRecords].reverse().map(record => `
+              <div class="shop-pay-entry">
+                <div class="shop-pay-entry-head">
+                  <div class="shop-pay-entry-status">${record.status}</div>
+                  <div class="shop-pay-entry-amount">¥${formatShopMoney(record.amount)}</div>
+                </div>
+                <div class="shop-pay-entry-summary">${record.summary}${record.targetName ? `\n目标：${record.targetName}` : ''}${record.time ? `\n时间：${record.time}` : ''}</div>
+                <div class="shop-cart-entry-actions">
+                  <button class="shop-btn" data-shop-forward-record="${record.id}" type="button">转发这条记录</button>
+                </div>
+              </div>
+            `).join('');
+          }
+        }
+        if (itemsList && !itemsList.dataset.shopBound) {
+          itemsList.dataset.shopBound = '1';
+          itemsList.addEventListener('click', (e) => {
+            const addBtn = e.target && e.target.closest('[data-shop-add]');
+            if (addBtn) {
+              addShopItemToCart(addBtn.getAttribute('data-shop-add'));
+              return;
+            }
+          });
+          itemsList.addEventListener('scroll', () => {
+            if (getShopData().loading) return;
+            if (itemsList.scrollTop + itemsList.clientHeight >= itemsList.scrollHeight - 20) {
+              requestShopGenerate('append');
+            }
+          }, { passive: true });
+          let touchStartY = 0;
+          itemsList.addEventListener('touchstart', (e) => {
+            const t = e.touches && e.touches[0];
+            if (t) touchStartY = t.clientY;
+          }, { passive: true });
+          itemsList.addEventListener('touchend', (e) => {
+            const t = e.changedTouches && e.changedTouches[0];
+            if (!t) return;
+            const dy = touchStartY - t.clientY;
+            if (dy > 36 && !getShopData().loading && itemsList.scrollTop + itemsList.clientHeight >= itemsList.scrollHeight - 24) {
+              requestShopGenerate('append');
+            }
+          }, { passive: true });
+        }
+        if (cartList && !cartList.dataset.shopBound) {
+          cartList.dataset.shopBound = '1';
+          cartList.addEventListener('click', (e) => {
+            const minusBtn = e.target && e.target.closest('[data-shop-minus]');
+            if (minusBtn) return changeShopCartQty(minusBtn.getAttribute('data-shop-minus'), -1);
+            const plusBtn = e.target && e.target.closest('[data-shop-plus]');
+            if (plusBtn) return changeShopCartQty(plusBtn.getAttribute('data-shop-plus'), 1);
+            const removeBtn = e.target && e.target.closest('[data-shop-remove]');
+            if (removeBtn) {
+              const itemId = removeBtn.getAttribute('data-shop-remove');
+              const cart = normalizeShopCartItems(getShopData().cart).filter(it => String(it.itemId) !== String(itemId));
+              return setShopData({ cart });
+            }
+            if (e.target && e.target.id === 'shopCheckoutBtn') return checkoutShopCart();
+            if (e.target && e.target.id === 'shopForwardPendingBtn') return forwardShopPaymentRequest(false);
+            if (e.target && e.target.id === 'shopForwardPaidBtn') return forwardShopPaymentRequest(true);
+          });
+        }
+        if (payList && !payList.dataset.shopBound) {
+          payList.dataset.shopBound = '1';
+          payList.addEventListener('click', (e) => {
+            const btn = e.target && e.target.closest('[data-shop-forward-record]');
+            if (btn) forwardShopRecordById(btn.getAttribute('data-shop-forward-record'));
+          });
+        }
+      }
+
+      function openShopOverlay() {
+        const homeOverlay = document.getElementById('homeOverlay');
+        if (homeOverlay) homeOverlay.style.display = 'none';
+        const overlay = document.getElementById('shopOverlay');
+        if (overlay) {
+          overlay.style.display = 'flex';
+          overlay.setAttribute('aria-hidden', 'false');
+        }
+        renderShopOverlay();
+        try { if (typeof deferredSync === 'function') deferredSync(0); } catch (_) {}
+      }
+
+      function closeShopOverlay() {
+        const overlay = document.getElementById('shopOverlay');
+        if (overlay) {
+          overlay.style.display = 'none';
+          overlay.setAttribute('aria-hidden', 'true');
+        }
         const homeOverlay = document.getElementById('homeOverlay');
         if (homeOverlay) homeOverlay.style.display = 'flex';
       }
@@ -12524,6 +13370,254 @@ function applyUserAvatar(avatarElement) {
           const merged = [body, diary].filter(Boolean).join('\n\n');
           return `<shouji>\n${merged}\n</shouji>`;
         });
+      }
+
+      function sanitizeShopInlineField(raw, fallback = '') {
+        let s = String(raw || '').trim();
+        s = s.replace(/[\r\n]/g, ' ');
+        s = s.replace(/\|/g, '｜');
+        s = s.replace(/[\[\]]/g, '');
+        return s || String(fallback || '').trim();
+      }
+
+      function normalizeShopMoney(value) {
+        const raw = String(value == null ? '' : value).replace(/,/g, '').trim();
+        if (!raw) return 0;
+        const num = Number(raw);
+        if (!Number.isFinite(num)) return 0;
+        return Math.max(0, Number(num.toFixed(2)));
+      }
+
+      function formatShopMoney(value) {
+        return normalizeShopMoney(value).toFixed(2).replace(/\.00$/, '');
+      }
+
+      function normalizeShopCartItems(cart) {
+        const list = Array.isArray(cart) ? cart : [];
+        return list
+          .map((it) => {
+            const itemId = sanitizeShopInlineField(it && it.itemId ? it.itemId : '');
+            const name = sanitizeShopInlineField(it && it.name ? it.name : '');
+            const qtyNum = Math.max(1, parseInt(it && it.qty, 10) || 1);
+            const price = normalizeShopMoney(it && it.price);
+            if (!name) return null;
+            return { itemId, name, qty: qtyNum, price };
+          })
+          .filter(Boolean);
+      }
+
+      function normalizeShopItems(items) {
+        const list = Array.isArray(items) ? items : [];
+        return list
+          .map((it, idx) => {
+            const name = sanitizeShopInlineField(it && it.name ? it.name : '');
+            if (!name) return null;
+            const price = normalizeShopMoney(it && it.price);
+            const intro = sanitizeShopInlineField(it && it.intro ? it.intro : '暂无简介');
+            const stock = Math.max(0, parseInt(it && it.stock, 10) || 99);
+            const id = sanitizeShopInlineField(it && it.id ? it.id : `shop_item_${Date.now()}_${idx}`);
+            return { id, name, price, intro, stock };
+          })
+          .filter(Boolean);
+      }
+
+      function normalizeShopPayRecords(records) {
+        const list = Array.isArray(records) ? records : [];
+        return list
+          .map((it, idx) => {
+            const status = sanitizeShopInlineField(it && it.status ? it.status : '已购买');
+            const amount = normalizeShopMoney(it && it.amount);
+            const summary = sanitizeShopInlineField(it && it.summary ? it.summary : '');
+            const targetType = sanitizeShopInlineField(it && it.targetType ? it.targetType : '');
+            const targetName = sanitizeShopInlineField(it && it.targetName ? it.targetName : '');
+            const time = sanitizeShopInlineField(it && it.time ? it.time : '');
+            const id = sanitizeShopInlineField(it && it.id ? it.id : `shop_pay_${Date.now()}_${idx}`);
+            if (!summary) return null;
+            return { id, status, amount, summary, targetType, targetName, time };
+          })
+          .filter(Boolean);
+      }
+
+      function normalizeShopData(data) {
+        const input = data && typeof data === 'object' ? data : {};
+        return {
+          money: normalizeShopMoney(input.money),
+          items: normalizeShopItems(input.items),
+          payRecords: normalizeShopPayRecords(input.payRecords),
+          cart: normalizeShopCartItems(input.cart),
+          lastGeneratedAt: sanitizeShopInlineField(input.lastGeneratedAt || ''),
+          loading: !!input.loading,
+          lastForwardTarget: input.lastForwardTarget && typeof input.lastForwardTarget === 'object'
+            ? {
+                type: sanitizeShopInlineField(input.lastForwardTarget.type || ''),
+                name: sanitizeShopInlineField(input.lastForwardTarget.name || ''),
+              }
+            : null,
+        };
+      }
+
+      function summarizeShopCart(cart) {
+        const normalized = normalizeShopCartItems(cart);
+        if (!normalized.length) return '';
+        return normalized.map((it) => `${it.name}x${it.qty}`).join('、');
+      }
+
+      function calculateShopCartTotal(cart) {
+        const normalized = normalizeShopCartItems(cart);
+        return normalized.reduce((sum, it) => sum + normalizeShopMoney(it.price) * Math.max(1, parseInt(it.qty, 10) || 1), 0);
+      }
+
+      function serializeShopToTag(shopData) {
+        const shop = normalizeShopData(shopData);
+        const lines = ['<shop>'];
+        lines.push(`[money|${formatShopMoney(shop.money)}]`);
+        shop.items.forEach((item) => {
+          lines.push(`[${sanitizeShopInlineField(item.name)}|${formatShopMoney(item.price)}|${sanitizeShopInlineField(item.intro)}]`);
+        });
+        lines.push('</shop>');
+        return lines.join('\n');
+      }
+
+      function serializeShopPayToTag(records) {
+        const list = normalizeShopPayRecords(records);
+        if (!list.length) return '';
+        const lines = ['<pay>'];
+        list.forEach((record) => {
+          lines.push(`[${sanitizeShopInlineField(record.status)}|${formatShopMoney(record.amount)}|${sanitizeShopInlineField(record.summary)}]`);
+        });
+        lines.push('</pay>');
+        return lines.join('\n');
+      }
+
+      function parseShopFromShouji(rawText) {
+        const msg = ensureShoujiWrapper(rawText);
+        const shoujiMatch = msg.match(/<shouji>([\s\S]*?)<\/shouji>/i);
+        if (!shoujiMatch) return normalizeShopData({});
+        const inner = String(shoujiMatch[1] || '');
+        const lower = inner.toLowerCase();
+        const startIdx = lower.indexOf('<shop>');
+        const endIdx = lower.lastIndexOf('</shop>');
+        if (startIdx < 0 || endIdx < 0 || endIdx <= startIdx) return normalizeShopData({});
+        const body = inner.slice(startIdx + '<shop>'.length, endIdx).trim();
+        const lines = body.split('\n').map(s => String(s || '').trim()).filter(Boolean);
+        let money = 0;
+        const items = [];
+        lines.forEach((line, idx) => {
+          const mm = line.match(/^\[money\|([^\]]+)\]$/i);
+          if (mm) {
+            money = normalizeShopMoney(mm[1]);
+            return;
+          }
+          const m = line.match(/^\[(.*?)\|(.*?)\|(.*?)\]$/);
+          if (!m) return;
+          const name = sanitizeShopInlineField(m[1]);
+          const price = normalizeShopMoney(m[2]);
+          const intro = sanitizeShopInlineField(m[3], '暂无简介');
+          if (!name) return;
+          items.push({
+            id: `shop_item_loaded_${idx}_${name}`,
+            name,
+            price,
+            intro,
+            stock: 99,
+          });
+        });
+        return normalizeShopData({ money, items, payRecords: [] });
+      }
+
+      function parseShopPayFromShouji(rawText) {
+        const msg = ensureShoujiWrapper(rawText);
+        const shoujiMatch = msg.match(/<shouji>([\s\S]*?)<\/shouji>/i);
+        if (!shoujiMatch) return [];
+        const inner = String(shoujiMatch[1] || '');
+        const lower = inner.toLowerCase();
+        const startIdx = lower.indexOf('<pay>');
+        const endIdx = lower.lastIndexOf('</pay>');
+        if (startIdx < 0 || endIdx < 0 || endIdx <= startIdx) return [];
+        const body = inner.slice(startIdx + '<pay>'.length, endIdx).trim();
+        const lines = body.split('\n').map(s => String(s || '').trim()).filter(Boolean);
+        const records = [];
+        lines.forEach((line, idx) => {
+          const m = line.match(/^\[(.*?)\|(.*?)\|(.*?)\]$/);
+          if (!m) return;
+          const status = sanitizeShopInlineField(m[1], '已购买');
+          const amount = normalizeShopMoney(m[2]);
+          const summary = sanitizeShopInlineField(m[3]);
+          if (!summary) return;
+          records.push({
+            id: `shop_pay_loaded_${idx}_${status}`,
+            status,
+            amount,
+            summary,
+            targetType: '',
+            targetName: '',
+            time: '',
+          });
+        });
+        return normalizeShopPayRecords(records);
+      }
+
+      function upsertShopIntoShoujiMessage(shoujiMessageText, shopText) {
+        const msg = ensureShoujiWrapper(shoujiMessageText);
+        const shop = String(shopText || '').trim();
+        return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/i, (_m, inner) => {
+          let body = String(inner || '');
+          try {
+            const lower = body.toLowerCase();
+            const s = lower.indexOf('<shop>');
+            const e = lower.lastIndexOf('</shop>');
+            if (s >= 0 && e >= 0 && e > s) {
+              body = body.slice(0, s) + body.slice(e + '</shop>'.length);
+            } else {
+              body = body.replace(/<shop>[\s\S]*?<\/shop>/gi, '');
+            }
+          } catch (_) {
+            body = body.replace(/<shop>[\s\S]*?<\/shop>/gi, '');
+          }
+          body = body.trim();
+          const merged = [body, shop].filter(Boolean).join('\n\n');
+          return `<shouji>\n${merged}\n</shouji>`;
+        });
+      }
+
+      function upsertShopPayIntoShoujiMessage(shoujiMessageText, payText) {
+        const msg = ensureShoujiWrapper(shoujiMessageText);
+        const pay = String(payText || '').trim();
+        return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/i, (_m, inner) => {
+          let body = String(inner || '');
+          try {
+            const lower = body.toLowerCase();
+            const s = lower.indexOf('<pay>');
+            const e = lower.lastIndexOf('</pay>');
+            if (s >= 0 && e >= 0 && e > s) {
+              body = body.slice(0, s) + body.slice(e + '</pay>'.length);
+            } else {
+              body = body.replace(/<pay>[\s\S]*?<\/pay>/gi, '');
+            }
+          } catch (_) {
+            body = body.replace(/<pay>[\s\S]*?<\/pay>/gi, '');
+          }
+          body = body.trim();
+          const merged = [body, pay].filter(Boolean).join('\n\n');
+          return `<shouji>\n${merged}\n</shouji>`;
+        });
+      }
+
+      function getShopData() {
+        state.shopData = normalizeShopData(state.shopData);
+        return state.shopData;
+      }
+
+      function setShopData(nextData, options = {}) {
+        const merged = normalizeShopData({ ...getShopData(), ...(nextData || {}) });
+        state.shopData = merged;
+        if (!options.skipRender) {
+          try { if (typeof renderShopOverlay === 'function') renderShopOverlay(); } catch (_) {}
+        }
+        if (!options.skipSync) {
+          try { if (typeof deferredSync === 'function') deferredSync(options.syncDelay == null ? 80 : options.syncDelay); } catch (_) {}
+        }
+        return merged;
       }
 
       function getDiaryEntriesByFriend(friendName) {
@@ -13827,6 +14921,14 @@ function applyUserAvatar(avatarElement) {
               ? `[我方消息|${m.locationText}|${m.time}]`
               : `[${nameForOther}|${m.avatar || ''}|${m.locationText}|${m.time}]`;
           }
+          else if (m.type === 'payment-request') {
+            const status = sanitizeShopInlineField(m.paymentStatus || '待付款');
+            const amount = formatShopMoney(m.amount || 0);
+            const summary = sanitizeShopInlineField(m.paymentSummary || m.content || '');
+            return m.sender === 'user'
+              ? `[我方消息|${status}|${amount}|${summary}|${m.time}]`
+              : `[${nameForOther}|${m.avatar || ''}|${status}|${amount}|${summary}|${m.time}]`;
+          }
 
           // 撤回消息
           else if (m.type === 'retracted') {
@@ -14923,6 +16025,27 @@ function applyUserAvatar(avatarElement) {
         `;
       }
 
+      function renderPaymentRequestMessage(contentDiv, msg) {
+        const status = sanitizeShopInlineField(msg.paymentStatus || '待付款');
+        const amount = formatShopMoney(msg.amount || 0);
+        const summary = sanitizeShopInlineField(msg.paymentSummary || msg.content || '');
+        const isHelpPay = status === '帮付款';
+        const isDone = status === '已付款' || status === '已购买';
+        const accent = isHelpPay ? '#3b82f6' : (isDone ? '#16a34a' : '#ff7a1a');
+        contentDiv.style.background = '#fffaf6';
+        contentDiv.style.border = `1px solid ${accent}33`;
+        contentDiv.style.borderRadius = '16px';
+        contentDiv.style.boxShadow = `0 6px 18px ${accent}18`;
+        contentDiv.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div style="font-size:14px;font-weight:700;color:${accent};">${status}</div>
+            <div style="font-size:16px;font-weight:800;color:${accent};">¥${amount}</div>
+          </div>
+          <div style="margin-top:8px;font-size:12px;line-height:1.5;color:#6e4b2d;white-space:pre-wrap;word-break:break-word;">${summary}</div>
+          <div style="margin-top:8px;font-size:11px;color:#aa7a52;">${isHelpPay ? '对方正在帮你付款' : (isDone ? '付款状态已完成' : '等待付款中')}</div>
+        `;
+      }
+
 
 
       const messageRenderers = {
@@ -14943,6 +16066,7 @@ function applyUserAvatar(avatarElement) {
         file: renderFileMessage,
         document: renderFileMessage, // 文档消息也使用 renderFileMessage，内部会自动判断类型
         location: renderLocationMessage,
+        'payment-request': renderPaymentRequestMessage,
       };
 
       // 检查消息中是否包含图片URL并提取
@@ -23621,6 +24745,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const pyqText = serializeMomentsToPyq(state.moments);
         const forumText = serializeForumToForum(state.forum);
         const diaryText = serializeDiaryStoreToDiaryTag(state.diaryByFriend);
+        const shopText = serializeShopToTag(getShopData());
+        const shopPayText = serializeShopPayToTag(getShopData().payRecords);
         const divinationText = sanitizeDivinationContent(state.divinationChanges || '');
 
         // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
@@ -23639,6 +24765,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
               messageToSave = upsertForumIntoShoujiMessage(messageToSave, forumText);
               messageToSave = upsertDiaryIntoShoujiMessage(messageToSave, diaryText);
+              messageToSave = upsertShopIntoShoujiMessage(messageToSave, shopText);
+              messageToSave = upsertShopPayIntoShoujiMessage(messageToSave, shopPayText);
             } catch (_) {}
             const changesToSave = divinationText || preservedChanges;
             if (changesToSave) {
@@ -23667,6 +24795,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           let updated = upsertPyqIntoShoujiMessage(updatedCore, pyqText);
           updated = upsertForumIntoShoujiMessage(updated, forumText);
           updated = upsertDiaryIntoShoujiMessage(updated, diaryText);
+          updated = upsertShopIntoShoujiMessage(updated, shopText);
+          updated = upsertShopPayIntoShoujiMessage(updated, shopPayText);
           const preservedChanges = extractChangesContentFromMessage(raw);
           const changesToSave = divinationText || preservedChanges;
           if (changesToSave) {
@@ -23683,6 +24813,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
             messageToSave = upsertForumIntoShoujiMessage(messageToSave, forumText);
             messageToSave = upsertDiaryIntoShoujiMessage(messageToSave, diaryText);
+            messageToSave = upsertShopIntoShoujiMessage(messageToSave, shopText);
+            messageToSave = upsertShopPayIntoShoujiMessage(messageToSave, shopPayText);
           } catch (_) {}
           if (divinationText) {
             messageToSave = upsertChangesIntoShoujiMessage(messageToSave, divinationText);
@@ -23748,6 +24880,19 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               saveDiaryStore(mergedDiary);
             } catch (_) {
               state.diaryByFriend = loadDiaryStore();
+            }
+            try {
+              const shopFromMsg = parseShopFromShouji(msg.message);
+              const payRecords = parseShopPayFromShouji(msg.message);
+              state.shopData = normalizeShopData({
+                ...state.shopData,
+                ...shopFromMsg,
+                payRecords,
+                cart: Array.isArray(state.shopData && state.shopData.cart) ? state.shopData.cart : [],
+                loading: false,
+              });
+            } catch (_) {
+              state.shopData = normalizeShopData(state.shopData);
             }
              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
              const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
@@ -23871,7 +25016,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
            state.forum = [];
            state.diaryByFriend = loadDiaryStore();
            state.divinationChanges = '';
-            state.groupChatMode = false;
+           state.shopData = normalizeShopData(state.shopData);
+             state.groupChatMode = false;
             state.friendsPanelMode = 'friend';
             state.roleGroupMode = false;
             setRoleGroupInputLock(false);
@@ -28506,6 +29652,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         const showHome = () => {
           try { if (typeof closeDiaryPanel === 'function') closeDiaryPanel(); } catch (_) {}
+          try { if (typeof closeShopOverlay === 'function') closeShopOverlay(); } catch (_) {}
           if (homeOverlay) homeOverlay.style.display = 'flex';
         };
         const openChat = () => {
@@ -28532,7 +29679,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           } catch (_) {}
           return placeholder('论坛')();
         });
-        if (appStore) appStore.addEventListener('click', placeholder('商店'));
+        if (appStore) appStore.addEventListener('click', () => {
+          try {
+            if (typeof openShopOverlay === 'function') return openShopOverlay();
+          } catch (_) {}
+          return placeholder('商店')();
+        });
         if (appMusic) appMusic.addEventListener('click', placeholder('音乐'));
         if (appDivination) appDivination.addEventListener('click', () => {
           try {
@@ -28589,6 +29741,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const divinationBackBtn = document.getElementById('divinationBackBtn');
           const divinationCastBtn = document.getElementById('divinationCastBtn');
           const divinationAskBtn = document.getElementById('divinationAskBtn');
+          const shopBackBtn = document.getElementById('shopBackBtn');
+          const shopMoreBtn = document.getElementById('shopMoreBtn');
+          const shopRefreshMoneyBtn = document.getElementById('shopRefreshMoneyBtn');
 
           const openChat = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
@@ -28600,6 +29755,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             try { if (typeof closeForumPanel === 'function') closeForumPanel(); } catch (_) {}
             try { if (typeof closeDivinationPanel === 'function') closeDivinationPanel(); } catch (_) {}
             try { if (typeof closeDiaryPanel === 'function') closeDiaryPanel(); } catch (_) {}
+            try { if (typeof closeShopOverlay === 'function') closeShopOverlay(); } catch (_) {}
             if (homeOverlay) homeOverlay.style.display = 'flex';
           };
 
@@ -28615,7 +29771,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             try { if (typeof openForumPanel === 'function') return openForumPanel(); } catch(_) {}
             showToastSafe('论坛 功能暂未开放');
           };
-          if (appStore) appStore.onclick = () => showToastSafe('商店 功能暂未开放');
+          if (appStore) appStore.onclick = () => {
+            try { if (typeof openShopOverlay === 'function') return openShopOverlay(); } catch(_) {}
+            showToastSafe('商店 功能暂未开放');
+          };
           if (appMusic) appMusic.onclick = () => {
             try { if (typeof openMusicPanel === 'function') return openMusicPanel(); } catch(_) {}
             showToastSafe('音乐 功能暂未开放');
@@ -28631,6 +29790,16 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           if (appSettings) appSettings.onclick = () => {
             if (homeOverlay) homeOverlay.style.display = 'none';
             try { if (typeof showSettings === 'function') showSettings(); } catch(_) {}
+          };
+          if (shopBackBtn) shopBackBtn.onclick = () => {
+            try { if (typeof closeShopOverlay === 'function') return closeShopOverlay(); } catch(_) {}
+            if (homeOverlay) homeOverlay.style.display = 'flex';
+          };
+          if (shopMoreBtn) shopMoreBtn.onclick = () => {
+            try { if (typeof requestShopGenerate === 'function') return requestShopGenerate('append'); } catch(_) {}
+          };
+          if (shopRefreshMoneyBtn) shopRefreshMoneyBtn.onclick = () => {
+            try { if (typeof requestShopGenerate === 'function') return requestShopGenerate('refresh'); } catch(_) {}
           };
 
           // 朋友圈覆盖层按钮
