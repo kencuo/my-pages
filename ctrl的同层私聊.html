@@ -12071,6 +12071,13 @@ function applyUserAvatar(avatarElement) {
           overlay.setAttribute('aria-hidden', 'false');
         }
         renderShopOverlay();
+        const shop = getShopData();
+        if (Array.isArray(shop.items) && shop.items.length > 0) {
+          setShopStatus(`已载入 ${shop.items.length} 件商品。`);
+        } else if (!shop.loading) {
+          setShopStatus('还没有可见商品，正在自动补货...');
+          try { requestShopGenerate('refresh'); } catch (_) {}
+        }
         try { if (typeof deferredSync === 'function') deferredSync(0); } catch (_) {}
       }
 
@@ -13608,9 +13615,34 @@ function applyUserAvatar(avatarElement) {
         return state.shopData;
       }
 
+      function getShopStorageKey() {
+        const c = getCurrentCharacterInfo();
+        return `${SHOP_LS_PREFIX}_${c.source}_${c.id}`;
+      }
+
+      function loadShopDataLegacy() {
+        try {
+          const raw = localStorage.getItem(getShopStorageKey());
+          if (!raw) return normalizeShopData({});
+          return normalizeShopData(JSON.parse(raw));
+        } catch (e) {
+          console.warn('加载商店缓存失败', e);
+          return normalizeShopData({});
+        }
+      }
+
+      function saveShopDataLegacy(data) {
+        try {
+          localStorage.setItem(getShopStorageKey(), JSON.stringify(normalizeShopData(data)));
+        } catch (e) {
+          console.warn('保存商店缓存失败', e);
+        }
+      }
+
       function setShopData(nextData, options = {}) {
         const merged = normalizeShopData({ ...getShopData(), ...(nextData || {}) });
         state.shopData = merged;
+        if (!options.skipPersist) saveShopDataLegacy(merged);
         if (!options.skipRender) {
           try { if (typeof renderShopOverlay === 'function') renderShopOverlay(); } catch (_) {}
         }
@@ -20472,6 +20504,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       const EXTENSION_DIARY_KEY = 'tavern_helper_diary_v1';
       const PRIVATE_CHAT_STYLE_LS_KEY = 'tavern_private_chat_styles_v1';
       const DIARY_LS_KEY = 'tavern_diary_v1';
+      const SHOP_LS_PREFIX = 'tavern_shop_v1';
 
       function getSillyContextSafe() {
         try {
@@ -24884,15 +24917,25 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             try {
               const shopFromMsg = parseShopFromShouji(msg.message);
               const payRecords = parseShopPayFromShouji(msg.message);
+              const shopFromStore = loadShopDataLegacy();
+              const resolvedShop = (Array.isArray(shopFromMsg.items) && shopFromMsg.items.length)
+                ? shopFromMsg
+                : shopFromStore;
+              const resolvedPayRecords = Array.isArray(payRecords) && payRecords.length
+                ? payRecords
+                : (Array.isArray(shopFromStore.payRecords) ? shopFromStore.payRecords : []);
               state.shopData = normalizeShopData({
-                ...state.shopData,
-                ...shopFromMsg,
-                payRecords,
-                cart: Array.isArray(state.shopData && state.shopData.cart) ? state.shopData.cart : [],
+                ...shopFromStore,
+                ...resolvedShop,
+                payRecords: resolvedPayRecords,
+                cart: Array.isArray(shopFromStore && shopFromStore.cart) && shopFromStore.cart.length
+                  ? shopFromStore.cart
+                  : (Array.isArray(state.shopData && state.shopData.cart) ? state.shopData.cart : []),
                 loading: false,
               });
+              saveShopDataLegacy(state.shopData);
             } catch (_) {
-              state.shopData = normalizeShopData(state.shopData);
+              state.shopData = loadShopDataLegacy();
             }
              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
              const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
@@ -25016,7 +25059,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
            state.forum = [];
            state.diaryByFriend = loadDiaryStore();
            state.divinationChanges = '';
-           state.shopData = normalizeShopData(state.shopData);
+           state.shopData = loadShopDataLegacy();
              state.groupChatMode = false;
             state.friendsPanelMode = 'friend';
             state.roleGroupMode = false;
@@ -25097,6 +25140,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           try { if (typeof initDivinationPanel === 'function') initDivinationPanel(); } catch (_) {}
           try { if (typeof initForumPanel === 'function') initForumPanel(); } catch (_) {}
           try { if (typeof initDiaryPanel === 'function') initDiaryPanel(); } catch (_) {}
+          try { state.shopData = loadShopDataLegacy(); } catch (_) {}
 
           // iOS-like home overlay (clock/dock)
           try { if (typeof initIosHomeScreen === 'function') initIosHomeScreen(); } catch (_) {}
