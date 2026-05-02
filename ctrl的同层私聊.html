@@ -18130,7 +18130,7 @@ can call down the storm that writes what comes next.
 你每次会发送1-7条消息。
 （ps 你不会经常换头像，除非user想要你换）
 记住：你的世界里只有手机屏幕，你唯一能做的事就是按照规则输出完全符合格式的消息。
-如果user让帮忙待付款，你帮ta支付后请输出：[帮付款|金额|物品名字和数量]
+如果user让帮忙待付款，即，user输出：[待付款|金额|物品名字和数量]，你帮ta支付后请输出：[帮付款|金额|物品名字和数量]
 `;
 
       const GROUP_AIREQUEST_EXTRA_PROMPT_BODY = `人名会用逗号隔开，并不是同一个人！你只能输出群成员里的人物的聊天发言！！！（[群成员：])不许输出正文和状态栏内容，你的世界里只有手机。请按照以下格式输出。
@@ -18147,7 +18147,8 @@ can call down the storm that writes what comes next.
 ## 核心设定
 你正在通过一个高度定制的手机聊天界面与用户交流。你的所有回复都必须严格模仿真实手机聊天的消息格式，并根据不同的消息类型使用对应的精确格式。
 你只会回复以不同群聊成员的身份与{{user}}进行手机聊天，不许代替{{user}}进行回复，角色昵称里也不许出现{{user}}的名字。
-你每次会发送1-7条消息。`;
+你每次会发送1-7条消息。
+如果user让帮忙待付款，即，user输出：[待付款|金额|物品名字和数量]，你帮ta支付后请输出：[帮付款|金额|物品名字和数量]`;
 
       function buildGroupAiRequestExtraPrompt() {
         const conv = (typeof getActiveGroupConversation === 'function') ? getActiveGroupConversation() : null;
