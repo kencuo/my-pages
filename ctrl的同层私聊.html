@@ -7178,7 +7178,10 @@
         <div class="moments-header">
           <button class="moments-btn" id="momentsBackBtn" title="返回">←</button>
           <div class="moments-title">朋友圈</div>
-          <button class="moments-btn" id="momentsAiBtn" title="AI">对方</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="moments-btn" id="momentsClearBtn" title="清空">清空</button>
+            <button class="moments-btn" id="momentsAiBtn" title="AI">对方</button>
+          </div>
         </div>
         <div class="moments-list" id="momentsList"></div>
         <button class="moments-time-fab" id="momentsTimeBtn" title="自定义时间">🕐</button>
@@ -7663,7 +7666,10 @@
         <div class="diary-header">
           <button class="diary-btn" id="diaryBackBtn" title="返回">←</button>
           <div class="diary-title">日记</div>
-          <button class="diary-btn primary" id="diaryAiBtn" title="AI写日记">对方写</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="diary-btn" id="diaryClearBtn" title="清空日记">清空</button>
+            <button class="diary-btn primary" id="diaryAiBtn" title="AI写日记">对方写</button>
+          </div>
         </div>
         <div class="diary-controls">
           <select class="diary-select" id="diaryFriendSelect"></select>
@@ -7789,18 +7795,6 @@
           border: 1px solid rgba(255, 195, 148, 0.58);
           color: #8a572b;
           font-size: 12px;
-        }
-        .shop-debug-box {
-          margin: 0 12px 10px;
-          padding: 8px 10px;
-          border-radius: 12px;
-          background: rgba(89, 52, 22, 0.08);
-          border: 1px dashed rgba(140, 88, 39, 0.35);
-          color: #6f4220;
-          font-size: 11px;
-          line-height: 1.45;
-          white-space: pre-wrap;
-          word-break: break-word;
         }
         .shop-content {
           flex: 0 0 auto;
@@ -7979,7 +7973,6 @@
             <div class="shop-title">喵喵百货</div>
             <div class="shop-subtitle">购物</div>
           </div>
-          <button class="shop-btn" id="shopDebugBtn" title="商店调试">调试</button>
           <button class="shop-btn" id="shopResetBtn" title="清空商店">重置</button>
           <button class="shop-btn" id="shopMoreBtn" title="继续生成商品">补货</button>
           <button class="shop-btn primary" id="shopRefreshMoneyBtn" title="刷新余额">余额</button>
@@ -7998,7 +7991,6 @@
             </div>
           </div>
           <div class="shop-status" id="shopStatus">商店已就绪，可以先让 AI 生成一批商品。</div>
-          <div class="shop-debug-box" id="shopDebugBox" style="display:none;"></div>
           <div class="shop-content">
             <div class="shop-items-panel">
               <div class="shop-panel-head">
@@ -9373,6 +9365,9 @@ https://i.postimg.cc/.../xxx.png"
               <button class="reset-btn" id="privateChatWallpaperResetBtn">重置</button>
             </div>
             <input type="file" class="file-input" id="privateChatWallpaperFileInput" accept="image/*">
+          </div>
+          <div class="setting-section" style="margin-top: 16px;">
+            <button class="reset-btn" id="privateChatClearBtn" style="margin-left:0;width:100%;background:#ffefef;color:#c62828;">清空当前私聊</button>
           </div>
         </div>
       </div>
@@ -11654,6 +11649,15 @@ function applyUserAvatar(avatarElement) {
         if (homeOverlay) homeOverlay.style.display = 'flex';
       }
 
+      function clearAllMoments() {
+        if (!confirm('确认清空全部朋友圈内容吗？')) return false;
+        state.moments = [];
+        renderMomentsList();
+        deferredSync(0);
+        try { showToast('朋友圈已清空'); } catch (_) {}
+        return true;
+      }
+
       function setShopStatus(message) {
         const el = document.getElementById('shopStatus');
         if (el) el.textContent = String(message || '');
@@ -12027,31 +12031,10 @@ function applyUserAvatar(avatarElement) {
         const itemsList = document.getElementById('shopItemsList');
         const cartList = document.getElementById('shopCartList');
         const payList = document.getElementById('shopPayList');
-        const debugBox = document.getElementById('shopDebugBox');
         if (moneyEl) moneyEl.textContent = `¥${formatShopMoney(shop.money)}`;
         if (hintEl) hintEl.textContent = shop.lastGeneratedAt
           ? `最近一次生成：${shop.lastGeneratedAt}`
           : '上滑商品区可让 AI 同时刷新余额和商品。';
-        if (debugBox) {
-          if (state.shopDebug && state.shopDebug.visible) {
-            debugBox.style.display = 'block';
-            const raw = String(state.shopDebug.raw || '');
-            const previewRaw = raw.length > 800 ? `${raw.slice(0, 800)}\n...` : raw;
-            debugBox.textContent = [
-              `模式: ${state.shopDebug.mode || '-'}`,
-              `备注: ${state.shopDebug.note || '-'}`,
-              `解析余额: ${state.shopDebug.parsedMoney == null ? 'null' : state.shopDebug.parsedMoney}`,
-              `解析商品数: ${Array.isArray(state.shopDebug.parsedItems) ? state.shopDebug.parsedItems.length : 0}`,
-              `最后更新: ${state.shopDebug.lastUpdatedAt || '-'}`,
-              '',
-              'AI原始输出:',
-              previewRaw || '(空)',
-            ].join('\n');
-          } else {
-            debugBox.style.display = 'none';
-            debugBox.textContent = '';
-          }
-        }
         if (totalEl) totalEl.textContent = `¥${formatShopMoney(calculateShopCartTotal(shop.cart))}`;
         if (summaryEl) summaryEl.textContent = buildShopLineSummary(shop.cart);
         if (itemsList) {
@@ -13741,12 +13724,6 @@ function applyUserAvatar(avatarElement) {
         return next;
       }
 
-      function toggleShopDebug(force = null) {
-        const next = typeof force === 'boolean' ? force : !state.shopDebug.visible;
-        state.shopDebug = { ...(state.shopDebug || {}), visible: next };
-        try { if (typeof renderShopOverlay === 'function') renderShopOverlay(); } catch (_) {}
-      }
-
       function getShopStorageKey() {
         const c = getCurrentCharacterInfo();
         return `${SHOP_LS_PREFIX}_${c.source}_${c.id}`;
@@ -14032,6 +14009,20 @@ function applyUserAvatar(avatarElement) {
         if (homeOverlay) homeOverlay.style.display = 'flex';
       }
 
+      function clearDiaryForSelectedFriend() {
+        const target = String((diaryRuntime.selectedFriend || document.getElementById('diaryFriendSelect')?.value || '')).trim();
+        if (!target) {
+          setDiaryStatus('请先选择一个好友。', true);
+          return false;
+        }
+        if (!confirm(`确认清空 ${target} 的日记吗？`)) return false;
+        setDiaryEntriesByFriend(target, []);
+        renderDiaryList(target);
+        setDiaryStatus(`${target} 的日记已清空。`);
+        try { showToast('日记已清空'); } catch (_) {}
+        return true;
+      }
+
       function initDiaryPanel() {
         const overlay = document.getElementById('diaryOverlay');
         if (!overlay || overlay.dataset.bound === '1') return;
@@ -14039,6 +14030,7 @@ function applyUserAvatar(avatarElement) {
 
         const backBtn = document.getElementById('diaryBackBtn');
         const aiBtn = document.getElementById('diaryAiBtn');
+        const clearBtn = document.getElementById('diaryClearBtn');
         const refreshBtn = document.getElementById('diaryRefreshBtn');
         const select = document.getElementById('diaryFriendSelect');
 
@@ -14049,6 +14041,7 @@ function applyUserAvatar(avatarElement) {
         }
 
         if (backBtn) backBtn.onclick = closeDiaryPanel;
+        if (clearBtn) clearBtn.onclick = () => clearDiaryForSelectedFriend();
         if (refreshBtn) refreshBtn.onclick = () => refreshDiaryFriendSelect(select ? select.value : '');
         if (select) {
           select.addEventListener('change', () => {
@@ -20865,7 +20858,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       function updatePrivateChatSettingsButtonVisibility() {
         const btn = document.getElementById('privateChatSettingsBtn');
         if (!btn) return;
-        const show = isPrivateChatMode() && !!getActivePrivateConversationName();
+        const show = (isPrivateChatMode() && !!getActivePrivateConversationName()) || !!state.groupChatMode;
         btn.style.display = show ? 'flex' : 'none';
         if (!show) hidePrivateChatSettings();
       }
@@ -20907,6 +20900,40 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       function hidePrivateChatSettings() {
         const overlay = document.getElementById('privateChatSettingsOverlay');
         if (overlay) overlay.style.display = 'none';
+      }
+
+      function clearCurrentPrivateConversation() {
+        const name = getActivePrivateConversationName();
+        if (!name || !isPrivateChatMode()) return false;
+        if (!confirm(`确认清空私聊「${name}」的聊天记录吗？`)) return false;
+        const list = getPrivateConversations();
+        const idx = Math.max(0, Math.min(state.currentPrivateIndex || 0, list.length - 1));
+        if (!list[idx]) return false;
+        list[idx].messages = [];
+        state.messageHistory = [];
+        lastHistoryCount = 0;
+        renderAllMessages();
+        deferredSync(0);
+        hidePrivateChatSettings();
+        try { showToast('当前私聊已清空'); } catch (_) {}
+        return true;
+      }
+
+      function clearCurrentGroupConversation() {
+        if (!state.groupChatMode) return false;
+        const conv = getActiveGroupConversation();
+        const name = String(conv && conv.name || '群聊').trim() || '群聊';
+        if (!confirm(`确认清空群聊「${name}」的聊天记录吗？`)) return false;
+        const list = getGroupConversations();
+        const idx = Math.max(0, Math.min(state.currentGroupIndex || 0, list.length - 1));
+        if (!list[idx]) return false;
+        list[idx].messages = [];
+        state.messageHistory = [];
+        lastHistoryCount = 0;
+        renderAllMessages();
+        deferredSync(0);
+        try { showToast('当前群聊已清空'); } catch (_) {}
+        return true;
       }
 
       function readFileAsDataUrl(file) {
@@ -28037,7 +28064,19 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       document.getElementById('screenshotBtn').addEventListener('click', (event) => takeScreenshot(event));
       document.getElementById('settingsBtn').addEventListener('click', showSettings);
       document.getElementById('settingsCloseBtn').addEventListener('click', hideSettings);
-      document.getElementById('privateChatSettingsBtn').addEventListener('click', showPrivateChatSettings);
+      document.getElementById('privateChatSettingsBtn').addEventListener('click', () => {
+        if (state.groupChatMode) {
+          clearCurrentGroupConversation();
+          return;
+        }
+        showPrivateChatSettings();
+      });
+      const __privateChatClearBtn = document.getElementById('privateChatClearBtn');
+      if (__privateChatClearBtn) {
+        __privateChatClearBtn.addEventListener('click', () => {
+          clearCurrentPrivateConversation();
+        });
+      }
       document.getElementById('privateChatSettingsCloseBtn').addEventListener('click', hidePrivateChatSettings);
       document.getElementById('privateChatSettingsOverlay').addEventListener('click', (e) => {
         if (e.target && e.target.id === 'privateChatSettingsOverlay') hidePrivateChatSettings();
@@ -29910,6 +29949,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const homeBtn = document.getElementById('homeBtn');
           const homeDockBtn = document.getElementById('homeDockBtn');
           const momentsBackBtn = document.getElementById('momentsBackBtn');
+          const momentsClearBtn = document.getElementById('momentsClearBtn');
           const momentsAiBtn = document.getElementById('momentsAiBtn');
           const momentsPublishBtn = document.getElementById('momentsPublishBtn');
           const momentsTimeBtn = document.getElementById('momentsTimeBtn');
@@ -29919,7 +29959,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const divinationBackBtn = document.getElementById('divinationBackBtn');
           const divinationCastBtn = document.getElementById('divinationCastBtn');
           const divinationAskBtn = document.getElementById('divinationAskBtn');
-          const shopDebugBtn = document.getElementById('shopDebugBtn');
           const shopResetBtn = document.getElementById('shopResetBtn');
           const shopBackBtn = document.getElementById('shopBackBtn');
           const shopMoreBtn = document.getElementById('shopMoreBtn');
@@ -29975,9 +30014,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             try { if (typeof closeShopOverlay === 'function') return closeShopOverlay(); } catch(_) {}
             if (homeOverlay) homeOverlay.style.display = 'flex';
           };
-          if (shopDebugBtn) shopDebugBtn.onclick = () => {
-            try { if (typeof toggleShopDebug === 'function') return toggleShopDebug(); } catch(_) {}
-          };
           if (shopResetBtn) shopResetBtn.onclick = () => {
             try { if (typeof resetShopState === 'function') return resetShopState(); } catch(_) {}
           };
@@ -29994,6 +30030,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             const o = document.getElementById('momentsOverlay');
             if (o) { o.style.display = 'none'; o.setAttribute('aria-hidden','true'); }
             if (homeOverlay) homeOverlay.style.display = 'flex';
+          };
+          if (momentsClearBtn) momentsClearBtn.onclick = () => {
+            try { if (typeof clearAllMoments === 'function') return clearAllMoments(); } catch(_) {}
           };
           if (momentsAiBtn) momentsAiBtn.onclick = () => {
             try {
