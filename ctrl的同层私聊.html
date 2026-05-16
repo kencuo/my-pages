@@ -43,7 +43,7 @@
         /* Layout helpers so height tweaks propagate everywhere */
         --phone-height: 550px;
         --phone-shell-height: calc(var(--phone-height) + 15px);
-        --input-area-height: 56px;
+        --input-area-height: 50px;
       }
 
       /* 简约办公风主题 - 专业商务风 */
@@ -1151,15 +1151,15 @@
         align-items: center;
         justify-content: center;
         transition: all 0.3s ease;
-        padding: 8px 0;
+        padding: 6px 0;
       }
 
       .settings-btn {
         position: absolute;
-        top: 6px;
-        right: 12px;
-        width: 32px;
-        height: 32px;
+        top: 8px;
+        right: 10px;
+        width: 28px;
+        height: 28px;
         background-color: var(--bg-tertiary);
         border: none;
         border-radius: 50%;
@@ -1177,8 +1177,8 @@
       }
 
       .settings-btn svg {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         color: var(--text-secondary);
       }
 
@@ -1190,10 +1190,10 @@
       /* 截屏按钮样式 */
       .screenshot-btn {
         position: absolute;
-        top: 6px;
-        right: 56px; /* 位于设置按钮左侧 */
-        width: 32px;
-        height: 32px;
+        top: 8px;
+        right: 44px; /* 位于设置按钮左侧 */
+        width: 28px;
+        height: 28px;
         background-color: var(--bg-tertiary);
         border: none;
         border-radius: 50%;
@@ -1211,17 +1211,17 @@
       }
 
       .screenshot-btn svg {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         color: var(--text-secondary);
       }
       /* 私聊专属设置按钮（右上角） */
       .private-chat-settings-btn {
         position: absolute;
-        top: 6px;
-        right: 12px;
-        width: 32px;
-        height: 32px;
+        top: 8px;
+        right: 10px;
+        width: 28px;
+        height: 28px;
         background-color: var(--bg-tertiary);
         border: none;
         border-radius: 50%;
@@ -1237,17 +1237,17 @@
         transform: scale(1.1);
       }
       .private-chat-settings-btn svg {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         color: var(--text-secondary);
       }
       /* 好友列表按钮样式 */
       .friends-btn {
         position: absolute;
-        top: 6px;
-        right: 100px; /* 调整到右侧，避免遮挡人名 */
-        width: 32px;
-        height: 32px;
+        top: 8px;
+        right: 78px; /* 调整到右侧，避免遮挡人名 */
+        width: 28px;
+        height: 28px;
         background-color: var(--bg-tertiary);
         border: none;
         border-radius: 50%;
@@ -1259,7 +1259,7 @@
         transition: all 0.2s;
       }
       .friends-btn:hover { background-color: var(--bg-primary); transform: scale(1.1); }
-      .friends-btn svg { width: 18px; height: 18px; color: var(--text-secondary); }
+      .friends-btn svg { width: 16px; height: 16px; color: var(--text-secondary); }
       /* 一体化好友面板样式 */
       .friends-panel {
         position: absolute;
@@ -1475,25 +1475,40 @@
       .chat-messages {
         flex: 1;
         background: url('https://files.catbox.moe/e1xk9k.jpeg') center/cover;
-        padding: 18px 10px 10px 10px;
+        padding: 14px 10px 8px 10px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 3px;
-        padding-bottom: 80px;
+        gap: 2px;
+        padding-bottom: calc(var(--input-area-height) + 64px);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(160, 160, 160, 0.85) transparent;
+      }
+      .chat-messages::-webkit-scrollbar {
+        width: 4px;
+      }
+      .chat-messages::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: rgba(160, 160, 160, 0.85);
+        border-radius: 999px;
+      }
+      .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: rgba(130, 130, 130, 0.95);
       }
       .bubble-row {
         display: flex;
         align-items: flex-end;
-        gap: 6px;
+        gap: 4px;
         position: relative;
       }
       .bubble-row.user {
         flex-direction: row-reverse;
       }
       .avatar {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
         border-radius: 8px;
         background: #ddd;
         border: none;
@@ -1525,7 +1540,7 @@
         display: block;
         font-size: 11px;
         color: #999;
-        margin-top: 4px;
+        margin-top: 2px;
         text-align: right;
       }
       .bubble img.emoji {
@@ -1673,11 +1688,11 @@
       }
       .chat-input-area {
         background: var(--bg-input-gradient);
-        padding: 10px 15px;
+        padding: 7px 12px;
         border-top: 2px solid var(--accent-primary);
         display: flex;
         align-items: flex-end;
-        gap: 8px;
+        gap: 6px;
         position: absolute;
         bottom: 0;
         left: 0;
@@ -1686,18 +1701,19 @@
         min-height: var(--input-area-height);
         max-height: 200px;
         transition: all 0.3s ease;
+        z-index: 1005;
       }
       .chat-input {
         flex: 1;
-        min-height: 36px;
-        max-height: 80px;
+        min-height: 32px;
+        max-height: 72px;
         border: none;
         border-radius: 6px;
         background: var(--bg-secondary);
-        padding: 8px 12px;
+        padding: 6px 10px;
         outline: none;
-        font-size: 16px;
-        line-height: 1.5;
+        font-size: 15px;
+        line-height: 1.35;
         color: var(--text-primary);
         border: 1px solid var(--border-primary);
         resize: none;
@@ -1717,8 +1733,8 @@
         box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
       }
       .action-btn {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         border: none;
         background: transparent;
         cursor: pointer;
@@ -1729,18 +1745,18 @@
         padding: 0;
       }
       .action-btn svg {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         color: #333;
       }
       .send-btn {
-        width: 60px;
-        height: 32px;
+        width: 54px;
+        height: 30px;
         border: none;
         border-radius: 6px;
         background: var(--accent-primary);
         color: #fff;
-        font-size: 15px;
+        font-size: 14px;
         cursor: pointer;
         align-items: center;
         justify-content: center;
@@ -2521,15 +2537,16 @@
       /* ========== WeChat style message layout override ========== */
       .message {
         display: flex;
-        margin-bottom: 15px;
+        margin-bottom: 4px;
         align-items: flex-start;
+        gap: 8px;
       }
       .message.sent {
         flex-direction: row-reverse;
       }
       .avatar {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
         border-radius: 6px;
         flex-shrink: 0;
         object-fit: cover;
@@ -2541,17 +2558,18 @@
         flex-direction: column;
         align-items: center;
         gap: 4px;
-        min-width: 32px;
-        max-width: 60px;
+        min-width: 30px;
+        max-width: 56px;
         flex-shrink: 0;
         position: relative;
         z-index: 2;
+        transform: translateY(-7px);
       }
       .avatar-name {
         font-size: 10px;
         color: #888;
         line-height: 1.2;
-        max-width: 60px;
+        max-width: 56px;
         text-align: center;
         white-space: nowrap;
         overflow: hidden;
@@ -2567,11 +2585,11 @@
         align-items: flex-end;
       }
       .message-content {
-        max-width: 80%; /* A bit wider for the style */
-        padding: 10px 15px;
-        border-radius: 15px;
-        font-size: 15px;
-        line-height: 1.5;
+        max-width: 72%;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 14px;
+        line-height: 1.4;
         color: #333;
         word-break: break-word;
         position: relative;
@@ -2579,7 +2597,7 @@
         background: #fff !important;
         border: 2px dotted #888 !important;
         box-shadow: none !important;
-        margin: 10px; /* Space for ears/tail */
+        margin: 2px 0 1px;
       }
       .message.sent .message-content,
       .message.received .message-content {
@@ -2587,87 +2605,16 @@
         border-color: #888 !important;
       }
 
-      /* Cat Ears */
       .message-content::before,
       .message-content::after {
-        content: '';
-        position: absolute;
-        width: 15px;
-        height: 15px;
-        background: #fff;
-        border: 2px dotted #888;
-        border-bottom: none;
-        border-right: none;
-        border-radius: 12px 0 0 0;
-        top: -9px;
+        display: none;
+        content: none;
       }
 
-      /* Cat Tail & Heart */
       .message-wrapper::before,
       .message-wrapper::after {
-        content: '';
-        position: absolute;
-      }
-
-      /* Sent bubble (right side) */
-      .message.sent .message-content::before {
-        right: 38px;
-        transform: rotate(45deg);
-        transform-origin: bottom right;
-      }
-      .message.sent .message-content::after {
-        right: 18px;
-        transform: rotate(35deg);
-        transform-origin: bottom right;
-      }
-      .message.sent .message-wrapper::before {
-        /* Tail */
-        width: 15px;
-        height: 15px;
-        border: 2px dotted #888;
-        border-color: transparent transparent #888 #888;
-        border-radius: 10px;
-        transform: rotate(45deg);
-        left: -5px;
-        top: 8px;
-      }
-      .message.sent .message-wrapper::after {
-        /* Heart */
-        content: '♥';
-        color: #ffc0cb;
-        bottom: 2px;
-        right: 5px;
-      }
-
-      /* Received bubble (left side) */
-      .message.received .message-content::before {
-        left: 18px;
-        transform: rotate(-35deg);
-        transform-origin: bottom left;
-        background: radial-gradient(circle at 70% 70%, #ffc0cb 2px, transparent 3px), #fff;
-      }
-      .message.received .message-content::after {
-        left: 38px;
-        transform: rotate(-45deg);
-        transform-origin: bottom left;
-      }
-      .message.received .message-wrapper::before {
-        /* Tail */
-        width: 15px;
-        height: 15px;
-        border: 2px dotted #888;
-        border-color: transparent #888 #888 transparent;
-        border-radius: 10px;
-        transform: rotate(-45deg);
-        right: -5px;
-        top: 8px;
-      }
-      .message.received .message-wrapper::after {
-        /* Heart */
-        content: '♥';
-        color: #ffc0cb;
-        bottom: 2px;
-        left: 5px;
+        display: none;
+        content: none;
       }
 
       .message-meta {
@@ -2675,7 +2622,7 @@
         color: #999;
         text-align: right;
         display: block;
-        margin-top: 6px;
+        margin-top: 1px;
       }
       .message-content .quote {
         display: block;
@@ -5504,17 +5451,17 @@
         vertical-align: middle;
         position: absolute;
         left: 50px;
+        right: 112px;
         top: 50%;
         transform: translateY(-50%);
-        padding: 4px 8px;
+        padding: 3px 8px;
         border-radius: 8px;
-        max-width: 120px;
-        word-wrap: break-word;
-        word-break: keep-all;
-        overflow-wrap: break-word;
+        max-width: calc(100% - 162px);
         line-height: 1.3;
         text-align: center;
-        white-space: normal;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         background: rgba(255,240,250,0.7);
         display: inline-block;
         min-width: 40px;
@@ -9762,7 +9709,7 @@ function applyUserAvatar(avatarElement) {
             const waitGap = Math.max(0, minGap - sinceLast);
             const totalDelay = Math.max(delayMs, waitGap);
             if (totalDelay > 0) await sleep(totalDelay);
-            appendMessage(msg, idx, true, { flowIn: true });
+            appendMessage(msg, idx, true, { flowIn: true, typeText: true });
             lastAiMessageRenderAt = Date.now();
           });
 
@@ -15422,6 +15369,12 @@ function applyUserAvatar(avatarElement) {
           }
           chat.appendChild(message);
 
+          if (options && options.typeText && msg && msg.sender === 'char') {
+            queueMicrotask(() => {
+              runCharBubbleTypingEffect(message, msg).catch(() => {});
+            });
+          }
+
           // 🎉 检测关键词特效（只对用户发送的消息触发）
           if (msg.sender === 'user' && msg.content && typeof msg.content === 'string') {
             setTimeout(() => {
@@ -15437,6 +15390,55 @@ function applyUserAvatar(avatarElement) {
             }
           }, 10);
         }
+      }
+
+      function getCharBubbleTypingConfig(text = '') {
+        const speed = Number(state.typingSpeedLevel || 2);
+        const len = String(text || '').replace(/\s+/g, '').length || 1;
+
+        if (speed <= 1) {
+          return { intervalMs: 42, charsPerTick: Math.max(1, Math.ceil(len / 46)) };
+        }
+        if (speed >= 3) {
+          return { intervalMs: 16, charsPerTick: Math.max(1, Math.ceil(len / 28)) };
+        }
+        return { intervalMs: 26, charsPerTick: Math.max(1, Math.ceil(len / 36)) };
+      }
+
+      async function runCharBubbleTypingEffect(messageEl, msg) {
+        if (!messageEl || !msg || msg.sender !== 'char' || state.inVoiceCall) return;
+        if (msg.type && msg.type !== 'text') return;
+
+        const contentDiv = messageEl.querySelector('.message-content');
+        if (!contentDiv) return;
+
+        const textSpan = contentDiv.querySelector('span');
+        if (!textSpan) return;
+
+        const finalHtml = textSpan.innerHTML;
+        const plainText = textSpan.textContent || String(msg.content || '');
+        if (!plainText || plainText.trim().length <= 1) return;
+
+        textSpan.textContent = '';
+        textSpan.style.whiteSpace = 'pre-wrap';
+        textSpan.style.wordBreak = 'break-word';
+
+        const chat = document.getElementById('chatMessages');
+        const { intervalMs, charsPerTick } = getCharBubbleTypingConfig(plainText);
+        let cursor = 0;
+
+        while (cursor < plainText.length) {
+          cursor = Math.min(plainText.length, cursor + charsPerTick);
+          textSpan.textContent = plainText.slice(0, cursor);
+
+          if (chat && chat.scrollHeight - chat.scrollTop < chat.clientHeight + 120) {
+            chat.scrollTop = chat.scrollHeight;
+          }
+
+          await sleep(intervalMs);
+        }
+
+        textSpan.innerHTML = finalHtml;
       }
 
       // Update a single message in the chat
