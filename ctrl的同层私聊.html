@@ -28212,9 +28212,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       }
 
       // 绑定收藏相关事件
-      document.getElementById('viewFavoritesBtn').addEventListener('click', showFavorites);
-      document.getElementById('favoritesCloseBtn').addEventListener('click', hideFavorites);
-      document.getElementById('clearAllFavoritesBtn').addEventListener('click', clearAllFavorites);
+      const viewFavoritesBtn = document.getElementById('viewFavoritesBtn');
+      if (viewFavoritesBtn) viewFavoritesBtn.addEventListener('click', showFavorites);
+      const favoritesCloseBtn = document.getElementById('favoritesCloseBtn');
+      if (favoritesCloseBtn) favoritesCloseBtn.addEventListener('click', hideFavorites);
+      const clearAllFavoritesBtn = document.getElementById('clearAllFavoritesBtn');
+      if (clearAllFavoritesBtn) clearAllFavoritesBtn.addEventListener('click', clearAllFavorites);
 
       // 导入/导出好友列表 & 远程世界书
       const openImportExportBtn = document.getElementById('openImportExportBtn');
@@ -29028,59 +29031,80 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       });
 
       // 识图API相关事件监听器
-      document.getElementById('testVisionBtn').addEventListener('click', testVisionConnection);
-      document.getElementById('refreshVisionBtn').addEventListener('click', refreshVisionModels);
+      const testVisionBtn = document.getElementById('testVisionBtn');
+      if (testVisionBtn) testVisionBtn.addEventListener('click', testVisionConnection);
+      const refreshVisionBtn = document.getElementById('refreshVisionBtn');
+      if (refreshVisionBtn) refreshVisionBtn.addEventListener('click', refreshVisionModels);
 
       // 识图方式选择
-      document.getElementById('visionMode').addEventListener('change', (e) => {
-        state.visionMode = e.target.value;
-        localStorage.setItem('visionMode', state.visionMode);
+      const visionModeSelect = document.getElementById('visionMode');
+      if (visionModeSelect) {
+        visionModeSelect.addEventListener('change', (e) => {
+          state.visionMode = e.target.value;
+          localStorage.setItem('visionMode', state.visionMode);
 
-        // 根据选择的模式显示/隐藏配置
-        const kimiConfig = document.getElementById('kimiConfig');
-        const customConfig = document.getElementById('customConfig');
+          // 根据选择的模式显示/隐藏配置
+          const kimiConfig = document.getElementById('kimiConfig');
+          const customConfig = document.getElementById('customConfig');
 
-        if (state.visionMode === 'kimi') {
-          kimiConfig.style.display = 'block';
-          customConfig.style.display = 'none';
-        } else if (state.visionMode === 'custom') {
-          kimiConfig.style.display = 'none';
-          customConfig.style.display = 'block';
-        } else {
-          // tavern模式
-          kimiConfig.style.display = 'none';
-          customConfig.style.display = 'none';
-        }
-      });
+          if (state.visionMode === 'kimi') {
+            if (kimiConfig) kimiConfig.style.display = 'block';
+            if (customConfig) customConfig.style.display = 'none';
+          } else if (state.visionMode === 'custom') {
+            if (kimiConfig) kimiConfig.style.display = 'none';
+            if (customConfig) customConfig.style.display = 'block';
+          } else {
+            // tavern模式
+            if (kimiConfig) kimiConfig.style.display = 'none';
+            if (customConfig) customConfig.style.display = 'none';
+          }
+        });
+      }
 
       // Kimi相关事件监听器
-      document.getElementById('testKimiBtn').addEventListener('click', testKimiConnection);
+      const testKimiBtn = document.getElementById('testKimiBtn');
+      if (testKimiBtn) testKimiBtn.addEventListener('click', testKimiConnection);
 
-      document.getElementById('kimiApiKey').addEventListener('input', (e) => {
-        state.kimiApiKey = e.target.value.trim();
-        localStorage.setItem('kimiApiKey', state.kimiApiKey);
-      });
+      const kimiApiKeyInput = document.getElementById('kimiApiKey');
+      if (kimiApiKeyInput) {
+        kimiApiKeyInput.addEventListener('input', (e) => {
+          state.kimiApiKey = e.target.value.trim();
+          localStorage.setItem('kimiApiKey', state.kimiApiKey);
+        });
+      }
 
-      document.getElementById('kimiModel').addEventListener('change', (e) => {
-        state.kimiModel = e.target.value;
-        localStorage.setItem('kimiModel', state.kimiModel);
-      });
+      const kimiModelSelect = document.getElementById('kimiModel');
+      if (kimiModelSelect) {
+        kimiModelSelect.addEventListener('change', (e) => {
+          state.kimiModel = e.target.value;
+          localStorage.setItem('kimiModel', state.kimiModel);
+        });
+      }
 
       // 识图API配置输入框变化时保存
-      document.getElementById('visionApiUrl').addEventListener('input', (e) => {
-        state.visionApiUrl = e.target.value.trim();
-        localStorage.setItem('visionApiUrl', state.visionApiUrl);
-      });
+      const visionApiUrlInput = document.getElementById('visionApiUrl');
+      if (visionApiUrlInput) {
+        visionApiUrlInput.addEventListener('input', (e) => {
+          state.visionApiUrl = e.target.value.trim();
+          localStorage.setItem('visionApiUrl', state.visionApiUrl);
+        });
+      }
 
-      document.getElementById('visionApiKey').addEventListener('input', (e) => {
-        state.visionApiKey = e.target.value.trim();
-        localStorage.setItem('visionApiKey', state.visionApiKey);
-      });
+      const visionApiKeyInput = document.getElementById('visionApiKey');
+      if (visionApiKeyInput) {
+        visionApiKeyInput.addEventListener('input', (e) => {
+          state.visionApiKey = e.target.value.trim();
+          localStorage.setItem('visionApiKey', state.visionApiKey);
+        });
+      }
 
-      document.getElementById('visionModel').addEventListener('change', (e) => {
-        state.visionModel = e.target.value;
-        localStorage.setItem('visionModel', state.visionModel);
-      });
+      const visionModelSelect = document.getElementById('visionModel');
+      if (visionModelSelect) {
+        visionModelSelect.addEventListener('change', (e) => {
+          state.visionModel = e.target.value;
+          localStorage.setItem('visionModel', state.visionModel);
+        });
+      }
 
       // 点击遮罩关闭模态框
       document.getElementById('settingsOverlay').addEventListener('click', (e) => {
