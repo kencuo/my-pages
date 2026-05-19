@@ -1497,6 +1497,35 @@
       .chat-messages::-webkit-scrollbar-thumb:hover {
         background: rgba(130, 130, 130, 0.95);
       }
+      .chat-load-more {
+        align-self: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin: 4px auto 10px;
+        padding: 7px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--text-secondary, #666);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1;
+        cursor: pointer;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      }
+      .chat-load-more:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 12px 22px rgba(15, 23, 42, 0.12);
+      }
+      .chat-load-more:active {
+        transform: scale(0.98);
+      }
       .bubble-row {
         display: flex;
         align-items: flex-end;
@@ -9378,6 +9407,9 @@ https://i.postimg.cc/.../xxx.png"
         currentRoleGroupIndex: 0,   // 当前激活角色群聊索引
         roleGroupMode: false,       // 是否处于角色群聊偷看模式
         currentMsgId: null,
+        sharedHistorySource: 'message',
+        renderedHistoryLimit: 30,
+        renderedHistoryStart: 0,
         userHasSentNewMessage: false,
         callTimerId: null,
         callStartTime: null,
@@ -10497,6 +10529,80 @@ function applyUserAvatar(avatarElement) {
         return conversations;
       }
 
+      function normalizeConversationEntry(entry, index = 0, defaults = {}) {
+        const fallbackName = defaults.name || `会话${index + 1}`;
+        const fallbackMembers = Array.isArray(defaults.members) ? defaults.members : [];
+        if (!entry || typeof entry !== 'object') {
+          return {
+            name: fallbackName,
+            members: fallbackMembers,
+            messages: [],
+            addTime: new Date().toISOString(),
+          };
+        }
+
+        const rawName = entry.name || entry.title || entry.nickname || fallbackName;
+        const name = String(rawName || fallbackName).trim() || fallbackName;
+        const members = Array.isArray(entry.members) ? entry.members.filter(Boolean) : fallbackMembers;
+        const messages = Array.isArray(entry.messages) ? entry.messages : [];
+        const addTime = entry.addTime || new Date().toISOString();
+        return { ...entry, name, members, messages, addTime };
+      }
+
+      function normalizePrivateConversationEntry(entry, index = 0) {
+        return normalizeConversationEntry(entry, index, { name: `会话${index + 1}`, members: [] });
+      }
+
+      function normalizeGroupConversationEntry(entry, index = 0) {
+        return normalizeConversationEntry(entry, index, { name: `群聊${index + 1}`, members: [] });
+      }
+
+      function loadPrivateConversationsFromExtensions() {
+        try {
+          const ctx = getSillyContextSafe();
+          const extValue = readCharacterExtensionField(ctx, EXTENSION_PRIVATE_CONVERSATIONS_KEY);
+          if (Array.isArray(extValue)) return JSON.parse(JSON.stringify(extValue));
+          return null;
+        } catch (e) {
+          console.warn('加载私聊会话失败', e);
+          return null;
+        }
+      }
+
+      function savePrivateConversations(list) {
+        try {
+          const safeList = (Array.isArray(list) ? list : []).map(normalizePrivateConversationEntry);
+          if (getSillyContextSafe()) {
+            void writeCharacterExtensionField(EXTENSION_PRIVATE_CONVERSATIONS_KEY, safeList);
+          }
+        } catch (e) {
+          console.warn('保存私聊会话失败', e);
+        }
+      }
+
+      function loadGroupConversationsFromExtensions() {
+        try {
+          const ctx = getSillyContextSafe();
+          const extValue = readCharacterExtensionField(ctx, EXTENSION_GROUP_CONVERSATIONS_KEY);
+          if (Array.isArray(extValue)) return JSON.parse(JSON.stringify(extValue));
+          return null;
+        } catch (e) {
+          console.warn('加载群聊会话失败', e);
+          return null;
+        }
+      }
+
+      function saveGroupConversations(list) {
+        try {
+          const safeList = (Array.isArray(list) ? list : []).map(normalizeGroupConversationEntry);
+          if (getSillyContextSafe()) {
+            void writeCharacterExtensionField(EXTENSION_GROUP_CONVERSATIONS_KEY, safeList);
+          }
+        } catch (e) {
+          console.warn('保存群聊会话失败', e);
+        }
+      }
+
       // ==================== ROLE GROUP (<group>) SUPPORT ====================
       // 格式：
       // <group>
@@ -10621,6 +10727,13 @@ function applyUserAvatar(avatarElement) {
         const idx = Number.isInteger(state.activeConversationIndex) ? state.activeConversationIndex : getActiveConversationIndex();
         if (Array.isArray(list) && list[idx]) {
           list[idx].messages = Array.isArray(state.messageHistory) ? [...state.messageHistory] : [];
+        }
+        if (mode === 'private') {
+          savePrivateConversations(getPrivateConversations());
+        } else if (mode === 'group') {
+          saveGroupConversations(getGroupConversations());
+        } else if (mode === 'roleGroup') {
+          saveRoleGroupConversations(getRoleGroupConversations());
         }
       }
 
@@ -14856,6 +14969,7 @@ function applyUserAvatar(avatarElement) {
         // 切换消息并重渲染
         state.messageHistory = (conv && Array.isArray(conv.messages)) ? [...conv.messages] : [];
         setActiveConversationPointer(willBeGroup ? 'group' : 'private', index);
+        resetRenderedHistoryWindow();
         // 更新标签激活态
         const tabs = document.querySelectorAll('#privateChatTabs .chat-tab');
         tabs.forEach((t, i) => {
@@ -14895,6 +15009,7 @@ function applyUserAvatar(avatarElement) {
 
         state.messageHistory = Array.isArray(conv.messages) ? [...conv.messages] : [];
         setActiveConversationPointer('roleGroup', index);
+        resetRenderedHistoryWindow();
 
         const tabs = document.getElementById('privateChatTabs');
         if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
@@ -14928,11 +15043,12 @@ function applyUserAvatar(avatarElement) {
             switchPrivateChat(idx, 'private');
             return;
           }
-          list.push({ name, messages: [] });
-          state.currentPrivateIndex = list.length - 1;
-          state.messageHistory = [];
-          setActiveConversationPointer('private', state.currentPrivateIndex);
-          buildPrivateChatTabs(list, state.currentPrivateIndex);
+           list.push({ name, messages: [] });
+           state.currentPrivateIndex = list.length - 1;
+           state.messageHistory = [];
+           setActiveConversationPointer('private', state.currentPrivateIndex);
+           resetRenderedHistoryWindow();
+           buildPrivateChatTabs(list, state.currentPrivateIndex);
           lastHistoryCount = 0;
           renderAllMessages();
           updateWallpaper();
@@ -14945,6 +15061,7 @@ function applyUserAvatar(avatarElement) {
         state.currentPrivateIndex = 0;
         state.messageHistory = [];
         setActiveConversationPointer('private', 0);
+        resetRenderedHistoryWindow();
         buildPrivateChatTabs(state.privateConversations, 0);
         lastHistoryCount = 0;
         renderAllMessages();
@@ -15289,8 +15406,60 @@ function applyUserAvatar(avatarElement) {
       // 记录历史消息数量，用于部分渲染优化
       let lastHistoryCount = 0;
 
+      function resetRenderedHistoryWindow(forceFull = false) {
+        const total = Array.isArray(state.messageHistory) ? state.messageHistory.length : 0;
+        const pageSize = Math.max(1, Number(state.renderedHistoryLimit) || MOBILE_HISTORY_PAGE_SIZE);
+        state.renderedHistoryStart = forceFull ? 0 : Math.max(0, total - pageSize);
+      }
+
+      function getRenderedHistoryMessages() {
+        const list = Array.isArray(state.messageHistory) ? state.messageHistory : [];
+        const start = Math.max(0, Math.min(Number(state.renderedHistoryStart) || 0, list.length));
+        return list.slice(start);
+      }
+
+      function hasMoreRenderedHistory() {
+        const total = Array.isArray(state.messageHistory) ? state.messageHistory.length : 0;
+        return (Number(state.renderedHistoryStart) || 0) > 0 && total > 0;
+      }
+
+      function createLoadMoreMessagesButton() {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'chatLoadMoreBtn';
+        btn.className = 'chat-load-more';
+        btn.textContent = '查看更多';
+        btn.addEventListener('click', loadOlderRenderedMessages);
+        return btn;
+      }
+
+      function ensureLoadMoreMessagesButton(chat) {
+        if (!chat) return;
+        const existing = chat.querySelector('#chatLoadMoreBtn');
+        if (hasMoreRenderedHistory()) {
+          if (!existing) {
+            chat.insertBefore(createLoadMoreMessagesButton(), chat.firstChild || null);
+          }
+        } else if (existing) {
+          existing.remove();
+        }
+      }
+
+      function loadOlderRenderedMessages() {
+        if (!hasMoreRenderedHistory()) return;
+        const chat = document.getElementById('chatMessages');
+        const prevHeight = chat ? chat.scrollHeight : 0;
+        const pageSize = Math.max(1, Number(state.renderedHistoryLimit) || MOBILE_HISTORY_PAGE_SIZE);
+        state.renderedHistoryStart = Math.max(0, (Number(state.renderedHistoryStart) || 0) - pageSize);
+        renderAllMessages({ preserveScrollFromTop: true, previousHeight: prevHeight });
+      }
+
+      function pinRenderedHistoryToLatest() {
+        resetRenderedHistoryWindow();
+      }
+
       // 全量渲染消息气泡（仅在必要时使用）
-      function renderAllMessages() {
+      function renderAllMessages(options = {}) {
         const chat = document.getElementById('chatMessages');
         if (!chat) {
           console.error('Chat container not found!');
@@ -15300,22 +15469,29 @@ function applyUserAvatar(avatarElement) {
         console.log('Rendering all messages, count:', state.messageHistory.length);
         chat.innerHTML = '';
         lastHistoryCount = 0;
+        const renderedMessages = getRenderedHistoryMessages();
+        const startIndex = Math.max(0, Number(state.renderedHistoryStart) || 0);
+        ensureLoadMoreMessagesButton(chat);
 
-        state.messageHistory.forEach((msg, idx) => {
+        renderedMessages.forEach((msg, idx) => {
           try {
-            appendMessage(msg, idx);
+            appendMessage(msg, startIndex + idx, false, { skipAutoScroll: !!options.preserveScrollFromTop });
           } catch (error) {
-            console.error('Error rendering message at index', idx, ':', error, msg);
+            console.error('Error rendering message at index', startIndex + idx, ':', error, msg);
           }
         });
 
         lastHistoryCount = state.messageHistory.length;
 
-        // 确保滚动到底部
         setTimeout(() => {
-          chat.scrollTop = chat.scrollHeight;
+          if (options.preserveScrollFromTop) {
+            const previousHeight = Number(options.previousHeight) || 0;
+            const nextHeight = chat.scrollHeight;
+            chat.scrollTop = Math.max(0, nextHeight - previousHeight);
+          } else {
+            chat.scrollTop = chat.scrollHeight;
+          }
           console.log('Rendered messages in DOM:', chat.children.length);
-          // 添加收藏标识
           addFavoriteIndicatorToRenderedMessages();
         }, 50);
       }
@@ -15323,20 +15499,8 @@ function applyUserAvatar(avatarElement) {
       // 优化的部分渲染：只渲染新消息
       function renderNewMessages() {
         if (state.messageHistory.length <= lastHistoryCount) return;
-
-        // 只渲染新添加的消息
-        for (let i = lastHistoryCount; i < state.messageHistory.length; i++) {
-          appendMessage(state.messageHistory[i], i);
-          // 为新消息添加收藏标识
-          setTimeout(() => updateMessageFavoriteIndicator(i), 10);
-        }
-        lastHistoryCount = state.messageHistory.length;
-
-        // 确保滚动到底部
-        const chat = document.getElementById('chatMessages');
-        setTimeout(() => {
-          chat.scrollTop = chat.scrollHeight;
-        }, 50);
+        pinRenderedHistoryToLatest();
+        renderAllMessages();
       }
 
       // 清除生成的消息（保留历史消息）
@@ -15383,12 +15547,14 @@ function applyUserAvatar(avatarElement) {
           }
 
           // 确保消息内容正确渲染
-          setTimeout(() => {
-            // Scroll to bottom only if the user is already near the bottom
-            if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
-              chat.scrollTop = chat.scrollHeight;
-            }
-          }, 10);
+          if (!options.skipAutoScroll) {
+            setTimeout(() => {
+              // Scroll to bottom only if the user is already near the bottom
+              if (chat.scrollHeight - chat.scrollTop < chat.clientHeight + 100) {
+                chat.scrollTop = chat.scrollHeight;
+              }
+            }, 10);
+          }
         }
       }
 
@@ -16825,6 +16991,7 @@ function applyUserAvatar(avatarElement) {
         state.messageHistory.splice(idx, 1);
         reindexFavoritesAfterMessageDelete(idx);
         recomputePendingUserState();
+        resetRenderedHistoryWindow();
         renderAllMessages();
         updateAiRequestButtonVisibility();
         if (!options.skipSync) {
@@ -20655,6 +20822,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       const EXTENSION_FRIENDS_KEY = 'tavern_helper_friends_v1';
       const EXTENSION_GROUPS_KEY = 'tavern_helper_groups_v1';
       const EXTENSION_ROLE_GROUPS_KEY = 'tavern_helper_role_groups_v1';
+      const EXTENSION_PRIVATE_CONVERSATIONS_KEY = 'tavern_helper_private_conversations_v1';
+      const EXTENSION_GROUP_CONVERSATIONS_KEY = 'tavern_helper_group_conversations_v1';
       const EXTENSION_UI_ASSETS_KEY = 'tavern_helper_ui_assets_v1';
       const EXTENSION_CHAR_PROFILE_KEY = 'tavern_helper_char_profile_v1';
       const EXTENSION_PRIVATE_CHAT_STYLES_KEY = 'tavern_helper_private_chat_styles_v1';
@@ -20662,6 +20831,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       const PRIVATE_CHAT_STYLE_LS_KEY = 'tavern_private_chat_styles_v1';
       const DIARY_LS_KEY = 'tavern_diary_v1';
       const SHOP_LS_PREFIX = 'tavern_shop_v1';
+      const MOBILE_HISTORY_PAGE_SIZE = 30;
 
       function getSillyContextSafe() {
         try {
@@ -20941,6 +21111,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (!list[idx]) return false;
         list[idx].messages = [];
         state.messageHistory = [];
+        resetRenderedHistoryWindow();
         lastHistoryCount = 0;
         renderAllMessages();
         deferredSync(0);
@@ -20959,6 +21130,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (!list[idx]) return false;
         list[idx].messages = [];
         state.messageHistory = [];
+        resetRenderedHistoryWindow();
         lastHistoryCount = 0;
         renderAllMessages();
         deferredSync(0);
@@ -21217,6 +21389,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         const extFriends = readCharacterExtensionField(ctx, EXTENSION_FRIENDS_KEY);
         const extGroups = readCharacterExtensionField(ctx, EXTENSION_GROUPS_KEY);
+        const extPrivateConversations = readCharacterExtensionField(ctx, EXTENSION_PRIVATE_CONVERSATIONS_KEY);
+        const extGroupConversations = readCharacterExtensionField(ctx, EXTENSION_GROUP_CONVERSATIONS_KEY);
         const legacyFriends = loadFriendsListLegacy();
         const legacyGroups = loadGroupsListLegacy();
 
@@ -21230,6 +21404,20 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           void writeCharacterExtensionField(EXTENSION_GROUPS_KEY, legacyGroups);
         } else if (Array.isArray(extGroups)) {
           saveGroupsListLegacy(extGroups);
+        }
+
+        if (!Array.isArray(extPrivateConversations) && legacyFriends.length) {
+          const seededPrivates = legacyFriends
+            .map((f, index) => normalizePrivateConversationEntry({ name: f && f.name ? f.name : f, messages: [], addTime: f && f.addTime ? f.addTime : undefined }, index))
+            .filter(item => item.name);
+          if (seededPrivates.length) void writeCharacterExtensionField(EXTENSION_PRIVATE_CONVERSATIONS_KEY, seededPrivates);
+        }
+
+        if (!Array.isArray(extGroupConversations) && legacyGroups.length) {
+          const seededGroups = legacyGroups
+            .map((g, index) => normalizeGroupConversationEntry({ ...g, messages: Array.isArray(g && g.messages) ? g.messages : [] }, index))
+            .filter(item => item.name);
+          if (seededGroups.length) void writeCharacterExtensionField(EXTENSION_GROUP_CONVERSATIONS_KEY, seededGroups);
         }
       }
 
@@ -22191,6 +22379,14 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (!confirm(`确认删除好友「${name || ('好友' + (index + 1))}」吗？`)) return;
         list.splice(index, 1);
         saveFriendsList(list);
+        if (name) {
+          const convs = getPrivateConversations();
+          const convIndex = convs.findIndex(c => c && String(c.name || '').trim() === name);
+          if (convIndex >= 0) {
+            convs.splice(convIndex, 1);
+            savePrivateConversations(convs);
+          }
+        }
         renderFriendsPanelList();
       }
 
@@ -22311,6 +22507,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (state.groupChatMode) {
           buildPrivateChatTabs(getGroupsList(), state.currentGroupIndex || 0);
         }
+        saveGroupConversations(getGroupConversations());
         syncGroupsListFromConversations(list);
         deferredSync();
       }
@@ -25129,16 +25326,30 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               state.shopData = loadShopDataLegacy();
             }
              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
-             const groupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
-             const privateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
+             const parsedGroupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
+             const parsedPrivateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
+             const extPrivateConversations = loadPrivateConversationsFromExtensions();
+             const extGroupConversations = loadGroupConversationsFromExtensions();
+             const privateConversations = (Array.isArray(extPrivateConversations) && extPrivateConversations.length)
+               ? extPrivateConversations
+               : parsedPrivateConversations;
+             const groupConversations = (Array.isArray(extGroupConversations) && extGroupConversations.length)
+               ? extGroupConversations
+               : parsedGroupConversations;
              const parsedRoleGroups = parseRoleGroupConversationsFromShouji(msg.message) || [];
              const extRoleGroups = loadRoleGroupsFromExtensions();
              const roleGroupConversations = (Array.isArray(extRoleGroups) && extRoleGroups.length)
                ? extRoleGroups
                : parsedRoleGroups;
-             if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroups.length) {
-               saveRoleGroupConversations(parsedRoleGroups);
+             if ((!Array.isArray(extPrivateConversations) || extPrivateConversations.length === 0) && parsedPrivateConversations.length) {
+               savePrivateConversations(parsedPrivateConversations);
              }
+             if ((!Array.isArray(extGroupConversations) || extGroupConversations.length === 0) && parsedGroupConversations.length) {
+               saveGroupConversations(parsedGroupConversations);
+             }
+             if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroups.length) {
+                saveRoleGroupConversations(parsedRoleGroups);
+              }
              const nameSpan = document.getElementById('chatPersonName');
 
              state.groupConversations = groupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
@@ -25200,10 +25411,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                state.currentGroupIndex = activeGroupIndex;
                state.currentRoleGroupIndex = activeRoleGroupIndex;
 
-               if (state.roleGroupMode && hasRoleGroup) {
-                 const activeList = state.roleGroupConversations;
-                 const activeIndex = Math.max(0, Math.min(state.currentRoleGroupIndex || 0, activeList.length - 1));
-                 const conv = activeList[activeIndex] || {};
+                if (state.roleGroupMode && hasRoleGroup) {
+                  const activeList = state.roleGroupConversations;
+                  const activeIndex = Math.max(0, Math.min(state.currentRoleGroupIndex || 0, activeList.length - 1));
+                  const conv = activeList[activeIndex] || {};
                  const roleName = String(conv.role || conv.viewer || '').trim();
                  const groupName = String(conv.name || '').trim();
                  const title = roleName && groupName ? `${roleName} · ${groupName}` : (groupName || roleName || '');
@@ -25214,10 +25425,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                  if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
                  setRoleGroupInputLock(true);
                } else {
-                 const activeList = state.groupChatMode ? state.groupConversations : state.privateConversations;
-                 const activeIndex = state.groupChatMode ? state.currentGroupIndex : state.currentPrivateIndex;
-                 state.messageHistory = Array.isArray(activeList[activeIndex]?.messages) ? [...activeList[activeIndex].messages] : [];
-                 setActiveConversationPointer(state.groupChatMode ? 'group' : 'private', activeIndex);
+                  const activeList = state.groupChatMode ? state.groupConversations : state.privateConversations;
+                  const activeIndex = state.groupChatMode ? state.currentGroupIndex : state.currentPrivateIndex;
+                  state.messageHistory = Array.isArray(activeList[activeIndex]?.messages) ? [...activeList[activeIndex].messages] : [];
+                  setActiveConversationPointer(state.groupChatMode ? 'group' : 'private', activeIndex);
                  if (nameSpan) nameSpan.textContent = activeList[activeIndex]?.name || wantedName || '';
                  buildPrivateChatTabs(activeList, activeIndex);
                  setRoleGroupInputLock(false);
@@ -25238,17 +25449,18 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                    console.log('No person name found, keeping current name:', nameSpan.textContent);
                  }
                }
-               state.messageHistory = parseShoujiLog(msg.message);
-               setActiveConversationPointer('private', 0);
-               const tabs = document.getElementById('privateChatTabs');
-               if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
-               console.log('Loaded single conversation, messages:', state.messageHistory.length);
-             }
-          } else {
-            state.messageHistory = [];
-           state.moments = [];
-           state.forum = [];
-           state.diaryByFriend = loadDiaryStore();
+                state.messageHistory = parseShoujiLog(msg.message);
+                setActiveConversationPointer('private', 0);
+                const tabs = document.getElementById('privateChatTabs');
+                if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
+                console.log('Loaded single conversation, messages:', state.messageHistory.length);
+              }
+              state.sharedHistorySource = (hasPrivate || hasGroup || hasRoleGroup) ? 'extension' : 'message';
+           } else {
+             state.messageHistory = [];
+            state.moments = [];
+            state.forum = [];
+            state.diaryByFriend = loadDiaryStore();
            state.divinationChanges = '';
            state.shopData = loadShopDataLegacy();
              state.groupChatMode = false;
@@ -25267,13 +25479,14 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
              if (nameSpan && !nameSpan.textContent.trim()) {
                nameSpan.textContent = '';
              }
-            const tabs = document.getElementById('privateChatTabs');
-            if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
-            console.log('No message history found');
-          }
+             const tabs = document.getElementById('privateChatTabs');
+             if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
+             console.log('No message history found');
+           }
 
-          // 强制重置渲染状态
-          lastHistoryCount = 0;
+           // 强制重置渲染状态
+           resetRenderedHistoryWindow();
+           lastHistoryCount = 0;
           try { if (typeof renderDivinationBook === 'function') renderDivinationBook(state.divinationChanges); } catch (_) {}
 
           // 延迟渲染确保DOM已准备好
@@ -30188,4 +30401,3 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
-
