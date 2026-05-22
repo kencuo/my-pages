@@ -10603,6 +10603,24 @@ function applyUserAvatar(avatarElement) {
         }
       }
 
+      function promoteLegacySingleConversation(personName = '') {
+        const resolvedName = String(personName || getActivePrivateConversationName() || parsePersonNameFromShouji(serializeShoujiLog(state.messageHistory)) || '对方').trim() || '对方';
+        const messages = Array.isArray(state.messageHistory) ? [...state.messageHistory] : [];
+        const list = [{
+          name: resolvedName,
+          messages,
+          addTime: new Date().toISOString(),
+        }].map(normalizePrivateConversationEntry);
+
+        state.privateConversations = list;
+        state.currentPrivateIndex = 0;
+        state.groupChatMode = false;
+        state.roleGroupMode = false;
+        setActiveConversationPointer('private', 0);
+        savePrivateConversations(list);
+        return list;
+      }
+
       // ==================== ROLE GROUP (<group>) SUPPORT ====================
       // 格式：
       // <group>
@@ -25172,11 +25190,14 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
         if (!hasPrivate && !hasGroup && !hasRoleGroup) {
+          promoteLegacySingleConversation(getActivePrivateConversationName());
+          const promotedPrivateList = getPrivateConversations();
+          const promotedPrivateBlocks = buildPrivateBlocksFromConversations(promotedPrivateList);
+          const promotedCore = upsertPrivateAndGroupIntoShoujiMessage('<shouji>\n</shouji>', promotedPrivateBlocks, '', '');
           saveRoleGroupConversations([]);
           if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
             if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-            const log = serializeShoujiLog(state.messageHistory);
-            let messageToSave = log;
+            let messageToSave = promotedCore;
             let preservedChanges = '';
             try {
               const currentObj = getchatmessage(state.currentMsgId)[0];
@@ -25434,11 +25455,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                  setRoleGroupInputLock(false);
                }
                console.log('Loaded conversations - private:', state.privateConversations.length, 'group:', state.groupConversations.length);
-             } else {
-               state.groupChatMode = false;
-               state.roleGroupMode = false;
-               setRoleGroupInputLock(false);
-               // 单会话格式保持兼容
+              } else {
+                state.groupChatMode = false;
+                state.roleGroupMode = false;
+                setRoleGroupInputLock(false);
+                // 单会话格式保持兼容
                const titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
                const personName = titleMatch ? titleMatch[1] : parsePersonNameFromShouji(msg.message);
                if (nameSpan) {
@@ -25446,11 +25467,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                    nameSpan.textContent = personName;
                    console.log('Set person name to:', personName);
                  } else {
-                   console.log('No person name found, keeping current name:', nameSpan.textContent);
-                 }
-               }
+                    console.log('No person name found, keeping current name:', nameSpan.textContent);
+                  }
+                }
                 state.messageHistory = parseShoujiLog(msg.message);
-                setActiveConversationPointer('private', 0);
+                promoteLegacySingleConversation(personName);
                 const tabs = document.getElementById('privateChatTabs');
                 if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
                 console.log('Loaded single conversation, messages:', state.messageHistory.length);
