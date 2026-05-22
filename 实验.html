@@ -15726,6 +15726,87 @@ function applyUserAvatar(avatarElement) {
         }
       }
 
+      function enableInlineMessageEditing(contentDiv, msg, idx) {
+        if (!contentDiv || !msg || !isEditableMessage(msg)) return;
+        if (msg.sender !== 'user' && msg.sender !== 'char') return;
+        if (msg.type && msg.type !== 'text' && msg.type !== '' && msg.type !== 'voice' && msg.type !== 'redpacket') return;
+        if (contentDiv.querySelector('img, video, .message-image-container, .wechat-card, .location-card, .document-container')) return;
+
+        const startEdit = () => {
+          if (contentDiv.dataset.inlineEditing === '1') return;
+          contentDiv.dataset.inlineEditing = '1';
+          contentDiv.contentEditable = 'true';
+          contentDiv.spellcheck = false;
+          contentDiv.focus();
+          const selection = window.getSelection && window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            range.selectNodeContents(contentDiv);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        };
+
+        const finishEdit = (commit) => {
+          if (contentDiv.dataset.inlineEditing !== '1') return;
+          contentDiv.dataset.inlineEditing = '0';
+          contentDiv.contentEditable = 'false';
+          if (!commit) {
+            updateMessage(idx);
+            return;
+          }
+
+          const nextText = String(contentDiv.innerText || '').trim();
+          if (!nextText) {
+            showToast('消息内容不能为空', 'error');
+            updateMessage(idx);
+            return;
+          }
+
+          const originalMsg = state.messageHistory[idx];
+          if (!originalMsg) {
+            updateMessage(idx);
+            return;
+          }
+
+          const parsed = parseInlineContentType(nextText);
+          state.messageHistory[idx] = {
+            ...originalMsg,
+            ...parsed,
+            content: nextText,
+          };
+          recomputePendingUserState();
+          updateMessage(idx);
+          updateAiRequestButtonVisibility();
+          deferredSync(50);
+          showToast('消息已修改', 'success');
+        };
+
+        contentDiv.addEventListener('dblclick', e => {
+          if (e.target.closest('img,video,audio,button,input,textarea,select,a')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          startEdit();
+        });
+
+        contentDiv.addEventListener('keydown', e => {
+          if (contentDiv.dataset.inlineEditing !== '1') return;
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            finishEdit(true);
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            finishEdit(false);
+          }
+        });
+
+        contentDiv.addEventListener('blur', () => {
+          if (contentDiv.dataset.inlineEditing !== '1') return;
+          finishEdit(true);
+        });
+      }
+
       function renderRecalledMessage(contentDiv, msg) {
         contentDiv.classList.add('recalled-message');
         state.retractingMessages.add(contentDiv);
@@ -16617,6 +16698,8 @@ function applyUserAvatar(avatarElement) {
           messageRenderers.text(contentDiv, msg, idx);
         }
 
+        enableInlineMessageEditing(contentDiv, msg, idx);
+
         // For cancelled call, we want the user bubble style
         if (msg.type === 'call-cancelled') {
           contentDiv.classList.add('user');
@@ -16784,11 +16867,11 @@ function applyUserAvatar(avatarElement) {
         // Quote action is always available
         menuItems.push({ action: 'quote', icon: '📝', text: '引用' });
 
-        // 用户消息：在“申请回复前”可编辑/删除
+        // 用户消息：在“申请回复前”可编辑
         if (isUserMessagePendingReply(idx) && isEditableMessage(message)) {
           menuItems.push({ action: 'edit-message', icon: '✏️', text: '编辑消息' });
         }
-        if (isUserMessagePendingReply(idx)) {
+        if (isDeletableMessage(message)) {
           menuItems.push({ action: 'delete-message', icon: '🗑️', text: '删除消息' });
         }
 
@@ -16962,6 +17045,12 @@ function applyUserAvatar(avatarElement) {
 
       function isLatestCharMessage(idx) {
         return idx === getLatestCharMessageIndex();
+      }
+
+      function isDeletableMessage(message) {
+        if (!message) return false;
+        if (message.sender !== 'user' && message.sender !== 'char') return false;
+        return message.type !== 'retracted';
       }
 
       function recomputePendingUserState() {
@@ -25647,6 +25736,17 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               }
             });
           }
+
+          const bindClearClick = (id, handler) => {
+            const element = document.getElementById(id);
+            if (!element || element.dataset.clearBound === '1') return;
+            element.dataset.clearBound = '1';
+            element.addEventListener('click', handler);
+          };
+
+          bindClearClick('momentsClearBtn', () => clearAllMoments());
+          bindClearClick('diaryClearBtn', () => clearDiaryForSelectedFriend());
+          bindClearClick('privateChatClearBtn', () => clearCurrentPrivateConversation());
 
         } catch (error) {
         }
