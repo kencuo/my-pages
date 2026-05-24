@@ -7198,6 +7198,7 @@
           display: flex;
           align-items: center;
           justify-content: flex-end;
+          gap: 2px;
         }
         .forum-btn {
           height: 36px;
@@ -7279,6 +7280,7 @@
           font-size: 13px;
           font-weight: 700;
           box-shadow: 0 0 0 1px rgba(15, 20, 25, 0.04);
+          cursor: pointer;
         }
         #forumAiPostBtn {
           width: 40px;
@@ -7294,6 +7296,24 @@
         }
         #forumAiPostBtn:hover {
           background: #f7f9f9;
+          border-color: transparent;
+          transform: none;
+        }
+        #forumClearBtn {
+          width: 40px;
+          min-width: 40px;
+          height: 40px;
+          padding: 0;
+          border: none;
+          background: transparent;
+          border-radius: 999px;
+          color: #e0245e;
+          font-size: 16px;
+          box-shadow: none;
+        }
+        #forumClearBtn:hover {
+          background: #fff1f5;
+          color: #c81e55;
           border-color: transparent;
           transform: none;
         }
@@ -7367,6 +7387,7 @@
           height: 40px;
           border-radius: 50%;
           box-shadow: none;
+          cursor: pointer;
         }
         .forum-card-body,
         .forum-comment-body {
@@ -7517,6 +7538,7 @@
           border-radius: 50%;
           flex: 0 0 28px;
           margin-top: 2px;
+          cursor: pointer;
         }
         .forum-comment .fc-head {
           display: flex;
@@ -7735,6 +7757,7 @@
           </button>
           <div class="forum-brand">X</div>
           <div class="forum-header-actions">
+            <button class="forum-btn" id="forumClearBtn" title="清空论坛">🗑</button>
             <button class="forum-btn" id="forumAiPostBtn" title="AI发帖">✦</button>
           </div>
         </div>
@@ -13337,6 +13360,14 @@ function applyUserAvatar(avatarElement) {
         renderForumList();
       }
 
+      function clearAllForumPosts() {
+        state.forum = [];
+        renderForumList();
+        deferredSync(0);
+        try { showToast('论坛已清空'); } catch (_) {}
+        return true;
+      }
+
       function parseForumCommentDisplay(rawText) {
         const text = unescapeStoredText(rawText || '');
         let author = '';
@@ -13453,6 +13484,49 @@ function applyUserAvatar(avatarElement) {
           el.style.backgroundImage = '';
           el.style.color = '#ffffff';
         }
+        el.title = '点击更换我的头像';
+        el.onclick = () => openForumAvatarPicker(name);
+      }
+
+      function openForumAvatarPicker(authorName) {
+        const name = String(authorName || '').trim();
+        if (!name) return;
+
+        try {
+          const userName = typeof getUserDisplayName === 'function' ? getUserDisplayName() : '我';
+          const isUser = !!(name && userName && name === userName);
+          if (isUser) {
+            const input = document.getElementById('avatarFileInput');
+            if (!input) return;
+            input.onchange = async (e) => {
+              const file = e.target && e.target.files ? e.target.files[0] : null;
+              if (!file) return;
+              await handleFileUpload(file, 'avatar');
+              updateForumHeaderAvatar();
+              renderForumList();
+              input.value = '';
+            };
+            input.click();
+            return;
+          }
+
+          const charInput = document.getElementById('charNameInput');
+          if (charInput) charInput.value = name;
+          const input = document.getElementById('charAvatarFileInput');
+          if (!input) return;
+          input.onchange = async (e) => {
+            const file = e.target && e.target.files ? e.target.files[0] : null;
+            if (!file) return;
+            await handleFileUpload(file, 'charAvatar');
+            renderForumList();
+            updateForumHeaderAvatar();
+            try { updateCharAvatarPreview(); } catch (_) {}
+            input.value = '';
+          };
+          input.click();
+        } catch (e) {
+          console.error('论坛头像更换失败:', e);
+        }
       }
 
       function renderForumList() {
@@ -13484,6 +13558,8 @@ function applyUserAvatar(avatarElement) {
           const avatar = document.createElement('img');
           avatar.className = 'forum-avatar';
           applyForumAvatarImage(avatar, author);
+          avatar.title = `点击更换 ${author} 的头像`;
+          avatar.onclick = () => openForumAvatarPicker(author);
           avatarShell.appendChild(avatar);
           card.appendChild(avatarShell);
 
@@ -13567,6 +13643,8 @@ function applyUserAvatar(avatarElement) {
               const commentAvatar = document.createElement('img');
               commentAvatar.className = 'forum-comment-avatar';
               applyForumAvatarImage(commentAvatar, parsed.author || '评论');
+              commentAvatar.title = `点击更换 ${(parsed.author || '评论')} 的头像`;
+              commentAvatar.onclick = () => openForumAvatarPicker(parsed.author || '');
               row.appendChild(commentAvatar);
 
               const commentBody = document.createElement('div');
@@ -13951,9 +14029,19 @@ function applyUserAvatar(avatarElement) {
         if (!overlay || overlay.dataset.bound === '1') return;
         overlay.dataset.bound = '1';
         const backBtn = document.getElementById('forumBackBtn');
+        const clearBtn = document.getElementById('forumClearBtn');
         const aiBtn = document.getElementById('forumAiPostBtn');
         const publishBtn = document.getElementById('forumPublishBtn');
         if (backBtn) backBtn.onclick = closeForumPanel;
+        if (clearBtn) clearBtn.onclick = () => {
+          if (!Array.isArray(state.forum) || state.forum.length === 0) {
+            try { showToast('论坛已经是空的'); } catch (_) {}
+            return;
+          }
+          if (confirm('确定要一键清空论坛吗？此操作不可撤销。')) {
+            clearAllForumPosts();
+          }
+        };
         if (aiBtn) aiBtn.onclick = forumQuickAiPost;
         if (publishBtn) publishBtn.onclick = () => openForumComposer({ mode: 'post' });
       }
