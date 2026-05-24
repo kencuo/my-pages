@@ -7170,180 +7170,598 @@
           inset: 0;
           display: none;
           flex-direction: column;
-          background: #f7f3ea;
-          font-family: "Microsoft YaHei", "SimSun", "PingFang SC", "Mi Sans", Arial, sans-serif;
+          overflow: hidden;
+          background: #ffffff;
+          color: #0f1419;
+          font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
           z-index: 1255;
         }
         .forum-header {
-          height: 44px;
-          display: flex;
+          display: grid;
+          grid-template-columns: 44px 1fr 44px;
           align-items: center;
-          justify-content: space-between;
-          padding: 0 10px;
-          background: #f2efe8;
-          border-bottom: 1px solid #d8cfc0;
+          gap: 8px;
+          padding: 10px 14px 8px;
+          background: rgba(255, 255, 255, 0.94);
+          border-bottom: 1px solid #eff3f4;
         }
-        .forum-title {
-          flex: 1;
-          text-align: left;
-          font-size: 14px;
-          font-weight: 700;
-          color: #3a2f23;
-          padding-left: 6px;
+        .forum-brand {
+          justify-self: center;
+          font-size: 30px;
+          font-weight: 800;
+          line-height: 1;
+          letter-spacing: -0.1em;
+          color: #0f1419;
+          user-select: none;
         }
         .forum-header-actions {
           display: flex;
-          gap: 6px;
+          align-items: center;
+          justify-content: flex-end;
         }
         .forum-btn {
-          height: 26px;
-          min-width: 28px;
-          padding: 0 8px;
-          border: 1px solid #c9bfae;
-          border-radius: 3px;
+          height: 36px;
+          min-width: 36px;
+          padding: 0 16px;
+          border: 1px solid #cfd9de;
+          border-radius: 999px;
           background: #ffffff;
-          color: #5c4a2a;
+          color: #0f1419;
           cursor: pointer;
-          font-size: 12px;
+          font-size: 13px;
+          font-weight: 700;
+          transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .forum-btn:hover {
+          background: #f7f9f9;
+          border-color: #c1d1d8;
         }
         .forum-btn.primary {
-          background: #2d6dcc;
-          border-color: #2d6dcc;
-          color: #fff;
+          background: #1d9bf0;
+          border-color: #1d9bf0;
+          color: #ffffff;
+          box-shadow: none;
         }
-        .forum-btn.ghost {
-          border-color: #9ab7e4;
-          color: #2d6dcc;
+        .forum-btn.primary:hover {
+          background: #1a8cd8;
+          border-color: #1a8cd8;
         }
         .forum-btn.small {
-          height: 22px;
-          min-width: 44px;
+          height: 34px;
+          min-width: 0;
           padding: 0 8px;
-          font-size: 11px;
-          border-radius: 11px;
+          border: none;
+          background: transparent;
+          color: #536471;
+          font-size: 12px;
+          font-weight: 500;
+          box-shadow: none;
+          transform: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .forum-btn.small:hover {
+          background: transparent;
+          border-color: transparent;
+          color: #1d9bf0;
+          transform: none;
         }
         #forumBackBtn {
-          width: 44px;
-          min-width: 44px;
+          width: 40px;
+          min-width: 40px;
+          height: 40px;
           padding: 0;
+          border: none;
+          background: transparent;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        #forumBackBtn:hover {
+          background: #f7f9f9;
+          transform: none;
+          box-shadow: none;
+        }
+        .forum-header-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
+          background: linear-gradient(135deg, #1d9bf0 0%, #8fd2ff 100%);
+          background-size: cover;
+          background-position: center;
+          color: #ffffff;
+          font-size: 13px;
+          font-weight: 700;
+          box-shadow: 0 0 0 1px rgba(15, 20, 25, 0.04);
+        }
+        #forumAiPostBtn {
+          width: 40px;
+          min-width: 40px;
+          height: 40px;
+          padding: 0;
           border: none;
           background: transparent;
-          color: #2d6dcc;
-          font-size: 16px;
+          border-radius: 999px;
+          color: #0f1419;
+          font-size: 18px;
+          box-shadow: none;
+        }
+        #forumAiPostBtn:hover {
+          background: #f7f9f9;
+          border-color: transparent;
+          transform: none;
         }
         .forum-subnav {
           display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 6px 10px;
-          background: #fbf9f4;
-          border-bottom: 1px solid #e0d6c8;
-          font-size: 12px;
-          color: #6b5d4f;
+          align-items: flex-end;
+          gap: 20px;
+          padding: 0 14px;
+          background: #ffffff;
+          border-bottom: 1px solid #eff3f4;
+          overflow-x: auto;
+          scrollbar-width: none;
         }
-        .forum-subnav-title {
+        .forum-subnav::-webkit-scrollbar {
+          display: none;
+        }
+        .forum-subnav-pill {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 14px 2px 13px;
+          color: #536471;
+          font-size: 15px;
           font-weight: 700;
-          color: #3a2f23;
+          white-space: nowrap;
+        }
+        .forum-subnav-pill.active {
+          color: #0f1419;
+        }
+        .forum-subnav-pill.active::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 4px;
+          border-radius: 999px;
+          background: #1d9bf0;
+        }
+        .forum-subnav-hint {
+          display: none;
         }
         .forum-list {
           flex: 1;
           overflow-y: auto;
-          padding: 10px 10px 14px;
+          background: #ffffff;
+          padding: 0 0 118px;
         }
         .forum-card {
+          display: flex;
+          gap: 12px;
+          padding: 14px 14px 10px;
           background: #ffffff;
-          border: 1px solid #e0d6c8;
-          border-radius: 4px;
-          padding: 8px 10px;
-          margin-bottom: 10px;
+          border-bottom: 1px solid #eff3f4;
+        }
+        .forum-card:hover {
+          background: #fbfcfc;
+        }
+        .forum-avatar-shell {
+          flex: 0 0 40px;
+        }
+        .forum-avatar,
+        .forum-comment-avatar {
+          display: block;
+          object-fit: cover;
+          background: #dbe7f0;
+        }
+        .forum-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
           box-shadow: none;
         }
-        .forum-post-title {
-          font-size: 14px;
+        .forum-card-body,
+        .forum-comment-body {
+          flex: 1;
+          min-width: 0;
+        }
+        .forum-card-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .forum-head-main {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 4px 6px;
+          min-width: 0;
+        }
+        .forum-author {
+          font-size: 15px;
           font-weight: 700;
-          color: #0645ad;
-          line-height: 1.3;
+          color: #0f1419;
+        }
+        .forum-verified {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: #1d9bf0;
+          color: #ffffff;
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 1;
+        }
+        .forum-handle,
+        .forum-time,
+        .forum-dot {
+          font-size: 13px;
+          color: #536471;
+        }
+        .forum-card-more {
+          width: 32px;
+          height: 32px;
+          padding: 0;
+          margin: -4px -6px 0 0;
+          border: none;
+          border-radius: 50%;
+          background: transparent;
+          color: #536471;
+          font-size: 20px;
+          line-height: 1;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        .forum-card-more:hover {
+          background: #eff3f4;
+          color: #0f1419;
+        }
+        .forum-post-title {
+          margin-top: 4px;
+          font-size: 16px;
+          font-weight: 500;
+          line-height: 1.45;
+          color: #0f1419;
           cursor: pointer;
         }
-        .forum-post-title:hover { text-decoration: underline; }
-        .forum-meta {
-          margin-top: 4px;
-          font-size: 11px;
-          color: #7a6a58;
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
+        .forum-post-title:hover {
+          color: #0f1419;
         }
         .forum-content {
           margin-top: 8px;
-          font-size: 13px;
-          color: #3a2f23;
+          font-size: 14px;
+          color: #0f1419;
           white-space: pre-wrap;
-          line-height: 1.45;
+          word-break: break-word;
+          line-height: 1.55;
         }
         .forum-actions {
           display: flex;
+          align-items: center;
+          justify-content: space-between;
           gap: 8px;
           margin-top: 10px;
         }
         .forum-actions .forum-btn,
         .forum-comment-actions .forum-btn {
-          background: transparent;
-          border: none;
-          padding: 0;
-          height: auto;
-          min-width: 0;
-          color: #2d6dcc;
-          font-size: 12px;
+          color: #536471;
         }
         .forum-actions .forum-btn:hover,
         .forum-comment-actions .forum-btn:hover {
-          text-decoration: underline;
+          text-decoration: none;
+        }
+        .forum-action-icon {
+          width: 18px;
+          height: 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: currentColor;
+          flex-shrink: 0;
+        }
+        .forum-action-icon svg {
+          width: 18px;
+          height: 18px;
+          stroke: currentColor;
+          fill: none;
+          stroke-width: 1.8;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+        }
+        .forum-action-count {
+          font-size: 12px;
+          color: currentColor;
         }
         .forum-comments {
           margin-top: 10px;
-          background: #f9f7f2;
-          border-radius: 4px;
-          padding: 6px 8px;
-          border: 1px dashed #d8cfc0;
+          padding-top: 10px;
+          border-top: 1px solid #eff3f4;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .forum-comments-title {
+          font-size: 13px;
+          font-weight: 600;
+          color: #536471;
+        }
+        .forum-comments-more {
+          padding-left: 38px;
+          font-size: 13px;
+          color: #1d9bf0;
         }
         .forum-comment {
-          font-size: 12px;
-          color: #3a2f23;
-          line-height: 1.35;
-          padding: 4px 0;
-          border-bottom: 1px dashed #e0d6c8;
+          display: flex;
+          gap: 10px;
+          padding: 0;
+          border: none;
+          border-radius: 0;
+          background: transparent;
+          color: #0f1419;
         }
-        .forum-comment:last-child { border-bottom: none; }
-        .forum-comment .fc-head { font-weight: 600; color: #2d6dcc; }
-        .forum-comment .fc-reply { margin-left: 4px; color: #6b5d4f; }
-        .forum-comment .fc-time { font-size: 11px; color: #8a7b69; margin-left: 6px; }
-        .forum-comment .fc-text { white-space: pre-wrap; word-break: break-word; }
-        .forum-comment-actions { margin-top: 4px; display: flex; gap: 6px; }
-        .forum-empty {
-          padding: 40px 10px;
-          text-align: center;
-          color: #8a7b69;
+        .forum-comment-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          flex: 0 0 28px;
+          margin-top: 2px;
+        }
+        .forum-comment .fc-head {
+          display: flex;
+          align-items: center;
+          gap: 4px 6px;
+          flex-wrap: wrap;
+        }
+        .forum-comment .fc-name {
           font-size: 13px;
+          font-weight: 700;
+          color: #0f1419;
+        }
+        .forum-comment .fc-handle,
+        .forum-comment .fc-time,
+        .forum-comment .fc-reply {
+          font-size: 12px;
+          color: #536471;
+        }
+        .forum-comment .fc-reply {
+          padding: 0;
+          background: transparent;
+          font-weight: 500;
+        }
+        .forum-comment .fc-text {
+          margin-top: 2px;
+          white-space: pre-wrap;
+          word-break: break-word;
+          font-size: 14px;
+          line-height: 1.5;
+          color: #0f1419;
+        }
+        .forum-comment-actions {
+          margin-top: 4px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+        .forum-empty {
+          padding: 70px 22px;
+          text-align: left;
+          color: #536471;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+        }
+        .forum-empty-title {
+          font-size: 28px;
+          font-weight: 800;
+          line-height: 1.1;
+          letter-spacing: -0.03em;
+          color: #0f1419;
+        }
+        .forum-empty-subtitle {
+          font-size: 14px;
+          line-height: 1.6;
+          max-width: 220px;
+        }
+        #forumPublishBtn {
+          position: absolute;
+          right: 18px;
+          bottom: 74px;
+          width: 54px;
+          height: 54px;
+          min-width: 54px;
+          padding: 0;
+          border: none;
+          border-radius: 50%;
+          background: #1d9bf0;
+          color: #ffffff;
+          font-size: 34px;
+          font-weight: 300;
+          line-height: 1;
+          box-shadow: 0 10px 22px rgba(29, 155, 240, 0.3);
+          z-index: 2;
+        }
+        #forumPublishBtn:hover {
+          background: #1a8cd8;
+          transform: translateY(-1px);
+        }
+        .forum-bottom-nav {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 58px;
+          display: flex;
+          align-items: center;
+          justify-content: space-around;
+          background: rgba(255, 255, 255, 0.96);
+          border-top: 1px solid #eff3f4;
+          z-index: 1;
+        }
+        .forum-bottom-item {
+          width: 42px;
+          height: 42px;
+          padding: 0;
+          border: none;
+          background: transparent;
+          color: #0f1419;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          border-radius: 50%;
+        }
+        .forum-bottom-item:hover {
+          background: #f7f9f9;
+        }
+        .forum-bottom-item svg {
+          width: 24px;
+          height: 24px;
+          stroke: currentColor;
+          fill: none;
+          stroke-width: 1.8;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+        }
+        .forum-compose-modal {
+          position: fixed;
+          inset: 0;
+          display: none;
+          align-items: flex-end;
+          justify-content: center;
+          padding: 0;
+          background: rgba(15, 20, 25, 0.42);
+          backdrop-filter: blur(4px);
+          z-index: 9999;
+        }
+        .forum-compose-sheet {
+          width: min(100%, 380px);
+          padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+          border-radius: 22px 22px 0 0;
+          background: #ffffff;
+          box-shadow: 0 -12px 36px rgba(15, 20, 25, 0.18);
+          border: none;
+        }
+        .forum-compose-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+        .forum-compose-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #0f1419;
+          line-height: 1.2;
+        }
+        .forum-compose-subtitle {
+          margin-top: 4px;
+          font-size: 13px;
+          color: #536471;
+          line-height: 1.4;
+        }
+        .forum-compose-close {
+          width: 36px;
+          height: 36px;
+          padding: 0;
+          border: none;
+          border-radius: 50%;
+          background: #eff3f4;
+          color: #536471;
+          font-size: 22px;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        .forum-compose-close:hover {
+          background: #e7ecef;
+        }
+        .forum-compose-input,
+        .forum-compose-textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #cfd9de;
+          border-radius: 16px;
+          background: #ffffff;
+          color: #0f1419;
+          font-size: 14px;
+          transition: border-color 0.18s ease, box-shadow 0.18s ease;
+          outline: none;
+        }
+        .forum-compose-input {
+          padding: 12px 14px;
+          margin-bottom: 10px;
+        }
+        .forum-compose-textarea {
+          min-height: 126px;
+          padding: 12px 14px;
+          resize: vertical;
+          line-height: 1.6;
+        }
+        .forum-compose-input:focus,
+        .forum-compose-textarea:focus {
+          border-color: #8ecdf7;
+          box-shadow: 0 0 0 4px rgba(29, 155, 240, 0.12);
+        }
+        .forum-compose-status {
+          margin-top: 10px;
+          min-height: 18px;
+          font-size: 12px;
+          color: #536471;
+        }
+        .forum-compose-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 14px;
         }
       </style>
       <div class="forum-overlay" id="forumOverlay" aria-hidden="true">
         <div class="forum-header">
-          <button class="forum-btn" id="forumBackBtn" title="返回">←</button>
-          <div class="forum-title">天涯论坛</div>
+          <button class="forum-btn" id="forumBackBtn" title="返回">
+            <span class="forum-header-avatar" id="forumHeaderAvatar">我</span>
+          </button>
+          <div class="forum-brand">X</div>
           <div class="forum-header-actions">
-            <button class="forum-btn ghost" id="forumAiPostBtn" title="AI发帖">对方发帖</button>
-            <button class="forum-btn primary" id="forumPublishBtn" title="发帖">发帖</button>
+            <button class="forum-btn" id="forumAiPostBtn" title="AI发帖">✦</button>
           </div>
         </div>
         <div class="forum-subnav">
-          <span class="forum-subnav-title">天涯论坛</span>
-          <span>看帖 / 回帖 / 发帖</span>
+          <span class="forum-subnav-pill active">为你推荐</span>
+          <span class="forum-subnav-pill">正在关注</span>
+          <span class="forum-subnav-pill">角色广场</span>
         </div>
         <div class="forum-list" id="forumList"></div>
+        <button class="forum-btn primary" id="forumPublishBtn" title="发帖">+</button>
+        <div class="forum-bottom-nav" aria-hidden="true">
+          <button class="forum-bottom-item" title="首页">
+            <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
+          </button>
+          <button class="forum-bottom-item" title="搜索">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          </button>
+          <button class="forum-bottom-item" title="动态">
+            <svg viewBox="0 0 24 24"><path d="m13.5 2.5-3 7h4l-4 12 1-9h-4z"></path></svg>
+          </button>
+          <button class="forum-bottom-item" title="通知">
+            <svg viewBox="0 0 24 24"><path d="M15 17H5.5l1.6-1.6a2 2 0 0 0 .6-1.4V10a4.3 4.3 0 1 1 8.6 0v4a2 2 0 0 0 .6 1.4L19 17z"></path><path d="M10 19a2 2 0 0 0 4 0"></path></svg>
+          </button>
+          <button class="forum-bottom-item" title="消息">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"></path><path d="m4 7 8 6 8-6"></path></svg>
+          </button>
+        </div>
       </div>
       <style>
         .divination-overlay {
@@ -11748,7 +12166,6 @@ function applyUserAvatar(avatarElement) {
       }
 
       function clearAllMoments() {
-        if (!confirm('确认清空全部朋友圈内容吗？')) return false;
         state.moments = [];
         renderMomentsList();
         deferredSync(0);
@@ -11786,15 +12203,11 @@ function applyUserAvatar(avatarElement) {
           try { showToast('还没有可转发的私聊或群聊'); } catch (_) {}
           return null;
         }
-        const text = options.map((opt, idx) => `${idx + 1}. ${opt.label}`).join('\n');
-        const raw = prompt(`选择转发目标：\n${text}`, '1');
-        if (raw == null) return null;
-        const idx = parseInt(raw, 10) - 1;
-        if (!Number.isInteger(idx) || idx < 0 || idx >= options.length) {
-          try { showToast('选择无效'); } catch (_) {}
-          return null;
-        }
-        return options[idx];
+        if (options.length === 1) return options[0];
+        const activeMode = getActiveConversationMode();
+        const activeIndex = getActiveConversationIndex();
+        const preferred = options.find(opt => opt.type === activeMode && opt.index !== activeIndex);
+        return preferred || options[0];
       }
 
       function appendPaymentMessageToConversation(target, line) {
@@ -11845,7 +12258,6 @@ function applyUserAvatar(avatarElement) {
       }
 
       function resetShopState() {
-        if (!confirm('确认一键清空商店吗？这会重置余额、商品、购物车和支付记录。')) return;
         setShopData({
           money: 0,
           items: [],
@@ -12249,9 +12661,12 @@ function applyUserAvatar(avatarElement) {
               const cart = normalizeShopCartItems(getShopData().cart).filter(it => String(it.itemId) !== String(itemId));
               return setShopData({ cart });
             }
-            if (e.target && e.target.id === 'shopCheckoutBtn') return checkoutShopCart();
-            if (e.target && e.target.id === 'shopForwardPendingBtn') return forwardShopPaymentRequest(false);
-            if (e.target && e.target.id === 'shopForwardPaidBtn') return forwardShopPaymentRequest(true);
+            const checkoutBtn = e.target && e.target.closest('#shopCheckoutBtn');
+            if (checkoutBtn) return checkoutShopCart();
+            const forwardPendingBtn = e.target && e.target.closest('#shopForwardPendingBtn');
+            if (forwardPendingBtn) return forwardShopPaymentRequest(false);
+            const forwardPaidBtn = e.target && e.target.closest('#shopForwardPaidBtn');
+            if (forwardPaidBtn) return forwardShopPaymentRequest(true);
           });
         }
         if (payList && !payList.dataset.shopBound) {
@@ -12859,6 +13274,7 @@ function applyUserAvatar(avatarElement) {
           o.style.display = 'flex';
           o.setAttribute('aria-hidden', 'false');
         }
+        updateForumHeaderAvatar();
         renderForumList();
         try { if (typeof deferredSync === 'function') deferredSync(0); } catch (_) {}
       }
@@ -12944,6 +13360,101 @@ function applyUserAvatar(avatarElement) {
         return { author, replyTo, time, content: content || text, raw: text };
       }
 
+      function getForumAuthorAvatarUrl(authorName) {
+        const name = String(authorName || '').trim();
+        const fallback = typeof getAvatarFallbackUrlForName === 'function'
+          ? getAvatarFallbackUrlForName(name || '匿名')
+          : '';
+        if (!name) return fallback;
+
+        try {
+          const userName = typeof getUserDisplayName === 'function' ? getUserDisplayName() : '';
+          if (userName && name === userName) {
+            const userAvatar = typeof getUserAvatarForStorage === 'function' ? getUserAvatarForStorage() : '';
+            return resolveAvatarUrl(userAvatar, fallback) || fallback;
+          }
+        } catch (_) {}
+
+        try {
+          const directAvatar = (typeof getCharacterAvatarUrl === 'function' ? getCharacterAvatarUrl(name) : '') ||
+            ((settingsState && settingsState.charAvatars) ? settingsState.charAvatars[name] : '');
+          if (directAvatar) return resolveAvatarUrl(directAvatar, fallback) || fallback;
+        } catch (_) {}
+
+        try {
+          const currentCharName = typeof getCurrentCharName === 'function' ? getCurrentCharName() : '';
+          if (currentCharName && name === currentCharName) {
+            const avatarToken = typeof getCurrentCharAvatarSuffix === 'function' ? getCurrentCharAvatarSuffix() : '';
+            if (avatarToken) return resolveAvatarUrl(avatarToken, fallback) || fallback;
+          }
+        } catch (_) {}
+
+        return fallback;
+      }
+
+      function applyForumAvatarImage(img, authorName) {
+        if (!img) return;
+        const name = String(authorName || '').trim() || '匿名';
+        const fallback = typeof getAvatarFallbackUrlForName === 'function'
+          ? getAvatarFallbackUrlForName(name)
+          : '';
+        const resolved = getForumAuthorAvatarUrl(name) || fallback;
+        img.src = resolved || fallback;
+        img.alt = `${name}头像`;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = () => {
+          img.onerror = null;
+          if (fallback) img.src = fallback;
+        };
+      }
+
+      function buildForumHandle(authorName) {
+        const base = String(authorName || '').trim().replace(/\s+/g, '');
+        return `@${(base || 'forum').slice(0, 18)}`;
+      }
+
+      function getForumTimeLabel(rawTime) {
+        const s = String(rawTime || '').trim();
+        if (!s) return '';
+        const parts = s.split(/\s+/).filter(Boolean);
+        return parts[parts.length - 1] || s;
+      }
+
+      function getForumDateLabel(rawTime) {
+        const s = String(rawTime || '').trim();
+        if (!s) return '';
+        const parts = s.split(/\s+/).filter(Boolean);
+        return parts[0] || s;
+      }
+
+      function getForumShortDateLabel(rawTime) {
+        const s = getForumDateLabel(rawTime);
+        if (!s) return '';
+        const m = s.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+        if (!m) return s;
+        return `${Number(m[2])}月${Number(m[3])}日`;
+      }
+
+      function updateForumHeaderAvatar() {
+        const el = document.getElementById('forumHeaderAvatar');
+        if (!el) return;
+        const name = (typeof getUserDisplayName === 'function' ? getUserDisplayName() : '我') || '我';
+        const initial = String(name).trim().charAt(0) || '我';
+        const avatarToken = typeof getUserAvatarForStorage === 'function' ? getUserAvatarForStorage() : '';
+        const fallback = typeof getAvatarFallbackUrlForName === 'function' ? getAvatarFallbackUrlForName(name) : '';
+        const resolved = avatarToken ? resolveAvatarUrl(avatarToken, fallback) : fallback;
+        el.textContent = initial;
+        if (resolved) {
+          el.style.backgroundImage = `url('${resolved}')`;
+          el.style.color = 'transparent';
+        } else {
+          el.style.backgroundImage = '';
+          el.style.color = '#ffffff';
+        }
+      }
+
       function renderForumList() {
         const list = document.getElementById('forumList');
         if (!list) return;
@@ -12954,100 +13465,164 @@ function applyUserAvatar(avatarElement) {
         if (posts.length === 0) {
           const empty = document.createElement('div');
           empty.className = 'forum-empty';
-          empty.textContent = '还没有论坛帖子，点下方“发帖”创建第一帖吧。';
+          empty.innerHTML = `
+            <div class="forum-empty-title">时间线还是空的</div>
+            <div class="forum-empty-subtitle">点右上角“发帖”，这里就会像推文流一样滚起来。</div>
+          `;
           list.appendChild(empty);
           return;
         }
 
         for (const post of posts) {
-          const card = document.createElement('div');
+          const card = document.createElement('article');
           card.className = 'forum-card';
+          const author = post.author || '匿名';
+          const commentCount = Array.isArray(post.comments) ? post.comments.length : 0;
+          const timeLabel = getForumTimeLabel(post.time || '');
+          const avatarShell = document.createElement('div');
+          avatarShell.className = 'forum-avatar-shell';
+          const avatar = document.createElement('img');
+          avatar.className = 'forum-avatar';
+          applyForumAvatarImage(avatar, author);
+          avatarShell.appendChild(avatar);
+          card.appendChild(avatarShell);
+
+          const bodyWrap = document.createElement('div');
+          bodyWrap.className = 'forum-card-body';
 
           const title = document.createElement('div');
           title.className = 'forum-post-title';
           title.textContent = post.title || '未命名';
-          card.appendChild(title);
+          title.title = '点击评论这条帖子';
+          title.onclick = () => openForumComposer({ mode: 'comment', postId: post.id });
 
-          const meta = document.createElement('div');
-          meta.className = 'forum-meta';
-          const author = post.author || '匿名';
-          const time = post.time || '';
-          meta.textContent = time ? `${author} · ${time}` : author;
-          card.appendChild(meta);
+          const head = document.createElement('div');
+          head.className = 'forum-card-head';
+          const headMain = document.createElement('div');
+          headMain.className = 'forum-head-main';
+          headMain.innerHTML = `
+            <span class="forum-author">${author}</span>
+            <span class="forum-verified">✓</span>
+            <span class="forum-handle">${buildForumHandle(author)}</span>
+            <span class="forum-dot">·</span>
+            <span class="forum-time">${timeLabel || '刚刚'}</span>
+          `;
+          const headMore = document.createElement('button');
+          headMore.className = 'forum-card-more';
+          headMore.type = 'button';
+          headMore.title = '更多';
+          headMore.textContent = '…';
+          head.appendChild(headMain);
+          head.appendChild(headMore);
+          bodyWrap.appendChild(head);
+          bodyWrap.appendChild(title);
 
-          const content = document.createElement('div');
-          content.className = 'forum-content';
-          content.textContent = unescapeStoredText(post.content || '');
-          card.appendChild(content);
+          const contentText = unescapeStoredText(post.content || '');
+          if (contentText) {
+            const content = document.createElement('div');
+            content.className = 'forum-content';
+            content.textContent = contentText;
+            bodyWrap.appendChild(content);
+          }
 
           const actions = document.createElement('div');
           actions.className = 'forum-actions';
           const btnComment = document.createElement('button');
           btnComment.className = 'forum-btn small';
-          btnComment.textContent = '评论';
+          btnComment.innerHTML = `<span class="forum-action-icon"><svg viewBox="0 0 24 24"><path d="M4 5.5C4 4.672 4.672 4 5.5 4h13A1.5 1.5 0 0 1 20 5.5v8A1.5 1.5 0 0 1 18.5 15H9l-4 4v-4H5.5A1.5 1.5 0 0 1 4 13.5z"></path></svg></span><span class="forum-action-count">${commentCount || ''}</span>`;
           btnComment.onclick = () => openForumComposer({ mode: 'comment', postId: post.id });
+          const btnRepeat = document.createElement('button');
+          btnRepeat.className = 'forum-btn small';
+          btnRepeat.innerHTML = `<span class="forum-action-icon"><svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"></path><path d="M3 11V9a3 3 0 0 1 3-3h15"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v2a3 3 0 0 1-3 3H3"></path></svg></span><span class="forum-action-count">${commentCount > 0 ? 1 : ''}</span>`;
           const btnAi = document.createElement('button');
           btnAi.className = 'forum-btn small';
-          btnAi.textContent = 'AI回复';
+          btnAi.innerHTML = `<span class="forum-action-icon"><svg viewBox="0 0 24 24"><path d="M12 20.5c4.142 0 7.5-3.134 7.5-7s-3.358-7-7.5-7-7.5 3.134-7.5 7 3.358 7 7.5 7Z"></path><path d="M8.5 10h.01"></path><path d="M15.5 10h.01"></path><path d="M9 14c.9.667 1.9 1 3 1s2.1-.333 3-1"></path></svg></span><span class="forum-action-count"></span>`;
           btnAi.onclick = () => forumAiReply(post.id);
+          const btnViews = document.createElement('button');
+          btnViews.className = 'forum-btn small';
+          btnViews.innerHTML = `<span class="forum-action-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="M8 14v-3"></path><path d="M12 14V8"></path><path d="M16 14v-6"></path></svg></span><span class="forum-action-count">${commentCount > 0 ? `${commentCount * 7}` : ''}</span>`;
+          const btnBookmark = document.createElement('button');
+          btnBookmark.className = 'forum-btn small';
+          btnBookmark.innerHTML = `<span class="forum-action-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"></path></svg></span><span class="forum-action-count"></span>`;
           actions.appendChild(btnComment);
+          actions.appendChild(btnRepeat);
           actions.appendChild(btnAi);
-          card.appendChild(actions);
+          actions.appendChild(btnViews);
+          actions.appendChild(btnBookmark);
+          bodyWrap.appendChild(actions);
 
-          const commentsWrap = document.createElement('div');
-          commentsWrap.className = 'forum-comments';
           const comments = Array.isArray(post.comments) ? post.comments : [];
-          if (comments.length === 0) {
-            const c = document.createElement('div');
-            c.className = 'forum-comment';
-            c.style.borderBottom = 'none';
-            c.textContent = '暂无评论';
-            commentsWrap.appendChild(c);
-          } else {
-            comments.forEach((cmt) => {
+          if (comments.length > 0) {
+            const commentsWrap = document.createElement('div');
+            commentsWrap.className = 'forum-comments';
+            const commentsTitle = document.createElement('div');
+            commentsTitle.className = 'forum-comments-title';
+            commentsTitle.textContent = `${commentCount} 条回复`;
+            commentsWrap.appendChild(commentsTitle);
+            comments.slice(0, 2).forEach((cmt) => {
               const row = document.createElement('div');
               row.className = 'forum-comment';
 
               const parsed = parseForumCommentDisplay((cmt && (cmt.text || cmt.content)) || '');
+              const commentAvatar = document.createElement('img');
+              commentAvatar.className = 'forum-comment-avatar';
+              applyForumAvatarImage(commentAvatar, parsed.author || '评论');
+              row.appendChild(commentAvatar);
+
+              const commentBody = document.createElement('div');
+              commentBody.className = 'forum-comment-body';
+
               const head = document.createElement('div');
               head.className = 'fc-head';
               const name = document.createElement('span');
               name.className = 'fc-name';
               name.textContent = parsed.author || '评论';
+              const handle = document.createElement('span');
+              handle.className = 'fc-handle';
+              handle.textContent = buildForumHandle(parsed.author || '评论');
               const reply = document.createElement('span');
               reply.className = 'fc-reply';
-              reply.textContent = parsed.replyTo ? ` 回复 ${parsed.replyTo}` : '';
+              reply.textContent = parsed.replyTo ? `回复 ${parsed.replyTo}` : '';
               const t = document.createElement('span');
               t.className = 'fc-time';
-              t.textContent = parsed.time ? ` ${parsed.time}` : '';
+              t.textContent = getForumTimeLabel(parsed.time || '');
               head.appendChild(name);
-              head.appendChild(reply);
+              head.appendChild(handle);
+              if (parsed.replyTo) head.appendChild(reply);
               head.appendChild(t);
-              row.appendChild(head);
+              commentBody.appendChild(head);
 
               const body = document.createElement('div');
               body.className = 'fc-text';
               body.textContent = parsed.content || '';
-              row.appendChild(body);
+              commentBody.appendChild(body);
 
               const cActions = document.createElement('div');
               cActions.className = 'forum-comment-actions';
               const r = document.createElement('button');
               r.className = 'forum-btn small';
-              r.textContent = '回复';
+              r.innerHTML = `<span class="forum-action-icon"><svg viewBox="0 0 24 24"><path d="M4 5.5C4 4.672 4.672 4 5.5 4h13A1.5 1.5 0 0 1 20 5.5v8A1.5 1.5 0 0 1 18.5 15H9l-4 4v-4H5.5A1.5 1.5 0 0 1 4 13.5z"></path></svg></span><span>回复</span>`;
               r.onclick = () => openForumComposer({ mode: 'comment', postId: post.id, replyTo: parsed.author || '' });
               const ai = document.createElement('button');
               ai.className = 'forum-btn small';
-              ai.textContent = 'AI回复';
+              ai.innerHTML = `<span class="forum-action-icon"><svg viewBox="0 0 24 24"><path d="M12 20.5c4.142 0 7.5-3.134 7.5-7s-3.358-7-7.5-7-7.5 3.134-7.5 7 3.358 7 7.5 7Z"></path><path d="M8.5 10h.01"></path><path d="M15.5 10h.01"></path><path d="M9 14c.9.667 1.9 1 3 1s2.1-.333 3-1"></path></svg></span><span>AI接话</span>`;
               ai.onclick = () => forumAiReply(post.id, parsed.raw);
               cActions.appendChild(r);
               cActions.appendChild(ai);
-              row.appendChild(cActions);
+              commentBody.appendChild(cActions);
+              row.appendChild(commentBody);
 
               commentsWrap.appendChild(row);
             });
+            if (comments.length > 2) {
+              const more = document.createElement('div');
+              more.className = 'forum-comments-more';
+              more.textContent = `查看全部 ${comments.length} 条回复`;
+              commentsWrap.appendChild(more);
+            }
+            bodyWrap.appendChild(commentsWrap);
           }
-          card.appendChild(commentsWrap);
+          card.appendChild(bodyWrap);
           list.appendChild(card);
         }
       }
@@ -13058,34 +13633,27 @@ function applyUserAvatar(avatarElement) {
 
         modal = document.createElement('div');
         modal.id = 'forumComposeModal';
-        modal.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.45);
-          z-index: 9999;
-          display: none;
-          align-items: center;
-          justify-content: center;
-        `;
+        modal.className = 'forum-compose-modal';
+        modal.style.display = 'none';
 
         modal.innerHTML = `
-          <div style="background: #fff; border-radius: 12px; width: 92%; max-width: 340px; padding: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.2);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <div id="forumComposeTitle" style="font-size: 16px; font-weight: 600; color: #333;">发布帖子</div>
-              <button id="forumComposeClose" style="background: none; border: none; font-size: 22px; color: #666; cursor: pointer;">×</button>
+          <div class="forum-compose-sheet">
+            <div class="forum-compose-header">
+              <div>
+                <div id="forumComposeTitle" class="forum-compose-title">发布帖子</div>
+                <div id="forumComposeSubtitle" class="forum-compose-subtitle">写一条会出现在论坛时间线里的新内容。</div>
+              </div>
+              <button id="forumComposeClose" class="forum-compose-close" aria-label="关闭">×</button>
             </div>
 
-            <input id="forumComposePostTitle" placeholder="帖子标题" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; margin-bottom: 8px;" />
-            <textarea id="forumComposeText" placeholder="写下你的内容..." style="width: 100%; min-height: 90px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; resize: vertical;"></textarea>
+            <input id="forumComposePostTitle" class="forum-compose-input" placeholder="帖子标题" />
+            <textarea id="forumComposeText" class="forum-compose-textarea" placeholder="写下你的内容..."></textarea>
 
-            <div id="forumComposeStatus" style="margin-top: 8px; font-size: 12px; color: #888; min-height: 16px;"></div>
+            <div id="forumComposeStatus" class="forum-compose-status"></div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
-              <button id="forumComposeCancel" style="padding: 6px 16px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 6px; cursor: pointer;">取消</button>
-              <button id="forumComposeConfirm" style="padding: 6px 16px; border: none; background: #07c160; color: white; border-radius: 6px; cursor: pointer;">确定</button>
+            <div class="forum-compose-actions">
+              <button id="forumComposeCancel" class="forum-btn">取消</button>
+              <button id="forumComposeConfirm" class="forum-btn primary">发布</button>
             </div>
           </div>
         `;
@@ -13103,7 +13671,7 @@ function applyUserAvatar(avatarElement) {
           const status = modal.querySelector('#forumComposeStatus');
           if (titleInput) titleInput.value = '';
           if (textArea) textArea.value = '';
-          if (status) { status.textContent = ''; status.style.color = '#888'; }
+          if (status) { status.textContent = ''; status.style.color = '#536471'; }
         };
 
         closeBtn.onclick = closeModal;
@@ -13154,24 +13722,35 @@ function applyUserAvatar(avatarElement) {
         modal.dataset.replyTo = options.replyTo ? String(options.replyTo) : '';
 
         const titleEl = modal.querySelector('#forumComposeTitle');
+        const subtitleEl = modal.querySelector('#forumComposeSubtitle');
         const titleInput = modal.querySelector('#forumComposePostTitle');
         const textArea = modal.querySelector('#forumComposeText');
         const status = modal.querySelector('#forumComposeStatus');
+        const confirmBtn = modal.querySelector('#forumComposeConfirm');
 
         if (titleEl) {
           titleEl.textContent = mode === 'comment'
             ? (options.replyTo ? `回复 ${options.replyTo}` : '评论帖子')
             : '发布帖子';
         }
+        if (subtitleEl) {
+          subtitleEl.textContent = mode === 'comment'
+            ? (options.replyTo ? '接着这条评论继续聊下去。' : '写一句自然的评论，挂到这条帖子下面。')
+            : '写一条会出现在论坛时间线里的新内容。';
+        }
         if (titleInput) {
           titleInput.style.display = mode === 'comment' ? 'none' : 'block';
           if (mode !== 'comment') titleInput.placeholder = '帖子标题';
+          titleInput.value = options.prefillTitle ? String(options.prefillTitle || '') : '';
         }
         if (textArea) {
           textArea.placeholder = mode === 'comment' ? '写下你的评论...' : '写下你的内容...';
-          if (options.prefillText) textArea.value = String(options.prefillText || '');
+          textArea.value = options.prefillText ? String(options.prefillText || '') : '';
         }
-        if (status) { status.textContent = ''; status.style.color = '#888'; }
+        if (status) { status.textContent = ''; status.style.color = '#536471'; }
+        if (confirmBtn) {
+          confirmBtn.textContent = mode === 'comment' ? '回复' : '发布';
+        }
 
         modal.style.display = 'flex';
       }
@@ -14121,7 +14700,6 @@ function applyUserAvatar(avatarElement) {
           setDiaryStatus('请先选择一个好友。', true);
           return false;
         }
-        if (!confirm(`确认清空 ${target} 的日记吗？`)) return false;
         setDiaryEntriesByFriend(target, []);
         renderDiaryList(target);
         setDiaryStatus(`${target} 的日记已清空。`);
@@ -21212,7 +21790,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       function clearCurrentPrivateConversation() {
         const name = getActivePrivateConversationName();
         if (!name || !isPrivateChatMode()) return false;
-        if (!confirm(`确认清空私聊「${name}」的聊天记录吗？`)) return false;
         const list = getPrivateConversations();
         const idx = Math.max(0, Math.min(state.currentPrivateIndex || 0, list.length - 1));
         if (!list[idx]) return false;
@@ -21231,7 +21808,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (!state.groupChatMode) return false;
         const conv = getActiveGroupConversation();
         const name = String(conv && conv.name || '群聊').trim() || '群聊';
-        if (!confirm(`确认清空群聊「${name}」的聊天记录吗？`)) return false;
         const list = getGroupConversations();
         const idx = Math.max(0, Math.min(state.currentGroupIndex || 0, list.length - 1));
         if (!list[idx]) return false;
