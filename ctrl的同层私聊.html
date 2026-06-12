@@ -7522,6 +7522,11 @@
           padding-left: 38px;
           font-size: 12px;
           color: #1d9bf0;
+          cursor: pointer;
+          user-select: none;
+        }
+        .forum-comments-more:hover {
+          text-decoration: underline;
         }
         .forum-comment {
           display: flex;
@@ -9865,6 +9870,7 @@ https://i.postimg.cc/.../xxx.png"
         callInitiator: null, // Added flag to track call initiator
         retractingMessages: new Set(), // Track messages being retracted
         songNotes: new Map(), // Store song notes/descriptions
+        forumExpandedPosts: new Set(),
         isAiReplying: false, // Added flag to track AI reply status
         jailbreakEnabled: true, // 破限模式开关（默认开启）
         debugEnabled: true,     // 调试开关（默认开启，可在UI按钮切换）
@@ -13635,7 +13641,11 @@ function applyUserAvatar(avatarElement) {
             commentsTitle.className = 'forum-comments-title';
             commentsTitle.textContent = `${commentCount} 条回复`;
             commentsWrap.appendChild(commentsTitle);
-            comments.slice(0, 2).forEach((cmt) => {
+            const expandedPosts = state.forumExpandedPosts instanceof Set ? state.forumExpandedPosts : new Set();
+            state.forumExpandedPosts = expandedPosts;
+            const isExpanded = expandedPosts.has(Number(post.id));
+            const visibleComments = isExpanded ? comments : comments.slice(0, 2);
+            visibleComments.forEach((cmt) => {
               const row = document.createElement('div');
               row.className = 'forum-comment';
 
@@ -13695,7 +13705,16 @@ function applyUserAvatar(avatarElement) {
             if (comments.length > 2) {
               const more = document.createElement('div');
               more.className = 'forum-comments-more';
-              more.textContent = `查看全部 ${comments.length} 条回复`;
+              more.textContent = isExpanded ? '收起评论' : `展开其余 ${comments.length - 2} 条评论`;
+              more.onclick = () => {
+                const pid = Number(post.id);
+                if (expandedPosts.has(pid)) {
+                  expandedPosts.delete(pid);
+                } else {
+                  expandedPosts.add(pid);
+                }
+                renderForumList();
+              };
               commentsWrap.appendChild(more);
             }
             bodyWrap.appendChild(commentsWrap);
