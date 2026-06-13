@@ -15836,21 +15836,8 @@ function applyUserAvatar(avatarElement) {
       function buildPrivateChatTabs(conversations, activeIndex = 0) {
         const tabs = document.getElementById('privateChatTabs');
         if (!tabs) return;
-        if (!conversations || conversations.length <= 1) {
-          tabs.style.display = 'none';
-          tabs.innerHTML = '';
-          return;
-        }
         tabs.innerHTML = '';
-        conversations.forEach((c, i) => {
-          const el = document.createElement('div');
-          el.className = 'chat-tab' + (i === activeIndex ? ' active' : '');
-          el.textContent = c.name || `会话${i + 1}`;
-          el.dataset.index = i;
-          el.onclick = () => switchPrivateChat(i);
-          tabs.appendChild(el);
-        });
-        tabs.style.display = 'flex';
+        tabs.style.display = 'none';
       }
 
       function setRoleGroupInputLock(locked) {
@@ -19746,8 +19733,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
           };
 
-          const usesCompatWrappedRawStream = !!(stream && stream[GENERATE_RAW_COMPAT_STREAM_FLAG]);
-          if (!usesCompatWrappedRawStream) {
+          const shouldListenCompatEvents =
+            state.jailbreakEnabled && AI_GENERATE_RAW && !!(stream && !stream[GENERATE_RAW_COMPAT_STREAM_FLAG]);
+          if (shouldListenCompatEvents) {
             streamDetach = bindGenerateRawCompatEvents(
               (delta, current) => {
                 if (!delta && !current) return;
@@ -20180,8 +20168,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
           };
 
-          const usesCompatWrappedRawStream = !!(stream && stream[GENERATE_RAW_COMPAT_STREAM_FLAG]);
-          if (!usesCompatWrappedRawStream) {
+          const shouldListenCompatEvents =
+            state.jailbreakEnabled && AI_GENERATE_RAW && !!(stream && !stream[GENERATE_RAW_COMPAT_STREAM_FLAG]);
+          if (shouldListenCompatEvents) {
             streamDetach = bindGenerateRawCompatEvents(
               (delta, current) => {
                 if (!delta && !current) return;
