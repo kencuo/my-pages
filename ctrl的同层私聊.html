@@ -9933,6 +9933,7 @@ https://i.postimg.cc/.../xxx.png"
         typeof generateRaw === 'function' ? generateRaw : null;
       const AI_GENERATE_RAW =
         NATIVE_GENERATE_RAW ? generateraw : null;
+      const GENERATE_RAW_COMPAT_STREAM_FLAG = '__th_generate_raw_compat_stream__';
 
       // 同层兼容桥：保持小写函数名可用（用户自定义脚本常见命名）
       function getchatmessage(messageId) {
@@ -12105,7 +12106,8 @@ function applyUserAvatar(avatarElement) {
                   });
                 }
               };
-            }
+            },
+            [GENERATE_RAW_COMPAT_STREAM_FLAG]: true
           }
         };
       }
@@ -19744,38 +19746,41 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
           };
 
-          streamDetach = bindGenerateRawCompatEvents(
-            (delta, current) => {
-              if (!delta && !current) return;
-              streamSawEvent = true;
-              if (delta) {
-                buffer += delta;
-              } else if (current) {
-                buffer = current;
+          const usesCompatWrappedRawStream = !!(stream && stream[GENERATE_RAW_COMPAT_STREAM_FLAG]);
+          if (!usesCompatWrappedRawStream) {
+            streamDetach = bindGenerateRawCompatEvents(
+              (delta, current) => {
+                if (!delta && !current) return;
+                streamSawEvent = true;
+                if (delta) {
+                  buffer += delta;
+                } else if (current) {
+                  buffer = current;
+                }
+                try { if (state.debugEnabled && window.__aiDebug) {
+                  window.__aiDebug.stream = buffer;
+                  if (window.__aiDebug.stream.length > 12000) {
+                    window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                  }
+                  window.__updateAIDebug && window.__updateAIDebug();
+                }} catch(_){}
+                processBuffer();
+              },
+              (fullText) => {
+                if (!fullText) return;
+                streamSawEvent = true;
+                buffer = fullText;
+                try { if (state.debugEnabled && window.__aiDebug) {
+                  window.__aiDebug.stream = buffer;
+                  if (window.__aiDebug.stream.length > 12000) {
+                    window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                  }
+                  window.__updateAIDebug && window.__updateAIDebug();
+                }} catch(_){}
+                processBuffer();
               }
-              try { if (state.debugEnabled && window.__aiDebug) {
-                window.__aiDebug.stream = buffer;
-                if (window.__aiDebug.stream.length > 12000) {
-                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
-                }
-                window.__updateAIDebug && window.__updateAIDebug();
-              }} catch(_){}
-              processBuffer();
-            },
-            (fullText) => {
-              if (!fullText) return;
-              streamSawEvent = true;
-              buffer = fullText;
-              try { if (state.debugEnabled && window.__aiDebug) {
-                window.__aiDebug.stream = buffer;
-                if (window.__aiDebug.stream.length > 12000) {
-                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
-                }
-                window.__updateAIDebug && window.__updateAIDebug();
-              }} catch(_){}
-              processBuffer();
-            }
-          );
+            );
+          }
 
           // 检查stream是否有效
           if (!stream) {
@@ -20175,38 +20180,41 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
           };
 
-          streamDetach = bindGenerateRawCompatEvents(
-            (delta, current) => {
-              if (!delta && !current) return;
-              streamSawEvent = true;
-              if (delta) {
-                buffer += delta;
-              } else if (current) {
-                buffer = current;
+          const usesCompatWrappedRawStream = !!(stream && stream[GENERATE_RAW_COMPAT_STREAM_FLAG]);
+          if (!usesCompatWrappedRawStream) {
+            streamDetach = bindGenerateRawCompatEvents(
+              (delta, current) => {
+                if (!delta && !current) return;
+                streamSawEvent = true;
+                if (delta) {
+                  buffer += delta;
+                } else if (current) {
+                  buffer = current;
+                }
+                try { if (state.debugEnabled && window.__aiDebug) {
+                  window.__aiDebug.stream = buffer;
+                  if (window.__aiDebug.stream.length > 12000) {
+                    window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                  }
+                  window.__updateAIDebug && window.__updateAIDebug();
+                }} catch(_){}
+                processBuffer();
+              },
+              (fullText) => {
+                if (!fullText) return;
+                streamSawEvent = true;
+                buffer = fullText;
+                try { if (state.debugEnabled && window.__aiDebug) {
+                  window.__aiDebug.stream = buffer;
+                  if (window.__aiDebug.stream.length > 12000) {
+                    window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                  }
+                  window.__updateAIDebug && window.__updateAIDebug();
+                }} catch(_){}
+                processBuffer();
               }
-              try { if (state.debugEnabled && window.__aiDebug) {
-                window.__aiDebug.stream = buffer;
-                if (window.__aiDebug.stream.length > 12000) {
-                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
-                }
-                window.__updateAIDebug && window.__updateAIDebug();
-              }} catch(_){}
-              processBuffer();
-            },
-            (fullText) => {
-              if (!fullText) return;
-              streamSawEvent = true;
-              buffer = fullText;
-              try { if (state.debugEnabled && window.__aiDebug) {
-                window.__aiDebug.stream = buffer;
-                if (window.__aiDebug.stream.length > 12000) {
-                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
-                }
-                window.__updateAIDebug && window.__updateAIDebug();
-              }} catch(_){}
-              processBuffer();
-            }
-          );
+            );
+          }
 
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
