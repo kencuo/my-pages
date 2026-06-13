@@ -9929,8 +9929,10 @@ https://i.postimg.cc/.../xxx.png"
         typeof generate === 'function' ? generate : null;
 
       // 获取 SillyTavern 原始生成函数（用于破限模式）
-      const AI_GENERATE_RAW =
+      const NATIVE_GENERATE_RAW =
         typeof generateRaw === 'function' ? generateRaw : null;
+      const AI_GENERATE_RAW =
+        NATIVE_GENERATE_RAW ? generateraw : null;
 
       // 同层兼容桥：保持小写函数名可用（用户自定义脚本常见命名）
       function getchatmessage(messageId) {
@@ -9951,10 +9953,111 @@ https://i.postimg.cc/.../xxx.png"
       }
 
       async function generateraw(requestData) {
-        if (typeof generateRaw !== 'function') {
+        if (typeof NATIVE_GENERATE_RAW !== 'function') {
           throw new Error('generateRaw 不可用');
         }
-        return generateRaw(requestData);
+        const wantsStream = !(requestData && requestData.should_stream === false);
+        if (!wantsStream) {
+          return NATIVE_GENERATE_RAW(requestData);
+        }
+
+        const bridge = createAsyncTextStreamBridge();
+        let streamText = '';
+        let sawEvent = false;
+        let settled = false;
+        let detached = false;
+
+        const safeDetach = () => {
+          if (detached) return;
+          detached = true;
+          try { detach && detach(); } catch (_) {}
+        };
+
+        const attachChunk = (delta, current) => {
+          let chunk = String(delta || '');
+          const full = String(current || '');
+          if (!chunk && full) {
+            if (streamText && full.startsWith(streamText)) {
+              chunk = full.slice(streamText.length);
+            } else if (!streamText) {
+              chunk = full;
+            }
+          }
+          if (!chunk) return;
+          streamText += chunk;
+          bridge.push(chunk);
+        };
+
+        return new Promise((resolve, reject) => {
+          const settleStream = () => {
+            if (settled) return;
+            settled = true;
+            resolve(bridge.stream);
+          };
+
+          const detach = bindGenerateRawCompatEvents(
+            (delta, current) => {
+              sawEvent = true;
+              settleStream();
+              attachChunk(delta, current);
+            },
+            (fullText) => {
+              sawEvent = true;
+              settleStream();
+              attachChunk('', fullText);
+            }
+          );
+
+          Promise.resolve()
+            .then(() => NATIVE_GENERATE_RAW(requestData))
+            .then(async (result) => {
+              try {
+                if (result && typeof result[Symbol.asyncIterator] === 'function') {
+                  settleStream();
+                  safeDetach();
+                  if (sawEvent) {
+                    for await (const _ of result) {}
+                  } else {
+                    for await (const chunk of result) {
+                      attachChunk(String(chunk ?? ''), '');
+                    }
+                  }
+                  bridge.finish();
+                  return;
+                }
+
+                const finalText = String(result || '');
+                if (sawEvent) {
+                  settleStream();
+                  attachChunk('', finalText);
+                  safeDetach();
+                  bridge.finish();
+                  return;
+                }
+
+                safeDetach();
+                settled = true;
+                resolve(finalText);
+              } catch (err) {
+                safeDetach();
+                if (!settled) {
+                  settled = true;
+                  reject(err);
+                } else {
+                  bridge.fail(err);
+                }
+              }
+            })
+            .catch((err) => {
+              safeDetach();
+              if (!settled) {
+                settled = true;
+                reject(err);
+              } else {
+                bridge.fail(err);
+              }
+            });
+        });
       }
 
       // 工具函数：sleep
@@ -11940,6 +12043,122 @@ function applyUserAvatar(avatarElement) {
           return parts.join('');
         }
         return String(stream || '');
+      }
+
+      function createAsyncTextStreamBridge() {
+        const queue = [];
+        const waiters = [];
+        let done = false;
+        let failed = null;
+
+        const flush = () => {
+          while (waiters.length) {
+            const waiter = waiters.shift();
+            if (failed) {
+              waiter.reject(failed);
+              continue;
+            }
+            if (queue.length) {
+              waiter.resolve({ value: queue.shift(), done: false });
+              continue;
+            }
+            if (done) {
+              waiter.resolve({ value: undefined, done: true });
+              continue;
+            }
+            waiters.unshift(waiter);
+            break;
+          }
+        };
+
+        return {
+          push(chunk) {
+            if (done || failed) return;
+            const text = String(chunk ?? '');
+            if (!text) return;
+            queue.push(text);
+            flush();
+          },
+          finish() {
+            if (done || failed) return;
+            done = true;
+            flush();
+          },
+          fail(error) {
+            if (done || failed) return;
+            failed = error || new Error('stream failed');
+            flush();
+          },
+          stream: {
+            [Symbol.asyncIterator]() {
+              return {
+                next() {
+                  if (failed) return Promise.reject(failed);
+                  if (queue.length) {
+                    return Promise.resolve({ value: queue.shift(), done: false });
+                  }
+                  if (done) {
+                    return Promise.resolve({ value: undefined, done: true });
+                  }
+                  return new Promise((resolve, reject) => {
+                    waiters.push({ resolve, reject });
+                  });
+                }
+              };
+            }
+          }
+        };
+      }
+
+      function bindGenerateRawCompatEvents(onIncremental, onFull) {
+        const events = globalThis.iframe_events;
+        const eventOn = globalThis.eventOn;
+        const eventOff = globalThis.eventOff;
+        if (!events || typeof eventOn !== 'function') return null;
+
+        const incrementalEvent = events.STREAM_TOKEN_RECEIVED_INCREMENTALLY || events.STREAM_TOKEN_RECEIVED;
+        const fullEvent = events.STREAM_TOKEN_RECEIVED_FULLY || null;
+        let lastText = '';
+
+        const normalize = (text) => {
+          const current = String(text ?? '');
+          if (!current) return { current: '', delta: '' };
+          let delta = current;
+          if (lastText && current.startsWith(lastText)) {
+            delta = current.slice(lastText.length);
+          } else if (lastText && lastText.startsWith(current)) {
+            delta = '';
+          }
+          lastText = current;
+          return { current, delta };
+        };
+
+        const incHandler = (text) => {
+          const { current, delta } = normalize(text);
+          try { onIncremental && onIncremental(delta, current); } catch (_) {}
+        };
+
+        const fullHandler = (text) => {
+          const current = String(text ?? '');
+          if (current) lastText = current;
+          try { onFull && onFull(current); } catch (_) {}
+        };
+
+        eventOn(incrementalEvent, incHandler);
+        if (fullEvent && fullEvent !== incrementalEvent) {
+          eventOn(fullEvent, fullHandler);
+        }
+
+        return () => {
+          try {
+            if (typeof eventOff === 'function') {
+              eventOff(incrementalEvent, incHandler);
+              if (fullEvent && fullEvent !== incrementalEvent) {
+                eventOff(fullEvent, fullHandler);
+              }
+            }
+          } catch (_) {}
+        };
       }
 
       function getUserAvatarUrlFromDom() {
@@ -19338,6 +19557,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         );
 
         let stream;
+        let streamDetach = null;
+        let streamSawEvent = false;
 
         try {
           // 添加超时处理，3分钟超时
@@ -19429,11 +19650,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               AI_GENERATE(requestData),
               timeoutPromise
             ]);
-          }
-          
-          // 检查stream是否有效
-          if (!stream) {
-            throw new Error('AI生成返回空结果');
           }
           
           let buffer = '';
@@ -19528,6 +19744,44 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
           };
 
+          streamDetach = bindGenerateRawCompatEvents(
+            (delta, current) => {
+              if (!delta && !current) return;
+              streamSawEvent = true;
+              if (delta) {
+                buffer += delta;
+              } else if (current) {
+                buffer = current;
+              }
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.stream = buffer;
+                if (window.__aiDebug.stream.length > 12000) {
+                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                }
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
+              processBuffer();
+            },
+            (fullText) => {
+              if (!fullText) return;
+              streamSawEvent = true;
+              buffer = fullText;
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.stream = buffer;
+                if (window.__aiDebug.stream.length > 12000) {
+                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                }
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
+              processBuffer();
+            }
+          );
+
+          // 检查stream是否有效
+          if (!stream) {
+            throw new Error('AI生成返回空结果');
+          }
+
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
               buffer += chunk;
@@ -19544,13 +19798,18 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               await yieldForStreamPace();
             }
           } else if (typeof stream === 'string') {
-            // 部分后端直接返回完整字符串
-            buffer = stream;
-            try { if (state.debugEnabled && window.__aiDebug) {
-              window.__aiDebug.stream = String(stream);
-              window.__updateAIDebug && window.__updateAIDebug();
-            }} catch(_){}
-            processBuffer();
+            // 新版环境下 generateRaw 可能直接返回最终字符串，增量流通过 iframe_events 发出
+            if (!streamSawEvent) {
+              buffer = stream;
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.stream = String(stream);
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
+              processBuffer();
+            } else if (stream.length > buffer.length) {
+              buffer = stream;
+              processBuffer();
+            }
           }
 
           // 若仍未得到任何消息，再尝试一次性模式
@@ -19602,6 +19861,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           // 出错时不提供fallback，让用户手动重试或等待下次对话
           try { if (state.debugEnabled) { console.error('[AI-DEBUG] error:', e); window.__aiDebug = window.__aiDebug || {}; window.__aiDebug.error = String(e && e.stack || e); window.__updateAIDebug && window.__updateAIDebug(); } } catch(_){}
         } finally {
+          try { if (typeof streamDetach === 'function') streamDetach(); } catch (_) {}
           // 确保在任何情况下都重置AI回复标志
           state.isAiReplying = false;
           updateAiRequestButtonVisibility();
@@ -19837,6 +20097,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }} catch(_){}
 
         let stream;
+        let streamDetach = null;
+        let streamSawEvent = false;
         try {
           const timeoutMs = 180000;
           const timeoutPromise = new Promise((_, reject) =>
@@ -19913,6 +20175,39 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
           };
 
+          streamDetach = bindGenerateRawCompatEvents(
+            (delta, current) => {
+              if (!delta && !current) return;
+              streamSawEvent = true;
+              if (delta) {
+                buffer += delta;
+              } else if (current) {
+                buffer = current;
+              }
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.stream = buffer;
+                if (window.__aiDebug.stream.length > 12000) {
+                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                }
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
+              processBuffer();
+            },
+            (fullText) => {
+              if (!fullText) return;
+              streamSawEvent = true;
+              buffer = fullText;
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.stream = buffer;
+                if (window.__aiDebug.stream.length > 12000) {
+                  window.__aiDebug.stream = window.__aiDebug.stream.slice(-12000);
+                }
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
+              processBuffer();
+            }
+          );
+
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
               buffer += chunk;
@@ -19927,12 +20222,17 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               await yieldForStreamPace();
             }
           } else if (typeof stream === 'string') {
-            buffer = stream;
-            try { if (state.debugEnabled && window.__aiDebug) {
-              window.__aiDebug.stream = String(stream || '');
-              window.__updateAIDebug && window.__updateAIDebug();
-            }} catch(_){}
-            processBuffer();
+            if (!streamSawEvent) {
+              buffer = stream;
+              try { if (state.debugEnabled && window.__aiDebug) {
+                window.__aiDebug.stream = String(stream || '');
+                window.__updateAIDebug && window.__updateAIDebug();
+              }} catch(_){}
+              processBuffer();
+            } else if (stream.length > buffer.length) {
+              buffer = stream;
+              processBuffer();
+            }
           }
 
           if (handled === 0) {
@@ -19969,6 +20269,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             window.__updateAIDebug && window.__updateAIDebug();
           }} catch(_){}
         } finally {
+          try { if (typeof streamDetach === 'function') streamDetach(); } catch (_) {}
           state.isAiReplying = false;
           updateAiRequestButtonVisibility();
         }
