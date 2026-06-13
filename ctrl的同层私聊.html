@@ -2609,18 +2609,26 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start; /* Default for received */
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: calc(100% - 38px);
       }
       .message.sent .message-wrapper {
         align-items: flex-end;
       }
       .message-content {
-        max-width: 72%;
+        display: inline-block;
+        width: fit-content;
+        max-width: min(84%, 100%);
+        min-width: 0;
         padding: 8px 12px;
         border-radius: 12px;
         font-size: 14px;
         line-height: 1.4;
         color: #333;
+        white-space: pre-wrap;
         word-break: break-word;
+        overflow-wrap: anywhere;
         position: relative;
         /* New Cat Bubble Style */
         background: #fff !important;
@@ -9852,6 +9860,7 @@ https://i.postimg.cc/.../xxx.png"
         roleGroupConversations: [], // 角色群聊(<group>)集合（偷看模式）
         currentRoleGroupIndex: 0,   // 当前激活角色群聊索引
         roleGroupMode: false,       // 是否处于角色群聊偷看模式
+        recentAiMessageSignatures: new Set(), // 近期AI消息签名去重
         currentMsgId: null,
         sharedHistorySource: 'message',
         renderedHistoryLimit: 30,
@@ -10472,6 +10481,34 @@ function applyUserAvatar(avatarElement) {
         }
         // Default text message
         return { type: 'text', content };
+      }
+
+      function getAiMessageDedupSignature(msg) {
+        if (!msg || msg.sender === 'user') return '';
+        const sender = String(msg.sender || '');
+        const type = String(msg.type || 'text');
+        const charName = String(msg.charName || '');
+        const avatar = String(msg.avatar || '');
+        const time = String(msg.time || '');
+        const content = String(msg.content || msg.voiceText || msg.text || '');
+        return [sender, type, charName, avatar, content, time].join('||');
+      }
+
+      function shouldSkipDuplicateAiMessage(msg) {
+        const signature = getAiMessageDedupSignature(msg);
+        if (!signature) return false;
+        if (!(state.recentAiMessageSignatures instanceof Set)) {
+          state.recentAiMessageSignatures = new Set();
+        }
+        if (state.recentAiMessageSignatures.has(signature)) {
+          return true;
+        }
+        state.recentAiMessageSignatures.add(signature);
+        if (state.recentAiMessageSignatures.size > 200) {
+          const values = Array.from(state.recentAiMessageSignatures);
+          state.recentAiMessageSignatures = new Set(values.slice(-120));
+        }
+        return false;
       }
 
       const messageParsers = [
@@ -19665,6 +19702,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
             while (handled < msgs.length) {
               const msg = msgs[handled++];
+              if (shouldSkipDuplicateAiMessage(msg)) continue;
 
               // 🎤 语音通话中的消息处理：保持文本格式，模拟真实通话
               if (state.inVoiceCall) {
@@ -20158,6 +20196,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
             while (handled < msgs.length) {
               const msg = msgs[handled++];
+              if (shouldSkipDuplicateAiMessage(msg)) continue;
               if (!msg || msg.sender === 'user') continue; // 用户不能发言
               const newIndex = state.messageHistory.push(msg) - 1;
               enqueueAiMessageRender(msg, newIndex);
