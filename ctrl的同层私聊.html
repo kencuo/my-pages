@@ -8929,7 +8929,7 @@ https://i.postimg.cc/.../xxx.png"
           <div class="setting-section">
             <label class="setting-label">主屏壁纸</label>
             <div class="setting-preview">
-              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://i.postimg.cc/HkJHhjQq/IMG-7523.jpg" alt="主屏壁纸预览">
+              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg" alt="主屏壁纸预览">
               <div class="preview-info">
                 <div class="preview-title">自定义主屏壁纸</div>
                 <div class="preview-desc">上传本地图片作为主屏背景</div>
@@ -9882,7 +9882,7 @@ https://i.postimg.cc/.../xxx.png"
         forumExpandedPosts: new Set(),
         isAiReplying: false, // Added flag to track AI reply status
         jailbreakEnabled: true, // 破限模式开关（默认开启）
-        debugEnabled: true,     // 调试开关（默认开启，可在UI按钮切换）
+        debugEnabled: false,    // 调试开关（默认关闭，可在UI按钮切换）
         // 时间选择功能
         customTimeEnabled: false, // 是否启用自定义时间
         customTime: null, // 自定义时间字符串 (HH:MM)
@@ -28660,7 +28660,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             home.style.backgroundSize = 'cover';
             home.style.backgroundPosition = 'center';
           } else {
-            home.style.backgroundImage = "url('https://i.postimg.cc/HkJHhjQq/IMG-7523.jpg')";
+            home.style.backgroundImage = "url('https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg')";
             home.style.backgroundSize = 'cover';
             home.style.backgroundPosition = 'center';
           }
@@ -28668,7 +28668,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         const preview = document.getElementById('homeWallpaperPreview');
         if (preview) {
-          preview.src = settingsState.homeWallpaper || 'https://i.postimg.cc/HkJHhjQq/IMG-7523.jpg';
+          preview.src = settingsState.homeWallpaper || 'https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg';
         }
       }
 
@@ -29586,6 +29586,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       const __openAIDebugBtn = document.getElementById('openAIDebugBtn');
       if (__openAIDebugBtn) {
         __openAIDebugBtn.addEventListener('click', () => {
+          state.debugEnabled = true;
           const wrap = document.getElementById('ai-debug-panel');
           if (wrap) wrap.style.display = 'block';
           try { localStorage.setItem('ai_debug_visible', '1'); } catch(_){}
@@ -29597,6 +29598,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       const __openMomentsDebugBtn = document.getElementById('openMomentsDebugBtn');
       if (__openMomentsDebugBtn) {
         __openMomentsDebugBtn.addEventListener('click', () => {
+          state.debugEnabled = true;
           // 先打开调试面板
           const wrap = document.getElementById('ai-debug-panel');
           if (wrap) wrap.style.display = 'block';
@@ -29616,6 +29618,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       const __openShopDebugBtn = document.getElementById('openShopDebugBtn');
       if (__openShopDebugBtn) {
         __openShopDebugBtn.addEventListener('click', () => {
+          state.debugEnabled = true;
           const wrap = document.getElementById('ai-debug-panel');
           if (wrap) wrap.style.display = 'block';
           try { localStorage.setItem('ai_debug_visible', '1'); } catch(_){}
