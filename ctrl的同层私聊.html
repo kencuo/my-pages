@@ -1474,7 +1474,7 @@
       }
       .chat-messages {
         flex: 1;
-        background: url('https://files.catbox.moe/e1xk9k.jpeg') center/cover;
+        background: url('https://i.postimg.cc/nrzMnGXJ/IMG-1216.jpg') center/cover;
         padding: 14px 10px 8px 10px;
         overflow-y: auto;
         display: flex;
@@ -6437,7 +6437,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        background: url('https://i.postimg.cc/HkJHhjQq/IMG-7523.jpg') center/cover no-repeat;
+        background: url('https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg') center/cover no-repeat;
         z-index: 1400;
         padding-top: 16px;
       }
@@ -6897,7 +6897,7 @@
           <button class="cloud-music-close" id="cloudMusicClose" title="关闭">×</button>
         </div>
         <div class="cloud-music-body">
-          <iframe class="cloud-music-frame" id="cloudMusicFrame" src="https://music.gdstudio.org/" loading="lazy"></iframe>
+          <iframe class="cloud-music-frame" id="cloudMusicFrame" src="about:blank" loading="lazy"></iframe>
         </div>
       </div>
 
@@ -26714,6 +26714,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
       // 初始化应用
       async function initApp() {
+        if (window.__thInitAppStarted) return;
+        window.__thInitAppStarted = true;
         try {
 
 
@@ -26762,6 +26764,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           console.error('应用初始化失败:', error);
           // 显示错误提示
           showErrorMessage('应用初始化失败，请刷新页面重试');
+        } finally {
+          window.__thInitAppFinished = true;
         }
       }
 
@@ -26999,16 +27003,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }, 500);
       });
 
-      // 定期检查消息渲染状态（开发调试用）
       if (typeof window !== 'undefined') {
-        setInterval(() => {
-          const chat = document.getElementById('chatMessages');
-          if (chat && state.messageHistory.length > 0 && chat.children.length === 0) {
-            console.warn('Detected missing messages, attempting re-render...');
-            renderAllMessages();
-          }
-        }, 5000); // 每5秒检查一次
-
         // 暴露全局函数供用户使用
         window.setCharName = setCharacterName;
         window.getCurrentCharName = getCurrentCharName;
