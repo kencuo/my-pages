@@ -10417,6 +10417,17 @@ function applyUserAvatar(avatarElement) {
 
       
       function parseInlineContentType(content) {
+        const paymentCardMatchWithId = String(content || '').match(/^PAYID:([^|]+)\|(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)$/);
+        if (paymentCardMatchWithId) {
+          return {
+            type: 'payment-request',
+            paymentId: sanitizeShopInlineField(paymentCardMatchWithId[1]),
+            paymentStatus: paymentCardMatchWithId[2],
+            amount: normalizeShopMoney(paymentCardMatchWithId[3]),
+            paymentSummary: sanitizeShopInlineField(paymentCardMatchWithId[4]),
+            content,
+          };
+        }
         const paymentCardMatch = String(content || '').match(/^(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)$/);
         if (paymentCardMatch) {
           return {
@@ -10661,6 +10672,19 @@ function applyUserAvatar(avatarElement) {
           }),
         },
         {
+          regex: /^\[我方消息\|PAYID:([^|]+)\|(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)\|(\d{2}:\d{2})\]$/,
+          handler: ([, paymentId, status, amount, summary, time]) => ({
+            sender: 'user',
+            type: 'payment-request',
+            paymentId: sanitizeShopInlineField(paymentId),
+            paymentStatus: status,
+            amount: normalizeShopMoney(amount),
+            paymentSummary: sanitizeShopInlineField(summary),
+            time,
+            content: buildPaymentMessageContent({ paymentId, status, amount, summary }),
+          }),
+        },
+        {
           regex: /^\[我方消息\|(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)\|(\d{2}:\d{2})\]$/,
           handler: ([, status, amount, summary, time]) => ({
             sender: 'user',
@@ -10669,6 +10693,21 @@ function applyUserAvatar(avatarElement) {
             amount: normalizeShopMoney(amount),
             paymentSummary: sanitizeShopInlineField(summary),
             time,
+          }),
+        },
+        {
+          regex: /^\[(.+?)\|((?:IMGDATA:[^|\]]+\|FILENAME:[^|\]]+)|[^|\]]+)\|PAYID:([^|]+)\|(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, avatar, paymentId, status, amount, summary, time]) => ({
+            sender: 'char',
+            type: 'payment-request',
+            charName,
+            avatar,
+            paymentId: sanitizeShopInlineField(paymentId),
+            paymentStatus: status,
+            amount: normalizeShopMoney(amount),
+            paymentSummary: sanitizeShopInlineField(summary),
+            time,
+            content: buildPaymentMessageContent({ paymentId, status, amount, summary }),
           }),
         },
         {
@@ -10682,6 +10721,21 @@ function applyUserAvatar(avatarElement) {
             amount: normalizeShopMoney(amount),
             paymentSummary: sanitizeShopInlineField(summary),
             time,
+          }),
+        },
+        {
+          regex: /^\[(.+?)\|PAYID:([^|]+)\|(待付款|已付款|帮付款|已购买)\|([^|]+)\|(.+)\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, paymentId, status, amount, summary, time]) => ({
+            sender: 'char',
+            type: 'payment-request',
+            charName,
+            avatar: '',
+            paymentId: sanitizeShopInlineField(paymentId),
+            paymentStatus: status,
+            amount: normalizeShopMoney(amount),
+            paymentSummary: sanitizeShopInlineField(summary),
+            time,
+            content: buildPaymentMessageContent({ paymentId, status, amount, summary }),
           }),
         },
         {
@@ -11332,7 +11386,10 @@ function applyUserAvatar(avatarElement) {
         const list = mode === 'roleGroup' ? getRoleGroupConversations() : (mode === 'group' ? getGroupConversations() : getPrivateConversations());
         const idx = Number.isInteger(state.activeConversationIndex) ? state.activeConversationIndex : getActiveConversationIndex();
         if (Array.isArray(list) && list[idx]) {
-          list[idx].messages = Array.isArray(state.messageHistory) ? [...state.messageHistory] : [];
+          const normalizedMessages = normalizePaymentMessageIds(Array.isArray(state.messageHistory) ? state.messageHistory : []);
+          state.messageHistory = [...normalizedMessages];
+          list[idx].messages = [...normalizedMessages];
+          syncShopPayRecordsFromMessages(normalizedMessages, { skipRender: true, skipSync: true });
         }
         if (mode === 'private') {
           savePrivateConversations(getPrivateConversations());
@@ -12499,14 +12556,31 @@ function applyUserAvatar(avatarElement) {
 
       function appendPaymentMessageToConversation(target, line) {
         if (!target || !line) return false;
+        const paymentId = sanitizeShopInlineField(line.paymentId || line.id || buildShopPayRecordId({
+          status: line.status,
+          amount: line.amount,
+          summary: line.summary,
+          targetType: target.type,
+          targetName: target.name,
+          time: getFullTimeStr(),
+        }));
         const msg = {
           sender: 'user',
           type: 'payment-request',
+          paymentId,
           paymentStatus: line.status,
           amount: normalizeShopMoney(line.amount),
           paymentSummary: line.summary,
-          content: `${line.status}|${formatShopMoney(line.amount)}|${line.summary}`,
+          targetType: target.type,
+          targetName: target.name,
+          content: buildPaymentMessageContent({
+            paymentId,
+            status: line.status,
+            amount: line.amount,
+            summary: line.summary,
+          }),
           time: getTimeStr(),
+          fullTime: getFullTimeStr(),
         };
         if (target.type === 'group') {
           const groups = getGroupConversations();
@@ -12532,9 +12606,10 @@ function applyUserAvatar(avatarElement) {
 
       function addShopPayRecord(record, options = {}) {
         const shop = getShopData();
-        const next = normalizeShopPayRecords([...(shop.payRecords || []), {
+        const nextId = buildShopPayRecordId(record);
+        const next = normalizeShopPayRecords([...(shop.payRecords || []).filter(it => String(it.id) !== String(nextId)), {
           ...record,
-          id: record && record.id ? record.id : `shop_pay_${Date.now()}`,
+          id: nextId,
           time: record && record.time ? record.time : getFullTimeStr(),
         }]);
         setShopData({ payRecords: next }, options);
@@ -12608,7 +12683,9 @@ function applyUserAvatar(avatarElement) {
           money: normalizeShopMoney(shop.money - total),
           cart: [],
         });
+        const recordId = buildShopPayRecordId({ status: '已购买', amount: total, summary, time: getFullTimeStr() });
         addShopPayRecord({
+          id: recordId,
           status: '已购买',
           amount: total,
           summary,
@@ -12629,12 +12706,14 @@ function applyUserAvatar(avatarElement) {
         const total = calculateShopCartTotal(cart);
         const summary = createShopOrderSummary(cart);
         const status = asPaid ? '已付款' : '待付款';
-        const ok = appendPaymentMessageToConversation(target, { status, amount: total, summary });
+        const paymentId = buildShopPayRecordId({ status, amount: total, summary, targetType: target.type, targetName: target.name, time: getFullTimeStr() });
+        const ok = appendPaymentMessageToConversation(target, { id: paymentId, paymentId, status, amount: total, summary });
         if (!ok) {
           try { showToast('转发失败'); } catch (_) {}
           return;
         }
         addShopPayRecord({
+          id: paymentId,
           status,
           amount: total,
           summary,
@@ -12654,6 +12733,8 @@ function applyUserAvatar(avatarElement) {
         if (!target) return;
         const status = record.status === '待付款' ? '待付款' : (record.status === '帮付款' ? '帮付款' : '已付款');
         const ok = appendPaymentMessageToConversation(target, {
+          id: record.id,
+          paymentId: record.id,
           status,
           amount: record.amount,
           summary: record.summary,
@@ -12664,6 +12745,7 @@ function applyUserAvatar(avatarElement) {
         }
         setShopStatus(`已将记录转发到${target.type === 'group' ? '群聊' : '私聊'}「${target.name}」。`);
         addShopPayRecord({
+          id: record.id,
           status,
           amount: record.amount,
           summary: record.summary,
@@ -14532,6 +14614,109 @@ function applyUserAvatar(avatarElement) {
         return s || String(fallback || '').trim();
       }
 
+      function buildShopPayRecordId(record, fallbackIdx = 0) {
+        const rawId = sanitizeShopInlineField(record && record.id ? record.id : '');
+        if (rawId) return rawId;
+        const status = sanitizeShopInlineField(record && record.status ? record.status : '已购买');
+        const amount = formatShopMoney(record && record.amount);
+        const summary = sanitizeShopInlineField(record && record.summary ? record.summary : '');
+        const targetType = sanitizeShopInlineField(record && record.targetType ? record.targetType : '');
+        const targetName = sanitizeShopInlineField(record && record.targetName ? record.targetName : '');
+        const time = sanitizeShopInlineField(record && record.time ? record.time : '');
+        return sanitizeShopInlineField(`shop_pay_${status}_${amount}_${summary}_${targetType}_${targetName}_${time}_${fallbackIdx}`);
+      }
+
+      function buildPaymentMessageContent(line) {
+        if (!line) return '';
+        const id = sanitizeShopInlineField(line.paymentId || line.id || '');
+        const status = sanitizeShopInlineField(line.status || line.paymentStatus || '待付款');
+        const amount = formatShopMoney(line.amount || 0);
+        const summary = sanitizeShopInlineField(line.summary || line.paymentSummary || '');
+        return id
+          ? `PAYID:${id}|${status}|${amount}|${summary}`
+          : `${status}|${amount}|${summary}`;
+      }
+
+      function findMatchingPaymentRequestId(messages, currentIndex, msgLike) {
+        const list = Array.isArray(messages) ? messages : [];
+        const status = sanitizeShopInlineField(msgLike && (msgLike.paymentStatus || msgLike.status) ? (msgLike.paymentStatus || msgLike.status) : '');
+        const amount = formatShopMoney(msgLike && (msgLike.amount || 0));
+        const summary = sanitizeShopInlineField(msgLike && (msgLike.paymentSummary || msgLike.summary) ? (msgLike.paymentSummary || msgLike.summary) : '');
+        if (!status || !amount || !summary) return '';
+        const start = Number.isInteger(currentIndex) ? Math.min(currentIndex - 1, list.length - 1) : (list.length - 1);
+        for (let i = start; i >= 0; i--) {
+          const candidate = list[i];
+          if (!candidate || String(candidate.type || '') !== 'payment-request') continue;
+          const candidateId = sanitizeShopInlineField(candidate.paymentId || candidate.id || '');
+          if (!candidateId) continue;
+          const candidateAmount = formatShopMoney(candidate.amount || 0);
+          const candidateSummary = sanitizeShopInlineField(candidate.paymentSummary || candidate.summary || candidate.content || '');
+          if (candidateAmount !== amount || candidateSummary !== summary) continue;
+          if (status === '待付款') {
+            if (sanitizeShopInlineField(candidate.paymentStatus || '') === '待付款') return candidateId;
+            continue;
+          }
+          return candidateId;
+        }
+        return '';
+      }
+
+      function normalizePaymentMessageIds(messages) {
+        const list = Array.isArray(messages) ? messages : [];
+        return list.map((msg, idx) => {
+          if (!msg || String(msg.type || '') !== 'payment-request') return msg;
+          const existingId = sanitizeShopInlineField(msg.paymentId || msg.id || '');
+          const paymentId = existingId || findMatchingPaymentRequestId(list, idx, msg) || buildShopPayRecordId({
+            status: msg.paymentStatus,
+            amount: msg.amount,
+            summary: msg.paymentSummary || msg.content,
+            targetName: msg.targetName || '',
+            time: msg.fullTime || msg.time || '',
+          }, idx);
+          return {
+            ...msg,
+            paymentId,
+            content: buildPaymentMessageContent({
+              paymentId,
+              status: msg.paymentStatus,
+              amount: msg.amount,
+              summary: msg.paymentSummary || msg.content,
+            }) || msg.content,
+          };
+        });
+      }
+
+      function syncShopPayRecordsFromMessages(messages, options = {}) {
+        const list = Array.isArray(messages) ? messages : [];
+        const paymentMessages = list.filter(msg => msg && String(msg.type || '') === 'payment-request');
+        if (!paymentMessages.length) return;
+        const normalizedRecords = normalizeShopPayRecords(paymentMessages.map((msg, idx) => ({
+          id: msg.paymentId || msg.id || buildShopPayRecordId({
+            status: msg.paymentStatus,
+            amount: msg.amount,
+            summary: msg.paymentSummary || msg.content,
+            time: msg.fullTime || msg.time || '',
+          }, idx),
+          status: msg.paymentStatus || '待付款',
+          amount: msg.amount || 0,
+          summary: msg.paymentSummary || msg.content || '',
+          targetType: msg.targetType || '',
+          targetName: msg.targetName || '',
+          time: msg.fullTime || msg.time || '',
+        })));
+        if (!normalizedRecords.length) return;
+        const currentRecords = normalizeShopPayRecords(getShopData().payRecords || []);
+        const mergedRecords = normalizeShopPayRecords([...(currentRecords || []), ...normalizedRecords]);
+        const currentKey = JSON.stringify(currentRecords);
+        const nextKey = JSON.stringify(mergedRecords);
+        if (currentKey === nextKey) return;
+        setShopData({ payRecords: mergedRecords }, {
+          skipRender: !!options.skipRender,
+          skipSync: !!options.skipSync,
+          skipPersist: !!options.skipPersist,
+        });
+      }
+
       function normalizeShopMoney(value) {
         const raw = String(value == null ? '' : value).replace(/,/g, '').trim();
         if (!raw) return 0;
@@ -14578,19 +14763,31 @@ function applyUserAvatar(avatarElement) {
 
       function normalizeShopPayRecords(records) {
         const list = Array.isArray(records) ? records : [];
-        return list
-          .map((it, idx) => {
+        const seen = new Set();
+        const normalized = [];
+        for (let idx = list.length - 1; idx >= 0; idx--) {
+          const it = list[idx];
             const status = sanitizeShopInlineField(it && it.status ? it.status : '已购买');
             const amount = normalizeShopMoney(it && it.amount);
             const summary = sanitizeShopInlineField(it && it.summary ? it.summary : '');
             const targetType = sanitizeShopInlineField(it && it.targetType ? it.targetType : '');
             const targetName = sanitizeShopInlineField(it && it.targetName ? it.targetName : '');
             const time = sanitizeShopInlineField(it && it.time ? it.time : '');
-            const id = sanitizeShopInlineField(it && it.id ? it.id : `shop_pay_${Date.now()}_${idx}`);
-            if (!summary) return null;
-            return { id, status, amount, summary, targetType, targetName, time };
-          })
-          .filter(Boolean);
+            const id = buildShopPayRecordId({
+              id: it && it.id ? it.id : '',
+              status,
+              amount,
+              summary,
+              targetType,
+              targetName,
+              time,
+            }, idx);
+            if (!summary) continue;
+            if (seen.has(id)) continue;
+            seen.add(id);
+            normalized.unshift({ id, status, amount, summary, targetType, targetName, time });
+        }
+        return normalized;
       }
 
       function normalizeShopData(data) {
@@ -14638,7 +14835,7 @@ function applyUserAvatar(avatarElement) {
         if (!list.length) return '';
         const lines = ['<pay>'];
         list.forEach((record) => {
-          lines.push(`[${sanitizeShopInlineField(record.status)}|${formatShopMoney(record.amount)}|${sanitizeShopInlineField(record.summary)}]`);
+          lines.push(`[${buildShopPayRecordId(record)}|${sanitizeShopInlineField(record.status)}|${formatShopMoney(record.amount)}|${sanitizeShopInlineField(record.summary)}]`);
         });
         lines.push('</pay>');
         return lines.join('\n');
@@ -14693,6 +14890,24 @@ function applyUserAvatar(avatarElement) {
         const lines = body.split('\n').map(s => String(s || '').trim()).filter(Boolean);
         const records = [];
         lines.forEach((line, idx) => {
+          const m4 = line.match(/^\[(.*?)\|(.*?)\|(.*?)\|(.*?)\]$/);
+          if (m4) {
+            const id = sanitizeShopInlineField(m4[1]);
+            const status = sanitizeShopInlineField(m4[2], '已购买');
+            const amount = normalizeShopMoney(m4[3]);
+            const summary = sanitizeShopInlineField(m4[4]);
+            if (!summary) return;
+            records.push({
+              id: id || buildShopPayRecordId({ status, amount, summary }, idx),
+              status,
+              amount,
+              summary,
+              targetType: '',
+              targetName: '',
+              time: '',
+            });
+            return;
+          }
           const m = line.match(/^\[(.*?)\|(.*?)\|(.*?)\]$/);
           if (!m) return;
           const status = sanitizeShopInlineField(m[1], '已购买');
@@ -14700,7 +14915,7 @@ function applyUserAvatar(avatarElement) {
           const summary = sanitizeShopInlineField(m[3]);
           if (!summary) return;
           records.push({
-            id: `shop_pay_loaded_${idx}_${status}`,
+            id: buildShopPayRecordId({ status, amount, summary }, idx),
             status,
             amount,
             summary,
@@ -15915,7 +16130,7 @@ function applyUserAvatar(avatarElement) {
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && conv && conv.name) nameSpan.textContent = conv.name;
         // 切换消息并重渲染
-        state.messageHistory = (conv && Array.isArray(conv.messages)) ? [...conv.messages] : [];
+        state.messageHistory = normalizePaymentMessageIds((conv && Array.isArray(conv.messages)) ? conv.messages : []);
         setActiveConversationPointer(willBeGroup ? 'group' : 'private', index);
         resetRenderedHistoryWindow();
         // 更新标签激活态
@@ -16122,9 +16337,15 @@ function applyUserAvatar(avatarElement) {
             const status = sanitizeShopInlineField(m.paymentStatus || '待付款');
             const amount = formatShopMoney(m.amount || 0);
             const summary = sanitizeShopInlineField(m.paymentSummary || m.content || '');
+            const paymentContent = buildPaymentMessageContent({
+              paymentId: m.paymentId,
+              status,
+              amount,
+              summary,
+            });
             return m.sender === 'user'
-              ? `[我方消息|${status}|${amount}|${summary}|${m.time}]`
-              : `[${nameForOther}|${m.avatar || ''}|${status}|${amount}|${summary}|${m.time}]`;
+              ? `[我方消息|${paymentContent}|${m.time}]`
+              : `[${nameForOther}|${m.avatar || ''}|${paymentContent}|${m.time}]`;
           }
 
           // 撤回消息
@@ -18512,8 +18733,10 @@ function applyUserAvatar(avatarElement) {
 
 
 
-        state.messageHistory.push(parsedMsg);
-        appendMessage(parsedMsg, newIndex);
+         state.messageHistory.push(parsedMsg);
+         state.messageHistory = normalizePaymentMessageIds(state.messageHistory);
+         syncShopPayRecordsFromMessages(state.messageHistory, { skipRender: true, skipSync: true });
+         appendMessage(parsedMsg, newIndex);
 
         // Add to call transcript if in call
         if (state.inVoiceCall) {
@@ -19463,7 +19686,7 @@ can call down the storm that writes what comes next.
 你每次会发送1-7条消息。
 （ps 你不会经常换头像，除非user想要你换）
 记住：你的世界里只有手机屏幕，你唯一能做的事就是按照规则输出完全符合格式的消息。
-如果user让帮忙待付款，即，user输出：[待付款|金额|物品名字和数量]，你帮ta支付后请输出：[帮付款|金额|物品名字和数量|时间]
+如果user发来付款请求，且消息里带有PAYID，例如：[我方消息|PAYID:abc123|待付款|88|苹果x2|12:30]，那么你后续帮付款、确认付款、完成购买时，必须保留同一个PAYID进行回复，例如：[${'{'}{charName}或角色昵称${'}'}|头像|PAYID:abc123|帮付款|88|苹果x2|12:31] 或 [${'{'}{charName}或角色昵称${'}'}|头像|PAYID:abc123|已付款|88|苹果x2|12:31]。不允许擅自修改、删除或新建PAYID。若用户消息里没有PAYID，才使用旧格式：[帮付款|金额|物品名字和数量|时间]
 `;
 
       const GROUP_AIREQUEST_EXTRA_PROMPT_BODY = `人名会用逗号隔开，并不是同一个人！你只能输出群成员里的人物的聊天发言！！！（[群成员：])不许输出正文和状态栏内容，你的世界里只有手机。请按照以下格式输出。
@@ -19481,7 +19704,7 @@ can call down the storm that writes what comes next.
 你正在通过一个高度定制的手机聊天界面与用户交流。你的所有回复都必须严格模仿真实手机聊天的消息格式，并根据不同的消息类型使用对应的精确格式。
 你只会回复以不同群聊成员的身份与{{user}}进行手机聊天，不许代替{{user}}进行回复，角色昵称里也不许出现{{user}}的名字。
 你每次会发送1-7条消息。
-如果user让帮忙待付款，即，user输出：[待付款|金额|物品名字和数量]，你帮ta支付后请输出：[帮付款|金额|物品名字和数量|时间]`;
+如果user发来付款请求，且消息里带有PAYID，例如：[我方消息|PAYID:abc123|待付款|88|苹果x2|12:30]，那么你后续帮付款、确认付款、完成购买时，必须保留同一个PAYID进行回复，例如：[角色名|头像|PAYID:abc123|帮付款|88|苹果x2|12:31] 或 [角色名|头像|PAYID:abc123|已付款|88|苹果x2|12:31]。不允许擅自修改、删除或新建PAYID。若用户消息里没有PAYID，才使用旧格式：[帮付款|金额|物品名字和数量|时间]`;
 
       function buildGroupAiRequestExtraPrompt() {
         const conv = (typeof getActiveGroupConversation === 'function') ? getActiveGroupConversation() : null;
