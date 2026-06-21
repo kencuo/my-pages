@@ -17996,6 +17996,143 @@ function applyUserAvatar(avatarElement) {
         };
       }
 
+      function getSmartMediaAssistantBridge() {
+        return (
+          window.smartMediaAssistant ||
+          window.parent?.smartMediaAssistant ||
+          window.top?.smartMediaAssistant ||
+          null
+        );
+      }
+
+      function sanitizeTtsPlainText(raw) {
+        return String(raw || '')
+          .replace(/\r/g, '')
+          .replace(/\\n/g, '\n')
+          .replace(/<!--[\s\S]*?-->/g, ' ')
+          .replace(/<comment>[\s\S]*?<\/comment>/gi, ' ')
+          .replace(/<\/?content>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/[ \t]+\n/g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .replace(/[ \t]{2,}/g, ' ')
+          .trim();
+      }
+
+      function escapeHtmlText(raw) {
+        return String(raw || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function getTtsSourceCandidates(message) {
+        if (!message) return [];
+        return [
+          message.fileContent,
+          message.originalContent,
+          message.content,
+          message.voiceText,
+          message.locationText,
+        ]
+          .map(item => String(item || '').trim())
+          .filter(Boolean);
+      }
+
+      function hasStructuredContentBody(message) {
+        return getTtsSourceCandidates(message).some(text => /<content>[\s\S]*?<\/content>/i.test(text));
+      }
+
+      function extractTtsTextFromMessage(message, mode = 'content') {
+        if (!message) return '';
+        if (mode === 'quote') {
+          return sanitizeTtsPlainText(message.quote || '');
+        }
+
+        if (message.type === 'voice' && message.voiceText) {
+          return sanitizeTtsPlainText(message.voiceText);
+        }
+
+        const sourceText = getTtsSourceCandidates(message).find(Boolean) || '';
+        if (!sourceText) return '';
+
+        const contentMatches = Array.from(sourceText.matchAll(/<content>([\s\S]*?)<\/content>/gi));
+        if (contentMatches.length) {
+          return sanitizeTtsPlainText(contentMatches.map(match => match[1]).join('\n\n'));
+        }
+
+        return sanitizeTtsPlainText(sourceText);
+      }
+
+      function getTtsContentMenuLabel(message) {
+        return hasStructuredContentBody(message) ? '朗读正文' : '朗读消息';
+      }
+
+      function isTtsPlaying() {
+        try {
+          const bridge = getSmartMediaAssistantBridge();
+          const status = bridge && typeof bridge.getTtsStatus === 'function' ? bridge.getTtsStatus() : null;
+          if (status && status.isSpeaking) return true;
+        } catch (_) {}
+
+        try {
+          return !!(window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function speakTextWithBrowserFallback(text) {
+        if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+          throw new Error('当前浏览器不支持系统语音朗读');
+        }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+        const preferredVoice = voices.find(voice => String(voice.lang || '').toLowerCase().startsWith('zh')) || voices[0];
+        if (preferredVoice) utterance.voice = preferredVoice;
+        window.speechSynthesis.speak(utterance);
+      }
+
+      async function speakMessageText(message, mode = 'content') {
+        const text = extractTtsTextFromMessage(message, mode);
+        if (!text) {
+          showToast(mode === 'quote' ? '这条消息没有可朗读的引用内容' : '这条消息没有可朗读的正文');
+          return false;
+        }
+
+        const bridge = getSmartMediaAssistantBridge();
+        try {
+          if (bridge && typeof bridge.speakText === 'function') {
+            await bridge.speakText(text, { source: mode, type: message?.type || 'text' });
+          } else {
+            speakTextWithBrowserFallback(text);
+          }
+          showToast(mode === 'quote' ? '开始朗读引用内容' : '开始朗读文本内容');
+          return true;
+        } catch (error) {
+          console.error('TTS 朗读失败:', error);
+          showToast(`朗读失败：${error.message || '请检查 TTS 配置'}`);
+          return false;
+        }
+      }
+
+      function stopTtsPlayback() {
+        const bridge = getSmartMediaAssistantBridge();
+        try {
+          if (bridge && typeof bridge.stopSpeaking === 'function') {
+            bridge.stopSpeaking();
+          } else if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+          }
+          showToast('已停止朗读');
+        } catch (error) {
+          console.error('停止朗读失败:', error);
+        }
+      }
+
       // 显示右键菜单
       function showContextMenu(e, idx) {
         removeContextMenu();
@@ -18017,6 +18154,16 @@ function applyUserAvatar(avatarElement) {
 
         // Quote action is always available
         menuItems.push({ action: 'quote', icon: '📝', text: '引用' });
+
+        const quoteTtsText = extractTtsTextFromMessage(message, 'quote');
+        if (quoteTtsText) {
+          menuItems.push({ action: 'speak-quote', icon: '🔊', text: '朗读引用' });
+        }
+
+        const contentTtsText = extractTtsTextFromMessage(message, 'content');
+        if (contentTtsText) {
+          menuItems.push({ action: 'speak-content', icon: '🎧', text: getTtsContentMenuLabel(message) });
+        }
 
         // 用户消息：在“申请回复前”可编辑
         if (isUserMessagePendingReply(idx) && isEditableMessage(message)) {
@@ -18044,6 +18191,10 @@ function applyUserAvatar(avatarElement) {
         const favoriteIcon = isFavorited ? '💔' : '⭐';
         const favoriteText = isFavorited ? '取消收藏' : '收藏';
         menuItems.push({ action: 'favorite', icon: favoriteIcon, text: favoriteText });
+
+        if (isTtsPlaying()) {
+          menuItems.push({ action: 'stop-tts', icon: '⏹️', text: '停止朗读' });
+        }
 
         menu.innerHTML = menuItems
           .map((item, i) => {
@@ -18378,6 +18529,21 @@ function applyUserAvatar(avatarElement) {
         if (action === 'favorite') {
           toggleMessageFavorite(idx);
           removeContextMenu();
+          return;
+        }
+        if (action === 'speak-quote') {
+          removeContextMenu();
+          void speakMessageText(message, 'quote');
+          return;
+        }
+        if (action === 'speak-content') {
+          removeContextMenu();
+          void speakMessageText(message, 'content');
+          return;
+        }
+        if (action === 'stop-tts') {
+          removeContextMenu();
+          stopTtsPlayback();
           return;
         }
         if (action === 'edit-message') {
@@ -28049,10 +28215,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             message: {
               sender: message.sender,
               content: message.content,
+              quote: message.quote,
               type: message.type,
               time: message.time,
               avatar: message.avatar,
               charName: message.charName,
+              originalContent: message.originalContent,
               // 保存特殊消息的额外数据
               imageData: message.imageData,
               videoData: message.videoData,
@@ -28316,6 +28484,29 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           `;
         }
 
+        const quoteTtsText = extractTtsTextFromMessage(msg, 'quote');
+        const contentTtsText = extractTtsTextFromMessage(msg, 'content');
+        const quotePreview = msg.quote
+          ? `
+            <div style="background: #f3e6ff; color: #7d5ba6; border-left: 3px solid #d7b7f0; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; white-space: pre-wrap; line-height: 1.5;">
+              ${escapeHtmlText(msg.quote)}
+            </div>
+          `
+          : '';
+        const ttsButtons = [
+          quoteTtsText
+            ? `<button id="playFavoriteQuote" style="padding: 8px 16px; background: #7c4dff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">🔊 朗读引用</button>`
+            : '',
+          contentTtsText
+            ? `<button id="playFavoriteContent" style="padding: 8px 16px; background: #26a69a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">🎧 ${getTtsContentMenuLabel(msg)}</button>`
+            : '',
+          isTtsPlaying()
+            ? `<button id="stopFavoriteTts" style="padding: 8px 16px; background: #607d8b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">⏹️ 停止朗读</button>`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('');
+
         // 创建详情模态框
         const modal = document.createElement('div');
         modal.style.cssText = `
@@ -28369,8 +28560,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               ">×</button>
             </div>
             <div style="padding: 20px;">
+              ${quotePreview}
               ${detailContent}
-              <div style="text-align: center; margin-top: 20px;">
+              <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+                ${ttsButtons}
                 <button id="copyFavoriteContent" style="
                   padding: 8px 16px;
                   background: #007AFF;
@@ -28379,7 +28572,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                   border-radius: 6px;
                   cursor: pointer;
                   font-size: 14px;
-                  margin-right: 10px;
                 ">📋 复制内容</button>
                 <button id="removeFavoriteDetail" style="
                   padding: 8px 16px;
@@ -28410,6 +28602,27 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             showToast('复制失败，请手动复制');
           });
         };
+
+        const playFavoriteQuoteBtn = modal.querySelector('#playFavoriteQuote');
+        if (playFavoriteQuoteBtn) {
+          playFavoriteQuoteBtn.onclick = () => {
+            void speakMessageText(msg, 'quote');
+          };
+        }
+
+        const playFavoriteContentBtn = modal.querySelector('#playFavoriteContent');
+        if (playFavoriteContentBtn) {
+          playFavoriteContentBtn.onclick = () => {
+            void speakMessageText(msg, 'content');
+          };
+        }
+
+        const stopFavoriteTtsBtn = modal.querySelector('#stopFavoriteTts');
+        if (stopFavoriteTtsBtn) {
+          stopFavoriteTtsBtn.onclick = () => {
+            stopTtsPlayback();
+          };
+        }
 
         modal.querySelector('#removeFavoriteDetail').onclick = () => {
           const favorites = loadFavoriteMessages();
@@ -28501,7 +28714,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         hint.innerHTML = `
           <div style="font-size: 24px; margin-bottom: 8px;">👆</div>
           <div>长按消息可以</div>
-          <div><strong>引用 • 撤回 • 收藏</strong></div>
+          <div><strong>引用 • 朗读 • 收藏</strong></div>
         `;
 
         document.body.appendChild(hint);
