@@ -11508,7 +11508,7 @@ function applyUserAvatar(avatarElement) {
 
           if (imported > 0 && activateIdx >= 0) {
             savePrivateConversations(getPrivateConversations());
-            switchPrivateChat(activateIdx, 'private');
+            switchPrivateChat(activateIdx, 'private', { skipSync: true });
             return { ok: true, imported };
           }
         }
@@ -11552,7 +11552,7 @@ function applyUserAvatar(avatarElement) {
         }
 
         if (appendedToCurrent === 0 && switchIdx >= 0) {
-          switchPrivateChat(switchIdx, 'private');
+          switchPrivateChat(switchIdx, 'private', { skipSync: true });
         }
 
         return { ok: imported > 0, imported };
@@ -16265,8 +16265,10 @@ function applyUserAvatar(avatarElement) {
       }
 
       // 切换当前会话
-      function switchPrivateChat(index, mode = null) {
-        syncActiveConversationCache();
+      function switchPrivateChat(index, mode = null, options = {}) {
+        if (!options || !options.skipSync) {
+          syncActiveConversationCache();
+        }
         if (state.roleGroupMode) {
           state.roleGroupMode = false;
           setRoleGroupInputLock(false);
@@ -16274,7 +16276,9 @@ function applyUserAvatar(avatarElement) {
         const targetMode = mode === 'group' ? 'group' : (mode === 'private' ? 'private' : (state.groupChatMode ? 'group' : 'private'));
         const willBeGroup = targetMode === 'group';
         if (state.groupChatMode !== willBeGroup) {
-          syncActiveConversationCache();
+          if (!options || !options.skipSync) {
+            syncActiveConversationCache();
+          }
           state.groupChatMode = willBeGroup;
           state.friendsPanelMode = willBeGroup ? 'group' : 'friend';
           try { localStorage.setItem('tavern_chat_mode', willBeGroup ? 'group' : 'private'); } catch (_) {}
