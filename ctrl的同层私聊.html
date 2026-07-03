@@ -11154,6 +11154,12 @@ function applyUserAvatar(avatarElement) {
           .replace(/&gt;/gi, '>')
           .replace(/&amp;/gi, '&');
 
+        const hasShoujiTag = /<\s*shouji\b/i.test(text) || /<\/\s*shouji\s*>/i.test(text);
+        const hasPrivateTag = /<\s*private\b/i.test(text) || /<\/\s*private\s*>/i.test(text);
+        if (!hasShoujiTag && hasPrivateTag) {
+          text = `<shouji>\n${text}\n</shouji>`;
+        }
+
         const shoujiMatch = text.match(/<shouji>[\s\S]*?<\/shouji>/i);
         return String(shoujiMatch ? shoujiMatch[0] : text).trim();
       }
@@ -11458,6 +11464,98 @@ function applyUserAvatar(avatarElement) {
         } else if (mode === 'roleGroup') {
           saveRoleGroupConversations(getRoleGroupConversations());
         }
+      }
+
+      function upsertPrivateConversationByName(name) {
+        const resolvedName = String(name || '').trim();
+        if (!resolvedName) return -1;
+        const list = getPrivateConversations();
+        let idx = list.findIndex(c => c && String(c.name || '').trim() === resolvedName);
+        if (idx >= 0) return idx;
+        list.push(normalizePrivateConversationEntry({
+          name: resolvedName,
+          messages: [],
+          addTime: new Date().toISOString(),
+        }, list.length));
+        return list.length - 1;
+      }
+
+      function importStructuredPrivateInput(rawText) {
+        const normalized = normalizeAiStructuredOutput(rawText);
+        if (!normalized) return { ok: false, imported: 0 };
+
+        syncActiveConversationCache();
+
+        const wrappedForPrivate = /<\s*private\b/i.test(normalized) && !/<\s*shouji\b/i.test(normalized)
+          ? `<shouji>\n${normalized}\n</shouji>`
+          : normalized;
+        const parsedConversations = parsePrivateConversationsFromShouji(wrappedForPrivate);
+        if (parsedConversations.length) {
+          let activateIdx = -1;
+          let imported = 0;
+          parsedConversations.forEach((conv) => {
+            const name = String(conv && conv.name || '').trim();
+            const messages = Array.isArray(conv && conv.messages) ? conv.messages.filter(Boolean) : [];
+            if (!name || !messages.length) return;
+            const idx = upsertPrivateConversationByName(name);
+            if (idx < 0) return;
+            const list = getPrivateConversations();
+            const existing = Array.isArray(list[idx].messages) ? list[idx].messages : [];
+            list[idx].messages = normalizePaymentMessageIds([...existing, ...messages]);
+            imported += messages.length;
+            if (activateIdx < 0) activateIdx = idx;
+          });
+
+          if (imported > 0 && activateIdx >= 0) {
+            savePrivateConversations(getPrivateConversations());
+            switchPrivateChat(activateIdx, 'private');
+            return { ok: true, imported };
+          }
+        }
+
+        const parsedMessages = parseAiStructuredMessages(normalized);
+        if (!parsedMessages.length) return { ok: false, imported: 0 };
+
+        const currentName = (document.getElementById('chatPersonName')?.textContent || '').trim() || getCurrentCharName();
+        let appendedToCurrent = 0;
+        let imported = 0;
+        let switchIdx = -1;
+
+        parsedMessages.forEach((msg) => {
+          if (!msg) return;
+          imported += 1;
+          if (msg.sender === 'char' && msg.charName) {
+            const targetName = String(msg.charName || '').trim();
+            if (targetName && currentName && targetName !== currentName) {
+              const idx = upsertPrivateConversationByName(targetName);
+              if (idx >= 0) {
+                const list = getPrivateConversations();
+                const existing = Array.isArray(list[idx].messages) ? list[idx].messages : [];
+                list[idx].messages = normalizePaymentMessageIds([...existing, msg]);
+                if (switchIdx < 0) switchIdx = idx;
+                return;
+              }
+            }
+          }
+          state.messageHistory.push(msg);
+          appendedToCurrent += 1;
+        });
+
+        if (appendedToCurrent > 0) {
+          state.messageHistory = normalizePaymentMessageIds(state.messageHistory);
+          syncShopPayRecordsFromMessages(state.messageHistory, { skipRender: true, skipSync: true });
+          syncActiveConversationCache();
+          resetRenderedHistoryWindow();
+          renderAllMessages();
+        } else {
+          savePrivateConversations(getPrivateConversations());
+        }
+
+        if (appendedToCurrent === 0 && switchIdx >= 0) {
+          switchPrivateChat(switchIdx, 'private');
+        }
+
+        return { ok: imported > 0, imported };
       }
 
       function getActiveConversation() {
@@ -18908,6 +19006,20 @@ function applyUserAvatar(avatarElement) {
 
         // 如果最终没有文本内容 (例如，只发送了图片URL但没有输入框文本)，则返回
         if (!text && !finalExtra.imgUrl && !finalExtra.voiceText) return;
+
+        if (!extra.type) {
+          const importedStructured = importStructuredPrivateInput(text);
+          if (importedStructured && importedStructured.ok) {
+            input.value = '';
+            chatInput.dispatchEvent(new Event('input'));
+            updateInputHeight();
+            recomputePendingUserState();
+            updateAiRequestButtonVisibility();
+            deferredSync();
+            try { showToast(`已按同层格式导入 ${importedStructured.imported || 0} 条消息`); } catch (_) {}
+            return;
+          }
+        }
 
         // 检查是否需要插入系统消息
         const systemMessage = shouldInsertSystemMessage();
