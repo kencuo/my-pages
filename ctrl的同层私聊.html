@@ -11013,6 +11013,18 @@ function applyUserAvatar(avatarElement) {
             time,
           }),
         },
+        {
+          // 兼容 AI 偶尔漏掉头像字段的引用消息：<角色名|引用内容|回复内容|12:34>
+          regex: /^\<(?!我方消息\|)(.+?)\|(.*?)\|(.+)\|(\d{2}:\d{2})\>$/,
+          handler: ([, charName, quote, content, time]) => ({
+            ...parseInlineContentType(content),
+            sender: 'char',
+            charName,
+            avatar: '',
+            quote,
+            time,
+          }),
+        },
         // 普通消息（放在最后，优先级最低）
         {
           regex: /^\[我方消息\|(.*?)\|(\d{2}:\d{2})\]$/,
@@ -11030,6 +11042,17 @@ function applyUserAvatar(avatarElement) {
             sender: 'char',
             charName,
             avatar,
+            time,
+          }),
+        },
+        {
+          // 兼容 AI 偶尔漏掉头像字段的正文消息：[角色名|消息内容|12:34]
+          regex: /^\[(?!我方消息\|)(.+?)\|(.+)\|(\d{2}:\d{2})\]$/,
+          handler: ([, charName, content, time]) => ({
+            ...parseInlineContentType(content),
+            sender: 'char',
+            charName,
+            avatar: '',
             time,
           }),
         },
@@ -11115,13 +11138,50 @@ function applyUserAvatar(avatarElement) {
         return parsedMessages;
       }
 
+      function normalizeAiStructuredOutput(rawText) {
+        let text = String(rawText || '').trim();
+        if (!text) return '';
+
+        const fenceMatch = text.match(/```(?:[\w-]+)?\s*([\s\S]*?)```/);
+        if (fenceMatch) {
+          text = String(fenceMatch[1] || '').trim();
+        }
+
+        text = text
+          .replace(/\r\n?/g, '\n')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/&lt;/gi, '<')
+          .replace(/&gt;/gi, '>')
+          .replace(/&amp;/gi, '&');
+
+        const shoujiMatch = text.match(/<shouji>[\s\S]*?<\/shouji>/i);
+        return String(shoujiMatch ? shoujiMatch[0] : text).trim();
+      }
+
+      function parseAiStructuredMessages(rawText) {
+        const normalized = normalizeAiStructuredOutput(rawText);
+        if (!normalized) return [];
+
+        const contentOnly = normalized
+          .replace(/<\/?shouji>/gi, '')
+          .replace(/<\/?private>/gi, '')
+          .replace(/<\/?qunliao>/gi, '')
+          .replace(/<\/?multi>/gi, '')
+          .replace(/<\/?group>/gi, '')
+          .trim();
+
+        if (!contentOnly) return [];
+        return parseShoujiLog(`<shouji>${contentOnly}</shouji>`);
+      }
+
       // ==================== MULTI-PRIVATE (<private>) SUPPORT ====================
       // 解析 <shouji> 内的多个 <private> 块，每个块代表一个单独的私聊会话
       function parsePrivateConversationsFromShouji(text) {
-        const shoujiMatch = text && String(text).match(/<shouji>([\s\S]*?)<\/shouji>/);
+        const normalized = normalizeAiStructuredOutput(text);
+        const shoujiMatch = normalized && String(normalized).match(/<shouji>([\s\S]*?)<\/shouji>/i);
         if (!shoujiMatch) return [];
         const inner = shoujiMatch[1];
-        const blocks = [...inner.matchAll(/<private>([\s\S]*?)<\/private>/g)];
+        const blocks = [...inner.matchAll(/<private>([\s\S]*?)<\/private>/gi)];
         if (!blocks.length) return [];
         const conversations = blocks.map((m, idx) => {
           const block = (m[1] || '').trim();
@@ -20073,15 +20133,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const processBuffer = () => {
             let msgs = [];
             try {
-              // AI 有时会把回复包成 <shouji><private>...，而 parseShoujiLog 会“整块剔除”<private>，导致解析结果永远为空。
-              // 这里先把包裹标签去掉，只保留“行协议”本体，再交给统一解析器。
-              const normalized = String(buffer || '')
-                .replace(/<\/?shouji>/g, '')
-                .replace(/<\/?private>/g, '')
-                .replace(/<\/?qunliao>/g, '')
-                .replace(/<\/?multi>/g, '')
-                .replace(/<\/?group>/g, '');
-              msgs = parseShoujiLog(`<shouji>${normalized}</shouji>`);
+              msgs = parseAiStructuredMessages(buffer);
             } catch (_) {
               // 当前片段不完整，先忽略
             }
@@ -20574,13 +20626,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const processBuffer = () => {
             let msgs = [];
             try {
-              const normalized = String(buffer || '')
-                .replace(/<\/?shouji>/g, '')
-                .replace(/<\/?private>/g, '')
-                .replace(/<\/?qunliao>/g, '')
-                .replace(/<\/?multi>/g, '')
-                .replace(/<\/?group>/g, '');
-              msgs = parseShoujiLog(`<shouji>${normalized}</shouji>`);
+              msgs = parseAiStructuredMessages(buffer);
             } catch (_) {}
 
             while (handled < msgs.length) {
