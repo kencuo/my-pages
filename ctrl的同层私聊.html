@@ -9966,6 +9966,33 @@ https://i.postimg.cc/.../xxx.png"
         }
       }
 
+      function ensureCurrentMsgId() {
+        try {
+          if (!state.currentMsgId && typeof getCurrentMessageId === 'function') {
+            state.currentMsgId = getCurrentMessageId();
+          }
+        } catch (_) {}
+        return state.currentMsgId;
+      }
+
+      function getChatMessageEntry(messageId = null) {
+        const resolvedId = messageId != null ? messageId : ensureCurrentMsgId();
+        if (resolvedId == null) return null;
+        const messages = getchatmessage(resolvedId);
+        return Array.isArray(messages) && messages.length ? messages[0] : null;
+      }
+
+      function getChatMessageText(messageId = null, fallback = '') {
+        const entry = getChatMessageEntry(messageId);
+        return extractRawMessageText(entry) || String(fallback || '');
+      }
+
+      async function setChatMessageText(messageText, messageId = null, options = { refresh: 'none' }) {
+        const resolvedId = messageId != null ? messageId : ensureCurrentMsgId();
+        if (resolvedId == null) return false;
+        return await setchatmessage([{ message_id: resolvedId, message: String(messageText || '') }], options);
+      }
+
       async function generateraw(requestData) {
         if (typeof NATIVE_GENERATE_RAW !== 'function') {
           throw new Error('generateRaw 不可用');
@@ -11580,6 +11607,14 @@ function applyUserAvatar(avatarElement) {
         return mode === 'group' ? getGroupConversations() : getPrivateConversations();
       }
 
+      function getConversationName(conversation, fallback = '') {
+        return String((conversation && conversation.name) || fallback || '').trim();
+      }
+
+      function hasConversationMessages(conversation) {
+        return Array.isArray(conversation && conversation.messages) && conversation.messages.length > 0;
+      }
+
       function getActiveConversationIndex() {
         const mode = getActiveConversationMode();
         if (mode === 'roleGroup') return state.currentRoleGroupIndex || 0;
@@ -11599,6 +11634,16 @@ function applyUserAvatar(avatarElement) {
         state.activeConversationIndex = Number.isInteger(index) ? index : 0;
       }
 
+      function saveConversationListByMode(mode) {
+        if (mode === 'private') {
+          savePrivateConversations(getPrivateConversations());
+        } else if (mode === 'group') {
+          saveGroupConversations(getGroupConversations());
+        } else if (mode === 'roleGroup') {
+          saveRoleGroupConversations(getRoleGroupConversations());
+        }
+      }
+
       function syncActiveConversationCache() {
         const mode = getActiveConversationMode();
         const list = mode === 'roleGroup' ? getRoleGroupConversations() : (mode === 'group' ? getGroupConversations() : getPrivateConversations());
@@ -11609,13 +11654,7 @@ function applyUserAvatar(avatarElement) {
           list[idx].messages = [...normalizedMessages];
           syncShopPayRecordsFromMessages(normalizedMessages, { skipRender: true, skipSync: true });
         }
-        if (mode === 'private') {
-          savePrivateConversations(getPrivateConversations());
-        } else if (mode === 'group') {
-          saveGroupConversations(getGroupConversations());
-        } else if (mode === 'roleGroup') {
-          saveRoleGroupConversations(getRoleGroupConversations());
-        }
+        saveConversationListByMode(mode);
       }
 
       function upsertPrivateConversationByName(name) {
@@ -16416,6 +16455,7 @@ function applyUserAvatar(avatarElement) {
         });
       }
 
+      // ==================== PRIVATE CONVERSATION NAVIGATION ====================
       // 切换当前会话
       function switchPrivateChat(index, mode = null, options = {}) {
         if (!options || !options.skipSync) {
@@ -16441,14 +16481,18 @@ function applyUserAvatar(avatarElement) {
         if (willBeGroup) state.currentGroupIndex = index;
         else state.currentPrivateIndex = index;
         let conv = list[index];
-        if (!willBeGroup && conv && (!Array.isArray(conv.messages) || conv.messages.length === 0)) {
+        if (!willBeGroup && conv && !hasConversationMessages(conv)) {
           try {
-            refreshPrivateConversationsFromStructuredSource(String(conv.name || '').trim());
+            const hydratedIdx = hydratePrivateConversationIndexByName(getConversationName(conv));
+            if (hydratedIdx >= 0) {
+              index = hydratedIdx;
+              state.currentPrivateIndex = hydratedIdx;
+            }
             conv = getPrivateConversations()[index] || conv;
           } catch (_) {}
         }
         const nameSpan = document.getElementById('chatPersonName');
-        if (nameSpan && conv && conv.name) nameSpan.textContent = conv.name;
+        if (nameSpan && getConversationName(conv)) nameSpan.textContent = getConversationName(conv);
         // 切换消息并重渲染
         state.messageHistory = normalizePaymentMessageIds((conv && Array.isArray(conv.messages)) ? conv.messages : []);
         setActiveConversationPointer(willBeGroup ? 'group' : 'private', index);
@@ -16510,75 +16554,47 @@ function applyUserAvatar(avatarElement) {
       function openConversation(name) {
         if (!name) return;
         syncActiveConversationCache();
-        if (state.roleGroupMode) {
-          state.roleGroupMode = false;
-          setRoleGroupInputLock(false);
-        }
-        if (state.groupChatMode) {
-          state.groupChatMode = false;
-          state.friendsPanelMode = 'friend';
-          try { localStorage.setItem('tavern_chat_mode', 'private'); } catch (_) {}
-        }
+        enterPrivateConversationMode();
         let list = getPrivateConversations();
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan) nameSpan.textContent = name;
 
         if (list.length > 0) {
-          let idx = list.findIndex(c => c && c.name === name);
+          let idx = findPrivateConversationIndexByName(name, list);
           if (idx >= 0) {
             const existing = list[idx];
-            if (!existing || !Array.isArray(existing.messages) || existing.messages.length === 0) {
-              const hydratedIdx = refreshPrivateConversationsFromStructuredSource(name);
+            if (!hasConversationMessages(existing)) {
+              const hydratedIdx = hydratePrivateConversationIndexByName(name);
               if (hydratedIdx >= 0) idx = hydratedIdx;
               list = getPrivateConversations();
             }
             switchPrivateChat(idx, 'private');
             return;
           }
-          const hydratedIdx = refreshPrivateConversationsFromStructuredSource(name);
+          const hydratedIdx = hydratePrivateConversationIndexByName(name);
           if (hydratedIdx >= 0) {
             switchPrivateChat(hydratedIdx, 'private');
             return;
           }
           list = getPrivateConversations();
-          idx = list.findIndex(c => c && c.name === name);
+          idx = findPrivateConversationIndexByName(name, list);
           if (idx >= 0) {
             switchPrivateChat(idx, 'private');
             return;
           }
            list.push({ name, messages: [] });
-           state.currentPrivateIndex = list.length - 1;
-           state.messageHistory = [];
-           setActiveConversationPointer('private', state.currentPrivateIndex);
-           resetRenderedHistoryWindow();
-           buildPrivateChatTabs(list, state.currentPrivateIndex);
-          lastHistoryCount = 0;
-           renderAllMessages();
-           updateWallpaper();
-           updatePrivateChatSettingsButtonVisibility();
-           startStructuredConversationWatcher();
-           deferredSync();
+           renderNewEmptyPrivateConversation(list, list.length - 1);
            return;
         }
 
-        const hydratedIdx = refreshPrivateConversationsFromStructuredSource(name);
+        const hydratedIdx = hydratePrivateConversationIndexByName(name);
         if (hydratedIdx >= 0) {
           switchPrivateChat(hydratedIdx, 'private');
           return;
         }
 
         state.privateConversations = [{ name, messages: [] }];
-        state.currentPrivateIndex = 0;
-        state.messageHistory = [];
-        setActiveConversationPointer('private', 0);
-        resetRenderedHistoryWindow();
-        buildPrivateChatTabs(state.privateConversations, 0);
-        lastHistoryCount = 0;
-        renderAllMessages();
-        updateWallpaper();
-        updatePrivateChatSettingsButtonVisibility();
-        startStructuredConversationWatcher();
-        deferredSync();
+        renderNewEmptyPrivateConversation(state.privateConversations, 0);
       }
 
       // ==================== IMAGE INFO PARSING HELPER ====================
@@ -17018,6 +17034,46 @@ function applyUserAvatar(avatarElement) {
         if (!Array.isArray(list) || !list.length) return null;
         const idx = Math.max(0, Math.min(state.currentPrivateIndex || 0, list.length - 1));
         return list[idx] || null;
+      }
+
+      function findPrivateConversationIndexByName(name, conversations = getPrivateConversations()) {
+        const targetName = String(name || '').trim();
+        if (!targetName || !Array.isArray(conversations) || !conversations.length) return -1;
+        return conversations.findIndex((conversation) => getConversationName(conversation) === targetName);
+      }
+
+      function hydratePrivateConversationIndexByName(name) {
+        const targetName = String(name || '').trim();
+        if (!targetName) return -1;
+        const hydratedIdx = refreshPrivateConversationsFromStructuredSource(targetName);
+        if (hydratedIdx >= 0) return hydratedIdx;
+        return findPrivateConversationIndexByName(targetName);
+      }
+
+      function renderNewEmptyPrivateConversation(conversations, index) {
+        state.currentPrivateIndex = index;
+        state.messageHistory = [];
+        setActiveConversationPointer('private', index);
+        resetRenderedHistoryWindow();
+        buildPrivateChatTabs(conversations, index);
+        lastHistoryCount = 0;
+        renderAllMessages();
+        updateWallpaper();
+        updatePrivateChatSettingsButtonVisibility();
+        startStructuredConversationWatcher();
+        deferredSync();
+      }
+
+      function enterPrivateConversationMode() {
+        if (state.roleGroupMode) {
+          state.roleGroupMode = false;
+          setRoleGroupInputLock(false);
+        }
+        if (state.groupChatMode) {
+          state.groupChatMode = false;
+          state.friendsPanelMode = 'friend';
+          try { localStorage.setItem('tavern_chat_mode', 'private'); } catch (_) {}
+        }
       }
 
       function primeStructuredConversationWatch() {
@@ -27406,14 +27462,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         // 同步前更新本地多会话缓存中当前会话的消息
         syncActiveConversationCache();
 
-        let currentRawMessage = '';
-        try {
-          if (!state.currentMsgId && typeof getCurrentMessageId === 'function') state.currentMsgId = getCurrentMessageId();
-          if (state.currentMsgId && typeof getChatMessages === 'function') {
-            const rawMsgObj = getChatMessages(state.currentMsgId)[0];
-            currentRawMessage = rawMsgObj && rawMsgObj.message ? String(rawMsgObj.message) : '';
-          }
-        } catch (_) {}
+        const currentMessageId = ensureCurrentMsgId();
+        const currentRawMessage = getChatMessageText(currentMessageId, '');
 
         const privateList = getPrivateConversations();
         const groupList = getGroupConversations();
@@ -27438,13 +27488,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const promotedPrivateBlocks = buildPrivateBlocksFromConversations(promotedPrivateList);
           const promotedCore = upsertPrivateAndGroupIntoShoujiMessage('<shouji>\n</shouji>', promotedPrivateBlocks, '', '');
           saveRoleGroupConversations([]);
-          if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
-            if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
+          if (currentMessageId != null) {
             let messageToSave = promotedCore;
             let preservedChanges = '';
             try {
-              const currentObj = getchatmessage(state.currentMsgId)[0];
-              preservedChanges = extractChangesContentFromMessage(currentObj && currentObj.message ? currentObj.message : '');
+              preservedChanges = extractChangesContentFromMessage(getChatMessageText(currentMessageId, ''));
             } catch (_) {}
             try {
               messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
@@ -27457,7 +27505,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             if (changesToSave) {
               messageToSave = upsertChangesIntoShoujiMessage(messageToSave, changesToSave);
             }
-            await setChatMessages([{ message_id: state.currentMsgId, message: messageToSave }], { refresh: 'none' });
+            await setChatMessageText(messageToSave, currentMessageId, { refresh: 'none' });
           }
           return;
         }
@@ -27467,15 +27515,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const roleGroupLog = hasRoleGroup ? serializeRoleGroups(roleGroupList) : '';
         saveRoleGroupConversations(roleGroupList);
 
-        if (
-          typeof getCurrentMessageId === 'function' &&
-          typeof setChatMessages === 'function' &&
-          typeof getChatMessages === 'function'
-        ) {
-          if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
-          const currentId = state.currentMsgId;
-          const msgObj = getChatMessages(currentId)[0];
-          const raw = msgObj && msgObj.message ? String(msgObj.message) : '';
+        if (currentMessageId != null) {
+          const raw = getChatMessageText(currentMessageId, '');
           const updatedCore = upsertPrivateAndGroupIntoShoujiMessage(raw, privateBlocks, qunliaoLog, roleGroupLog);
           let updated = upsertPyqIntoShoujiMessage(updatedCore, pyqText);
           updated = upsertForumIntoShoujiMessage(updated, forumText);
@@ -27487,12 +27528,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           if (changesToSave) {
             updated = upsertChangesIntoShoujiMessage(updated, changesToSave);
           }
-          await setChatMessages([{ message_id: currentId, message: updated }], { refresh: 'none' });
+          await setChatMessageText(updated, currentMessageId, { refresh: 'none' });
           return;
         }
 
-        if (typeof getCurrentMessageId === 'function' && typeof setChatMessages === 'function') {
-          if (!state.currentMsgId) state.currentMsgId = getCurrentMessageId();
+        if (currentMessageId != null) {
           let messageToSave = upsertPrivateAndGroupIntoShoujiMessage('<shouji>\n</shouji>', privateBlocks, qunliaoLog, roleGroupLog);
           try {
             messageToSave = upsertPyqIntoShoujiMessage(messageToSave, pyqText);
@@ -27504,7 +27544,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           if (divinationText) {
             messageToSave = upsertChangesIntoShoujiMessage(messageToSave, divinationText);
           }
-          await setChatMessages([{ message_id: state.currentMsgId, message: messageToSave }], { refresh: 'none' });
+          await setChatMessageText(messageToSave, currentMessageId, { refresh: 'none' });
         }
       }
 
@@ -27536,9 +27576,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
            const sourceMsg = resolveStructuredHistorySourceMessage();
            state.currentMsgId = sourceMsg && sourceMsg.message_id != null
              ? sourceMsg.message_id
-             : getCurrentMessageId();
-           const msg = sourceMsg || getChatMessages(state.currentMsgId)[0];
-           const rawMessage = sourceMsg ? String(sourceMsg.message || '') : extractRawMessageText(msg);
+             : ensureCurrentMsgId();
+           const rawMessage = sourceMsg
+             ? String(sourceMsg.message || '')
+             : getChatMessageText(state.currentMsgId, '');
            if (rawMessage) {
              try {
                state.divinationChanges = extractChangesContentFromMessage(rawMessage);
