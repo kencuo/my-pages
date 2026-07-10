@@ -16836,6 +16836,86 @@ function applyUserAvatar(avatarElement) {
         return false;
       }
 
+      function extractRawMessageText(entry) {
+        if (!entry || typeof entry !== 'object') return '';
+        const candidates = [
+          entry.message,
+          entry.mes,
+          entry.content,
+          entry.text,
+        ];
+        for (const value of candidates) {
+          const str = String(value || '').trim();
+          if (str) return str;
+        }
+        return '';
+      }
+
+      function extractMessageId(entry, fallback = null) {
+        if (!entry || typeof entry !== 'object') return fallback;
+        const candidates = [
+          entry.message_id,
+          entry.messageId,
+          entry.id,
+          entry.mesid,
+        ];
+        for (const value of candidates) {
+          if (value !== undefined && value !== null && value !== '') return value;
+        }
+        return fallback;
+      }
+
+      function resolveStructuredHistorySourceMessage() {
+        let fallbackId = null;
+        try {
+          if (typeof getCurrentMessageId === 'function') {
+            fallbackId = getCurrentMessageId();
+          }
+        } catch (_) {}
+
+        try {
+          if (fallbackId != null && typeof getChatMessages === 'function') {
+            const currentMsg = getChatMessages(fallbackId)[0];
+            const raw = extractRawMessageText(currentMsg);
+            if (containsStructuredConversationContent(raw)) {
+              return {
+                message_id: extractMessageId(currentMsg, fallbackId),
+                message: raw,
+              };
+            }
+          }
+        } catch (_) {}
+
+        try {
+          const ctx = getSillyContextSafe();
+          const chatList = Array.isArray(ctx && ctx.chat) ? ctx.chat : [];
+          for (let i = chatList.length - 1; i >= 0; i--) {
+            const entry = chatList[i];
+            const raw = extractRawMessageText(entry);
+            if (!containsStructuredConversationContent(raw)) continue;
+            return {
+              message_id: extractMessageId(entry, fallbackId),
+              message: raw,
+            };
+          }
+        } catch (_) {}
+
+        try {
+          if (fallbackId != null && typeof getChatMessages === 'function') {
+            const currentMsg = getChatMessages(fallbackId)[0];
+            const raw = extractRawMessageText(currentMsg);
+            if (raw) {
+              return {
+                message_id: extractMessageId(currentMsg, fallbackId),
+                message: raw,
+              };
+            }
+          }
+        } catch (_) {}
+
+        return null;
+      }
+
       function upsertPrivateAndGroupIntoShoujiMessage(shoujiMessageText, privateBlocksText, qunliaoText, roleGroupText = '') {
         const msg = ensureShoujiWrapper(shoujiMessageText);
         const privateBlocks = String(privateBlocksText || '').trim();
@@ -27188,46 +27268,50 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       // 初始化加载历史
        function loadHistoryFromSillyTavern() {
          if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
-           state.currentMsgId = getCurrentMessageId();
-           const msg = getChatMessages(state.currentMsgId)[0];
-           if (msg && msg.message) {
-            try {
-              state.divinationChanges = extractChangesContentFromMessage(msg.message);
-            } catch (_) {
-              state.divinationChanges = '';
+           const sourceMsg = resolveStructuredHistorySourceMessage();
+           state.currentMsgId = sourceMsg && sourceMsg.message_id != null
+             ? sourceMsg.message_id
+             : getCurrentMessageId();
+           const msg = sourceMsg || getChatMessages(state.currentMsgId)[0];
+           const rawMessage = sourceMsg ? String(sourceMsg.message || '') : extractRawMessageText(msg);
+           if (rawMessage) {
+             try {
+               state.divinationChanges = extractChangesContentFromMessage(rawMessage);
+             } catch (_) {
+               state.divinationChanges = '';
+             }
+             // 解析同层朋友圈（<pyq>）——独立于私聊会话
+             try {
+               state.moments = parseMomentsFromShouji(rawMessage);
+             } catch (e) {
+              state.moments = [];
             }
-            // 解析同层朋友圈（<pyq>）——独立于私聊会话
-            try {
-              state.moments = parseMomentsFromShouji(msg.message);
-            } catch (e) {
-             state.moments = [];
-           }
-            // 解析同层论坛（<forum>）——独立于私聊会话
-            try {
-              state.forum = parseForumFromShouji(msg.message);
-            } catch (e) {
-              state.forum = [];
-            }
-            // 解析同层日记（<diary_store>）——按好友维度存储
-            try {
-              const diaryFromMsg = parseDiaryStoreFromShouji(msg.message);
-              const diaryFromStore = loadDiaryStore();
-              const mergedDiary = normalizeDiaryStore({
-                ...diaryFromStore,
-                ...diaryFromMsg,
+             // 解析同层论坛（<forum>）——独立于私聊会话
+             try {
+               state.forum = parseForumFromShouji(rawMessage);
+             } catch (e) {
+               state.forum = [];
+             }
+             // 解析同层日记（<diary_store>）——按好友维度存储
+             try {
+               const diaryFromMsg = parseDiaryStoreFromShouji(rawMessage);
+               const diaryFromStore = loadDiaryStore();
+               const mergedDiary = normalizeDiaryStore({
+                 ...diaryFromStore,
+                 ...diaryFromMsg,
               });
               state.diaryByFriend = mergedDiary;
               saveDiaryStore(mergedDiary);
             } catch (_) {
               state.diaryByFriend = loadDiaryStore();
-            }
-            try {
-              const shopFromMsg = parseShopFromShouji(msg.message);
-              const payRecords = parseShopPayFromShouji(msg.message);
-              const shopFromStore = loadShopDataLegacy();
-              const resolvedShop = (Array.isArray(shopFromMsg.items) && shopFromMsg.items.length)
-                ? shopFromMsg
-                : shopFromStore;
+             }
+             try {
+               const shopFromMsg = parseShopFromShouji(rawMessage);
+               const payRecords = parseShopPayFromShouji(rawMessage);
+               const shopFromStore = loadShopDataLegacy();
+               const resolvedShop = (Array.isArray(shopFromMsg.items) && shopFromMsg.items.length)
+                 ? shopFromMsg
+                 : shopFromStore;
               const resolvedPayRecords = Array.isArray(payRecords) && payRecords.length
                 ? payRecords
                 : (Array.isArray(shopFromStore.payRecords) ? shopFromStore.payRecords : []);
@@ -27243,22 +27327,22 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               saveShopDataLegacy(state.shopData);
             } catch (_) {
               state.shopData = loadShopDataLegacy();
-            }
-             // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
-             const parsedGroupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
-             const parsedPrivateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
-             const parsedRoleGroups = parseRoleGroupConversationsFromShouji(msg.message) || [];
-             const looseProtocolMessages = parseShoujiLog(msg.message) || [];
-             const extPrivateConversations = loadPrivateConversationsFromExtensions();
-             const extGroupConversations = loadGroupConversationsFromExtensions();
-             const extRoleGroups = loadRoleGroupsFromExtensions();
+             }
+              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
+              const parsedGroupConversations = parseGroupConversationsFromQunliao(rawMessage) || [];
+              const parsedPrivateConversations = parsePrivateConversationsFromShouji(rawMessage) || [];
+              const parsedRoleGroups = parseRoleGroupConversationsFromShouji(rawMessage) || [];
+              const looseProtocolMessages = parseShoujiLog(rawMessage) || [];
+              const extPrivateConversations = loadPrivateConversationsFromExtensions();
+              const extGroupConversations = loadGroupConversationsFromExtensions();
+              const extRoleGroups = loadRoleGroupsFromExtensions();
 
              const preferParsedPrivate = parsedPrivateConversations.length > 0;
              const preferParsedGroup = parsedGroupConversations.length > 0;
              const preferParsedRoleGroups = parsedRoleGroups.length > 0;
 
-             const _titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
-             const wantedName = (document.getElementById('chatPersonName')?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(msg.message)) || '';
+              const _titleMatch = String(rawMessage).match(/【和(.+?)的聊天】/);
+              const wantedName = (document.getElementById('chatPersonName')?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(rawMessage)) || '';
 
              const privateConversations = routeLoosePrivateMessagesIntoConversations(
                mergeConversationSources(parsedPrivateConversations, extPrivateConversations, normalizePrivateConversationEntry),
@@ -27374,17 +27458,17 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                 state.roleGroupMode = false;
                 setRoleGroupInputLock(false);
                 // 单会话格式保持兼容
-               const titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
-               const personName = titleMatch ? titleMatch[1] : parsePersonNameFromShouji(msg.message);
-               if (nameSpan) {
-                 if (personName) {
-                   nameSpan.textContent = personName;
-                   console.log('Set person name to:', personName);
+                const titleMatch = String(rawMessage).match(/【和(.+?)的聊天】/);
+                const personName = titleMatch ? titleMatch[1] : parsePersonNameFromShouji(rawMessage);
+                if (nameSpan) {
+                  if (personName) {
+                    nameSpan.textContent = personName;
+                    console.log('Set person name to:', personName);
                  } else {
                     console.log('No person name found, keeping current name:', nameSpan.textContent);
                   }
                 }
-                state.messageHistory = parseShoujiLog(msg.message);
+                state.messageHistory = parseShoujiLog(rawMessage);
                 promoteLegacySingleConversation(personName);
                 const tabs = document.getElementById('privateChatTabs');
                 if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
