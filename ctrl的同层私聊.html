@@ -24360,16 +24360,35 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         list.splice(index, 1);
 
-          if (!list.length) {
-            state.groupConversations = [{ name: '群聊', members: [], messages: [] }];
-            state.currentGroupIndex = 0;
-            if (state.groupChatMode) {
+        if (!list.length) {
+          state.groupConversations = [];
+          state.currentGroupIndex = 0;
+
+          if (state.groupChatMode) {
+            state.groupChatMode = false;
+            try { localStorage.setItem('tavern_chat_mode', 'private'); } catch (_) {}
+
+            const hasPrivate = Array.isArray(state.privateConversations) && state.privateConversations.length > 0;
+            const hasRoleGroup = Array.isArray(state.roleGroupConversations) && state.roleGroupConversations.length > 0;
+
+            if (hasPrivate) {
+              switchPrivateChat(Math.min(state.currentPrivateIndex || 0, state.privateConversations.length - 1), 'private');
+            } else if (hasRoleGroup) {
+              switchRoleGroupChat(Math.min(state.currentRoleGroupIndex || 0, state.roleGroupConversations.length - 1));
+            } else {
               state.messageHistory = [];
-              setActiveConversationPointer('group', state.currentGroupIndex);
+              setActiveConversationPointer('private', 0);
               const nameSpan = document.getElementById('chatPersonName');
-              if (nameSpan) nameSpan.textContent = state.groupConversations[0].name || '群聊';
+              if (nameSpan) nameSpan.textContent = '';
+              const tabs = document.getElementById('privateChatTabs');
+              if (tabs) {
+                tabs.style.display = 'none';
+                tabs.innerHTML = '';
+              }
               lastHistoryCount = 0;
               renderAllMessages();
+              updateAiRequestButtonVisibility();
+            }
           }
         } else {
           let targetIndex = state.currentGroupIndex;
@@ -24387,7 +24406,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           buildPrivateChatTabs(getGroupsList(), state.currentGroupIndex || 0);
         }
         saveGroupConversations(getGroupConversations());
-        syncGroupsListFromConversations(list);
+        syncGroupsListFromConversations(getGroupConversations());
+        if (state.friendsPanelMode === 'group') renderFriendsPanelList();
         deferredSync();
       }
 
