@@ -11156,7 +11156,15 @@ function applyUserAvatar(avatarElement) {
 
         const hasShoujiTag = /<\s*shouji\b/i.test(text) || /<\/\s*shouji\s*>/i.test(text);
         const hasPrivateTag = /<\s*private\b/i.test(text) || /<\/\s*private\s*>/i.test(text);
+        const hasTitleLine = /(^|\n)\s*【和.+?的聊天】\s*(\n|$)/m.test(text);
+        const hasMessageProtocolLine = /(^|\n)\s*(?:\[[^\n[\]]+\|\d{2}:\d{2}\]|<[^<>\n]+\|\d{2}:\d{2}>)\s*(\n|$)/m.test(text);
         if (!hasShoujiTag && hasPrivateTag) {
+          text = `<shouji>\n${text}\n</shouji>`;
+        } else if (!hasShoujiTag && !hasPrivateTag && hasTitleLine) {
+          const titleMatch = text.match(/【和.+?的聊天】[\s\S]*/);
+          const body = String(titleMatch ? titleMatch[0] : text).trim();
+          text = `<shouji>\n<private>\n${body}\n</private>\n</shouji>`;
+        } else if (!hasShoujiTag && !hasPrivateTag && hasMessageProtocolLine) {
           text = `<shouji>\n${text}\n</shouji>`;
         }
 
@@ -11263,6 +11271,111 @@ function applyUserAvatar(avatarElement) {
 
       function normalizeGroupConversationEntry(entry, index = 0) {
         return normalizeConversationEntry(entry, index, { name: `群聊${index + 1}`, members: [] });
+      }
+
+      function getConversationMessageCount(conversation) {
+        return Array.isArray(conversation && conversation.messages) ? conversation.messages.length : 0;
+      }
+
+      function getMessageMergeSignature(msg) {
+        if (!msg || typeof msg !== 'object') return '';
+        const sender = String(msg.sender || '');
+        const type = String(msg.type || 'text');
+        const charName = String(msg.charName || msg.name || '');
+        const avatar = String(msg.avatar || '');
+        const quote = String(msg.quote || '');
+        const time = String(msg.time || '');
+        const payload = String(
+          msg.content ||
+          msg.voiceText ||
+          msg.voiceEffectContent ||
+          msg.imageData ||
+          msg.videoData ||
+          msg.fileName ||
+          msg.amount ||
+          ''
+        );
+        return [sender, type, charName, avatar, quote, payload, time].join('||');
+      }
+
+      function pushUniqueMessages(targetMessages, incomingMessages) {
+        const base = Array.isArray(targetMessages) ? [...targetMessages] : [];
+        const seen = new Set(base.map(getMessageMergeSignature).filter(Boolean));
+        (Array.isArray(incomingMessages) ? incomingMessages : []).forEach((msg) => {
+          const signature = getMessageMergeSignature(msg);
+          if (signature && seen.has(signature)) return;
+          if (signature) seen.add(signature);
+          base.push(msg);
+        });
+        return normalizePaymentMessageIds(base);
+      }
+
+      function mergeConversationSources(parsedList, extensionList, normalizeEntry) {
+        const ext = (Array.isArray(extensionList) ? extensionList : []).map((entry, index) => normalizeEntry(entry, index));
+        const parsed = (Array.isArray(parsedList) ? parsedList : []).map((entry, index) => normalizeEntry(entry, index));
+        const merged = [];
+        const usedNames = new Set();
+
+        const allNames = [];
+        ext.forEach((conv) => {
+          const name = String(conv && conv.name || '').trim();
+          if (name) allNames.push(name);
+        });
+        parsed.forEach((conv) => {
+          const name = String(conv && conv.name || '').trim();
+          if (name) allNames.push(name);
+        });
+
+        allNames.forEach((name) => {
+          if (!name || usedNames.has(name)) return;
+          usedNames.add(name);
+          const parsedConv = parsed.find((conv) => String(conv && conv.name || '').trim() === name);
+          const extConv = ext.find((conv) => String(conv && conv.name || '').trim() === name);
+          const parsedCount = getConversationMessageCount(parsedConv);
+          const extCount = getConversationMessageCount(extConv);
+          if (parsedConv && extConv) {
+            merged.push(parsedCount >= extCount ? parsedConv : extConv);
+          } else if (parsedConv) {
+            merged.push(parsedConv);
+          } else if (extConv) {
+            merged.push(extConv);
+          }
+        });
+
+        ext.forEach((conv) => {
+          const name = String(conv && conv.name || '').trim();
+          if (name && usedNames.has(name)) return;
+          merged.push(conv);
+        });
+        parsed.forEach((conv) => {
+          const name = String(conv && conv.name || '').trim();
+          if (name && usedNames.has(name)) return;
+          merged.push(conv);
+        });
+
+        return merged.map((entry, index) => normalizeEntry(entry, index));
+      }
+
+      function routeLoosePrivateMessagesIntoConversations(looseMessages, conversations, preferredName = '') {
+        const list = Array.isArray(conversations) ? conversations : [];
+        const messages = Array.isArray(looseMessages) ? looseMessages.filter(Boolean) : [];
+        if (!list.length || !messages.length) return list;
+
+        const normalizedPreferred = String(preferredName || '').trim();
+        const findIndexByName = (name) => list.findIndex((conv) => String(conv && conv.name || '').trim() === String(name || '').trim());
+        const fallbackIndex = normalizedPreferred ? Math.max(0, findIndexByName(normalizedPreferred)) : 0;
+
+        messages.forEach((msg) => {
+          let targetIndex = fallbackIndex;
+          if (msg && msg.sender === 'char' && msg.charName) {
+            const idx = findIndexByName(msg.charName);
+            if (idx >= 0) targetIndex = idx;
+          }
+          if (!list[targetIndex]) return;
+          list[targetIndex].messages = pushUniqueMessages(list[targetIndex].messages, [msg]);
+        });
+
+        return list;
       }
 
       function loadPrivateConversationsFromExtensions() {
@@ -27083,27 +27196,45 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
              // 解析群聊(<qunliao>/<multi>)与私聊(<private>)
              const parsedGroupConversations = parseGroupConversationsFromQunliao(msg.message) || [];
              const parsedPrivateConversations = parsePrivateConversationsFromShouji(msg.message) || [];
+             const parsedRoleGroups = parseRoleGroupConversationsFromShouji(msg.message) || [];
+             const looseProtocolMessages = parseShoujiLog(msg.message) || [];
              const extPrivateConversations = loadPrivateConversationsFromExtensions();
              const extGroupConversations = loadGroupConversationsFromExtensions();
-             const privateConversations = (Array.isArray(extPrivateConversations) && extPrivateConversations.length)
-               ? extPrivateConversations
-               : parsedPrivateConversations;
-             const groupConversations = (Array.isArray(extGroupConversations) && extGroupConversations.length)
-               ? extGroupConversations
-               : parsedGroupConversations;
-             const parsedRoleGroups = parseRoleGroupConversationsFromShouji(msg.message) || [];
              const extRoleGroups = loadRoleGroupsFromExtensions();
-             const roleGroupConversations = (Array.isArray(extRoleGroups) && extRoleGroups.length)
-               ? extRoleGroups
-               : parsedRoleGroups;
-             if ((!Array.isArray(extPrivateConversations) || extPrivateConversations.length === 0) && parsedPrivateConversations.length) {
-               savePrivateConversations(parsedPrivateConversations);
+
+             const preferParsedPrivate = parsedPrivateConversations.length > 0;
+             const preferParsedGroup = parsedGroupConversations.length > 0;
+             const preferParsedRoleGroups = parsedRoleGroups.length > 0;
+
+             const _titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
+             const wantedName = (document.getElementById('chatPersonName')?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(msg.message)) || '';
+
+             const privateConversations = routeLoosePrivateMessagesIntoConversations(
+               mergeConversationSources(parsedPrivateConversations, extPrivateConversations, normalizePrivateConversationEntry),
+               looseProtocolMessages,
+               wantedName
+             );
+             const groupConversations = mergeConversationSources(parsedGroupConversations, extGroupConversations, normalizeGroupConversationEntry);
+             const roleGroupConversations = preferParsedRoleGroups
+               ? parsedRoleGroups
+               : ((Array.isArray(extRoleGroups) && extRoleGroups.length)
+                 ? extRoleGroups
+                 : parsedRoleGroups);
+
+             if (preferParsedPrivate) {
+               savePrivateConversations(privateConversations);
+             } else if ((!Array.isArray(extPrivateConversations) || extPrivateConversations.length === 0) && parsedPrivateConversations.length) {
+               savePrivateConversations(privateConversations);
              }
-             if ((!Array.isArray(extGroupConversations) || extGroupConversations.length === 0) && parsedGroupConversations.length) {
-               saveGroupConversations(parsedGroupConversations);
+             if (preferParsedGroup) {
+               saveGroupConversations(groupConversations);
+             } else if ((!Array.isArray(extGroupConversations) || extGroupConversations.length === 0) && parsedGroupConversations.length) {
+               saveGroupConversations(groupConversations);
              }
-             if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroups.length) {
-                saveRoleGroupConversations(parsedRoleGroups);
+             if (preferParsedRoleGroups) {
+               saveRoleGroupConversations(roleGroupConversations);
+             } else if ((!Array.isArray(extRoleGroups) || extRoleGroups.length === 0) && parsedRoleGroups.length) {
+                saveRoleGroupConversations(roleGroupConversations);
               }
              const nameSpan = document.getElementById('chatPersonName');
 
@@ -27152,12 +27283,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                let activePrivateIndex = 0;
                let activeGroupIndex = 0;
                let activeRoleGroupIndex = 0;
-               const _titleMatch = String(msg.message).match(/【和(.+?)的聊天】/);
-               const wantedName = (nameSpan?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(msg.message)) || '';
-               if (wantedName && hasPrivate) {
-                 const idx = state.privateConversations.findIndex(c => c && c.name === wantedName);
-                 if (idx >= 0) activePrivateIndex = idx;
-               }
+                if (wantedName && hasPrivate) {
+                  const idx = state.privateConversations.findIndex(c => c && c.name === wantedName);
+                  if (idx >= 0) activePrivateIndex = idx;
+                }
                if (wantedName && hasGroup) {
                  const idx = state.groupConversations.findIndex(c => c && c.name === wantedName);
                  if (idx >= 0) activeGroupIndex = idx;
@@ -27210,7 +27339,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                 if (tabs) { tabs.style.display = 'none'; tabs.innerHTML = ''; }
                 console.log('Loaded single conversation, messages:', state.messageHistory.length);
               }
-              state.sharedHistorySource = (hasPrivate || hasGroup || hasRoleGroup) ? 'extension' : 'message';
+              state.sharedHistorySource = (preferParsedPrivate || preferParsedGroup || preferParsedRoleGroups)
+                ? 'message'
+                : ((hasPrivate || hasGroup || hasRoleGroup) ? 'extension' : 'message');
            } else {
              state.messageHistory = [];
             state.moments = [];
