@@ -16828,6 +16828,14 @@ function applyUserAvatar(avatarElement) {
         return `<shouji>\n${trimmed}\n</shouji>`;
       }
 
+      function containsStructuredConversationContent(raw) {
+        const text = String(raw || '');
+        if (!text.trim()) return false;
+        if (/<\s*private\b/i.test(text) || /<\s*qunliao\b/i.test(text) || /<\s*group\b/i.test(text)) return true;
+        if (/【和.+?的聊天】/.test(text)) return true;
+        return false;
+      }
+
       function upsertPrivateAndGroupIntoShoujiMessage(shoujiMessageText, privateBlocksText, qunliaoText, roleGroupText = '') {
         const msg = ensureShoujiWrapper(shoujiMessageText);
         const privateBlocks = String(privateBlocksText || '').trim();
@@ -16835,9 +16843,15 @@ function applyUserAvatar(avatarElement) {
         const roleGroups = String(roleGroupText || '').trim();
         return msg.replace(/<shouji>([\s\S]*?)<\/shouji>/, (_m, inner) => {
           let body = String(inner || '');
-          body = body.replace(/<private>[\s\S]*?<\/private>/g, '');
-          body = body.replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '');
-          body = body.replace(/<group>[\s\S]*?<\/group>/g, '');
+          if (privateBlocks) {
+            body = body.replace(/<private>[\s\S]*?<\/private>/g, '');
+          }
+          if (qunliao) {
+            body = body.replace(/<qunliao>[\s\S]*?<\/qunliao>/g, '');
+          }
+          if (roleGroups) {
+            body = body.replace(/<group>[\s\S]*?<\/group>/g, '');
+          }
           body = body.replace(/^\s*同层手机.*$/gm, '');
           body = body.trim();
           const merged = [privateBlocks, qunliao, roleGroups, body].filter(Boolean).join('\n\n');
@@ -27022,6 +27036,15 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         // 同步前更新本地多会话缓存中当前会话的消息
         syncActiveConversationCache();
 
+        let currentRawMessage = '';
+        try {
+          if (!state.currentMsgId && typeof getCurrentMessageId === 'function') state.currentMsgId = getCurrentMessageId();
+          if (state.currentMsgId && typeof getChatMessages === 'function') {
+            const rawMsgObj = getChatMessages(state.currentMsgId)[0];
+            currentRawMessage = rawMsgObj && rawMsgObj.message ? String(rawMsgObj.message) : '';
+          }
+        } catch (_) {}
+
         const privateList = getPrivateConversations();
         const groupList = getGroupConversations();
         const roleGroupList = getRoleGroupConversations();
@@ -27037,6 +27060,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         // 兼容旧格式：无私聊/群聊结构时仅写入当前会话
         if (!hasPrivate && !hasGroup && !hasRoleGroup) {
+          if (containsStructuredConversationContent(currentRawMessage)) {
+            return;
+          }
           promoteLegacySingleConversation(getActivePrivateConversationName());
           const promotedPrivateList = getPrivateConversations();
           const promotedPrivateBlocks = buildPrivateBlocksFromConversations(promotedPrivateList);
