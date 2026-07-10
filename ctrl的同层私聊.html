@@ -11154,6 +11154,20 @@ function applyUserAvatar(avatarElement) {
           .replace(/&gt;/gi, '>')
           .replace(/&amp;/gi, '&');
 
+        // SillyTavern 的消息编辑/展示链路有时会把纯文本包成 <p>/<div>/<span> 等 HTML，
+        // 标题还能被搜到，但协议行会因为外层标签包裹而整行匹配失败。
+        text = text
+          .replace(/<\/(?:p|div|section|article|header|footer|main|li|ul|ol|pre)[^>]*>/gi, '\n')
+          .replace(/<(?:p|div|section|article|header|footer|main|li|ul|ol|pre)[^>]*>/gi, '')
+          .replace(/<\/?(?:span|strong|em|b|i|u|small|font|code)[^>]*>/gi, '');
+
+        // 最后再兜底剥掉所有非同层结构标签，避免 <p>[角色|头像|内容|时间]</p> 这类情况漏匹配
+        text = text.replace(
+          /<(?!\/?(?:shouji|private|qunliao|multi|group|pyq|forum|diary_store|shop|pay|changes)\b)[^>]+>/gi,
+          ''
+        );
+        text = text.replace(/\n{3,}/g, '\n\n');
+
         const hasShoujiTag = /<\s*shouji\b/i.test(text) || /<\/\s*shouji\s*>/i.test(text);
         const hasPrivateTag = /<\s*private\b/i.test(text) || /<\/\s*private\s*>/i.test(text);
         const hasTitleLine = /(^|\n)\s*【和.+?的聊天】\s*(\n|$)/m.test(text);
