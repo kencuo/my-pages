@@ -16504,12 +16504,23 @@ function applyUserAvatar(avatarElement) {
           state.friendsPanelMode = 'friend';
           try { localStorage.setItem('tavern_chat_mode', 'private'); } catch (_) {}
         }
-        const list = getPrivateConversations();
+        let list = getPrivateConversations();
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan) nameSpan.textContent = name;
 
         if (list.length > 0) {
           let idx = list.findIndex(c => c && c.name === name);
+          if (idx >= 0) {
+            switchPrivateChat(idx, 'private');
+            return;
+          }
+          const hydratedIdx = refreshPrivateConversationsFromStructuredSource(name);
+          if (hydratedIdx >= 0) {
+            switchPrivateChat(hydratedIdx, 'private');
+            return;
+          }
+          list = getPrivateConversations();
+          idx = list.findIndex(c => c && c.name === name);
           if (idx >= 0) {
             switchPrivateChat(idx, 'private');
             return;
@@ -16524,7 +16535,13 @@ function applyUserAvatar(avatarElement) {
           renderAllMessages();
           updateWallpaper();
           updatePrivateChatSettingsButtonVisibility();
-          deferredSync();
+           deferredSync();
+           return;
+        }
+
+        const hydratedIdx = refreshPrivateConversationsFromStructuredSource(name);
+        if (hydratedIdx >= 0) {
+          switchPrivateChat(hydratedIdx, 'private');
           return;
         }
 
@@ -24206,8 +24223,76 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         return { name: '' };
       }
 
+      function mergeFriendEntriesWithPrivateConversations(friendEntries, conversations) {
+        const out = [];
+        const seen = new Set();
+        const append = (entry) => {
+          const normalized = normalizeFriendEntry(entry);
+          const name = String(normalized.name || '').trim();
+          if (!name || seen.has(name)) return;
+          seen.add(name);
+          out.push({ ...normalized, name });
+        };
+
+        (Array.isArray(friendEntries) ? friendEntries : []).forEach(append);
+        (Array.isArray(conversations) ? conversations : []).forEach((conv) => {
+          append({ name: conv && conv.name ? conv.name : '' });
+        });
+        return out;
+      }
+
+      function syncFriendsListWithPrivateConversations() {
+        try {
+          const current = (Array.isArray(loadFriendsList()) ? loadFriendsList() : [])
+            .map(normalizeFriendEntry)
+            .filter(f => String(f.name || '').trim());
+          const merged = mergeFriendEntriesWithPrivateConversations(current, getPrivateConversations());
+          const currentNames = current.map(f => String(f.name || '').trim());
+          const mergedNames = merged.map(f => String(f.name || '').trim());
+          if (JSON.stringify(currentNames) !== JSON.stringify(mergedNames)) {
+            saveFriendsList(merged);
+          }
+        } catch (_) {}
+      }
+
+      function refreshPrivateConversationsFromStructuredSource(targetName = '') {
+        try {
+          const sourceMsg = resolveStructuredHistorySourceMessage();
+          const rawMessage = sourceMsg ? String(sourceMsg.message || '') : '';
+          if (!rawMessage) return -1;
+
+          const parsedPrivateConversations = parsePrivateConversationsFromShouji(rawMessage) || [];
+          if (!parsedPrivateConversations.length) return -1;
+
+          const preferredName = String(targetName || '').trim();
+          const looseProtocolMessages = parseShoujiLog(rawMessage) || [];
+          const mergedConversations = routeLoosePrivateMessagesIntoConversations(
+            looseProtocolMessages,
+            mergeConversationSources(
+              parsedPrivateConversations,
+              getPrivateConversations(),
+              normalizePrivateConversationEntry,
+              { preferParsed: true }
+            ),
+            preferredName
+          );
+
+          state.privateConversations = mergedConversations.map((entry, index) => normalizePrivateConversationEntry(entry, index));
+          savePrivateConversations(state.privateConversations);
+          syncFriendsListWithPrivateConversations();
+
+          if (!preferredName) return state.privateConversations.length ? 0 : -1;
+          return state.privateConversations.findIndex(c => String((c && c.name) || '').trim() === preferredName);
+        } catch (_) {
+          return -1;
+        }
+      }
+
       function displayFriendsListInPanel() {
-        const list = loadFriendsList().map(normalizeFriendEntry).filter(f => f.name);
+        const list = mergeFriendEntriesWithPrivateConversations(
+          loadFriendsList(),
+          getPrivateConversations(),
+        ).filter(f => f.name);
         const box = document.getElementById('friendsList');
         if (!box) return;
 
@@ -27436,9 +27521,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
              state.groupConversations = groupConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.privateConversations = privateConversations.map(c => (c && c.members ? c : { ...c, members: [] }));
              state.roleGroupConversations = roleGroupConversations.map((c, idx) => {
-               const safe = normalizeRoleGroupEntry(c, idx);
-               return safe && safe.members ? safe : { ...safe, members: [] };
-             });
+                const safe = normalizeRoleGroupEntry(c, idx);
+                return safe && safe.members ? safe : { ...safe, members: [] };
+              });
+             syncFriendsListWithPrivateConversations();
              hydrateGroupsFromStorageIfEmpty();
              syncGroupsListFromConversations(state.groupConversations);
 
