@@ -11371,8 +11371,19 @@ function applyUserAvatar(avatarElement) {
       }
 
       function routeLoosePrivateMessagesIntoConversations(looseMessages, conversations, preferredName = '') {
-        const list = Array.isArray(conversations) ? conversations : [];
-        const messages = Array.isArray(looseMessages) ? looseMessages.filter(Boolean) : [];
+        let rawMessages = Array.isArray(looseMessages) ? looseMessages.filter(Boolean) : [];
+        let list = Array.isArray(conversations) ? conversations : [];
+        const looksLikeConversation = (value) => !!(value && typeof value === 'object' && ('messages' in value || 'name' in value));
+        const looksLikeMessage = (value) => !!(value && typeof value === 'object' && ('sender' in value || 'time' in value || 'content' in value || 'type' in value));
+
+        // 兼容误传参顺序：把会话数组误当成 looseMessages、把消息数组误当成 conversations 时自动纠正
+        if (rawMessages.length && list.length && looksLikeConversation(rawMessages[0]) && looksLikeMessage(list[0])) {
+          const swappedMessages = list;
+          list = rawMessages;
+          rawMessages = swappedMessages;
+        }
+
+        const messages = rawMessages;
         if (!list.length || !messages.length) return list;
 
         const normalizedPreferred = String(preferredName || '').trim();
@@ -27359,8 +27370,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               const wantedName = (document.getElementById('chatPersonName')?.textContent || '').trim() || (_titleMatch ? _titleMatch[1] : parsePersonNameFromShouji(rawMessage)) || '';
 
              const privateConversations = routeLoosePrivateMessagesIntoConversations(
-               mergeConversationSources(parsedPrivateConversations, extPrivateConversations, normalizePrivateConversationEntry),
                looseProtocolMessages,
+               mergeConversationSources(parsedPrivateConversations, extPrivateConversations, normalizePrivateConversationEntry),
                wantedName
              );
              const groupConversations = mergeConversationSources(parsedGroupConversations, extGroupConversations, normalizeGroupConversationEntry);
