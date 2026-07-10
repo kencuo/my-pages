@@ -9863,6 +9863,10 @@ https://i.postimg.cc/.../xxx.png"
         recentAiMessageSignatures: new Set(), // 近期AI消息签名去重
         currentMsgId: null,
         sharedHistorySource: 'message',
+        structuredWatchIntervalId: null,
+        structuredWatchConversationName: '',
+        structuredWatchRaw: '',
+        structuredWatchSourceId: null,
         renderedHistoryLimit: 30,
         renderedHistoryStart: 0,
         userHasSentNewMessage: false,
@@ -10993,7 +10997,8 @@ function applyUserAvatar(avatarElement) {
         },
         // 引用消息（优先级较高，放在通用消息前）
         {
-          regex: /^\<我方消息\|(.*?)\|(.*?)\|(\d{2}:\d{2})\>$/,
+          // 让“被引用内容”可以容纳额外的 |，按最右侧 time / content 回溯切分
+          regex: /^\<我方消息\|(.*)\|(.*?)\|(\d{2}:\d{2})\>$/,
           handler: ([, quote, content, time]) => ({ 
             ...parseInlineContentType(content), 
             sender: 'user', 
@@ -11003,7 +11008,8 @@ function applyUserAvatar(avatarElement) {
         },
         {
           // Avatar supports SillyTavern IMGDATA tokens: "IMGDATA:/path|FILENAME:xxx" (note the extra '|')
-          regex: /^\<(.+?)\|((?:IMGDATA:[^|>]+\|FILENAME:[^|>]+)|[^|>]*)\|(.*?)\|(.*?)\|(\d{2}:\d{2})\>$/,
+          // 让“被引用内容”可以容纳额外的 |，按最右侧 time / reply 回溯切分
+          regex: /^\<(.+?)\|((?:IMGDATA:[^|>]+\|FILENAME:[^|>]+)|[^|>]*)\|(.*)\|(.*?)\|(\d{2}:\d{2})\>$/,
           handler: ([, charName, avatar, quote, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
@@ -11015,7 +11021,7 @@ function applyUserAvatar(avatarElement) {
         },
         {
           // 兼容 AI 偶尔漏掉头像字段的引用消息：<角色名|引用内容|回复内容|12:34>
-          regex: /^\<(?!我方消息\|)(.+?)\|(.*?)\|(.+)\|(\d{2}:\d{2})\>$/,
+          regex: /^\<(?!我方消息\|)(.+?)\|(.*)\|(.+)\|(\d{2}:\d{2})\>$/,
           handler: ([, charName, quote, content, time]) => ({
             ...parseInlineContentType(content),
             sender: 'char',
@@ -16456,11 +16462,14 @@ function applyUserAvatar(avatarElement) {
           updatePrivateChatSettingsPreview();
         }
         updateAiRequestButtonVisibility();
+        if (willBeGroup) stopStructuredConversationWatcher();
+        else startStructuredConversationWatcher();
       }
 
       // 切换到角色群聊（偷看模式）
       function switchRoleGroupChat(index) {
         syncActiveConversationCache();
+        stopStructuredConversationWatcher();
         state.roleGroupMode = true;
         state.groupChatMode = false;
         state.friendsPanelMode = 'roleGroup';
@@ -16532,9 +16541,10 @@ function applyUserAvatar(avatarElement) {
            resetRenderedHistoryWindow();
            buildPrivateChatTabs(list, state.currentPrivateIndex);
           lastHistoryCount = 0;
-          renderAllMessages();
-          updateWallpaper();
-          updatePrivateChatSettingsButtonVisibility();
+           renderAllMessages();
+           updateWallpaper();
+           updatePrivateChatSettingsButtonVisibility();
+           startStructuredConversationWatcher();
            deferredSync();
            return;
         }
@@ -16555,6 +16565,7 @@ function applyUserAvatar(avatarElement) {
         renderAllMessages();
         updateWallpaper();
         updatePrivateChatSettingsButtonVisibility();
+        startStructuredConversationWatcher();
         deferredSync();
       }
 
@@ -16987,6 +16998,107 @@ function applyUserAvatar(avatarElement) {
         } catch (_) {}
 
         return null;
+      }
+
+      function getActivePrivateConversation() {
+        if (!isPrivateChatMode()) return null;
+        const list = getPrivateConversations();
+        if (!Array.isArray(list) || !list.length) return null;
+        const idx = Math.max(0, Math.min(state.currentPrivateIndex || 0, list.length - 1));
+        return list[idx] || null;
+      }
+
+      function primeStructuredConversationWatch() {
+        const activeName = String(getActivePrivateConversationName() || '').trim();
+        state.structuredWatchConversationName = activeName;
+        try {
+          const sourceMsg = resolveStructuredHistorySourceMessage();
+          state.structuredWatchSourceId = sourceMsg && sourceMsg.message_id != null ? sourceMsg.message_id : state.currentMsgId;
+          state.structuredWatchRaw = sourceMsg ? String(sourceMsg.message || '') : '';
+        } catch (_) {
+          state.structuredWatchSourceId = state.currentMsgId;
+          state.structuredWatchRaw = '';
+        }
+      }
+
+      function syncActivePrivateConversationFromStructuredSource(options = {}) {
+        if (!isPrivateChatMode()) return false;
+
+        const activeName = String(options.name || getActivePrivateConversationName() || '').trim();
+        if (!activeName) return false;
+
+        const sourceMsg = resolveStructuredHistorySourceMessage();
+        const rawMessage = sourceMsg ? String(sourceMsg.message || '') : '';
+        if (!rawMessage) return false;
+
+        const force = !!(options && options.force);
+        if (!force && state.structuredWatchConversationName === activeName && state.structuredWatchRaw === rawMessage) {
+          return false;
+        }
+
+        const parsedPrivateConversations = parsePrivateConversationsFromShouji(rawMessage) || [];
+        const sourceConversation = parsedPrivateConversations.find(c => String((c && c.name) || '').trim() === activeName);
+
+        state.structuredWatchConversationName = activeName;
+        state.structuredWatchRaw = rawMessage;
+        state.structuredWatchSourceId = sourceMsg && sourceMsg.message_id != null ? sourceMsg.message_id : state.currentMsgId;
+
+        if (!sourceConversation || !Array.isArray(sourceConversation.messages) || !sourceConversation.messages.length) {
+          return false;
+        }
+
+        const list = getPrivateConversations();
+        let idx = list.findIndex(c => String((c && c.name) || '').trim() === activeName);
+        if (idx < 0) {
+          list.push(normalizePrivateConversationEntry({
+            name: activeName,
+            messages: [],
+            addTime: new Date().toISOString(),
+          }, list.length));
+          idx = list.length - 1;
+        }
+
+        const currentMessages = Array.isArray(list[idx].messages) ? list[idx].messages : [];
+        const mergedMessages = pushUniqueMessages(currentMessages, sourceConversation.messages);
+        const appendedMessages = mergedMessages.slice(currentMessages.length);
+        if (!appendedMessages.length) return false;
+
+        list[idx].messages = mergedMessages;
+        savePrivateConversations(list);
+        syncFriendsListWithPrivateConversations();
+
+        if (isPrivateChatMode() && (state.currentPrivateIndex || 0) === idx) {
+          appendedMessages.forEach((msg) => {
+            const newIndex = state.messageHistory.push(msg) - 1;
+            appendMessage(msg, newIndex, false, { flowIn: !!(msg && msg.sender === 'char') });
+          });
+          lastHistoryCount = state.messageHistory.length;
+        }
+
+        return true;
+      }
+
+      function stopStructuredConversationWatcher() {
+        try {
+          if (state.structuredWatchIntervalId) {
+            clearInterval(state.structuredWatchIntervalId);
+          }
+        } catch (_) {}
+        state.structuredWatchIntervalId = null;
+      }
+
+      function startStructuredConversationWatcher() {
+        stopStructuredConversationWatcher();
+        try {
+          syncActivePrivateConversationFromStructuredSource({ force: true });
+        } catch (_) {
+          primeStructuredConversationWatch();
+        }
+        state.structuredWatchIntervalId = setInterval(() => {
+          try {
+            syncActivePrivateConversationFromStructuredSource();
+          } catch (_) {}
+        }, 1500);
       }
 
       function upsertPrivateAndGroupIntoShoujiMessage(shoujiMessageText, privateBlocksText, qunliaoText, roleGroupText = '') {
@@ -20297,7 +20409,7 @@ can call down the storm that writes what comes next.
 
       const PRIVATE_AIREQUEST_EXTRA_PROMPT = `结构约束
 不许输出正文和状态栏内容，你的世界里只有手机。请按照以下格式输出。以及：【和{{人名}}的聊天】，不管这个人是谁，你都必须要按照这个人的语气来输出，哪怕是从未提到过的新角色！不许想当然成你认为的角色。你的所有输出必须放在手机框架里：注意，每个<private>区块是不同的联系人，他们不能看到{{user}}与别人的聊天记录！也不能回复user给别人发的消息。以 <shouji> 开头，内部包含一个或多个 <private> 区块，每个区块首行固定写 “【和{{该会话名}}的聊天】”，随后是 1–7 行合法消息格式，最后用 </private> 和 </shouji> 结束。禁止输出任何其他文本或空行。/n一次回复可以包含多个 <private> 区块；若你同时回复不同联系人，请为每个联系人单独写一个 <private> 区块。
-每个 <private> 内部所有行的角色昵称必须与该区块标题相同，严格遵循 [角色昵称|头像文件名|内容|HH:MM] 或对应类型格式。绝不允许出现“我方消息”或用户姓名。
+每个 <private> 内部所有行的角色昵称必须与该区块标题相同，严格遵循 [角色昵称|头像文件名|内容|HH:MM] 或对应类型格式。若你需要引用用户的某条消息再回复，必须使用尖括号五段式：<角色昵称|头像文件名|被引用的内容|你的新回复|HH:MM>。例如用户发来 [我方消息|我今晚想吃火锅|18:00]，你可以回复 <角色昵称|头像文件名|我今晚想吃火锅|好啊，我们去哪家吃？|18:01>。绝不允许出现“我方消息”或用户姓名。
 记住，你要扮演好<private>标签里面的角色，不许混淆
 任何情况下不允许代替user说话！！不许重复之前的聊天内容，只针对用户最新的消息。
 要严格遵守"和xxx的聊天"，只生成和这个人的聊天，不许生成和他人的私聊
@@ -27654,7 +27766,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
            // 强制重置渲染状态
            resetRenderedHistoryWindow();
            lastHistoryCount = 0;
-          try { if (typeof renderDivinationBook === 'function') renderDivinationBook(state.divinationChanges); } catch (_) {}
+           if (isPrivateChatMode()) startStructuredConversationWatcher();
+           else stopStructuredConversationWatcher();
+           try { if (typeof renderDivinationBook === 'function') renderDivinationBook(state.divinationChanges); } catch (_) {}
 
           // 延迟渲染确保DOM已准备好
           setTimeout(() => {
