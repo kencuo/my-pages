@@ -11324,11 +11324,13 @@ function applyUserAvatar(avatarElement) {
         return normalizePaymentMessageIds(base);
       }
 
-      function mergeConversationSources(parsedList, extensionList, normalizeEntry) {
+      function mergeConversationSources(parsedList, extensionList, normalizeEntry, options = {}) {
         const ext = (Array.isArray(extensionList) ? extensionList : []).map((entry, index) => normalizeEntry(entry, index));
         const parsed = (Array.isArray(parsedList) ? parsedList : []).map((entry, index) => normalizeEntry(entry, index));
         const merged = [];
         const usedNames = new Set();
+        const preferParsed = !!(options && options.preferParsed);
+        const preferExtension = !!(options && options.preferExtension);
 
         const allNames = [];
         ext.forEach((conv) => {
@@ -11348,7 +11350,13 @@ function applyUserAvatar(avatarElement) {
           const parsedCount = getConversationMessageCount(parsedConv);
           const extCount = getConversationMessageCount(extConv);
           if (parsedConv && extConv) {
-            merged.push(parsedCount >= extCount ? parsedConv : extConv);
+            if (preferParsed) {
+              merged.push(parsedConv);
+            } else if (preferExtension) {
+              merged.push(extConv);
+            } else {
+              merged.push(parsedCount >= extCount ? parsedConv : extConv);
+            }
           } else if (parsedConv) {
             merged.push(parsedConv);
           } else if (extConv) {
@@ -16857,8 +16865,23 @@ function applyUserAvatar(avatarElement) {
         const text = String(raw || '');
         if (!text.trim()) return false;
         if (/<\s*private\b/i.test(text) || /<\s*qunliao\b/i.test(text) || /<\s*group\b/i.test(text)) return true;
-        if (/【和.+?的聊天】/.test(text)) return true;
+        if (/【和.+?的聊天】/.test(text) && /(?:^|\n)\s*(?:\[[^\n[\]]+\|\d{2}:\d{2}\]|<[^<>\n]+\|\d{2}:\d{2}>)\s*(?:\n|$)/m.test(text)) return true;
         return false;
+      }
+
+      function getStructuredMessageScore(raw) {
+        const text = String(raw || '');
+        if (!text.trim()) return 0;
+        let score = 0;
+        if (/<\s*shouji\b/i.test(text)) score += 10;
+        if (/<\s*private\b/i.test(text)) score += 100;
+        if (/<\s*qunliao\b/i.test(text)) score += 80;
+        if (/<\s*group\b/i.test(text)) score += 80;
+        const titleMatches = text.match(/【和.+?的聊天】/g);
+        if (titleMatches) score += titleMatches.length * 12;
+        const protocolMatches = text.match(/(?:^|\n)\s*(?:\[[^\n[\]]+\|\d{2}:\d{2}\]|<[^<>\n]+\|\d{2}:\d{2}>)\s*(?:\n|$)/gm);
+        if (protocolMatches) score += protocolMatches.length * 25;
+        return score;
       }
 
       function extractRawMessageText(entry) {
@@ -16902,7 +16925,7 @@ function applyUserAvatar(avatarElement) {
           if (fallbackId != null && typeof getChatMessages === 'function') {
             const currentMsg = getChatMessages(fallbackId)[0];
             const raw = extractRawMessageText(currentMsg);
-            if (containsStructuredConversationContent(raw)) {
+            if (getStructuredMessageScore(raw) > 0) {
               return {
                 message_id: extractMessageId(currentMsg, fallbackId),
                 message: raw,
@@ -16914,15 +16937,23 @@ function applyUserAvatar(avatarElement) {
         try {
           const ctx = getSillyContextSafe();
           const chatList = Array.isArray(ctx && ctx.chat) ? ctx.chat : [];
+          let best = null;
+          let bestScore = 0;
           for (let i = chatList.length - 1; i >= 0; i--) {
             const entry = chatList[i];
             const raw = extractRawMessageText(entry);
-            if (!containsStructuredConversationContent(raw)) continue;
-            return {
-              message_id: extractMessageId(entry, fallbackId),
-              message: raw,
-            };
+            const score = getStructuredMessageScore(raw);
+            if (score <= 0) continue;
+            if (score >= bestScore) {
+              bestScore = score;
+              best = {
+                message_id: extractMessageId(entry, fallbackId),
+                message: raw,
+              };
+              if (score >= 100) break;
+            }
           }
+          if (best) return best;
         } catch (_) {}
 
         try {
@@ -27371,10 +27402,14 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
              const privateConversations = routeLoosePrivateMessagesIntoConversations(
                looseProtocolMessages,
-               mergeConversationSources(parsedPrivateConversations, extPrivateConversations, normalizePrivateConversationEntry),
+               mergeConversationSources(parsedPrivateConversations, extPrivateConversations, normalizePrivateConversationEntry, {
+                 preferParsed: preferParsedPrivate,
+               }),
                wantedName
              );
-             const groupConversations = mergeConversationSources(parsedGroupConversations, extGroupConversations, normalizeGroupConversationEntry);
+             const groupConversations = mergeConversationSources(parsedGroupConversations, extGroupConversations, normalizeGroupConversationEntry, {
+               preferParsed: preferParsedGroup,
+             });
              const roleGroupConversations = preferParsedRoleGroups
                ? parsedRoleGroups
                : ((Array.isArray(extRoleGroups) && extRoleGroups.length)
