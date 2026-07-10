@@ -16440,7 +16440,13 @@ function applyUserAvatar(avatarElement) {
         if (index < 0 || index >= list.length) index = 0;
         if (willBeGroup) state.currentGroupIndex = index;
         else state.currentPrivateIndex = index;
-        const conv = list[index];
+        let conv = list[index];
+        if (!willBeGroup && conv && (!Array.isArray(conv.messages) || conv.messages.length === 0)) {
+          try {
+            refreshPrivateConversationsFromStructuredSource(String(conv.name || '').trim());
+            conv = getPrivateConversations()[index] || conv;
+          } catch (_) {}
+        }
         const nameSpan = document.getElementById('chatPersonName');
         if (nameSpan && conv && conv.name) nameSpan.textContent = conv.name;
         // 切换消息并重渲染
@@ -16520,6 +16526,12 @@ function applyUserAvatar(avatarElement) {
         if (list.length > 0) {
           let idx = list.findIndex(c => c && c.name === name);
           if (idx >= 0) {
+            const existing = list[idx];
+            if (!existing || !Array.isArray(existing.messages) || existing.messages.length === 0) {
+              const hydratedIdx = refreshPrivateConversationsFromStructuredSource(name);
+              if (hydratedIdx >= 0) idx = hydratedIdx;
+              list = getPrivateConversations();
+            }
             switchPrivateChat(idx, 'private');
             return;
           }
