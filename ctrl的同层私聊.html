@@ -6427,6 +6427,37 @@
         color: #fff;
         border-color: var(--accent-primary);
       }
+      .history-mode-badge {
+        position: absolute;
+        top: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1090;
+        min-height: 18px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        color: var(--text-secondary);
+        font-size: 11px;
+        line-height: 1.2;
+        white-space: nowrap;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: none;
+        pointer-events: none;
+      }
+      .history-mode-badge.display-only {
+        color: #8a4b00;
+        background: rgba(255, 243, 224, 0.9);
+        border-color: rgba(255, 152, 0, 0.18);
+      }
+      .history-mode-badge.current-sync {
+        color: #0f766e;
+        background: rgba(240, 253, 250, 0.9);
+        border-color: rgba(20, 184, 166, 0.18);
+      }
     </style>
     <style>
       /* --- 主屏样式：壁纸与底部图标 --- */
@@ -9864,6 +9895,12 @@ https://i.postimg.cc/.../xxx.png"
         currentMsgId: null,
         displayHistorySourceMsgId: null,
         historyDisplayOnly: false,
+        chatSourceWatcherId: null,
+        observedCurrentMsgId: null,
+        observedCurrentMsgText: '',
+        observedPreviousSourceMsgId: null,
+        observedPreviousSourceText: '',
+        lastInternalSourceWriteAt: 0,
         sharedHistorySource: 'message',
         structuredWatchIntervalId: null,
         structuredWatchConversationName: '',
@@ -9992,7 +10029,9 @@ https://i.postimg.cc/.../xxx.png"
       async function setChatMessageText(messageText, messageId = null, options = { refresh: 'none' }) {
         const resolvedId = messageId != null ? messageId : ensureCurrentMsgId();
         if (resolvedId == null) return false;
-        return await setchatmessage([{ message_id: resolvedId, message: String(messageText || '') }], options);
+        const ok = await setchatmessage([{ message_id: resolvedId, message: String(messageText || '') }], options);
+        if (ok) state.lastInternalSourceWriteAt = Date.now();
+        return ok;
       }
 
       async function generateraw(requestData) {
@@ -17065,6 +17104,67 @@ function applyUserAvatar(avatarElement) {
         } catch (_) {
           return null;
         }
+      }
+
+      function getObservedChatSourceSnapshot() {
+        const currentMsgId = ensureCurrentMsgId();
+        const currentMsgText = getChatMessageText(currentMsgId, '');
+        const previousSourceMsg = resolvePreviousStructuredHistorySourceMessage(currentMsgId);
+        const previousSourceMsgId = previousSourceMsg && previousSourceMsg.message_id != null
+          ? previousSourceMsg.message_id
+          : null;
+        const previousSourceText = previousSourceMsg ? String(previousSourceMsg.message || '') : '';
+        return {
+          currentMsgId,
+          currentMsgText,
+          previousSourceMsgId,
+          previousSourceText,
+        };
+      }
+
+      function updateObservedChatSourceSnapshot(snapshot = null) {
+        const next = snapshot || getObservedChatSourceSnapshot();
+        state.observedCurrentMsgId = next.currentMsgId;
+        state.observedCurrentMsgText = next.currentMsgText;
+        state.observedPreviousSourceMsgId = next.previousSourceMsgId;
+        state.observedPreviousSourceText = next.previousSourceText;
+      }
+
+      function hasObservedChatSourceChanged(nextSnapshot) {
+        return (
+          String(nextSnapshot.currentMsgId ?? '') !== String(state.observedCurrentMsgId ?? '') ||
+          String(nextSnapshot.currentMsgText || '') !== String(state.observedCurrentMsgText || '') ||
+          String(nextSnapshot.previousSourceMsgId ?? '') !== String(state.observedPreviousSourceMsgId ?? '') ||
+          String(nextSnapshot.previousSourceText || '') !== String(state.observedPreviousSourceText || '')
+        );
+      }
+
+      function stopChatSourceWatcher() {
+        try {
+          if (state.chatSourceWatcherId) {
+            clearInterval(state.chatSourceWatcherId);
+          }
+        } catch (_) {}
+        state.chatSourceWatcherId = null;
+      }
+
+      function startChatSourceWatcher() {
+        stopChatSourceWatcher();
+        updateObservedChatSourceSnapshot();
+        state.chatSourceWatcherId = setInterval(() => {
+          try {
+            const nextSnapshot = getObservedChatSourceSnapshot();
+            if (!hasObservedChatSourceChanged(nextSnapshot)) return;
+
+            // 避免把我们自己刚写回的新内容又当成“外部修改”重复重载
+            if (Date.now() - Number(state.lastInternalSourceWriteAt || 0) < 400) {
+              updateObservedChatSourceSnapshot(nextSnapshot);
+              return;
+            }
+
+            loadHistoryFromSillyTavern();
+          } catch (_) {}
+        }, 1200);
       }
 
       function appendConversationSources(baseList, incomingList, normalizeEntry) {
@@ -27910,6 +28010,13 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
              console.log('No message history found');
            }
 
+           updateObservedChatSourceSnapshot({
+             currentMsgId: currentMessageId,
+             currentMsgText: currentRawMessage,
+             previousSourceMsgId: previousSourceMsg && previousSourceMsg.message_id != null ? previousSourceMsg.message_id : null,
+             previousSourceText: previousRawMessage,
+           });
+
            // 强制重置渲染状态
            resetRenderedHistoryWindow();
            lastHistoryCount = 0;
@@ -27959,6 +28066,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
           // 加载历史记录
           loadHistoryFromSillyTavern();
+          startChatSourceWatcher();
 
           // 初始化输入框高度
           updateInputHeight();
