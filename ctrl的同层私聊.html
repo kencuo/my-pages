@@ -9896,6 +9896,8 @@ https://i.postimg.cc/.../xxx.png"
         displayHistorySourceMsgId: null,
         historyDisplayOnly: false,
         chatSourceWatcherId: null,
+        chatEventBindings: [],
+        pendingSourceReloadTimerId: null,
         observedCurrentMsgId: null,
         observedCurrentMsgText: '',
         observedPreviousSourceMsgId: null,
@@ -10007,8 +10009,11 @@ https://i.postimg.cc/.../xxx.png"
 
       function ensureCurrentMsgId() {
         try {
-          if (!state.currentMsgId && typeof getCurrentMessageId === 'function') {
-            state.currentMsgId = getCurrentMessageId();
+          if (typeof getCurrentMessageId === 'function') {
+            const liveId = getCurrentMessageId();
+            if (liveId !== undefined && liveId !== null && liveId !== '') {
+              state.currentMsgId = liveId;
+            }
           }
         } catch (_) {}
         return state.currentMsgId;
@@ -17137,6 +17142,115 @@ function applyUserAvatar(avatarElement) {
           String(nextSnapshot.previousSourceMsgId ?? '') !== String(state.observedPreviousSourceMsgId ?? '') ||
           String(nextSnapshot.previousSourceText || '') !== String(state.observedPreviousSourceText || '')
         );
+      }
+
+      function getSillyEventBridge() {
+        const scopes = [globalThis];
+        try {
+          if (typeof parent !== 'undefined' && parent && parent !== globalThis) {
+            scopes.push(parent);
+          }
+        } catch (_) {}
+
+        for (const scope of scopes) {
+          if (!scope) continue;
+          const eventOn = scope.eventOn;
+          const eventOff = scope.eventOff;
+          const events = scope.tavern_events || scope.iframe_events || null;
+          if (typeof eventOn === 'function' && events) {
+            return {
+              eventOn: eventOn.bind(scope),
+              eventOff: typeof eventOff === 'function' ? eventOff.bind(scope) : null,
+              events,
+            };
+          }
+        }
+
+        return null;
+      }
+
+      function queueStructuredSourceReload() {
+        try {
+          if (state.pendingSourceReloadTimerId) {
+            clearTimeout(state.pendingSourceReloadTimerId);
+          }
+        } catch (_) {}
+
+        state.pendingSourceReloadTimerId = setTimeout(() => {
+          state.pendingSourceReloadTimerId = null;
+          try {
+            loadHistoryFromSillyTavern();
+          } catch (_) {}
+        }, 80);
+      }
+
+      function stopSillyMessageEventBridge() {
+        const bindings = Array.isArray(state.chatEventBindings) ? state.chatEventBindings : [];
+        for (const binding of bindings) {
+          try {
+            if (
+              binding &&
+              typeof binding.eventOff === 'function' &&
+              binding.eventName &&
+              typeof binding.handler === 'function'
+            ) {
+              binding.eventOff(binding.eventName, binding.handler);
+            }
+          } catch (_) {}
+        }
+        state.chatEventBindings = [];
+
+        try {
+          if (state.pendingSourceReloadTimerId) {
+            clearTimeout(state.pendingSourceReloadTimerId);
+          }
+        } catch (_) {}
+        state.pendingSourceReloadTimerId = null;
+      }
+
+      function startSillyMessageEventBridge() {
+        stopSillyMessageEventBridge();
+        const bridge = getSillyEventBridge();
+        if (!bridge) return;
+
+        const register = (eventName, handler) => {
+          if (!eventName || typeof handler !== 'function') return;
+          try {
+            bridge.eventOn(eventName, handler);
+            state.chatEventBindings.push({
+              eventName,
+              handler,
+              eventOff: bridge.eventOff,
+            });
+          } catch (_) {}
+        };
+
+        const onMessageUpdated = (messageId) => {
+          ensureCurrentMsgId();
+          const msgIdText = String(messageId ?? '');
+          const isObservedCurrent = msgIdText && msgIdText === String(state.observedCurrentMsgId ?? '');
+          const isObservedHistory = msgIdText && msgIdText === String(state.observedPreviousSourceMsgId ?? '');
+          const isLiveCurrent = msgIdText && msgIdText === String(state.currentMsgId ?? '');
+          if (isObservedCurrent || isObservedHistory || isLiveCurrent) {
+            queueStructuredSourceReload();
+          }
+        };
+
+        const onChatChanged = () => {
+          ensureCurrentMsgId();
+          queueStructuredSourceReload();
+        };
+
+        const onMessageDeleted = () => {
+          ensureCurrentMsgId();
+          queueStructuredSourceReload();
+        };
+
+        register(bridge.events.MESSAGE_UPDATED, onMessageUpdated);
+        register(bridge.events.CHARACTER_MESSAGE_RENDERED, onMessageUpdated);
+        register(bridge.events.MESSAGE_SWIPED, onMessageUpdated);
+        register(bridge.events.MESSAGE_DELETED, onMessageDeleted);
+        register(bridge.events.CHAT_CHANGED, onChatChanged);
       }
 
       function stopChatSourceWatcher() {
@@ -28067,6 +28181,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           // 加载历史记录
           loadHistoryFromSillyTavern();
           startChatSourceWatcher();
+          startSillyMessageEventBridge();
 
           // 初始化输入框高度
           updateInputHeight();
