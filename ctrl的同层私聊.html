@@ -1429,6 +1429,26 @@
         font-size: 12px;
       }
       .group-member-add:hover { background: rgba(0,0,0,0.04); }
+      .group-member-settings-section .group-member-grid {
+        max-height: 184px;
+        overflow-y: auto;
+      }
+      .group-member-settings-section .group-member-chip {
+        flex: 1 1 132px;
+        min-width: 0;
+      }
+      .group-member-settings-section .group-member-chip input {
+        width: 100%;
+        min-width: 0;
+      }
+      .group-member-settings-section .group-member-add {
+        width: 100%;
+        margin-top: 8px;
+      }
+      .group-member-settings-save {
+        width: 100%;
+        margin-top: 10px;
+      }
       .friend-delete {
         margin-left: auto;
         width: 28px;
@@ -5556,6 +5576,60 @@
         overflow-y: auto;
       }
 
+      .text-to-image-form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      #textToImageModal {
+        z-index: 9000;
+      }
+
+      .text-to-image-form label {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        color: #333;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .text-to-image-form textarea,
+      .text-to-image-form select {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+        color: #333;
+        font: inherit;
+        outline: none;
+      }
+
+      .text-to-image-form textarea {
+        min-height: 88px;
+        max-height: 180px;
+        padding: 9px 10px;
+        resize: vertical;
+        line-height: 1.45;
+      }
+
+      .text-to-image-form textarea.negative-prompt {
+        min-height: 54px;
+      }
+
+      .text-to-image-form select {
+        height: 34px;
+        padding: 0 9px;
+      }
+
+      .text-to-image-form textarea:focus,
+      .text-to-image-form select:focus {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.12);
+      }
+
       .file-type-selector {
         display: flex;
         gap: 20px;
@@ -6468,7 +6542,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        background: url('https://i.postimg.cc/g0fLMkDQ/IMG-2155.jpg') center/cover no-repeat;
+        background: url('https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg') center/cover no-repeat;
         z-index: 1400;
         padding-top: 16px;
       }
@@ -8495,6 +8569,16 @@
             </div>
             <span class="action-label">照片</span>
           </div>
+          <div class="action-grid-item" id="textToImageBtn" title="文生图">
+            <div class="icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h8A1.5 1.5 0 0 1 15 5.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 13.5z"></path>
+                <path d="m5.5 12 2.6-2.6 2 2 1.4-1.4 2 2"></path>
+                <path d="M17 8h3M18.5 6.5v3M17.2 14.5h2.6M18.5 13.2v2.6"></path>
+              </svg>
+            </div>
+            <span class="action-label">文生图</span>
+          </div>
           <div class="action-grid-item" id="fileBtn" title="文件">
             <div class="icon-wrapper">
               <svg viewBox="0 0 24 24">
@@ -8960,7 +9044,7 @@ https://i.postimg.cc/.../xxx.png"
           <div class="setting-section">
             <label class="setting-label">主屏壁纸</label>
             <div class="setting-preview">
-              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://i.postimg.cc/g0fLMkDQ/IMG-2155.jpg" alt="主屏壁纸预览">
+              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg" alt="主屏壁纸预览">
               <div class="preview-info">
                 <div class="preview-title">自定义主屏壁纸</div>
                 <div class="preview-desc">上传本地图片作为主屏背景</div>
@@ -9793,7 +9877,7 @@ https://i.postimg.cc/.../xxx.png"
 
     <!-- 私聊专属设置弹窗 -->
     <div class="settings-overlay" id="privateChatSettingsOverlay" style="display: none;">
-        <div class="settings-modal" style="max-width: 260px;">
+        <div class="settings-modal" id="privateChatSettingsModal" style="max-width: 260px;">
           <div class="settings-header">
             <div class="settings-title" id="privateChatSettingsTitle">私聊设置</div>
             <button class="settings-close-btn" id="privateChatSettingsCloseBtn">×</button>
@@ -9801,6 +9885,13 @@ https://i.postimg.cc/.../xxx.png"
           <div class="settings-content">
             <div class="setting-section" style="margin-bottom: 14px;">
               <div class="preview-desc"><span id="privateChatSettingsTargetLabel">当前私聊：</span><span id="privateChatSettingsTarget" style="color:#333;font-weight:600;">-</span></div>
+            </div>
+
+            <div class="setting-section group-member-settings-section" id="groupMemberSettingsSection" style="display:none;margin-bottom:18px;">
+              <label class="setting-label">群成员</label>
+              <div class="group-member-grid" id="groupMemberSettingsGrid"></div>
+              <button class="group-member-add" id="groupSettingsMemberAddBtn" type="button">+ 添加成员</button>
+              <button class="upload-btn group-member-settings-save" id="groupSettingsMemberSaveBtn" type="button">保存群成员</button>
             </div>
 
             <div class="setting-section" id="privateChatAvatarSection" style="margin-bottom: 18px;">
@@ -9878,7 +9969,7 @@ https://i.postimg.cc/.../xxx.png"
       const NAME_CHAR = '对方';
 
       // emoji 列表
-      const EMOJIS = ['😊', '😂', '🥰', '😳', '😭', '😎', '😡', '👍', '🎉', '💖', '🥺', '🤔', '😏', '😱', '��', '🤗'];
+      const EMOJIS = ['😊', '😂', '🥰', '😳', '😭', '😎', '😡', '👍', '🎉', '💖', '🥺', '🤔', '😏', '😱', '  ', '🤗'];
 
       // centralized state management
       const state = {
@@ -10600,6 +10691,20 @@ function applyUserAvatar(avatarElement) {
       }
 
       const messageParsers = [
+        // 群成员变更消息必须先于通用系统时间消息解析
+        {
+          regex: /^\[系统消息\|群成员变更\|(.+?)\|(\d{2}:\d{2})\]$/,
+          handler: ([, encodedContent, time]) => {
+            let content = encodedContent;
+            try { content = decodeURIComponent(encodedContent); } catch (_) {}
+            return {
+              sender: 'system',
+              type: 'group-member-change',
+              content,
+              time,
+            };
+          },
+        },
         // 系统时间消息（优先级最高）
         {
           regex: /^\[系统消息\|(.+?)\]$/,
@@ -16558,6 +16663,7 @@ function applyUserAvatar(avatarElement) {
         const privateSettingsOverlay = document.getElementById('privateChatSettingsOverlay');
         if (privateSettingsOverlay && privateSettingsOverlay.style.display === 'flex') {
           updatePrivateChatSettingsPreview();
+          if (willBeGroup) renderGroupMemberSettings();
         }
         updateAiRequestButtonVisibility();
         if (willBeGroup) stopStructuredConversationWatcher();
@@ -16771,6 +16877,8 @@ function applyUserAvatar(avatarElement) {
             return `[${nameForOther}|语音未接听|${m.content}|${m.time}]`;
           } else if (m.type === 'system-time') {
             return m.content; // 系统时间消息直接返回内容，格式已经是 [系统消息|日期]
+          } else if (m.type === 'group-member-change') {
+            return '[系统消息|群成员变更|' + encodeURIComponent(String(m.content || '')) + '|' + (m.time || '00:00') + ']';
           } else if (m.type === 'poke') {
             return `[系统消息|戳一戳|${m.content}]`; // 戳一戳消息
           } else if (m.type === 'together-listen-start') {
@@ -18649,6 +18757,9 @@ function applyUserAvatar(avatarElement) {
         // Special case for system notifications that have a different structure
         if (msg.type === 'system-time') {
           return createSystemTimeMessageElement(msg, idx);
+        }
+        if (msg.type === 'group-member-change') {
+          return createGroupMemberChangeMessageElement(msg, idx);
         }
         if (msg.type === 'poke') {
           return createPokeMessageElement(msg, idx);
@@ -20754,7 +20865,21 @@ tongue parched, fingers crusted white.
 Only the next word from the ONE BEYOND THE DUNES  
 can call down the storm that writes what comes next.
 
-`;
+      `;
+
+      const IMAGE_GENERATION_AI_PROMPT_RULES = [
+        '可选生图协议（隐藏系统规则，不要向用户复述）：',
+        '1) 只有当当前角色确实想主动发送一张新生成的图片时才使用本协议；普通回复不要输出图片标签。',
+        '2) 先按当前私聊或群聊协议输出该角色的一条合法可见消息，然后紧接着输出：',
+        '<images>',
+        '<image>English image generation prompt</image>',
+        '</images>',
+        '3) <image> 内只写一张图的英文画面提示词，不写解释、Markdown、尺寸、反向提示词或参数命令。',
+        '4) 提示词必须写出可见的主体外貌、服装、动作、表情、环境、构图、光线和画风，不能只写角色姓名。',
+        '5) 需要多张图时，在同一个 <images> 中写多个 <image>；每个 <image> 只描述一张图。',
+        '6) <images> 紧跟在实际发送图片的角色消息之后；当前格式有 <private> 或 <multi> 包裹时必须放在该聊天区块内部。',
+        '7) 图片标签不是聊天正文，不要把提示词重复写进普通消息，不要代替用户发图。',
+      ].join('\n');
 
       const PRIVATE_AIREQUEST_EXTRA_PROMPT = `结构约束
 不许输出正文和状态栏内容，你的世界里只有手机。请按照以下格式输出。以及：【和{{人名}}的聊天】，不管这个人是谁，你都必须要按照这个人的语气来输出，哪怕是从未提到过的新角色！不许想当然成你认为的角色。你的所有输出必须放在手机框架里：注意，每个<private>区块是不同的联系人，他们不能看到{{user}}与别人的聊天记录！也不能回复user给别人发的消息。以 <shouji> 开头，内部包含一个或多个 <private> 区块，每个区块首行固定写 “【和{{该会话名}}的聊天】”，随后是 1–7 行合法消息格式，最后用 </private> 和 </shouji> 结束。禁止输出任何其他文本或空行。/n一次回复可以包含多个 <private> 区块；若你同时回复不同联系人，请为每个联系人单独写一个 <private> 区块。
@@ -20870,6 +20995,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             context = `${context}\n\n${buildGroupAiRequestExtraPrompt()}`;
           }
         }
+        context = context + '\n\n' + IMAGE_GENERATION_AI_PROMPT_RULES;
+        const imageGenerationTarget = captureImageGenerationTarget(
+          currentMode === 'private' ? getActivePrivateConversationName() : ''
+        );
 
         // 调试：记录上下文和模式
         try { if (state.debugEnabled) {
@@ -21141,8 +21270,13 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
           }
 
+          let imagePromptTasks = extractAiImagePromptTasks(
+            buffer,
+            imageGenerationTarget.defaultCharName
+          );
+
           // 若仍未得到任何消息，再尝试一次性模式
-          if (handled === 0) {
+          if (handled === 0 && imagePromptTasks.length === 0) {
             buffer = await AI_GENERATE({
               injects: [
                 { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
@@ -21150,10 +21284,14 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               should_stream: false
             });
             processBuffer();
+            imagePromptTasks = extractAiImagePromptTasks(
+              buffer,
+              imageGenerationTarget.defaultCharName
+            );
           }
 
           // 如果没有处理任何消息，尝试一次性模式重试一次
-          if (handled === 0) {
+          if (handled === 0 && imagePromptTasks.length === 0) {
             buffer = await AI_GENERATE({
               injects: [
                 { role: 'system', content: context, position: 'in_chat', depth: 0, should_scan: true }
@@ -21161,15 +21299,22 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               should_stream: false
             });
             processBuffer();
+            imagePromptTasks = extractAiImagePromptTasks(
+              buffer,
+              imageGenerationTarget.defaultCharName
+            );
           }
           
           // 如果重试后仍然没有有效消息，记录问题并结束
-          if (handled === 0) {
+          if (handled === 0 && imagePromptTasks.length === 0) {
             throw new Error('AI生成内容无法解析或被过滤');
           }
 
           await waitForAiMessageRenderQueue();
           hideTypingIndicator();
+          if (imagePromptTasks.length > 0) {
+            void generateAiImagePromptTasks(imagePromptTasks, imageGenerationTarget);
+          }
           // 统一使用延迟同步，提升响应速度
           setTimeout(() => syncToSillyTavern(), 100);
         } catch (e) {
@@ -21411,8 +21556,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           '   [张三|头像后缀|大家晚上好|19:20]',
           '   <李四|头像后缀|引用内容|回复内容|19:21>',
           '4) 一次输出 1~3 行即可。并且你只能输出群成员里面的成员聊天，不允许有多余的人出现',
+          IMAGE_GENERATION_AI_PROMPT_RULES,
           contextLines ? `\n已有聊天记录（供参考）：\n${contextLines}` : ''
         ].join('\n');
+        const imageGenerationTarget = captureImageGenerationTarget(roleName);
 
         // 调试：记录角色群聊AI回复上下文
         try { if (state.debugEnabled) {
@@ -21563,7 +21710,12 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             }
           }
 
-          if (handled === 0) {
+          let imagePromptTasks = extractAiImagePromptTasks(
+            buffer,
+            imageGenerationTarget.defaultCharName
+          );
+
+          if (handled === 0 && imagePromptTasks.length === 0) {
             const fallback = await AI_GENERATE({
               injects: [
                 { role: 'system', content: systemPrompt, position: 'in_chat', depth: 0, should_scan: true }
@@ -21572,14 +21724,21 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             });
             buffer = String(fallback || '');
             processBuffer();
+            imagePromptTasks = extractAiImagePromptTasks(
+              buffer,
+              imageGenerationTarget.defaultCharName
+            );
           }
 
-          if (handled === 0) {
+          if (handled === 0 && imagePromptTasks.length === 0) {
             throw new Error('AI生成内容无法解析或被过滤');
           }
 
           await waitForAiMessageRenderQueue();
           hideTypingIndicator();
+          if (imagePromptTasks.length > 0) {
+            void generateAiImagePromptTasks(imagePromptTasks, imageGenerationTarget);
+          }
           setTimeout(() => syncToSillyTavern(), 100);
         } catch (e) {
           await waitForAiMessageRenderQueue();
@@ -23196,6 +23355,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       // 集成群聊列表开关
       document.getElementById('friendsBtn').onclick = () => toggleFriendsPanel(true);
       document.getElementById('imgBtn').onclick = sendImage;
+      document.getElementById('textToImageBtn').onclick = showTextToImageModal;
       document.getElementById('recallBtn').onclick = recallLastUserMsg; // This button is in the action grid, keep it for now.
       document.getElementById('quoteBtn').onclick = quoteLastCharMsg;
       document.getElementById('transferBtn').onclick = sendTransfer;
@@ -23264,6 +23424,420 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           }
         } catch (_) {}
         return null;
+      }
+
+      const ST_CHATU8_IMAGE_REQUEST_EVENT = 'GENERATE_IMAGE_REQUEST';
+      const ST_CHATU8_IMAGE_RESPONSE_EVENT = 'GENERATE_IMAGE_RESPONSE';
+      const ST_CHATU8_IMAGE_TIMEOUT_MS = 300000;
+
+      function createImageGenerationRequestId() {
+        try {
+          if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return 'ctrl-phone-img-' + crypto.randomUUID();
+          }
+        } catch (_) {}
+        return 'ctrl-phone-img-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+      }
+
+      function getStChatu8EventSource() {
+        const ctx = getSillyContextSafe();
+        const eventSource = ctx && ctx.eventSource;
+        if (!eventSource || typeof eventSource.on !== 'function' || typeof eventSource.emit !== 'function') {
+          throw new Error('未找到 SillyTavern 事件总线');
+        }
+        return eventSource;
+      }
+
+      function requestStChatu8Image(prompt, options = {}) {
+        const normalizedPrompt = String(prompt || '').trim();
+        if (!normalizedPrompt) return Promise.reject(new Error('提示词不能为空'));
+
+        const eventSource = getStChatu8EventSource();
+        const id = createImageGenerationRequestId();
+        const payload = {
+          id,
+          prompt: normalizedPrompt,
+          width: Number(options.width) > 0 ? Number(options.width) : null,
+          height: Number(options.height) > 0 ? Number(options.height) : null,
+        };
+        const negativePrompt = String(options.negativePrompt || options.negative_prompt || '').trim();
+        if (negativePrompt) payload.negative_prompt = negativePrompt;
+
+        return new Promise((resolve, reject) => {
+          let settled = false;
+          let timer = null;
+
+          const cleanup = () => {
+            if (timer) clearTimeout(timer);
+            try {
+              if (typeof eventSource.removeListener === 'function') {
+                eventSource.removeListener(ST_CHATU8_IMAGE_RESPONSE_EVENT, handleResponse);
+              } else if (typeof eventSource.off === 'function') {
+                eventSource.off(ST_CHATU8_IMAGE_RESPONSE_EVENT, handleResponse);
+              }
+            } catch (_) {}
+          };
+
+          const finish = (error, value) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            if (error) reject(error);
+            else resolve(value);
+          };
+
+          const handleResponse = response => {
+            if (!response || String(response.id || '') !== id) return;
+            if (response.success === false) {
+              finish(new Error(response.error || 'st-chatu8 生图失败'));
+              return;
+            }
+            finish(null, response);
+          };
+
+          eventSource.on(ST_CHATU8_IMAGE_RESPONSE_EVENT, handleResponse);
+          timer = setTimeout(
+            () => finish(new Error('st-chatu8 生图超时')),
+            ST_CHATU8_IMAGE_TIMEOUT_MS
+          );
+
+          try {
+            Promise.resolve(eventSource.emit(ST_CHATU8_IMAGE_REQUEST_EVENT, payload))
+              .catch(error => finish(error instanceof Error ? error : new Error(String(error))));
+          } catch (error) {
+            finish(error instanceof Error ? error : new Error(String(error)));
+          }
+        });
+      }
+
+      function normalizeGeneratedImageSource(source, format = 'png') {
+        let value = String(source || '').trim();
+        if (!value) return '';
+        if (/^(?:data:image\/|blob:|https?:\/\/|\/)/i.test(value)) return value;
+        const compact = value.replace(/\s+/g, '');
+        if (compact.length > 128 && /^[A-Za-z0-9+/=]+$/.test(compact)) {
+          const safeFormat = String(format || 'png').toLowerCase().replace(/[^a-z0-9.+-]/g, '') || 'png';
+          return 'data:image/' + safeFormat + ';base64,' + compact;
+        }
+        return value;
+      }
+
+      function getGeneratedImageSources(response) {
+        const sources = [];
+        const visit = value => {
+          if (!value) return;
+          if (typeof value === 'string') {
+            const normalized = normalizeGeneratedImageSource(value, response && response.format);
+            if (normalized) sources.push(normalized);
+            return;
+          }
+          if (Array.isArray(value)) {
+            value.forEach(visit);
+            return;
+          }
+          if (typeof value === 'object') {
+            ['imageData', 'images', 'imageUrls', 'url', 'src', 'data'].forEach(key => {
+              if (value[key] !== undefined) visit(value[key]);
+            });
+          }
+        };
+
+        if (response && typeof response === 'object') {
+          const primary = response.imageData ?? response.images ?? response.imageUrls ?? response.url;
+          visit(primary);
+        } else {
+          visit(response);
+        }
+        return [...new Set(sources)];
+      }
+
+      function getConversationListForImageTarget(mode) {
+        if (mode === 'roleGroup') return getRoleGroupConversations();
+        if (mode === 'group') return getGroupConversations();
+        return getPrivateConversations();
+      }
+
+      function captureImageGenerationTarget(defaultCharName = '') {
+        try { syncActiveConversationCache(); } catch (_) {}
+        const mode = getActiveConversationMode();
+        const index = getActiveConversationIndex();
+        const list = getConversationListForImageTarget(mode);
+        const conversation = Array.isArray(list) ? list[index] : null;
+        let resolvedCharName = String(defaultCharName || '').trim();
+        if (!resolvedCharName && mode === 'private') {
+          resolvedCharName = getConversationName(conversation, getActivePrivateConversationName());
+        } else if (!resolvedCharName && mode === 'roleGroup') {
+          resolvedCharName = String(conversation && (conversation.role || conversation.viewer) || '').trim();
+        }
+        return {
+          mode,
+          index,
+          conversation,
+          conversationName: getConversationName(conversation),
+          addTime: String(conversation && conversation.addTime || ''),
+          defaultCharName: resolvedCharName || getCurrentCharName() || '对方',
+        };
+      }
+
+      function resolveImageGenerationTarget(target) {
+        const safeTarget = target || {};
+        const mode = safeTarget.mode || 'private';
+        const list = getConversationListForImageTarget(mode);
+        let index = Array.isArray(list) && safeTarget.conversation
+          ? list.indexOf(safeTarget.conversation)
+          : -1;
+        if (index < 0 && safeTarget.addTime) {
+          index = list.findIndex(item => String(item && item.addTime || '') === safeTarget.addTime);
+        }
+        if (index < 0 && safeTarget.conversationName) {
+          index = list.findIndex(item => getConversationName(item) === safeTarget.conversationName);
+        }
+        if (index < 0 && Number.isInteger(safeTarget.index) && list[safeTarget.index]) {
+          index = safeTarget.index;
+        }
+        return { mode, list, index, conversation: index >= 0 ? list[index] : null };
+      }
+
+      function appendGeneratedImageToTarget(message, target) {
+        const resolved = resolveImageGenerationTarget(target);
+        const isCurrent = resolved.mode === getActiveConversationMode()
+          && resolved.index >= 0
+          && resolved.index === getActiveConversationIndex();
+
+        if (isCurrent || !resolved.conversation) {
+          const newIndex = state.messageHistory.push(message) - 1;
+          appendMessage(message, newIndex, true);
+          if (message.sender === 'user') {
+            state.userHasSentNewMessage = true;
+            updateAiRequestButtonVisibility();
+          }
+        } else {
+          if (!Array.isArray(resolved.conversation.messages)) resolved.conversation.messages = [];
+          resolved.conversation.messages.push(message);
+          saveConversationListByMode(resolved.mode);
+        }
+        deferredSync(50);
+      }
+
+      async function persistGeneratedImageSource(source, requestId, format = 'png') {
+        const normalized = normalizeGeneratedImageSource(source, format);
+        if (!normalized) throw new Error('插件没有返回有效图片');
+
+        if (!/^(?:data:image\/|blob:)/i.test(normalized)) {
+          let fileName = 'generated_' + requestId + '.' + (String(format || 'png').replace(/[^a-z0-9]/gi, '') || 'png');
+          try {
+            const pathname = new URL(normalized, location.href).pathname;
+            const candidate = decodeURIComponent(pathname.split('/').pop() || '');
+            if (candidate && /\.[a-z0-9]{2,5}$/i.test(candidate)) fileName = candidate;
+          } catch (_) {}
+          return { url: normalized, fileName, persisted: true };
+        }
+
+        const response = await fetch(normalized);
+        if (!response.ok) throw new Error('无法读取生成图片');
+        const blob = await response.blob();
+        const mime = String(blob.type || ('image/' + (format || 'png'))).toLowerCase();
+        let ext = mime.includes('jpeg') ? 'jpg' : (mime.split('/')[1] || String(format || 'png'));
+        ext = ext.replace(/[^a-z0-9]/gi, '') || 'png';
+        const fileName = 'generated_' + requestId + '.' + ext;
+        const file = new File([blob], fileName, { type: mime || ('image/' + ext) });
+
+        const uploadImagePlugin = window.__uploadImageByPlugin
+          || window.parent?.__uploadImageByPlugin
+          || window.top?.__uploadImageByPlugin;
+        if (typeof uploadImagePlugin === 'function') {
+          try {
+            const result = await uploadImagePlugin(file, { enableAIVision: false });
+            if (result && result.success && result.url) {
+              return {
+                url: String(result.url),
+                fileName: String(result.originalFileName || fileName),
+                persisted: true,
+              };
+            }
+          } catch (_) {}
+        }
+
+        try {
+          const dataUrl = /^data:image\//i.test(normalized) ? normalized : await readFileAsDataUrl(file);
+          const uploaded = await uploadImageAssetForSettings(file, dataUrl, 'st_chatu8_generated');
+          if (uploaded) return { url: uploaded, fileName, persisted: true };
+        } catch (_) {}
+
+        return { url: normalized, fileName: '', persisted: false };
+      }
+
+      async function generateImagePromptForTarget(prompt, options = {}, target = null) {
+        const normalizedPrompt = String(prompt || '').trim();
+        if (!normalizedPrompt) return false;
+        const serializablePrompt = normalizedPrompt.replace(/[|\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const safeTarget = target || captureImageGenerationTarget(options.charName);
+        const sender = options.sender === 'char' ? 'char' : 'user';
+        try { showToast('正在生成图片...'); } catch (_) {}
+
+        try {
+          const response = await requestStChatu8Image(normalizedPrompt, options);
+          const sources = getGeneratedImageSources(response);
+          if (!sources.length) throw new Error('st-chatu8 未返回图片数据');
+
+          let persistedAll = true;
+          for (let index = 0; index < sources.length; index++) {
+            const stored = await persistGeneratedImageSource(
+              sources[index],
+              String(response.id || Date.now()) + '_' + (index + 1),
+              response.format || 'png'
+            );
+            persistedAll = persistedAll && stored.persisted;
+            appendGeneratedImageToTarget({
+              sender,
+              type: 'image',
+              charName: sender === 'char'
+                ? String(options.charName || safeTarget.defaultCharName || '对方').trim()
+                : undefined,
+              avatar: sender === 'char' ? String(options.avatar || '') : undefined,
+              imageData: stored.url,
+              fileName: stored.fileName,
+              imageDescription: serializablePrompt || '生成图片',
+              generatedBy: 'st-chatu8',
+              generationRequestId: String(response.id || ''),
+              time: getTimeStr(),
+            }, safeTarget);
+          }
+          try {
+            showToast(persistedAll ? '图片生成完成' : '图片已生成，但未能持久化保存');
+          } catch (_) {}
+          return true;
+        } catch (error) {
+          console.error('st-chatu8 文生图失败:', error);
+          const message = String(error && error.message || error || '生图失败');
+          try { showToast(message); } catch (_) {}
+          return false;
+        }
+      }
+
+      function decodeImagePromptMarkup(value) {
+        return String(value || '')
+          .replace(/&lt;/gi, '<')
+          .replace(/&gt;/gi, '>')
+          .replace(/&amp;/gi, '&')
+          .replace(/&quot;/gi, '"')
+          .replace(/&#39;/gi, "'");
+      }
+
+      function inferImagePromptSender(prefix, fallbackName) {
+        const lines = String(prefix || '').replace(/\r\n?/g, '\n').split('\n').reverse();
+        for (const rawLine of lines) {
+          const line = String(rawLine || '').trim();
+          const match = line.match(/^[\[<]([^|\]\n<>]+)\|[\s\S]*\|\d{2}:\d{2}[\]>]$/);
+          if (!match) continue;
+          const name = String(match[1] || '').trim();
+          if (!name || /^(?:我方消息|系统消息|群成员[:：]?)/.test(name)) continue;
+          return name;
+        }
+        return String(fallbackName || '').trim() || '对方';
+      }
+
+      function cleanAiImagePrompt(rawPrompt) {
+        let prompt = decodeImagePromptMarkup(rawPrompt)
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/[，；：]/g, char => ({ '，': ',', '；': ';', '：': ':' }[char] || char))
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (prompt.startsWith('[') && prompt.endsWith(']')) {
+          prompt = prompt.slice(1, -1).trim();
+        }
+        return prompt;
+      }
+
+      function extractAiImagePromptTasks(rawText, fallbackName = '') {
+        const text = decodeImagePromptMarkup(rawText);
+        const tasks = [];
+        const outerRegex = /<images\b[^>]*>([\s\S]*?)<\/images>/gi;
+        let outerMatch;
+        let foundOuter = false;
+
+        const collectImages = (content, prefix) => {
+          const imageRegex = /<image\b[^>]*>([\s\S]*?)<\/image>/gi;
+          let imageMatch;
+          while ((imageMatch = imageRegex.exec(content))) {
+            const prompt = cleanAiImagePrompt(imageMatch[1]);
+            if (!prompt) continue;
+            tasks.push({
+              prompt,
+              charName: inferImagePromptSender(prefix, fallbackName),
+            });
+          }
+        };
+
+        while ((outerMatch = outerRegex.exec(text))) {
+          foundOuter = true;
+          collectImages(outerMatch[1], text.slice(0, outerMatch.index));
+        }
+        if (!foundOuter) collectImages(text, text);
+        return tasks;
+      }
+
+      async function generateAiImagePromptTasks(tasks, target) {
+        for (const task of Array.isArray(tasks) ? tasks : []) {
+          await generateImagePromptForTarget(task.prompt, {
+            sender: 'char',
+            charName: task.charName || target.defaultCharName,
+          }, target);
+        }
+      }
+
+      function showTextToImageModal() {
+        moreActionsGrid.style.display = 'none';
+        const existing = document.getElementById('textToImageModal');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'textToImageModal';
+        overlay.className = 'simple-modal-overlay';
+        overlay.innerHTML = [
+          '<div class="simple-modal" role="dialog" aria-modal="true" aria-labelledby="textToImageTitle">',
+          '<div class="simple-modal-header" id="textToImageTitle">文生图</div>',
+          '<div class="simple-modal-body"><div class="text-to-image-form">',
+          '<label>提示词<textarea id="textToImagePrompt" placeholder="提示词"></textarea></label>',
+          '<label>反向提示词<textarea id="textToImageNegativePrompt" class="negative-prompt" placeholder="反向提示词"></textarea></label>',
+          '<label>画布<select id="textToImageSize">',
+          '<option value="">插件默认</option>',
+          '<option value="512x512">512 × 512</option>',
+          '<option value="768x1024">768 × 1024</option>',
+          '<option value="1024x768">1024 × 768</option>',
+          '<option value="1024x1024">1024 × 1024</option>',
+          '</select></label></div></div>',
+          '<div class="simple-modal-footer">',
+          '<button type="button" class="modal-btn cancel-btn" data-action="cancel">取消</button>',
+          '<button type="button" class="modal-btn confirm-btn" data-action="generate">生成</button>',
+          '</div></div>',
+        ].join('');
+        document.body.appendChild(overlay);
+
+        const close = () => overlay.remove();
+        overlay.querySelector('[data-action="cancel"]').onclick = close;
+        overlay.addEventListener('click', event => {
+          if (event.target === overlay) close();
+        });
+        overlay.querySelector('[data-action="generate"]').onclick = () => {
+          const prompt = String(overlay.querySelector('#textToImagePrompt').value || '').trim();
+          if (!prompt) {
+            overlay.querySelector('#textToImagePrompt').focus();
+            return;
+          }
+          const negativePrompt = String(overlay.querySelector('#textToImageNegativePrompt').value || '').trim();
+          const size = String(overlay.querySelector('#textToImageSize').value || '');
+          const dimensions = size ? size.split('x').map(Number) : [null, null];
+          const target = captureImageGenerationTarget();
+          close();
+          void generateImagePromptForTarget(prompt, {
+            sender: 'user',
+            negativePrompt,
+            width: dimensions[0],
+            height: dimensions[1],
+          }, target);
+        };
+        setTimeout(() => overlay.querySelector('#textToImagePrompt')?.focus(), 0);
       }
 
       async function ensureCharacterUnshallowed() {
@@ -23510,16 +24084,20 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       function updatePrivateChatSettingsPreview() {
         const isGroupMode = !!state.groupChatMode;
         const targetName = isGroupMode ? getActiveGroupConversationName() : getActivePrivateConversationName();
+        const modal = document.getElementById('privateChatSettingsModal');
         const titleEl = document.getElementById('privateChatSettingsTitle');
         const targetLabelEl = document.getElementById('privateChatSettingsTargetLabel');
         const avatarSection = document.getElementById('privateChatAvatarSection');
+        const groupMemberSection = document.getElementById('groupMemberSettingsSection');
         const wallpaperLabelEl = document.getElementById('privateChatWallpaperLabel');
         const wallpaperTitleEl = document.getElementById('privateChatWallpaperTitle');
         const clearBtn = document.getElementById('privateChatClearBtn');
 
+        if (modal) modal.style.maxWidth = isGroupMode ? '420px' : '260px';
         if (titleEl) titleEl.textContent = isGroupMode ? '群聊设置' : '私聊设置';
         if (targetLabelEl) targetLabelEl.textContent = isGroupMode ? '当前群聊：' : '当前私聊：';
         if (avatarSection) avatarSection.style.display = isGroupMode ? 'none' : '';
+        if (groupMemberSection) groupMemberSection.style.display = isGroupMode ? '' : 'none';
         if (wallpaperLabelEl) wallpaperLabelEl.textContent = isGroupMode ? '该群聊背景' : '该私聊背景';
         if (wallpaperTitleEl) wallpaperTitleEl.textContent = isGroupMode ? '群聊专属背景' : '专属聊天背景';
         if (clearBtn) clearBtn.textContent = isGroupMode ? '清空当前群聊' : '清空当前私聊';
@@ -23549,6 +24127,108 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }
       }
 
+      function appendGroupMemberSettingsRow(value = '', originalMember = '') {
+        const grid = document.getElementById('groupMemberSettingsGrid');
+        if (!grid) return null;
+
+        const chip = document.createElement('div');
+        chip.className = 'group-member-chip';
+        chip.dataset.originalMember = String(originalMember || '');
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = '成员姓名';
+        input.value = String(value || '');
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.title = '移除成员';
+        removeBtn.setAttribute('aria-label', '移除成员');
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', () => chip.remove());
+
+        chip.appendChild(input);
+        chip.appendChild(removeBtn);
+        grid.appendChild(chip);
+        return input;
+      }
+
+      function renderGroupMemberSettings() {
+        const grid = document.getElementById('groupMemberSettingsGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        const members = getActiveGroupMembers()
+          .map(member => String(member || '').trim())
+          .filter(Boolean);
+        members.forEach(member => appendGroupMemberSettingsRow(member, member));
+        if (!members.length) appendGroupMemberSettingsRow('', '');
+      }
+
+      function createGroupMemberChangeMessage(content) {
+        return {
+          sender: 'system',
+          type: 'group-member-change',
+          content: String(content || ''),
+          time: getTimeStr(),
+        };
+      }
+
+      function saveCurrentGroupMembersFromSettings() {
+        if (!state.groupChatMode) return false;
+        const grid = document.getElementById('groupMemberSettingsGrid');
+        const list = getGroupConversations();
+        const idx = Math.max(0, Math.min(state.currentGroupIndex || 0, list.length - 1));
+        const conv = list[idx];
+        if (!grid || !conv) return false;
+
+        const originalMembers = (Array.isArray(conv.members) ? conv.members : [])
+          .map(member => String(member || '').trim())
+          .filter(Boolean);
+        const rows = [...grid.querySelectorAll('.group-member-chip')].map(chip => ({
+          original: String(chip.dataset.originalMember || '').trim(),
+          current: String(chip.querySelector('input')?.value || '').trim(),
+        }));
+        const nextMembers = rows.map(row => row.current).filter(Boolean);
+        const duplicateName = nextMembers.find((name, memberIndex) => nextMembers.indexOf(name) !== memberIndex);
+        if (duplicateName) {
+          try { showToast('群成员“' + duplicateName + '”重复了'); } catch (_) {}
+          return false;
+        }
+
+        const retainedOriginals = new Set(
+          rows.filter(row => row.original && row.current).map(row => row.original)
+        );
+        const removedMembers = originalMembers.filter(member => !retainedOriginals.has(member));
+        const addedMembers = rows
+          .filter(row => !row.original && row.current)
+          .map(row => row.current);
+        const hasMemberChanges = originalMembers.length !== nextMembers.length ||
+          originalMembers.some((member, memberIndex) => member !== nextMembers[memberIndex]);
+
+        if (!hasMemberChanges) {
+          try { showToast('群成员没有变化'); } catch (_) {}
+          return true;
+        }
+
+        conv.members = nextMembers;
+        removedMembers.forEach(member => {
+          state.messageHistory.push(createGroupMemberChangeMessage('“' + member + '”已被移出群聊'));
+        });
+        addedMembers.forEach(member => {
+          state.messageHistory.push(createGroupMemberChangeMessage('“' + member + '”加入了群聊'));
+        });
+        conv.messages = [...state.messageHistory];
+
+        saveGroupConversations(list);
+        syncGroupsListFromConversations(list);
+        pinRenderedHistoryToLatest();
+        renderAllMessages();
+        renderGroupMemberSettings();
+        deferredSync(0);
+        try { showToast('群成员已保存'); } catch (_) {}
+        return true;
+      }
+
       function showPrivateChatSettings() {
         if (!isPrivateChatMode() && !state.groupChatMode) {
           if (typeof showToast === 'function') showToast('当前模式暂不支持此设置');
@@ -23557,6 +24237,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const overlay = document.getElementById('privateChatSettingsOverlay');
         if (!overlay) return;
         updatePrivateChatSettingsPreview();
+        if (state.groupChatMode) renderGroupMemberSettings();
         overlay.style.display = 'flex';
       }
 
@@ -29025,6 +29706,18 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         return message;
       }
 
+      function createGroupMemberChangeMessageElement(msg, idx) {
+        const message = document.createElement('div');
+        message.className = 'message system-time-notification group-member-change-notification';
+        message.dataset.index = idx;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'system-time-content';
+        contentDiv.textContent = String(msg.content || '群成员已更新');
+        message.appendChild(contentDiv);
+        return message;
+      }
+
       // 创建戳一戳消息元素
       function createPokeMessageElement(msg, idx) {
         const message = document.createElement('div');
@@ -30154,7 +30847,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             home.style.backgroundSize = 'cover';
             home.style.backgroundPosition = 'center';
           } else {
-            home.style.backgroundImage = "url('https://i.postimg.cc/g0fLMkDQ/IMG-2155.jpg')";
+            home.style.backgroundImage = "url('https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg')";
             home.style.backgroundSize = 'cover';
             home.style.backgroundPosition = 'center';
           }
@@ -30162,7 +30855,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         const preview = document.getElementById('homeWallpaperPreview');
         if (preview) {
-          preview.src = settingsState.homeWallpaper || 'https://i.postimg.cc/g0fLMkDQ/IMG-2155.jpg';
+          preview.src = settingsState.homeWallpaper || 'https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg';
         }
       }
 
@@ -31014,6 +31707,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       document.getElementById('settingsBtn').addEventListener('click', showSettings);
       document.getElementById('settingsCloseBtn').addEventListener('click', hideSettings);
       document.getElementById('privateChatSettingsBtn').addEventListener('click', showPrivateChatSettings);
+      document.getElementById('groupSettingsMemberAddBtn').addEventListener('click', () => {
+        const input = appendGroupMemberSettingsRow('', '');
+        if (input) input.focus();
+      });
+      document.getElementById('groupSettingsMemberSaveBtn').addEventListener('click', saveCurrentGroupMembersFromSettings);
       const __privateChatClearBtn = document.getElementById('privateChatClearBtn');
       if (__privateChatClearBtn && __privateChatClearBtn.dataset.clearBound !== '1') {
         __privateChatClearBtn.dataset.clearBound = '1';
