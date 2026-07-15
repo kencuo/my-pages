@@ -23427,6 +23427,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       // 角色卡扩展字段（写入角色卡文件，随角色变化）
       const EXTENSION_FRIENDS_KEY = 'tavern_helper_friends_v1';
       const EXTENSION_GROUPS_KEY = 'tavern_helper_groups_v1';
+      const EXTENSION_DELETED_GROUPS_KEY = 'tavern_helper_deleted_groups_v1';
       const EXTENSION_ROLE_GROUPS_KEY = 'tavern_helper_role_groups_v1';
       const EXTENSION_PRIVATE_CONVERSATIONS_KEY = 'tavern_helper_private_conversations_v1';
       const EXTENSION_GROUP_CONVERSATIONS_KEY = 'tavern_helper_group_conversations_v1';
@@ -23471,6 +23472,74 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         return null;
       }
 
+      function getStChatu8WindowCandidates() {
+        const candidates = [];
+        const push = value => {
+          if (!value || candidates.includes(value)) return;
+          candidates.push(value);
+        };
+        try { push(window); } catch (_) {}
+        try { push(globalThis); } catch (_) {}
+        try { if (typeof parent !== 'undefined') push(parent); } catch (_) {}
+        try { if (typeof top !== 'undefined') push(top); } catch (_) {}
+        return candidates;
+      }
+
+      function resolvePathFunction(root, path) {
+        const parts = String(path || '').split('.').filter(Boolean);
+        let owner = null;
+        let current = root;
+        for (const part of parts) {
+          if (!current || !(part in current)) return null;
+          owner = current;
+          current = current[part];
+        }
+        return typeof current === 'function' ? { fn: current, owner } : null;
+      }
+
+      function getStChatu8DirectGenerator() {
+        const paths = [
+          '__stChatu8GenerateImage',
+          '__st_chatu8_generate_image',
+          '__zhihuijiGenerateImage',
+          'stChatu8.generateImage',
+          'stChatu8.generate',
+          'STChatu8.generateImage',
+          'STChatu8.generate',
+          'zhihuiji.generateImage',
+          'zhihuiji.generate',
+          'ZhihuiJi.generateImage',
+          'ZhihuiJi.generate',
+          'smartImage.generateImage',
+          'smartImage.generate',
+        ];
+        for (const root of getStChatu8WindowCandidates()) {
+          for (const path of paths) {
+            try {
+              const resolved = resolvePathFunction(root, path);
+              if (resolved) return { ...resolved, path };
+            } catch (_) {}
+          }
+        }
+        return null;
+      }
+
+      async function requestStChatu8ImageByDirectApi(prompt, options = {}, requestPayload = null) {
+        const generator = getStChatu8DirectGenerator();
+        if (!generator) return null;
+        const payload = requestPayload || { prompt };
+        const result = await generator.fn.call(generator.owner, payload, options);
+        return {
+          id: payload.id || createImageGenerationRequestId(),
+          prompt,
+          images: getGeneratedImageSources(result),
+          imageData: result && result.imageData,
+          imageUrl: result && (result.imageUrl || result.url),
+          format: result && result.format || 'png',
+          raw: result,
+          source: generator.path,
+        };
+      }
       function addStChatu8EventListener(eventSource, eventName, handler) {
         if (!eventSource) return false;
         if (typeof eventSource.on === 'function') {
@@ -23502,9 +23571,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
       async function requestStChatu8Image(prompt, options = {}) {
         const normalizedPrompt = String(prompt || '').trim();
         if (!normalizedPrompt) throw new Error('提示词不能为空');
-        const eventSource = getStChatu8EventSource();
-        if (!eventSource) throw new Error('未找到 SillyTavern eventSource，无法调用智绘姬');
-
         const id = createImageGenerationRequestId();
         const timeoutMs = Number(options.timeoutMs) || ST_CHATU8_IMAGE_TIMEOUT_MS;
         const requestPayload = {
@@ -23515,6 +23581,16 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         };
         const negativePrompt = String(options.negativePrompt || options.negative_prompt || '').trim();
         if (negativePrompt) requestPayload.negative_prompt = negativePrompt;
+
+        const directResponse = await requestStChatu8ImageByDirectApi(normalizedPrompt, options, requestPayload);
+        if (directResponse) return directResponse;
+
+        if (!options.allowGuessedEvent) {
+          throw new Error('未检测到智绘姬可调用接口。已生成同层手机提示词消息，但当前智绘姬没有暴露给手机前端的生图函数。');
+        }
+
+        const eventSource = getStChatu8EventSource();
+        if (!eventSource) throw new Error('未找到 SillyTavern eventSource，无法调用智绘姬');
 
         return new Promise((resolve, reject) => {
           let timer = null;
@@ -25431,6 +25507,67 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         } catch (e) { console.warn('保存群聊列表失败', e); }
       }
 
+      function getDeletedGroupsStorageKey() {
+        const c = getCurrentCharacterInfo();
+        return `tavern_deleted_groups_${c.source}_${c.id}`;
+      }
+
+      function normalizeDeletedGroupName(name) {
+        return String(name || '').trim();
+      }
+
+      function loadDeletedGroupsList() {
+        try {
+          const ctx = getSillyContextSafe();
+          const extValue = readCharacterExtensionField(ctx, EXTENSION_DELETED_GROUPS_KEY);
+          if (Array.isArray(extValue)) return extValue.map(normalizeDeletedGroupName).filter(Boolean);
+          const key = getDeletedGroupsStorageKey();
+          if (typeof parent !== 'undefined' && parent.extension_settings && Array.isArray(parent.extension_settings[key])) {
+            return parent.extension_settings[key].map(normalizeDeletedGroupName).filter(Boolean);
+          }
+          const raw = localStorage.getItem(key);
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed.map(normalizeDeletedGroupName).filter(Boolean) : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function saveDeletedGroupsList(list) {
+        try {
+          const safeList = [...new Set((Array.isArray(list) ? list : []).map(normalizeDeletedGroupName).filter(Boolean))];
+          const key = getDeletedGroupsStorageKey();
+          if (typeof parent !== 'undefined' && parent.extension_settings) {
+            parent.extension_settings[key] = JSON.parse(JSON.stringify(safeList));
+            if (typeof parent.saveSettingsDebounced === 'function') parent.saveSettingsDebounced();
+          }
+          localStorage.setItem(key, JSON.stringify(safeList));
+          if (getSillyContextSafe()) {
+            void writeCharacterExtensionField(EXTENSION_DELETED_GROUPS_KEY, safeList);
+          }
+        } catch (e) { console.warn('保存已删除群聊标记失败', e); }
+      }
+
+      function markGroupAsDeleted(groupOrName) {
+        const name = normalizeDeletedGroupName(groupOrName && typeof groupOrName === 'object' ? groupOrName.name : groupOrName);
+        if (!name) return;
+        const list = loadDeletedGroupsList();
+        if (!list.includes(name)) list.push(name);
+        saveDeletedGroupsList(list);
+      }
+
+      function unmarkGroupAsDeleted(groupOrName) {
+        const name = normalizeDeletedGroupName(groupOrName && typeof groupOrName === 'object' ? groupOrName.name : groupOrName);
+        if (!name) return;
+        const next = loadDeletedGroupsList().filter(item => item !== name);
+        saveDeletedGroupsList(next);
+      }
+
+      function filterDeletedGroupConversations(conversations) {
+        const deleted = new Set(loadDeletedGroupsList().map(normalizeDeletedGroupName));
+        if (!deleted.size) return Array.isArray(conversations) ? conversations : [];
+        return (Array.isArray(conversations) ? conversations : []).filter(conv => !deleted.has(normalizeDeletedGroupName(conv && conv.name)));
+      }
       function normalizeRoleGroupEntry(entry, index = 0) {
         if (!entry || typeof entry !== 'object') {
           return {
@@ -25822,7 +25959,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         // Sync current messages before removing
         syncActiveConversationCache();
 
+        const removedGroup = list[index];
+        markGroupAsDeleted(removedGroup);
         list.splice(index, 1);
+        saveGroupConversations(list);
+        syncGroupsListFromConversations(list);
 
         if (!list.length) {
           state.roleGroupConversations = [];
@@ -25866,7 +26007,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         // Sync current messages before removing
         syncActiveConversationCache();
 
+        const removedGroup = list[index];
+        markGroupAsDeleted(removedGroup);
         list.splice(index, 1);
+        saveGroupConversations(list);
+        syncGroupsListFromConversations(list);
 
         if (!list.length) {
           state.groupConversations = [];
@@ -26010,6 +26155,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           state.groupChatMode = true;
           try { localStorage.setItem('tavern_chat_mode', 'group'); } catch (_) {}
 
+          unmarkGroupAsDeleted(groupName);
           const existingIndex = groups.findIndex(c => c && String(c.name || '').trim() === groupName);
           if (existingIndex >= 0) {
             const existing = groups[existingIndex];
@@ -28761,7 +28907,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
                const currentRoleGroups = currentRawMessage ? (parseRoleGroupConversationsFromShouji(currentRawMessage) || []) : [];
                const currentLooseProtocolMessages = currentRawMessage ? (parseShoujiLog(currentRawMessage) || []) : [];
 
-               const parsedGroupConversations = appendConversationSources(historyGroupConversations, currentGroupConversations, normalizeGroupConversationEntry);
+               const parsedGroupConversations = filterDeletedGroupConversations(
+                 appendConversationSources(historyGroupConversations, currentGroupConversations, normalizeGroupConversationEntry)
+               );
                const parsedPrivateConversations = appendConversationSources(historyPrivateConversations, currentPrivateConversations, normalizePrivateConversationEntry);
                const parsedRoleGroups = appendConversationSources(historyRoleGroups, currentRoleGroups, normalizeRoleGroupEntry);
                const looseProtocolMessages = pushUniqueMessages(historyLooseProtocolMessages, currentLooseProtocolMessages);
@@ -33948,5 +34096,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
+
+
 
 
