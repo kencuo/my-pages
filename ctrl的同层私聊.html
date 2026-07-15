@@ -25959,11 +25959,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         // Sync current messages before removing
         syncActiveConversationCache();
 
-        const removedGroup = list[index];
-        markGroupAsDeleted(removedGroup);
         list.splice(index, 1);
-        saveGroupConversations(list);
-        syncGroupsListFromConversations(list);
 
         if (!list.length) {
           state.roleGroupConversations = [];
@@ -34096,6 +34092,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
+
 
 
 
