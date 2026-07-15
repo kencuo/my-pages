@@ -17746,7 +17746,7 @@ function applyUserAvatar(avatarElement) {
       }
 
       function maybeGenerateImagesFromCharProtocolMessage(msg, idx, isGenerated) {
-        if (!isGenerated || !msg || msg.sender !== 'char' || msg.type && msg.type !== 'text') return;
+        if (!isGenerated || !msg || msg.sender !== 'char' || msg.imageGenerationRequest || msg.type && msg.type !== 'text') return;
         const content = String(msg.content || '');
         if (!/<images\b/i.test(content) && !/<image\b/i.test(content)) return;
         const target = {
@@ -19324,6 +19324,10 @@ function applyUserAvatar(avatarElement) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
+            const action = item.dataset.action;
+            if (action) {
+              handleContextMenuAction(action, idx);
+            }
           });
 
           // 添加触摸事件处理，确保移动端响应
@@ -24121,14 +24125,40 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         return tasks;
       }
 
-      async function generateAiImagePromptTasks(tasks, target) {
-        for (const task of Array.isArray(tasks) ? tasks : []) {
-          if (!claimImagePromptTask(task, target)) continue;
-          await generateImagePromptForTarget(task.prompt, {
+      function appendAiImagePromptRequestMessages(tasks, target) {
+        const list = Array.isArray(tasks) ? tasks : [];
+        for (const task of list) {
+          const prompt = String(task && task.prompt || '').trim();
+          if (!prompt) continue;
+          const charName = String(task.charName || target?.defaultCharName || '').trim() || '对方';
+          const safeTarget = {
+            ...(target || captureImageGenerationTarget(charName)),
+            defaultCharName: charName,
+          };
+          if (!claimImagePromptTask({ ...task, prompt, charName }, safeTarget)) continue;
+          const request = {
+            prompt,
+            negativePrompt: '',
+            width: null,
+            height: null,
             sender: 'char',
-            charName: task.charName || target.defaultCharName,
-          }, target);
+            charName,
+            target: createSerializableImageGenerationTarget(safeTarget),
+          };
+          appendGeneratedImageToTarget({
+            sender: 'char',
+            charName,
+            type: 'text',
+            content: buildTextToImagePhoneMessageContent(prompt, request),
+            time: getTimeStr(),
+            fullTime: getFullTimeStr(),
+            imageGenerationRequest: request,
+          }, safeTarget);
         }
+      }
+
+      async function generateAiImagePromptTasks(tasks, target) {
+        appendAiImagePromptRequestMessages(tasks, target);
       }
 
       const TEXT_TO_IMAGE_PROMPT_PRESETS_KEY = 'ctrl_phone_text_to_image_prompt_presets_v1';
@@ -34332,6 +34362,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
+
+
+
 
 
 
