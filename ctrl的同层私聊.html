@@ -5596,7 +5596,8 @@
       }
 
       .text-to-image-form textarea,
-      .text-to-image-form select {
+      .text-to-image-form select,
+      .text-to-image-form input {
         width: 100%;
         box-sizing: border-box;
         border: 1px solid #ddd;
@@ -5619,13 +5620,15 @@
         min-height: 54px;
       }
 
-      .text-to-image-form select {
+      .text-to-image-form select,
+      .text-to-image-form input {
         height: 34px;
         padding: 0 9px;
       }
 
       .text-to-image-form textarea:focus,
-      .text-to-image-form select:focus {
+      .text-to-image-form select:focus,
+      .text-to-image-form input:focus {
         border-color: var(--accent-primary);
         box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.12);
       }
@@ -24117,6 +24120,49 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }
       }
 
+      const TEXT_TO_IMAGE_PROMPT_PRESETS_KEY = 'ctrl_phone_text_to_image_prompt_presets_v1';
+
+      function normalizeTextToImagePromptPreset(preset) {
+        const obj = (preset && typeof preset === 'object') ? preset : {};
+        return {
+          name: String(obj.name || '').trim(),
+          positive: String(obj.positive || obj.prompt || '').trim(),
+          negative: String(obj.negative || obj.negativePrompt || '').trim(),
+        };
+      }
+
+      function loadTextToImagePromptPresets() {
+        try {
+          const raw = localStorage.getItem(TEXT_TO_IMAGE_PROMPT_PRESETS_KEY);
+          const parsed = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(parsed)) return [];
+          return parsed.map(normalizeTextToImagePromptPreset).filter(preset => preset.name);
+        } catch (e) {
+          console.warn('读取文生图提示词预设失败', e);
+          return [];
+        }
+      }
+
+      function saveTextToImagePromptPresets(presets) {
+        try {
+          const normalized = Array.isArray(presets)
+            ? presets.map(normalizeTextToImagePromptPreset).filter(preset => preset.name)
+            : [];
+          localStorage.setItem(TEXT_TO_IMAGE_PROMPT_PRESETS_KEY, JSON.stringify(normalized));
+          return normalized;
+        } catch (e) {
+          console.warn('保存文生图提示词预设失败', e);
+          return Array.isArray(presets) ? presets : [];
+        }
+      }
+
+      function mergeTextToImagePromptParts(presetPositive, description) {
+        return [presetPositive, description]
+          .map(part => String(part || '').trim())
+          .filter(Boolean)
+          .join(', ');
+      }
+
       function showTextToImageModal() {
         moreActionsGrid.style.display = 'none';
         const existing = document.getElementById('textToImageModal');
@@ -24129,8 +24175,15 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           '<div class="simple-modal" role="dialog" aria-modal="true" aria-labelledby="textToImageTitle">',
           '<div class="simple-modal-header" id="textToImageTitle">文生图</div>',
           '<div class="simple-modal-body"><div class="text-to-image-form">',
-          '<label>提示词<textarea id="textToImagePrompt" placeholder="提示词"></textarea></label>',
-          '<label>反向提示词<textarea id="textToImageNegativePrompt" class="negative-prompt" placeholder="反向提示词"></textarea></label>',
+          '<label>选择提示词预设<select id="textToImagePresetSelect"></select></label>',
+          '<label>预设名<input id="textToImagePresetName" type="text" placeholder="例如：厚涂电影感 / Q版头像 / 暗黑哥特"></label>',
+          '<label>正向提示词<textarea id="textToImagePresetPositive" placeholder="会放在本次描述前面，例如：masterpiece, best quality, cinematic lighting"></textarea></label>',
+          '<label>反向提示词<textarea id="textToImagePresetNegative" class="negative-prompt" placeholder="例如：low quality, blurry, bad anatomy"></textarea></label>',
+          '<div style="display:flex; gap:8px; justify-content:flex-end;">',
+          '<button type="button" class="text-to-image-action-btn" data-action="savePreset">保存预设</button>',
+          '<button type="button" class="text-to-image-action-btn" data-action="deletePreset" style="background:#e63946;border-color:rgba(230,57,70,.35);">删除预设</button>',
+          '</div>',
+          '<label>本次图片描述<textarea id="textToImageDescription" placeholder="写这次想画什么；会自动拼到正向提示词后面"></textarea></label>',
           '<label>画布<select id="textToImageSize">',
           '<option value="">插件默认</option>',
           '<option value="512x512">512 × 512</option>',
@@ -24140,10 +24193,75 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           '</select></label></div></div>',
           '<div class="simple-modal-footer">',
           '<button type="button" class="modal-btn cancel-btn" data-action="cancel">取消</button>',
-          '<button type="button" class="modal-btn confirm-btn" data-action="generate">发送</button>',
+          '<button type="button" class="modal-btn confirm-btn" data-action="generate">生成</button>',
           '</div></div>',
         ].join('');
         document.body.appendChild(overlay);
+
+        let presets = loadTextToImagePromptPresets();
+        let selectedPresetName = presets[0]?.name || '';
+        const presetSelect = overlay.querySelector('#textToImagePresetSelect');
+        const presetNameInput = overlay.querySelector('#textToImagePresetName');
+        const positiveInput = overlay.querySelector('#textToImagePresetPositive');
+        const negativeInput = overlay.querySelector('#textToImagePresetNegative');
+        const descriptionInput = overlay.querySelector('#textToImageDescription');
+
+        const renderPresetSelect = () => {
+          const options = ['<option value="">（临时空白预设）</option>'].concat(
+            presets.map(preset => `<option value="${escapeHtmlText(preset.name)}">${escapeHtmlText(preset.name)}</option>`)
+          );
+          presetSelect.innerHTML = options.join('');
+          presetSelect.value = selectedPresetName || '';
+        };
+        const fillPresetForm = (name) => {
+          const preset = presets.find(item => item.name === name) || { name: '', positive: '', negative: '' };
+          presetNameInput.value = preset.name || '';
+          positiveInput.value = preset.positive || '';
+          negativeInput.value = preset.negative || '';
+        };
+        const persistCurrentPreset = () => {
+          const name = String(presetNameInput.value || '').trim();
+          if (!name) {
+            presetNameInput.focus();
+            showToast('请先给预设起个名字');
+            return;
+          }
+          const nextPreset = normalizeTextToImagePromptPreset({
+            name,
+            positive: positiveInput.value,
+            negative: negativeInput.value,
+          });
+          const idx = presets.findIndex(item => item.name === name);
+          if (idx >= 0) presets[idx] = nextPreset;
+          else presets.push(nextPreset);
+          presets = saveTextToImagePromptPresets(presets);
+          selectedPresetName = name;
+          renderPresetSelect();
+          fillPresetForm(name);
+          showToast('提示词预设已保存');
+        };
+        const deleteCurrentPreset = () => {
+          const name = selectedPresetName || String(presetNameInput.value || '').trim();
+          if (!name) {
+            showToast('当前没有可删除的预设');
+            return;
+          }
+          presets = saveTextToImagePromptPresets(presets.filter(item => item.name !== name));
+          selectedPresetName = presets[0]?.name || '';
+          renderPresetSelect();
+          fillPresetForm(selectedPresetName);
+          showToast('提示词预设已删除');
+        };
+
+        renderPresetSelect();
+        fillPresetForm(selectedPresetName);
+
+        presetSelect.onchange = () => {
+          selectedPresetName = presetSelect.value || '';
+          fillPresetForm(selectedPresetName);
+        };
+        overlay.querySelector('[data-action="savePreset"]').onclick = persistCurrentPreset;
+        overlay.querySelector('[data-action="deletePreset"]').onclick = deleteCurrentPreset;
 
         const close = () => overlay.remove();
         overlay.querySelector('[data-action="cancel"]').onclick = close;
@@ -24151,12 +24269,13 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           if (event.target === overlay) close();
         });
         overlay.querySelector('[data-action="generate"]').onclick = () => {
-          const prompt = String(overlay.querySelector('#textToImagePrompt').value || '').trim();
+          const prompt = mergeTextToImagePromptParts(positiveInput.value, descriptionInput.value);
           if (!prompt) {
-            overlay.querySelector('#textToImagePrompt').focus();
+            descriptionInput.focus();
+            showToast('请填写本次图片描述，或选择/填写正向提示词');
             return;
           }
-          const negativePrompt = String(overlay.querySelector('#textToImageNegativePrompt').value || '').trim();
+          const negativePrompt = String(negativeInput.value || '').trim();
           const size = String(overlay.querySelector('#textToImageSize').value || '');
           const dimensions = size ? size.split('x').map(Number) : [null, null];
           const target = captureImageGenerationTarget();
@@ -24168,9 +24287,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             height: dimensions[1],
           }, target);
         };
-        setTimeout(() => overlay.querySelector('#textToImagePrompt')?.focus(), 0);
+        setTimeout(() => descriptionInput?.focus(), 0);
       }
-
       async function ensureCharacterUnshallowed() {
         const ctx = getSillyContextSafe();
         if (ctx && typeof ctx.unshallowCharacter === 'function') {
@@ -34203,6 +34321,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
+
+
+
+
 
 
 
