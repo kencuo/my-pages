@@ -17719,6 +17719,43 @@ function applyUserAvatar(avatarElement) {
       }
 
       // Append a single message to the chat
+      function getImagePromptTaskDedupeKey(task, target) {
+        return [
+          target && target.mode || getActiveConversationMode(),
+          target && (target.addTime || target.conversationName || target.index) || getActiveConversationIndex(),
+          String(task && task.charName || '').trim(),
+          String(task && task.prompt || '').trim(),
+        ].join('||');
+      }
+
+      function claimImagePromptTask(task, target) {
+        if (!state.imagePromptTaskDedupeKeys || !(state.imagePromptTaskDedupeKeys instanceof Set)) {
+          state.imagePromptTaskDedupeKeys = new Set();
+        }
+        const key = getImagePromptTaskDedupeKey(task, target);
+        if (state.imagePromptTaskDedupeKeys.has(key)) return false;
+        state.imagePromptTaskDedupeKeys.add(key);
+        if (state.imagePromptTaskDedupeKeys.size > 200) {
+          const first = state.imagePromptTaskDedupeKeys.values().next().value;
+          state.imagePromptTaskDedupeKeys.delete(first);
+        }
+        return true;
+      }
+
+      function maybeGenerateImagesFromCharProtocolMessage(msg, idx, isGenerated) {
+        if (!isGenerated || !msg || msg.sender !== 'char' || msg.type && msg.type !== 'text') return;
+        const content = String(msg.content || '');
+        if (!/<images\b/i.test(content) && !/<image\b/i.test(content)) return;
+        const target = {
+          ...captureImageGenerationTarget(msg.charName || msg.name || ''),
+          messageIndex: idx,
+        };
+        const tasks = extractAiImagePromptTasks(content, msg.charName || msg.name || target.defaultCharName);
+        if (!tasks.length) return;
+        setTimeout(() => {
+          void generateAiImagePromptTasks(tasks, target);
+        }, 0);
+      }
       function appendMessage(msg, idx, isGenerated = false, options = {}) {
         const chat = document.getElementById('chatMessages');
         if (!chat) {
@@ -24072,6 +24109,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
       async function generateAiImagePromptTasks(tasks, target) {
         for (const task of Array.isArray(tasks) ? tasks : []) {
+          if (!claimImagePromptTask(task, target)) continue;
           await generateImagePromptForTarget(task.prompt, {
             sender: 'char',
             charName: task.charName || target.defaultCharName,
@@ -34165,6 +34203,15 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
+
+
+
+
+
+
+
+
+
 
 
 
