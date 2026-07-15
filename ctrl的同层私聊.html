@@ -5630,6 +5630,30 @@
         box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.12);
       }
 
+      .text-to-image-action-btn {
+        align-self: flex-end;
+        margin-top: 5px;
+        padding: 4px 9px;
+        border: 1px solid rgba(7, 193, 96, 0.35);
+        border-radius: 999px;
+        background: rgba(7, 193, 96, 0.92);
+        color: #fff;
+        font-size: 11px;
+        line-height: 1.2;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(7, 193, 96, 0.18);
+        transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+      }
+      .text-to-image-action-btn:hover {
+        background: #06ad56;
+        transform: translateY(-1px);
+      }
+      .text-to-image-action-btn:disabled {
+        cursor: default;
+        opacity: 0.62;
+        transform: none;
+      }
+
       .file-type-selector {
         display: flex;
         gap: 20px;
@@ -6542,7 +6566,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        background: url('https://i.postimg.cc/g0fLMkDQ/IMG-2155.jpg') center/cover no-repeat;
+        background: url('https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg') center/cover no-repeat;
         z-index: 1400;
         padding-top: 16px;
       }
@@ -9044,7 +9068,7 @@ https://i.postimg.cc/.../xxx.png"
           <div class="setting-section">
             <label class="setting-label">主屏壁纸</label>
             <div class="setting-preview">
-              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://i.postimg.cc/g0fLMkDQ/IMG-2155.jpg" alt="主屏壁纸预览">
+              <img class="wallpaper-preview" id="homeWallpaperPreview" src="https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg" alt="主屏壁纸预览">
               <div class="preview-info">
                 <div class="preview-title">自定义主屏壁纸</div>
                 <div class="preview-desc">上传本地图片作为主屏背景</div>
@@ -18974,6 +18998,7 @@ function applyUserAvatar(avatarElement) {
         }
 
         wrapper.appendChild(contentDiv);
+        appendTextToImageActionButton(wrapper, msg, idx);
 
         // 时间
         const timeSpan = document.createElement('div');
@@ -23426,8 +23451,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         return null;
       }
 
-      const ST_CHATU8_IMAGE_REQUEST_EVENT = 'GENERATE_IMAGE_REQUEST';
-      const ST_CHATU8_IMAGE_RESPONSE_EVENT = 'GENERATE_IMAGE_RESPONSE';
       const ST_CHATU8_IMAGE_TIMEOUT_MS = 300000;
 
       function createImageGenerationRequestId() {
@@ -23441,43 +23464,65 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
       function getStChatu8EventSource() {
         const ctx = getSillyContextSafe();
-        const eventSource = ctx && ctx.eventSource;
-        if (!eventSource || typeof eventSource.on !== 'function' || typeof eventSource.emit !== 'function') {
-          throw new Error('未找到 SillyTavern 事件总线');
-        }
-        return eventSource;
+        if (ctx && ctx.eventSource && typeof ctx.eventSource.emit === 'function') return ctx.eventSource;
+        try {
+          if (typeof parent !== 'undefined' && parent.eventSource && typeof parent.eventSource.emit === 'function') return parent.eventSource;
+        } catch (_) {}
+        return null;
       }
 
-      function requestStChatu8Image(prompt, options = {}) {
-        const normalizedPrompt = String(prompt || '').trim();
-        if (!normalizedPrompt) return Promise.reject(new Error('提示词不能为空'));
+      function addStChatu8EventListener(eventSource, eventName, handler) {
+        if (!eventSource) return false;
+        if (typeof eventSource.on === 'function') {
+          eventSource.on(eventName, handler);
+          return true;
+        }
+        if (typeof eventSource.addEventListener === 'function') {
+          eventSource.addEventListener(eventName, handler);
+          return true;
+        }
+        return false;
+      }
 
+      function removeStChatu8EventListener(eventSource, eventName, handler) {
+        if (!eventSource) return;
+        if (typeof eventSource.removeListener === 'function') {
+          eventSource.removeListener(eventName, handler);
+          return;
+        }
+        if (typeof eventSource.off === 'function') {
+          eventSource.off(eventName, handler);
+          return;
+        }
+        if (typeof eventSource.removeEventListener === 'function') {
+          eventSource.removeEventListener(eventName, handler);
+        }
+      }
+
+      async function requestStChatu8Image(prompt, options = {}) {
+        const normalizedPrompt = String(prompt || '').trim();
+        if (!normalizedPrompt) throw new Error('提示词不能为空');
         const eventSource = getStChatu8EventSource();
+        if (!eventSource) throw new Error('未找到 SillyTavern eventSource，无法调用智绘姬');
+
         const id = createImageGenerationRequestId();
-        const payload = {
+        const timeoutMs = Number(options.timeoutMs) || ST_CHATU8_IMAGE_TIMEOUT_MS;
+        const requestPayload = {
           id,
           prompt: normalizedPrompt,
-          width: Number(options.width) > 0 ? Number(options.width) : null,
-          height: Number(options.height) > 0 ? Number(options.height) : null,
+          width: Number(options.width) || null,
+          height: Number(options.height) || null,
         };
         const negativePrompt = String(options.negativePrompt || options.negative_prompt || '').trim();
-        if (negativePrompt) payload.negative_prompt = negativePrompt;
+        if (negativePrompt) requestPayload.negative_prompt = negativePrompt;
 
         return new Promise((resolve, reject) => {
-          let settled = false;
           let timer = null;
-
+          let settled = false;
           const cleanup = () => {
             if (timer) clearTimeout(timer);
-            try {
-              if (typeof eventSource.removeListener === 'function') {
-                eventSource.removeListener(ST_CHATU8_IMAGE_RESPONSE_EVENT, handleResponse);
-              } else if (typeof eventSource.off === 'function') {
-                eventSource.off(ST_CHATU8_IMAGE_RESPONSE_EVENT, handleResponse);
-              }
-            } catch (_) {}
+            removeStChatu8EventListener(eventSource, 'GENERATE_IMAGE_RESPONSE', onResponse);
           };
-
           const finish = (error, value) => {
             if (settled) return;
             settled = true;
@@ -23485,31 +23530,36 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             if (error) reject(error);
             else resolve(value);
           };
-
-          const handleResponse = response => {
-            if (!response || String(response.id || '') !== id) return;
-            if (response.success === false) {
-              finish(new Error(response.error || 'st-chatu8 生图失败'));
-              return;
+          const onResponse = response => {
+            const data = response && response.detail ? response.detail : response;
+            if (!data || data.id !== id) return;
+            if (data.success) {
+              finish(null, {
+                id,
+                prompt: normalizedPrompt,
+                images: getGeneratedImageSources(data),
+                imageData: data.imageData,
+                imageUrl: data.imageUrl || data.url,
+                format: data.format || 'png',
+                raw: data,
+              });
+            } else {
+              finish(new Error(data.error || '智绘姬生图失败'));
             }
-            finish(null, response);
           };
 
-          eventSource.on(ST_CHATU8_IMAGE_RESPONSE_EVENT, handleResponse);
-          timer = setTimeout(
-            () => finish(new Error('st-chatu8 生图超时')),
-            ST_CHATU8_IMAGE_TIMEOUT_MS
-          );
-
+          if (!addStChatu8EventListener(eventSource, 'GENERATE_IMAGE_RESPONSE', onResponse)) {
+            finish(new Error('无法监听智绘姬生成响应'));
+            return;
+          }
+          timer = setTimeout(() => finish(new Error('智绘姬生图超时')), timeoutMs);
           try {
-            Promise.resolve(eventSource.emit(ST_CHATU8_IMAGE_REQUEST_EVENT, payload))
-              .catch(error => finish(error instanceof Error ? error : new Error(String(error))));
+            eventSource.emit('GENERATE_IMAGE_REQUEST', requestPayload);
           } catch (error) {
-            finish(error instanceof Error ? error : new Error(String(error)));
+            finish(error);
           }
         });
       }
-
       function normalizeGeneratedImageSource(source, format = 'png') {
         let value = String(source || '').trim();
         if (!value) return '';
@@ -23715,6 +23765,100 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }
       }
 
+      function buildTextToImagePhoneMessageContent(prompt, options = {}) {
+        const normalizedPrompt = String(prompt || '').trim();
+        const negativePrompt = String(options.negativePrompt || options.negative_prompt || '').trim();
+        const width = Number(options.width) || null;
+        const height = Number(options.height) || null;
+        const lines = ['<images>', '<image>' + normalizedPrompt + '</image>', '</images>'];
+        if (negativePrompt) lines.push('反向提示词：' + negativePrompt);
+        if (width && height) lines.push('画布：' + width + 'x' + height);
+        return lines.join('\n');
+      }
+
+      function createSerializableImageGenerationTarget(target = {}) {
+        return {
+          mode: target.mode || 'private',
+          index: Number.isInteger(target.index) ? target.index : -1,
+          conversationName: String(target.conversationName || '').trim(),
+          addTime: String(target.addTime || '').trim(),
+          defaultCharName: String(target.defaultCharName || '').trim(),
+        };
+      }
+
+      function appendTextToImageActionButton(wrapper, msg, idx) {
+        const request = msg && msg.imageGenerationRequest;
+        if (!wrapper || !request || !String(request.prompt || '').trim()) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'text-to-image-action-btn';
+        btn.textContent = request.submittedAt ? '重新生图' : '生图';
+        btn.onclick = async event => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (btn.disabled) return;
+          const oldText = btn.textContent;
+          btn.disabled = true;
+          btn.textContent = '生成中...';
+          const ok = await generateImagePromptForTarget(request.prompt, {
+            sender: request.sender || msg.sender || 'user',
+            negativePrompt: request.negativePrompt || '',
+            width: request.width || null,
+            height: request.height || null,
+            charName: request.charName || '',
+          }, request.target || null);
+          if (ok) {
+            request.submittedAt = typeof getFullTimeStr === 'function' ? getFullTimeStr() : String(Date.now());
+            btn.textContent = '重新生图';
+            try { deferredSync(50); } catch (_) {}
+          } else {
+            btn.textContent = oldText || '生图';
+          }
+          btn.disabled = false;
+        };
+        wrapper.appendChild(btn);
+      }
+
+      function sendTextToImageRequestMessage(prompt, options = {}, target = null) {
+        const normalizedPrompt = String(prompt || '').trim();
+        if (!normalizedPrompt) return false;
+        if (typeof isRoleGroupMode === 'function' && isRoleGroupMode()) {
+          try { showToast('偷看模式无法发送消息'); } catch (_) {}
+          return false;
+        }
+        const safeTarget = target || captureImageGenerationTarget(options.charName);
+        const negativePrompt = String(options.negativePrompt || options.negative_prompt || '').trim();
+        const width = Number(options.width) || null;
+        const height = Number(options.height) || null;
+        const systemMessage = typeof shouldInsertSystemMessage === 'function' ? shouldInsertSystemMessage() : '';
+        if (systemMessage) {
+          appendGeneratedImageToTarget({
+            sender: 'system',
+            type: 'system-time',
+            content: systemMessage,
+            time: '00:00',
+          }, safeTarget);
+        }
+        const request = {
+          prompt: normalizedPrompt,
+          negativePrompt,
+          width,
+          height,
+          sender: options.sender === 'char' ? 'char' : 'user',
+          target: createSerializableImageGenerationTarget(safeTarget),
+        };
+        appendGeneratedImageToTarget({
+          sender: 'user',
+          type: 'text',
+          content: buildTextToImagePhoneMessageContent(normalizedPrompt, request),
+          time: getTimeStr(),
+          fullTime: getFullTimeStr(),
+          imageGenerationRequest: request,
+        }, safeTarget);
+        try { showToast('已发送文生图提示词'); } catch (_) {}
+        return true;
+      }
+
       function decodeImagePromptMarkup(value) {
         return String(value || '')
           .replace(/&lt;/gi, '<')
@@ -23809,7 +23953,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           '</select></label></div></div>',
           '<div class="simple-modal-footer">',
           '<button type="button" class="modal-btn cancel-btn" data-action="cancel">取消</button>',
-          '<button type="button" class="modal-btn confirm-btn" data-action="generate">生成</button>',
+          '<button type="button" class="modal-btn confirm-btn" data-action="generate">发送</button>',
           '</div></div>',
         ].join('');
         document.body.appendChild(overlay);
@@ -23830,7 +23974,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const dimensions = size ? size.split('x').map(Number) : [null, null];
           const target = captureImageGenerationTarget();
           close();
-          void generateImagePromptForTarget(prompt, {
+          sendTextToImageRequestMessage(prompt, {
             sender: 'user',
             negativePrompt,
             width: dimensions[0],
@@ -29662,6 +29806,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }
 
         wrapper.appendChild(contentDiv);
+        appendTextToImageActionButton(wrapper, msg, idx);
 
         // 时间
         const timeSpan = document.createElement('div');
@@ -30847,7 +30992,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
             home.style.backgroundSize = 'cover';
             home.style.backgroundPosition = 'center';
           } else {
-            home.style.backgroundImage = "url('https://i.postimg.cc/g0fLMkDQ/IMG-2155.jpg')";
+            home.style.backgroundImage = "url('https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg')";
             home.style.backgroundSize = 'cover';
             home.style.backgroundPosition = 'center';
           }
@@ -30855,7 +31000,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         const preview = document.getElementById('homeWallpaperPreview');
         if (preview) {
-          preview.src = settingsState.homeWallpaper || 'https://i.postimg.cc/g0fLMkDQ/IMG-2155.jpg';
+          preview.src = settingsState.homeWallpaper || 'https://i.postimg.cc/PqYw7yDT/IMG-1215.jpg';
         }
       }
 
@@ -33803,3 +33948,5 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
+
+
