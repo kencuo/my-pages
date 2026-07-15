@@ -23499,6 +23499,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
       function getStChatu8DirectGenerator() {
         const paths = [
+          '__smartMediaAssistantGenerateImageForPhone',
+          'smartMediaAssistant.generateImageForPhone',
           '__stChatu8GenerateImage',
           '__st_chatu8_generate_image',
           '__zhihuijiGenerateImage',
@@ -23586,7 +23588,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         if (directResponse) return directResponse;
 
         if (!options.allowGuessedEvent) {
-          throw new Error('未检测到智绘姬可调用接口。已生成同层手机提示词消息，但当前智绘姬没有暴露给手机前端的生图函数。');
+          throw new Error('未检测到智绘姬可调用接口。已生成同层手机提示词消息；请确认 ctrl大杂烩/chajian-main 插件已安装/启用，并且智绘姬已加载。若仍失败，说明智绘姬当前版本没有暴露可桥接的生图入口。');
         }
 
         const eventSource = getStChatu8EventSource();
@@ -23803,6 +23805,10 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
 
         try {
           const response = await requestStChatu8Image(normalizedPrompt, options);
+          if (response && response.pending) {
+            try { showToast(response.message || '已发送给智绘姬处理，请等待返回图片'); } catch (_) {}
+            return true;
+          }
           const sources = getGeneratedImageSources(response);
           if (!sources.length) throw new Error('st-chatu8 未返回图片数据');
 
@@ -34092,6 +34098,9 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
+
+
+
 
 
 
