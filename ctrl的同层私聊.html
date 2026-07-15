@@ -23747,6 +23747,49 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         deferredSync(50);
       }
 
+      function replaceGeneratedImageInTarget(message, target) {
+        const resolved = resolveImageGenerationTarget(target);
+        const messageIndex = Number(target && target.messageIndex);
+        if (!Number.isInteger(messageIndex) || messageIndex < 0) return false;
+
+        const isCurrent = resolved.mode === getActiveConversationMode()
+          && resolved.index >= 0
+          && resolved.index === getActiveConversationIndex();
+        const list = isCurrent ? state.messageHistory : (resolved.conversation && resolved.conversation.messages);
+        if (!Array.isArray(list) || !list[messageIndex]) return false;
+
+        const previous = list[messageIndex] || {};
+        const previousRequest = previous.imageGenerationRequest || {};
+        const nextRequest = {
+          ...previousRequest,
+          ...(message.imageGenerationRequest || {}),
+          prompt: (message.imageGenerationRequest && message.imageGenerationRequest.prompt) || previousRequest.prompt || message.imageDescription || '',
+          submittedAt: typeof getFullTimeStr === 'function' ? getFullTimeStr() : String(Date.now()),
+          target: {
+            ...(previousRequest.target || {}),
+            ...(message.imageGenerationRequest && message.imageGenerationRequest.target || {}),
+            messageIndex,
+          },
+        };
+
+        list[messageIndex] = {
+          ...previous,
+          ...message,
+          type: 'image',
+          content: message.content || previous.content || '',
+          imageGenerationRequest: nextRequest,
+          time: getTimeStr(),
+          fullTime: typeof getFullTimeStr === 'function' ? getFullTimeStr() : previous.fullTime,
+        };
+
+        if (isCurrent) {
+          renderAllMessages();
+        } else {
+          saveConversationListByMode(resolved.mode);
+        }
+        deferredSync(50);
+        return true;
+      }
       async function persistGeneratedImageSource(source, requestId, format = 'png') {
         const normalized = normalizeGeneratedImageSource(source, format);
         if (!normalized) throw new Error('插件没有返回有效图片');
@@ -23801,6 +23844,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const serializablePrompt = normalizedPrompt.replace(/[|\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
         const safeTarget = target || captureImageGenerationTarget(options.charName);
         const sender = options.sender === 'char' ? 'char' : 'user';
+        const negativePrompt = String(options.negativePrompt || options.negative_prompt || '').trim();
         try { showToast('正在生成图片...'); } catch (_) {}
 
         try {
@@ -23820,7 +23864,24 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               response.format || 'png'
             );
             persistedAll = persistedAll && stored.persisted;
-            appendGeneratedImageToTarget({
+            const requestForRegenerate = {
+              ...(options.imageGenerationRequest || {}),
+              prompt: normalizedPrompt,
+              negativePrompt: negativePrompt,
+              width: Number(options.width) || null,
+              height: Number(options.height) || null,
+              sender,
+              charName: options.charName || safeTarget.defaultCharName || '',
+              submittedAt: typeof getFullTimeStr === 'function' ? getFullTimeStr() : String(Date.now()),
+              target: {
+                ...createSerializableImageGenerationTarget(safeTarget),
+                messageIndex: Number.isInteger(safeTarget.messageIndex) ? safeTarget.messageIndex : -1,
+              },
+            };
+            if (options.imageGenerationRequest && typeof options.imageGenerationRequest === 'object') {
+              Object.assign(options.imageGenerationRequest, requestForRegenerate);
+            }
+            const imageMessage = {
               sender,
               type: 'image',
               charName: sender === 'char'
@@ -23832,8 +23893,11 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
               imageDescription: serializablePrompt || '生成图片',
               generatedBy: 'st-chatu8',
               generationRequestId: String(response.id || ''),
+              imageGenerationRequest: requestForRegenerate,
               time: getTimeStr(),
-            }, safeTarget);
+            };
+            const replaced = index === 0 && replaceGeneratedImageInTarget(imageMessage, safeTarget);
+            if (!replaced) appendGeneratedImageToTarget(imageMessage, safeTarget);
           }
           try {
             showToast(persistedAll ? '图片生成完成' : '图片已生成，但未能持久化保存');
@@ -23865,6 +23929,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           conversationName: String(target.conversationName || '').trim(),
           addTime: String(target.addTime || '').trim(),
           defaultCharName: String(target.defaultCharName || '').trim(),
+          messageIndex: Number.isInteger(target.messageIndex) ? target.messageIndex : -1,
         };
       }
 
@@ -23874,7 +23939,7 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'text-to-image-action-btn';
-        btn.textContent = request.submittedAt ? '重新生图' : '生图';
+        btn.textContent = request.submittedAt ? '重新生成' : '生图';
         btn.onclick = async event => {
           event.preventDefault();
           event.stopPropagation();
@@ -23882,16 +23947,18 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           const oldText = btn.textContent;
           btn.disabled = true;
           btn.textContent = '生成中...';
+          const buttonTarget = { ...(request.target || {}), messageIndex: idx };
           const ok = await generateImagePromptForTarget(request.prompt, {
             sender: request.sender || msg.sender || 'user',
             negativePrompt: request.negativePrompt || '',
             width: request.width || null,
             height: request.height || null,
             charName: request.charName || '',
-          }, request.target || null);
+            imageGenerationRequest: request,
+          }, buttonTarget);
           if (ok) {
             request.submittedAt = typeof getFullTimeStr === 'function' ? getFullTimeStr() : String(Date.now());
-            btn.textContent = '重新生图';
+            btn.textContent = '重新生成';
             try { deferredSync(50); } catch (_) {}
           } else {
             btn.textContent = oldText || '生图';
@@ -34098,9 +34165,6 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
     } catch (_) {}
   });
 </script>
-
-
-
 
 
 
