@@ -15940,19 +15940,27 @@ function applyUserAvatar(avatarElement) {
 
         removeImageBtn.onclick = () => {
           modal.dataset.imageSelectionToken = '';
+          modal.dataset.imageUploading = '';
           modal.dataset.imageUrl = '';
           delete modal._imageDataUrl;
+          confirmBtn.disabled = false;
           updateMomentsComposerImage(modal, null, '');
         };
 
         confirmBtn.onclick = () => {
           const mode = modal.dataset.mode || 'post';
           const textArea = modal.querySelector('#momentsComposeText');
+          const status = modal.querySelector('#momentsComposeStatus');
           const text = String(textArea.value || '').trim();
           const imageUrl = modal.dataset.imageUrl || '';
 
+          if (modal.dataset.imageUploading === '1') {
+            status.textContent = '图片正在生成短链接，请稍候';
+            status.style.color = '#666';
+            return;
+          }
+
           if (!text && !imageUrl) {
-            const status = modal.querySelector('#momentsComposeStatus');
             status.textContent = '请填写文字或上传图片';
             status.style.color = '#dc3545';
             return;
@@ -15989,8 +15997,11 @@ function applyUserAvatar(avatarElement) {
         modal.dataset.postId = '';
         modal.dataset.replyToName = '';
         modal.dataset.imageSelectionToken = '';
+        modal.dataset.imageUploading = '';
         modal.dataset.imageUrl = '';
         delete modal._imageDataUrl;
+        const confirmBtn = modal.querySelector('#momentsComposeConfirm');
+        if (confirmBtn) confirmBtn.disabled = false;
         updateMomentsComposerImage(modal, null, '');
       }
 
@@ -16027,14 +16038,16 @@ function applyUserAvatar(avatarElement) {
         status.textContent = '上传中...';
         status.style.color = '#666';
         const selectionToken = `${Date.now()}_${Math.random()}`;
+        const confirmBtn = modal.querySelector('#momentsComposeConfirm');
         modal.dataset.imageSelectionToken = selectionToken;
+        modal.dataset.imageUploading = '1';
+        modal.dataset.imageUrl = '';
+        if (confirmBtn) confirmBtn.disabled = true;
 
         try {
           const previewData = await convertFileToBase64(file);
           if (modal.dataset.imageSelectionToken !== selectionToken) return;
           modal._imageDataUrl = previewData;
-          // Keep a usable local source immediately, including while persistence is still pending.
-          modal.dataset.imageUrl = sanitizeMomentImageField(previewData);
           updateMomentsComposerImage(modal, previewData, `${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
 
           let persistedUrl = '';
@@ -16059,21 +16072,23 @@ function applyUserAvatar(avatarElement) {
           }
 
           if (modal.dataset.imageSelectionToken !== selectionToken) return;
+          if (!persistedUrl) {
+            throw new Error('无法生成图片短链接，请检查 SillyTavern 图片上传接口或媒体插件');
+          }
 
-          modal.dataset.imageUrl = sanitizeMomentImageField(persistedUrl || previewData);
-          status.textContent = persistedUrl ? '图片已保存' : '图片已在本地就绪';
+          modal.dataset.imageUrl = sanitizeMomentImageField(persistedUrl);
+          status.textContent = '图片短链接已就绪';
           status.style.color = '#28a745';
         } catch (err) {
           console.error('朋友圈图片上传失败:', err);
           if (modal.dataset.imageSelectionToken !== selectionToken) return;
-          if (modal._imageDataUrl) {
-            modal.dataset.imageUrl = sanitizeMomentImageField(modal._imageDataUrl);
-            status.textContent = '图片已在本地就绪';
-            status.style.color = '#28a745';
-          } else {
-            status.textContent = err && err.message ? `图片读取失败: ${err.message}` : '图片读取失败';
-            status.style.color = '#dc3545';
-            modal.dataset.imageUrl = '';
+          status.textContent = err && err.message ? `图片上传失败: ${err.message}` : '图片上传失败';
+          status.style.color = '#dc3545';
+          modal.dataset.imageUrl = '';
+        } finally {
+          if (modal.dataset.imageSelectionToken === selectionToken) {
+            modal.dataset.imageUploading = '';
+            if (confirmBtn) confirmBtn.disabled = false;
           }
         }
       }
