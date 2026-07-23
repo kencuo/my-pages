@@ -12598,6 +12598,14 @@ function applyUserAvatar(avatarElement) {
         return s.trim();
       }
 
+      function resolveMomentImageUrl(raw) {
+        const value = sanitizeMomentImageField(raw);
+        if (!value) return '';
+        // Preserve complete/local sources instead of reducing them to an avatar filename.
+        if (/^(?:data:image\/|blob:|https?:\/\/|\/)/i.test(value)) return value;
+        return resolveAvatarUrl(value);
+      }
+
       function looksLikeMomentImageField(v) {
         const s = String(v || '').trim();
         if (!s) return false;
@@ -14059,7 +14067,7 @@ function applyUserAvatar(avatarElement) {
             media.className = 'moment-media';
             const img = document.createElement('img');
             img.className = 'moment-image';
-            const resolved = resolveAvatarUrl(post.image);
+            const resolved = resolveMomentImageUrl(post.image);
             img.src = resolved;
             img.alt = '朋友圈图片';
             img.onclick = () => {
@@ -14126,7 +14134,7 @@ function applyUserAvatar(avatarElement) {
                 const imgWrap = document.createElement('div');
                 imgWrap.className = 'moment-comment-image';
                 const img = document.createElement('img');
-                const resolved = resolveAvatarUrl(cmt.image);
+                const resolved = resolveMomentImageUrl(cmt.image);
                 img.src = resolved;
                 img.alt = '评论图片';
                 img.onclick = () => {
@@ -15931,6 +15939,7 @@ function applyUserAvatar(avatarElement) {
         };
 
         removeImageBtn.onclick = () => {
+          modal.dataset.imageSelectionToken = '';
           modal.dataset.imageUrl = '';
           delete modal._imageDataUrl;
           updateMomentsComposerImage(modal, null, '');
@@ -15979,6 +15988,7 @@ function applyUserAvatar(avatarElement) {
         modal.dataset.mode = '';
         modal.dataset.postId = '';
         modal.dataset.replyToName = '';
+        modal.dataset.imageSelectionToken = '';
         modal.dataset.imageUrl = '';
         delete modal._imageDataUrl;
         updateMomentsComposerImage(modal, null, '');
@@ -16016,33 +16026,55 @@ function applyUserAvatar(avatarElement) {
 
         status.textContent = '上传中...';
         status.style.color = '#666';
+        const selectionToken = `${Date.now()}_${Math.random()}`;
+        modal.dataset.imageSelectionToken = selectionToken;
 
         try {
           const previewData = await convertFileToBase64(file);
+          if (modal.dataset.imageSelectionToken !== selectionToken) return;
           modal._imageDataUrl = previewData;
+          // Keep a usable local source immediately, including while persistence is still pending.
+          modal.dataset.imageUrl = sanitizeMomentImageField(previewData);
           updateMomentsComposerImage(modal, previewData, `${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+
+          let persistedUrl = '';
+          if (typeof uploadImageAssetForSettings === 'function') {
+            persistedUrl = await uploadImageAssetForSettings(
+              file,
+              previewData,
+              'moments_post',
+              'phone_moments'
+            );
+          }
 
           const uploadImagePlugin = window.__uploadImageByPlugin ||
                                    window.parent?.__uploadImageByPlugin ||
                                    window.top?.__uploadImageByPlugin;
 
-          if (typeof uploadImagePlugin !== 'function') {
-            throw new Error('智能媒体助手插件未加载，无法上传图片');
+          if (!persistedUrl && typeof uploadImagePlugin === 'function') {
+            const result = await uploadImagePlugin(file, { enableAIVision: false });
+            if (result && result.success && result.url) {
+              persistedUrl = String(result.url);
+            }
           }
 
-          const result = await uploadImagePlugin(file);
-          if (!result || !result.success || !result.url) {
-            throw new Error(result && result.error ? result.error : '图片上传失败');
-          }
+          if (modal.dataset.imageSelectionToken !== selectionToken) return;
 
-          modal.dataset.imageUrl = sanitizeMomentImageField(result.url || '');
-          status.textContent = '✅ 图片已上传';
+          modal.dataset.imageUrl = sanitizeMomentImageField(persistedUrl || previewData);
+          status.textContent = persistedUrl ? '图片已保存' : '图片已在本地就绪';
           status.style.color = '#28a745';
         } catch (err) {
           console.error('朋友圈图片上传失败:', err);
-          status.textContent = err && err.message ? `上传失败: ${err.message}` : '上传失败';
-          status.style.color = '#dc3545';
-          modal.dataset.imageUrl = '';
+          if (modal.dataset.imageSelectionToken !== selectionToken) return;
+          if (modal._imageDataUrl) {
+            modal.dataset.imageUrl = sanitizeMomentImageField(modal._imageDataUrl);
+            status.textContent = '图片已在本地就绪';
+            status.style.color = '#28a745';
+          } else {
+            status.textContent = err && err.message ? `图片读取失败: ${err.message}` : '图片读取失败';
+            status.style.color = '#dc3545';
+            modal.dataset.imageUrl = '';
+          }
         }
       }
 
@@ -16440,7 +16472,7 @@ function applyUserAvatar(avatarElement) {
         try {
           const postImage = sanitizeMomentImageField(post.image || '');
           if (postImage) {
-            const resolved = resolveAvatarUrl(postImage);
+            const resolved = resolveMomentImageUrl(postImage);
             if (resolved) {
               try { showToast('检测到朋友圈图片，识图中...'); } catch (_) {}
               postImageDesc = await requestMomentVisionDescription(resolved, null);
@@ -16457,7 +16489,7 @@ function applyUserAvatar(avatarElement) {
             }
             const replyImage = target ? sanitizeMomentImageField(target.image || '') : '';
             if (replyImage) {
-              const resolvedReply = resolveAvatarUrl(replyImage);
+              const resolvedReply = resolveMomentImageUrl(replyImage);
               if (resolvedReply) {
                 try { showToast('检测到评论图片，识图中...'); } catch (_) {}
                 replyImageDesc = await requestMomentVisionDescription(resolvedReply, null);
@@ -30176,6 +30208,53 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
         }
       }
 
+      function bindStickerMessageContextMenu(contentDiv, idx) {
+        if (!contentDiv) return;
+
+        contentDiv.addEventListener('contextmenu', e => {
+          e.preventDefault();
+          showContextMenu(e, idx);
+        });
+
+        let longPressTimer = null;
+        let longPressed = false;
+        let touchPoint = null;
+
+        const cancelLongPress = () => {
+          if (longPressTimer) clearTimeout(longPressTimer);
+          longPressTimer = null;
+        };
+
+        contentDiv.addEventListener('touchstart', e => {
+          const touch = e.touches && e.touches[0];
+          if (!touch) return;
+          longPressed = false;
+          touchPoint = { clientX: touch.clientX, clientY: touch.clientY };
+          cancelLongPress();
+          longPressTimer = setTimeout(() => {
+            longPressTimer = null;
+            longPressed = true;
+            if (navigator.vibrate) navigator.vibrate(50);
+            showContextMenu({
+              clientX: touchPoint.clientX,
+              clientY: touchPoint.clientY,
+              preventDefault: () => {},
+            }, idx);
+          }, 500);
+        }, { passive: true });
+
+        contentDiv.addEventListener('touchmove', cancelLongPress, { passive: true });
+        contentDiv.addEventListener('touchcancel', cancelLongPress, { passive: true });
+        contentDiv.addEventListener('touchend', e => {
+          cancelLongPress();
+          if (longPressed) {
+            e.preventDefault();
+            e.stopPropagation();
+            longPressed = false;
+          }
+        });
+      }
+
       // 创建表情包消息元素
       function createStickerMessageElement(msg, idx) {
         const message = document.createElement('div');
@@ -30218,6 +30297,8 @@ ${GROUP_AIREQUEST_EXTRA_PROMPT_BODY}`;
           aiNote.innerHTML = `🤖 ${msg.aiDescription}`;
           contentDiv.appendChild(aiNote);
         }
+
+        bindStickerMessageContextMenu(contentDiv, idx);
 
         wrapper.appendChild(contentDiv);
         appendTextToImageActionButton(wrapper, msg, idx);
